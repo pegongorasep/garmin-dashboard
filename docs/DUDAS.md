@@ -16,3 +16,17 @@
 - Las 5 corridas recientes con RPE traen `feel` = 50; las antiguas, 75 o 100.
 - Ojo: el caché solo salta las actividades que ya tienen RPE, así que las que están en `null` se vuelven a pedir en cada corrida (8 peticiones extra, ~9 s totales). Es intencional: Pedro puede poner el RPE después en Garmin Connect.
 - `strength_training` no aparece en la ventana; el CrossFit actual se registra solo como `hiit`.
+
+## F2 Supuestos de `dashboard/metrics.py` (2026-10-24)
+
+- `day`, `week_start` son `date`; el semáforo se devuelve como texto: `verde` / `amarillo` / `rojo`. `traffic_light` devuelve un dict `{color, fuera, repetir_semana}`; `prev_light` es el color de ayer (o `None`).
+- Las señales se devuelven en un dict con claves `hrv`, `rhr`, `sueno`, `rpe`. La de HRV lleva además `hrv_baja`.
+- Zonas: el techo de cada zona es el piso de la siguiente (Z5 llega a la FC máx), así Z2 = 138–151 con 190/60. Los pisos y techos comparten el límite (p. ej. 151 es techo de Z2 y piso de Z3).
+- RPE de ayer: si ayer hubo CrossFit pero ninguna sesión tiene RPE, la señal es `sin_dato` (no `ok`). Con CrossFit de varias sesiones se toma el máximo de las que sí tienen RPE.
+- `plan_status` recibe las corridas hechas como `[{"fecha", "luz"}]` en orden. Devuelve `estado` = `hecha` | `pendiente` y `ajustada` como booleano aparte (en vez de un tercer estado).
+- `today_card`: si hoy es lun/mar/jue, ya hay una corrida registrada hoy y quedan sesiones pendientes, muestra la siguiente sesión. Las ramas de CrossFit tienen prioridad sobre el semáforo; en CrossFit solo se agrega el aviso de "repetir semana".
+- `week_load` cuenta en `sin_rpe` las actividades de corrida/CrossFit de la semana sin RPE. Firma: `week_load(activities, details, week_start, config)`.
+- `max_hr_progress`: "semanas medidas" = semanas lun–dom distintas con al menos una sesión de CrossFit con `maxHR` desde `strap_in_crossfit_since`. No distingue si esa sesión se grabó con correa.
+- `watch_zone_mismatch` acepta la lista de `hr_zones.json` y usa el perfil `DEFAULT` (o el primero). **Hallazgo real**: el reloj usa FC máx **203** y reposo 64 (Z1 desde 134); el dashboard usa 190. Hay que cambiar el reloj a 190, como pide REQUISITOS §3.1, o las barras de zonas por actividad no son comparables con las del plan.
+- Eficiencia = velocidad (m/min) ÷ FC prom, solo para `running`; en caminadora es `None`.
+- `rhr_7d` considera la ventana [day−7, day−1].
