@@ -68,7 +68,7 @@ const NOMBRE_SENAL = { hrv: "HRV de anoche", rhr: "FC en reposo", sueno: "Sueño
 
 function pasoLi(p) {
   if (p.kind === "repeat") {
-    return h("li", {}, h("span", { class: "min" }, `Repetir ${p.times}×`), h("ul", {}, p.steps.map(pasoLi)));
+    return h("li", {}, h("span", { class: "min" }, `${p.times}× (`), h("ul", {}, p.steps.map(pasoLi)), h("span", { class: "min" }, ")"));
   }
   const z = p.zone;
   const color = z.startsWith("Z") ? `var(--z${z.slice(1, 2)})` : "var(--axis)";
@@ -209,7 +209,8 @@ function zonaBar(dist) {
       const m = g.reduce((a, k) => a + dist.minutos[k], 0);
       return h("div", { style: `flex:${m} 1 0;${m <= 0 ? "display:none" : ""}` });
     }));
-  wrap.append(tip, barra, brackets);
+  const meta = h("div", { class: "meta80", "aria-hidden": "true" }, h("span", {}, "meta 80 %"));
+  wrap.append(tip, barra, brackets, meta);
   raiz.append(wrap);
 
   const grupo = (zs, nombre, valor, meta) => h("div", { class: "grupo" },
@@ -240,49 +241,3 @@ function renderSemana(d) {
     zonaBar(s.distribucion));
 }
 
-// --- arranque ---
-
-function actualizarEncabezado() {
-  const el = document.getElementById("actualizado");
-  const iso = datos && (datos.datos_al || datos.generado);
-  const hace = haceCuanto(iso);
-  el.textContent = hace ? `Actualizado ${hace}` : "";
-}
-
-function mostrarVista() {
-  const v = VISTAS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "hoy";
-  for (const id of VISTAS) document.getElementById(`vista-${id}`).hidden = id !== v;
-  for (const a of document.querySelectorAll(".tabs a")) {
-    if (a.dataset.tab === v) a.setAttribute("aria-current", "page");
-    else a.removeAttribute("aria-current");
-  }
-  window.scrollTo(0, 0);
-}
-
-function error(msg) {
-  document.getElementById("actualizado").textContent = "Sin datos";
-  document.getElementById("vista-hoy").replaceChildren(h("p", { class: "vacio" }, msg));
-}
-
-async function iniciar() {
-  window.addEventListener("hashchange", mostrarVista);
-  mostrarVista();
-  try {
-    const resp = await fetch("data.json", { cache: "no-cache" });
-    if (!resp.ok) throw new Error(resp.status);
-    datos = await resp.json();
-  } catch (e) {
-    error("No se pudieron cargar los datos. Intenta de nuevo en unos minutos.");
-    return;
-  }
-  actualizarEncabezado();
-  setInterval(actualizarEncabezado, 60000);
-  try {
-    renderHoy(datos);
-    renderSemana(datos);
-  } catch (e) {
-    error("Los datos tienen un formato inesperado.");
-  }
-}
-
-iniciar();

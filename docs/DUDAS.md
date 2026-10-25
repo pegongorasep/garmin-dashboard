@@ -52,3 +52,11 @@
 - Avisos del validador: en claro, el verde Z2 queda en 2.74:1 contra la superficie (WARN de contraste): se compensa con leyenda con etiquetas, tooltip y vista de tabla. En oscuro la separación tritan Z4/Z5 es 4.0 (el validador pasa por el ΔE de visión normal 16 y deutan 15.7).
 - El sitio está en español, sin librerías ni CDN. Se probó con Chrome headless (400 px dentro de un iframe y 1280 px, claro y oscuro).
 - Las pestañas Plan, Tendencias y Más son marcadores de posición hasta 5.5–5.7.
+
+## F5 (5.5–5.8) (2026-10-24)
+
+- Las gráficas son SVG a mano (`site/charts.js`); las vistas Plan, Tendencias y Más están en `site/vistas.js`.
+- Las series de las gráficas usan dos colores categóricos (azul = CrossFit y todas las líneas, naranja = corrida), distintos del orden de zonas pero con los mismos tonos que Z1 y Z4. Se distinguen por leyenda y tooltip; no se validaron como pareja aparte.
+- Los links a docs apuntan a `https://github.com/pegongorasep/garmin-dashboard/blob/main/docs/` (repo previsto en F6); no resuelven hasta publicar.
+- Estados vacíos probados con un `data.json` recortado en una carpeta temporal (arreglos vacíos y nulos): ninguna vista lanza error ni muestra el mensaje de fallo. Cada vista además está envuelta en try/catch y muestra "No se pudo mostrar esta sección" si faltaran claves.
+- Se probó con un script en Chrome headless: la cruz y el tooltip de línea, el tooltip por barra, el selector de 4 semanas y el cambio de semana del plan funcionan.
