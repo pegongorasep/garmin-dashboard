@@ -45,3 +45,10 @@
 - Se agregó `datos_al` (hora local de la última descarga, de `pulled_at_utc`), `rhr_promedio_7d` y `umbrales` al JSON; no estaban en la forma del plan pero el frontend los necesita.
 - `plan/plan.json` (de Opus) ya existía y se usa; `plan.example.json` solo es el respaldo.
 - La prueba de privacidad con datos reales compara contra los `activityName` y los datos del perfil de `data/` (se salta si no hay `data/`).
+
+## F5 (5.1–5.4) Frontend (2026-10-24)
+
+- Colores de zona (orden bajo -> alto, azul · verde · violeta · naranja · ciruela), distintos de los de estado. Claro: `#2a78d6 #1baf7a #6250d6 #eb6834 #a8326e`; oscuro: `#3987e5 #199e70 #9085e9 #e5632f #c0417f`. Ambos pasan `validate_palette.js` (adyacentes). Se descartó azul-verde-amarillo-naranja-rojo porque amarillo/naranja/rojo no se separan (ΔE normal 7–12 < 15). Z3 es violeta ("en medio" entre frío y cálido).
+- Avisos del validador: en claro, el verde Z2 queda en 2.74:1 contra la superficie (WARN de contraste): se compensa con leyenda con etiquetas, tooltip y vista de tabla. En oscuro la separación tritan Z4/Z5 es 4.0 (el validador pasa por el ΔE de visión normal 16 y deutan 15.7).
+- El sitio está en español, sin librerías ni CDN. Se probó con Chrome headless (400 px dentro de un iframe y 1280 px, claro y oscuro).
+- Las pestañas Plan, Tendencias y Más son marcadores de posición hasta 5.5–5.7.
