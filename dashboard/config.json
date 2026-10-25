@@ -1,0 +1,14 @@
+{
+  "timezone": "America/Merida",
+  "max_hr": 190,
+  "max_hr_floor": 183,
+  "max_hr_review_above": 200,
+  "zone_pcts": [50, 60, 70, 80, 90],
+  "plan_start": "2026-10-26",
+  "strap_in_crossfit_since": "2026-10-26",
+  "rhr_tolerance_bpm": 4,
+  "sleep_min_hours": 6.5,
+  "rpe_heavy": 8,
+  "run_types": ["running", "treadmill_running", "trail_running", "track_running"],
+  "crossfit_types": ["hiit", "strength_training"]
+}
