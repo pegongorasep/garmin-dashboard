@@ -187,7 +187,7 @@ th:first-child, td:first-child { text-align: left; }
 .eje.ast { font-size: 14px; font-weight: 700; fill: var(--ink-2); }
 .ln { fill: none; stroke: var(--s1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .pt { fill: var(--s1); stroke: var(--surface); stroke-width: 2; }
-.banda { fill: var(--s1); fill-opacity: .14; }
+.banda { fill: var(--s1); fill-opacity: .28; }
 .cruz { stroke: var(--axis); stroke-width: 1; }
 .capa { fill: transparent; cursor: crosshair; }
 .capa:focus-visible { outline: 2px solid var(--focus); }

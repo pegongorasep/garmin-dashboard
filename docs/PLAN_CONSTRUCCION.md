@@ -219,5 +219,5 @@ Opus abre `https://<usuario>.github.io/garmin-dashboard/` en el navegador, lo re
 | F2 Métricas · R2 | ✅ |
 | F3 Build · R3 | ✅ |
 | F4 Plan 12 semanas (Opus) | ⬜ |
-| F5 Frontend · R4 · R5 | 🔄 R5 (5.1–5.8 hechos, en revisión) |
-| F6 Publicación · R6 | ⬜ |
+| F5 Frontend · R4 · R5 | ✅ |
+| F6 Publicación · R6 | 🔄 (6.1, 6.2 y 6.7 hechos; faltan 6.3–6.6 de Opus) |

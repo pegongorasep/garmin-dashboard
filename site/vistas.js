@@ -133,9 +133,9 @@ function dibujarTendencias() {
     texto: (p) => `${fechaLarga(p.fecha)} · ${fmt(p.y, 0)} lpm`,
   }, "FC reposo (lpm)", (p) => `Última: ${fmt(p.y, 0)} lpm · ${fechaLarga(p.fecha)}`, (p) => [fechaLarga(p.fecha), fmt(p.y, 0)]);
   linea("sueno", dias.map((x) => ({ fecha: x.fecha, y: x["sueño_h"] })), {
-    ref: umbral != null ? { y: umbral, etiqueta: `mín ${fmt(umbral, 1)} h` } : null, fmtY: (v) => fmt(v, 1), etiqueta: "Horas de sueño por noche",
+    ref: umbral != null ? { y: umbral, etiqueta: null } : null, fmtY: (v) => fmt(v, 1), etiqueta: "Horas de sueño por noche",
     texto: (p) => `${fechaLarga(p.fecha)} · ${horasMin(p.y)}`,
-  }, "Sueño (h)", (p) => `Última noche: ${horasMin(p.y)} · ${fechaLarga(p.fecha)}`, (p) => [fechaLarga(p.fecha), horasMin(p.y)]);
+  }, "Sueño (h)", (p) => `Última noche: ${horasMin(p.y)} · ${fechaLarga(p.fecha)}.${umbral != null ? ` La línea marca el mínimo (${horasMin(umbral)}).` : ""}`, (p) => [fechaLarga(p.fecha), horasMin(p.y)]);
 
   const c = TEND.carga;
   const sinRpe = semanas.filter((s) => s.sin_rpe > 0);

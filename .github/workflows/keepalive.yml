@@ -1,0 +1,24 @@
+name: Keepalive
+
+# GitHub apaga los schedule de repos sin commits en 60 días; el plan dura 84.
+# El día 1 de cada mes (13:00 UTC) se hace un commit vacío para mantenerlos activos.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 13 1 * *"
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Commit vacío
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: keepalive"
+          git push

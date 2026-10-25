@@ -1,0 +1,64 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 13 * * *"  # 7:00 Mérida
+    - cron: "0 19 * * *"  # 13:00 Mérida
+    - cron: "0 1 * * *"   # 19:00 Mérida
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # Caché del RPE por actividad: cada corrida guarda una versión nueva.
+      - uses: actions/cache@v4
+        with:
+          path: data/activity_details.json
+          key: activity-details-${{ github.run_id }}
+          restore-keys: activity-details-
+
+      - name: Bajar datos de Garmin
+        run: python garmin_connect.py
+        env:
+          PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
+
+      - name: Construir el sitio
+        run: python dashboard/build.py
+
+      - name: Pruebas
+        run: pytest -q
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
