@@ -30,3 +30,18 @@
 - `watch_zone_mismatch` acepta la lista de `hr_zones.json` y usa el perfil `DEFAULT` (o el primero). **Hallazgo real**: el reloj usa FC máx **203** y reposo 64 (Z1 desde 134); el dashboard usa 190. Hay que cambiar el reloj a 190, como pide REQUISITOS §3.1, o las barras de zonas por actividad no son comparables con las del plan.
 - Eficiencia = velocidad (m/min) ÷ FC prom, solo para `running`; en caminadora es `None`.
 - `rhr_7d` considera la ventana [day−7, day−1].
+
+## Correcciones tras R2 (2026-10-24)
+
+- `today_card` ahora devuelve `tipo = "hecha_hoy"` si ya hay corrida hoy (y no es día de CrossFit por actividad registrada). Orden: CrossFit → hecha_hoy → completa → sesion.
+- Texto del sueño en h:mm ("Sueño 6 h 29 min, mínimo 6 h 30 min"); `valor` sigue en horas decimales.
+- **Repetir semana**: `dashboard/config.json` tiene `"semanas_repetidas": []` (números de semana del plan que se repitieron; una semana puede aparecer más de una vez). `week_index(day, plan_start, repetidas)` empuja el resto del plan una semana por cada repetición. **La revisión semanal (Claude) es quien edita esta lista** cuando el aviso "repetir la semana" se confirma; el dashboard solo avisa, no la modifica.
+
+## F3 Supuestos de `dashboard/build.py` (2026-10-24)
+
+- `semana.dias[].tipo`: días pasados = `crossfit` / `corrida` / `descanso` según lo que se registró (si hay ambos, `crossfit`); hoy = lo registrado o `hoy`; días futuros = `futuro`. No se usa "pendiente" por día; las corridas pendientes salen de `plan.estado_sesiones`.
+- Antes del inicio del plan (`semana_actual` = null) la tarjeta de hoy es `sin_plan` ("Hoy no hay semana de plan activa"); lo agregué a `today_card` porque sin sesiones devolvía "Semana completa", que era engañoso.
+- Las zonas del plan en lpm usan `max_hr` del config y el reposo promedio de 7 días de hoy (60 si no hay dato). Un paso "Z1-Z2" va del piso de Z1 al techo de Z2.
+- Se agregó `datos_al` (hora local de la última descarga, de `pulled_at_utc`), `rhr_promedio_7d` y `umbrales` al JSON; no estaban en la forma del plan pero el frontend los necesita.
+- `plan/plan.json` (de Opus) ya existía y se usa; `plan.example.json` solo es el respaldo.
+- La prueba de privacidad con datos reales compara contra los `activityName` y los datos del perfil de `data/` (se salta si no hay `data/`).

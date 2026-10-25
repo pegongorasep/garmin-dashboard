@@ -38,11 +38,11 @@ Notación: `6' Z1` = 6 minutos en Z1. `6×(2' Z2 / 1' Z1)` = repetir 6 veces.
 | 4 | descarga | Continua — 5' Z1 · 15' Z1–Z2 · 5' Z1 = **25'** | igual = **25'** | 50' |
 | 5 | carga | **Espiga** — 8' Z1 · 8' Z2 · **3' Z3** · 8' Z2 · 8' Z1 = **35'** | 5' Z1 · 25' Z1–Z2 · 5' Z1 = **35'** | 70' |
 | 6 | carga | **Pirámide 1-2-1** — 8' Z1 · 5' Z2 · (**1' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **1' Z3**) · 6' Z2 · 8' Z1 = **35'** | igual que sem 5 = **35'** | 70' |
-| 7 | carga | **Ascendente 1-2-3** — 7' Z1 · 5' Z2 · (**1' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **3' Z3**) · 5' Z2 · 6' Z1 = **35'** | igual = **35'** | 70' |
+| 7 | carga | **Ascendente 1-2-3** — 8' Z1 · 5' Z2 · (**1' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **3' Z3**) · 5' Z2 · 7' Z1 = **35'** | igual = **35'** | 70' |
 | 8 | descarga | Continua — 5' Z1 · 15' Z1–Z2 · 5' Z1 = **25'** | igual = **25'** | 50' |
 | 9 | carga | **Espiga doble** — 8' Z1 · 5' Z2 · **3' Z3** · 4' Z2 · **3' Z3** · 5' Z2 · 7' Z1 = **35'** | 5' Z1 · 30' Z1–Z2 · 5' Z1 = **40'** | 75' |
 | 10 | carga | **Intervalos Z3** — 8' Z1 · 5' Z2 · 3×(**2' Z3** / 2' Z2) · 4' Z2 · 6' Z1 = **35'** | 5' Z1 · 35' Z1–Z2 · 5' Z1 = **45'** | 80' |
-| 11 | carga | **Descendente 3-2-1** — 7' Z1 · 5' Z2 · (**3' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **1' Z3**) · 5' Z2 · 6' Z1 = **35'** | 5' Z1 · 40' Z1–Z2 · 5' Z1 = **50'** | 85' |
+| 11 | carga | **Descendente 3-2-1** — 8' Z1 · 5' Z2 · (**3' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **1' Z3**) · 5' Z2 · 7' Z1 = **35'** | 5' Z1 · 40' Z1–Z2 · 5' Z1 = **50'** | 85' |
 | 12 | descarga | Continua — 5' Z1 · 20' Z1–Z2 · 5' Z1 = **30'** | igual = **30'** | 60' |
 
 Después de la semana 12: revisión con datos (eficiencia aeróbica, FC máx medida) y se decide el siguiente ciclo.

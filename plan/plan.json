@@ -1,0 +1,1481 @@
+{
+  "start": "2026-10-26",
+  "weeks": [
+    {
+      "n": 1,
+      "block": 1,
+      "kind": "carga",
+      "focus": "Adaptación: duración",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Intervalos 2:1",
+          "minutes": 30,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 6,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "repeat",
+              "times": 6,
+              "steps": [
+                {
+                  "kind": "run",
+                  "minutes": 2,
+                  "zone": "Z2",
+                  "note": ""
+                },
+                {
+                  "kind": "walk",
+                  "minutes": 1,
+                  "zone": "Z1",
+                  "note": "trote suave o caminata"
+                }
+              ]
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 6,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 25,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 15,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "block": 1,
+      "kind": "carga",
+      "focus": "Adaptación: duración",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Intervalos 2:1",
+          "minutes": 33,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 6,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "repeat",
+              "times": 7,
+              "steps": [
+                {
+                  "kind": "run",
+                  "minutes": 2,
+                  "zone": "Z2",
+                  "note": ""
+                },
+                {
+                  "kind": "walk",
+                  "minutes": 1,
+                  "zone": "Z1",
+                  "note": "trote suave o caminata"
+                }
+              ]
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 6,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 30,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 20,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "block": 1,
+      "kind": "carga",
+      "focus": "Adaptación: duración",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Intervalos 2:1",
+          "minutes": 36,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 6,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "repeat",
+              "times": 8,
+              "steps": [
+                {
+                  "kind": "run",
+                  "minutes": 2,
+                  "zone": "Z2",
+                  "note": ""
+                },
+                {
+                  "kind": "walk",
+                  "minutes": 1,
+                  "zone": "Z1",
+                  "note": "trote suave o caminata"
+                }
+              ]
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 6,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 25,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "block": 1,
+      "kind": "descarga",
+      "focus": "Descarga: todo continuo Z1–Z2",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Continua Z1–Z2",
+          "minutes": 25,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 15,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 25,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 15,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "block": 2,
+      "kind": "carga",
+      "focus": "Introducir Z3: 3 min",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Espiga",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 8,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 3,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 8,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 25,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "block": 2,
+      "kind": "carga",
+      "focus": "Introducir Z3: 4 min",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Pirámide 1-2-1",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 1,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 1,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 6,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 25,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 7,
+      "block": 2,
+      "kind": "carga",
+      "focus": "Introducir Z3: 6 min",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Ascendente 1-2-3",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 1,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 3,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 7,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 25,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 8,
+      "block": 2,
+      "kind": "descarga",
+      "focus": "Descarga: todo continuo Z1–Z2",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Continua Z1–Z2",
+          "minutes": 25,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 15,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 25,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 15,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 9,
+      "block": 3,
+      "kind": "carga",
+      "focus": "Volumen: B 40'",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Espiga doble",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 3,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 4,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 3,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 7,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 40,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 30,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 30,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 20,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 10,
+      "block": 3,
+      "kind": "carga",
+      "focus": "Volumen: B 45'",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Intervalos Z3",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "repeat",
+              "times": 3,
+              "steps": [
+                {
+                  "kind": "run",
+                  "minutes": 2,
+                  "zone": "Z3",
+                  "note": ""
+                },
+                {
+                  "kind": "run",
+                  "minutes": 2,
+                  "zone": "Z2",
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "kind": "run",
+              "minutes": 4,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 6,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 45,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 35,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 30,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 20,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 11,
+      "block": 3,
+      "kind": "carga",
+      "focus": "Volumen: B 50'",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Descendente 3-2-1",
+          "minutes": 35,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 8,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 3,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 2,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 1,
+              "zone": "Z3",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 5,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 7,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 25,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 50,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 40,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 35,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 25,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "n": 12,
+      "block": 3,
+      "kind": "descarga",
+      "focus": "Descarga final",
+      "sessions": [
+        {
+          "id": "A",
+          "name": "Continua Z1–Z2",
+          "minutes": 30,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 20,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "name": "Continua Z1–Z2",
+          "minutes": 30,
+          "steps": [
+            {
+              "kind": "warmup",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 20,
+              "zone": "Z1-Z2",
+              "note": ""
+            },
+            {
+              "kind": "cooldown",
+              "minutes": 5,
+              "zone": "Z1",
+              "note": ""
+            }
+          ],
+          "easy": {
+            "name": "Suave continua",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "warmup",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              },
+              {
+                "kind": "run",
+                "minutes": 10,
+                "zone": "Z1-Z2",
+                "note": ""
+              },
+              {
+                "kind": "cooldown",
+                "minutes": 5,
+                "zone": "Z1",
+                "note": ""
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

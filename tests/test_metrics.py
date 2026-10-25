@@ -1,5 +1,5 @@
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "dashboard"))
@@ -102,6 +102,13 @@ def test_signal_sleep():
     assert m.signal_sleep(d, [{"calendarDate": "2026-10-23", "sleepTimeSeconds": 30000}], CFG)["estado"] == "sin_dato"
 
 
+def test_signal_sleep_texto_hmin():
+    d = date(2026, 10, 24)
+    s = m.signal_sleep(d, [{"calendarDate": "2026-10-24", "sleepTimeSeconds": 23340}], CFG)
+    assert s["texto"] == "Sueño 6 h 29 min, mínimo 6 h 30 min"
+    assert s["estado"] == "fuera" and round(s["valor"], 2) == 6.48
+
+
 def test_signal_rpe():
     d = date(2026, 10, 24)
     acts = [act(1, "2026-10-23"), act(2, "2026-10-23", "strength_training"), act(3, "2026-10-22")]
@@ -150,6 +157,20 @@ def test_week_index_bordes():
     assert m.week_index(date(2027, 1, 18), ini) is None
 
 
+def test_week_index_con_repetidas():
+    ini = date(2026, 10, 26)
+    sem = lambda n: ini + timedelta(weeks=n - 1)  # noqa: E731  (semana calendario n)
+    rep = [3]
+    assert [m.week_index(sem(n), ini, rep) for n in (1, 2, 3, 4, 5)] == [1, 2, 3, 3, 4]
+    assert m.week_index(sem(13), ini, rep) == 12
+    assert m.week_index(sem(14), ini, rep) is None
+    assert m.week_index(sem(14), ini, []) is None
+    assert m.week_index(sem(13), ini, []) is None
+    # una semana repetida dos veces
+    assert [m.week_index(sem(n), ini, [3, 3]) for n in (3, 4, 5, 6)] == [3, 3, 3, 4]
+    assert m.week_index(ini - timedelta(days=1), ini, rep) is None
+
+
 WEEK = {"sessions": [{"id": "A"}, {"id": "B"}]}
 
 
@@ -172,8 +193,11 @@ def test_today_card_ramas():
     assert m.today_card(lun, verde, pend, [], CFG)["tipo"] == "crossfit"
     # miércoles con CrossFit registrado -> CrossFit
     assert m.today_card(mie, verde, pend, [act(1, "2026-10-28")], CFG)["tipo"] == "crossfit"
-    # lunes con corrida hecha hoy y sesión pendiente -> sesión
-    assert m.today_card(lun, verde, hecha, [act(2, "2026-10-26", "running")], CFG)["tipo"] == "sesion"
+    # lunes con corrida hecha hoy -> hecha_hoy, aunque haya sesión pendiente
+    assert m.today_card(lun, verde, hecha, [act(2, "2026-10-26", "running")], CFG)["tipo"] == "hecha_hoy"
+    assert m.today_card(mie, verde, todas, [act(2, "2026-10-28", "running")], CFG)["tipo"] == "hecha_hoy"
+    # CrossFit manda sobre la corrida
+    assert m.today_card(mie, verde, hecha, [act(2, "2026-10-28", "running"), act(3, "2026-10-28")], CFG)["tipo"] == "crossfit"
     # miércoles libre: versión según semáforo y siguiente pendiente
     assert m.today_card(mie, verde, hecha, [], CFG)["sesion_id"] == "B"
     assert m.today_card(mie, verde, pend, [], CFG)["version"] == "normal"
@@ -181,6 +205,8 @@ def test_today_card_ramas():
     assert m.today_card(mie, {**verde, "color": "rojo"}, pend, [], CFG)["version"] == "descanso"
     # semana completa
     assert m.today_card(mie, verde, todas, [], CFG)["tipo"] == "completa"
+    # fuera del plan (sin sesiones)
+    assert m.today_card(mie, verde, [], [], CFG)["tipo"] == "sin_plan"
     # aviso de repetir semana
     rojo2 = {"color": "rojo", "repetir_semana": True}
     assert m.today_card(mie, rojo2, pend, [], CFG)["aviso"] == "Repetir la semana"

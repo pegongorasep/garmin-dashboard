@@ -120,13 +120,19 @@ def signal_rhr(day: date, daily_summaries: list, config: dict) -> dict:
     return _senal("fuera" if v > limite else "ok", v, round(prom, 1), texto)
 
 
+def _hmin(horas: float) -> str:
+    """Horas decimales -> '6 h 29 min' (trunca los segundos)."""
+    minutos = int(horas * 60 + 1e-6)
+    return f"{minutos // 60} h {minutos % 60:02d} min"
+
+
 def signal_sleep(day: date, sleep: list, config: dict) -> dict:
     r = _por_fecha(sleep, day)
     if not r or r.get("sleepTimeSeconds") is None:
         return _senal("sin_dato", None, config["sleep_min_hours"], "Sin dato de sueño")
     horas = r["sleepTimeSeconds"] / 3600
     minimo = config["sleep_min_hours"]
-    texto = f"Sueño {horas:.1f} h, mínimo {minimo} h"
+    texto = f"Sueño {_hmin(horas)}, mínimo {_hmin(minimo)}"
     return _senal("fuera" if horas < minimo else "ok", round(horas, 2), minimo, texto)
 
 
@@ -166,10 +172,17 @@ def traffic_light(sigs: dict, prev_light) -> dict:
             "repetir_semana": color == "rojo" and prev_light == "rojo"}
 
 
-def week_index(day: date, plan_start: date):
-    """Semana del plan (1–12) o None si `day` está fuera."""
-    n = (day - plan_start).days // 7 + 1
-    return n if 1 <= n <= 12 else None
+def week_index(day: date, plan_start: date, repetidas=()):
+    """Semana del plan (1–12) que toca en `day`, o None si está fuera.
+
+    `repetidas`: números de semana del plan que se repitieron (una semana puede
+    aparecer más de una vez). Cada repetición empuja el resto una semana.
+    """
+    secuencia = []
+    for n in range(1, 13):
+        secuencia += [n] * (1 + list(repetidas).count(n))
+    i = (day - plan_start).days // 7
+    return secuencia[i] if 0 <= i < len(secuencia) else None
 
 
 def plan_status(week: dict, runs_this_week: list) -> list:
@@ -195,6 +208,12 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
     aviso = "Repetir la semana" if light.get("repetir_semana") else None
     if hay_cf or (day.weekday() in (0, 1, 3) and not hay_run):
         return {"tipo": "crossfit", "texto": "Hoy es CrossFit", "version": None,
+                "sesion_id": None, "aviso": aviso}
+    if hay_run:
+        return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", "version": None,
+                "sesion_id": None, "aviso": aviso}
+    if not status:
+        return {"tipo": "sin_plan", "texto": "Hoy no hay semana de plan activa", "version": None,
                 "sesion_id": None, "aviso": aviso}
     pendientes = [s for s in status if s["estado"] == "pendiente"]
     if not pendientes:
