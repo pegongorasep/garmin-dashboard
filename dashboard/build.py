@@ -123,7 +123,11 @@ def week_assignment(day: date, data: dict, config: dict, plan: dict, hasta=None)
     return semana, m.assign_sessions(semana, week_runs(ini, hasta or day, data, config), config)
 
 
-def build_week(hoy: date, data: dict, config: dict, estado: list) -> dict:
+def _semana_corridas(ini: date, hasta: date, acts: list, details: dict, config: dict) -> list:
+    return m.run_rows([a for a in acts if ini <= m.day_of(a) <= hasta], details, config)
+
+
+def build_week(hoy: date, data: dict, config: dict, estado: list, plan: dict) -> dict:
     ini, acts = monday(hoy), data["activities"]
     dias = []
     for i in range(7):
@@ -131,12 +135,21 @@ def build_week(hoy: date, data: dict, config: dict, estado: list) -> dict:
         luz = light_on(d, data, config)["color"] if d <= hoy else None
         dias.append({"fecha": d.isoformat(), "dia_semana": DIAS[i],
                      "tipo": day_type(d, hoy, acts, config), "luz": luz})
-    filas = m.run_rows([a for a in acts if ini <= m.day_of(a) <= hoy], data["details"], config)
+    filas = _semana_corridas(ini, hoy, acts, data["details"], config)
+    previas = _semana_corridas(ini - timedelta(days=7), ini - timedelta(days=1), acts, data["details"], config)
+    n = m.week_index(hoy, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []))
+    semana = next((w for w in plan["weeks"] if w["n"] == n), None)
+    min_trote, min_camina = (sum(f[k] or 0 for f in filas) for k in ("trote_min", "camina_min"))
     return {"dias": dias, "sesiones_total": len(estado),
             "hechas": sum(1 for e in estado if e["estado"] == "hecha"),
             "incompletas": sum(1 for e in estado if e["estado"] == "incompleta"),
             "minutos": r1(sum(f["minutos"] for f in filas)), "km": r1(sum(f["km"] for f in filas)),
-            "min_trote": r1(sum(f["trote_min"] or 0 for f in filas))}
+            "min_trote": r1(min_trote), "min_camina": r1(min_camina),
+            "pct_trote": r1(min_trote / (min_trote + min_camina) * 100) if min_trote + min_camina else None,
+            "plan_min": sum(x["minutes"] for x in semana["sessions"]) if semana else None,
+            "anterior": {"minutos": r1(sum(f["minutos"] for f in previas)),
+                         "km": r1(sum(f["km"] for f in previas)),
+                         "min_trote": r1(sum(f["trote_min"] or 0 for f in previas))}}
 
 
 def rw_json(rw) -> dict:
@@ -171,10 +184,30 @@ def last_run(data: dict, config: dict, plan: dict):
         suave = light_on(dia, data, config)["color"] in ("amarillo", "rojo")
         sesion = {"id": plan_ses["id"], "name": plan_ses["name"], "version": "suave" if suave else "normal",
                   "minutes_plan": plan_ses["easy"]["minutes"] if suave else plan_ses["minutes"]}
-    return {"fecha": dia.isoformat(), "minutos": r1(minutos), "km": r2((a.get("distance") or 0) / 1000),
-            "fc_prom": r1(a.get("averageHR")),
-            "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "sesion": sesion,
+    return {"fecha": dia.isoformat(), "fc_prom": r1(a.get("averageHR")), "sesion": sesion,
+            **corrida_json(a, plan_ses, data, config)}
+
+
+def corrida_json(a: dict, plan_ses, data: dict, config: dict) -> dict:
+    """Lo común de una corrida: minutos, km, caminadora, '¿lo hice bien?' y trote/caminata."""
+    return {"minutos": r1(a["duration"] / 60), "km": r2((a.get("distance") or 0) / 1000),
+            "caminadora": a["activityType"]["typeKey"] == "treadmill_running",
             **m.run_check(a, plan_ses, config), "trote": rw_json(m.run_walk(a, data["details"]))}
+
+
+def corrida_de_sesion(e: dict, semana: dict, data: dict, config: dict):
+    """Corrida asignada a la sesión `e` de estado_sesiones, en plano; None si está pendiente."""
+    if e["estado"] == "pendiente":
+        return None
+    a = next(a for a in data["activities"] if m.classify(a, config) == "run"
+             and m.day_of(a).isoformat() == e["fecha"] and a["duration"] / 60 == e["minutos"])
+    plan_ses = next(s for s in semana["sessions"] if s["id"] == e["id"])
+    c = corrida_json(a, plan_ses, data, config)
+    tr = c.pop("trote") or dict.fromkeys(m.RW_CLAVES)
+    return {**c, "pct_trote": tr["pct_trote"], "ritmo_trote_s": tr["ritmo_trote_s"], "fc_trote": tr["fc_trote"],
+            "caminatas": tr["caminatas"], "patron_trote_min": tr["patron_trote_min"],
+            "patron_camina_min": tr["patron_camina_min"], "trote_min": tr["trote_min"],
+            "camina_min": tr["camina_min"]}
 
 
 def session_names(rows_acts: list, data: dict, config: dict, plan: dict) -> dict:
@@ -283,6 +316,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     if tarjeta["sesion_id"] and semana_plan:
         ses = next(s for s in semana_plan["sessions"] if s["id"] == tarjeta["sesion_id"])
         tarjeta["sesion"] = convert_session(ses, zonas)
+    tarjeta["motivo"] = m.motivo(sigs) if tarjeta["version"] in ("suave", "descanso") else None
 
     pulled = data["meta"].get("pulled_at_utc")
     datos_al = None
@@ -297,10 +331,11 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], config["max_hr"]),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "tarjeta": tarjeta},
         "ultima_corrida": last_run(data, config, plan),
-        "semana": build_week(hoy, data, config, estado),
+        "semana": build_week(hoy, data, config, estado, plan),
         "plan": {"inicio": plan["start"], "semana_actual": n, "semanas_repetidas": repetidas,
                  "semanas": [convert_week(w, zonas) for w in plan["weeks"]],
-                 "estado_sesiones": [{**e, "minutos": r1(e["minutos"])} for e in estado]},
+                 "estado_sesiones": [{**e, "minutos": r1(e["minutos"]),
+                                         "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
         "progreso": {"resumen": {str(k): m.progress_summary(filas, hoy, k) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
                      "semanas": build_weeks(hoy, data, config, plan),

@@ -212,3 +212,34 @@ def _flat(o):
 
 def test_fc_max_viene_del_reloj(salida):
     assert salida["detalles"]["fc_max"]["config"] == 190 and salida["detalles"]["fc_max"]["fuente"] == "reloj"
+
+
+def test_hoy_motivo_y_semana_nueva(salida):
+    assert salida["hoy"]["tarjeta"]["motivo"] is None          # verde
+    data, plan = fixture(), build.load(ROOT / "plan" / "plan.example.json")
+    data["sleep"] = [{**r, "sleepTimeSeconds": 18000} if r["calendarDate"] == "2026-11-04" else r
+                     for r in data["sleep"]]
+    out = build.build(data, plan, {**CONFIG_FIXTURE, "crossfit_days": []}, AHORA)
+    t = out["hoy"]["tarjeta"]
+    assert t["version"] == "suave" and t["motivo"] == "Dormiste poco"
+    s = salida["semana"]
+    assert s["min_camina"] == 10 and s["pct_trote"] == 66.7 and s["plan_min"] == 100
+    assert s["anterior"] == {"minutos": 30, "km": 4.5, "min_trote": 20}   # corrida del 28 oct
+
+
+def test_estado_sesiones_con_corrida(salida):
+    z2a, z2b, _ = salida["plan"]["estado_sesiones"]
+    assert z2b["corrida"] is None
+    c = z2a["corrida"]
+    assert c["minutos"] == 30 and c["km"] == 4.5 and c["pct_trote"] == 66.7 and c["ritmo_trote_s"] == 400
+    assert c["techo_ok"] is False and c["tolerancia_min"] == 4 and c["caminadora"] is False
+
+
+def test_escenario_real_12_nov():
+    if not (ROOT / "data" / "activities.json").exists():
+        pytest.skip("no hay data/ local")
+    cfg = {**CONFIG, "plan_start": "2026-11-09"}
+    ahora = datetime(2026, 11, 14, 12, 0, tzinfo=ZoneInfo("America/Merida"))
+    out = build.build(build.load_data(), build.load_plan(), cfg, ahora)
+    c = out["plan"]["estado_sesiones"][0]["corrida"]
+    assert c["km"] == 4.36 and c["pct_trote"] == 71.4 and c["techo_ok"] is False

@@ -399,3 +399,25 @@ def test_max_hr_above_watch():
     assert m.max_hr_above_watch(189, 189) is None
     assert m.max_hr_above_watch(None, 189) is None
     assert "192" in m.max_hr_above_watch(192, 189)
+
+
+def test_motivo():
+    assert m.motivo(_sigs()) is None
+    assert m.motivo(_sigs(rhr="fuera")) == "FC en reposo alta"
+    assert m.motivo(_sigs(hrv="fuera", rpe="fuera")) == "HRV baja · CrossFit pesado ayer"
+    assert m.motivo(_sigs(sueno="fuera", rhr="fuera")) == "FC en reposo alta · Dormiste poco"
+    assert m.motivo(_sigs(baja=True)) == "HRV baja"
+    assert m.motivo(_sigs(hrv="fuera", baja=True)) == "HRV baja"
+
+
+def test_today_card_proxima_id():
+    pend = [ses("z2a", "z2"), ses("z2b", "z2"), ses("larga", "larga")]
+    z2_hechas = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga")]
+    mar, vie, mie = date(2026, 11, 17), date(2026, 11, 20), date(2026, 11, 18)
+    assert m.today_card(mar, VERDE, pend, [], CFG)["proxima_id"] == "z2a"
+    jue = date(2026, 11, 19)
+    assert m.today_card(jue, VERDE, z2_hechas, [], CFG)["proxima_id"] == "larga"   # mañana viernes
+    run_hoy = [act(2, "2026-11-20", "running")]
+    assert m.today_card(vie, VERDE, z2_hechas, run_hoy, CFG)["proxima_id"] == "larga"  # mañana sábado
+    assert m.today_card(mie, VERDE, pend, [], CFG)["proxima_id"] is None   # tipo sesion
+    assert m.today_card(mar, VERDE, [], [], CFG)["proxima_id"] is None

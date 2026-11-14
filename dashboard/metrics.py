@@ -177,6 +177,18 @@ def traffic_light(sigs: dict, prev_light) -> dict:
             "repetir_semana": color == "rojo" and prev_light == "rojo"}
 
 
+MOTIVOS = {"hrv": "HRV baja", "rhr": "FC en reposo alta", "sueno": "Dormiste poco",
+           "rpe": "CrossFit pesado ayer"}
+
+
+def motivo(sigs: dict):
+    """Por qué la sesión va suave o en descanso: textos de las señales `fuera`, unidos con ' · '; None si no hay."""
+    textos = [MOTIVOS[k] for k in ("hrv", "rhr", "sueno", "rpe") if sigs[k]["estado"] == "fuera"]
+    if sigs["hrv"].get("hrv_baja") and MOTIVOS["hrv"] not in textos:
+        textos.insert(0, MOTIVOS["hrv"])
+    return " · ".join(textos) or None
+
+
 def week_index(day: date, plan_start: date, repetidas=()):
     """Semana del plan (1–12) que toca en `day`, o None si está fuera.
 
@@ -261,11 +273,12 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
     hay_cf = any(classify(a, config) == "crossfit" for a in hoy)
     hay_run = any(classify(a, config) == "run" for a in hoy)
     aviso = "Repetir la semana" if light.get("repetir_semana") else None
-    base = {"version": None, "sesion_id": None, "aviso": aviso}
+    base = {"version": None, "sesion_id": None, "aviso": aviso, "proxima_id": None}
+    manana = (_elegir_pendiente(day + timedelta(days=1), status)[0] or {}).get("id") if status else None
     if hay_cf or (day.weekday() in config["crossfit_days"] and not hay_run):
-        return {"tipo": "crossfit", "texto": "Hoy es CrossFit", **base}
+        return {"tipo": "crossfit", "texto": "Hoy es CrossFit", **{**base, "proxima_id": manana}}
     if hay_run:
-        return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", **base}
+        return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", **{**base, "proxima_id": manana}}
     if not status:
         return {"tipo": "sin_plan", "texto": "Hoy no hay semana de plan activa", **base}
     sesion, aviso_larga = _elegir_pendiente(day, status)
@@ -275,7 +288,7 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
     version = "normal" if sin_datos else {"verde": "normal", "amarillo": "suave", "rojo": "descanso"}[light["color"]]
     aviso = _unir_avisos(aviso, aviso_larga, AVISO_SIN_DATOS if sin_datos else None)
     return {"tipo": "sesion", "texto": f"Siguiente sesión: versión {version}",
-            "version": version, "sesion_id": sesion["id"], "aviso": aviso}
+            "version": version, "sesion_id": sesion["id"], "aviso": aviso, "proxima_id": None}
 
 
 # --- trote / caminata ---
