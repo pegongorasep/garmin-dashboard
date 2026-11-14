@@ -88,16 +88,6 @@ a:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 2px 
 .badge.bad { background: var(--bad); color: var(--bad-ink); }
 .badge.nd { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--muted); font-weight: 600; }
 
-.semaforo { border-radius: 12px; padding: 16px; }
-.semaforo .cab { display: flex; align-items: center; gap: 14px; }
-.semaforo .senales { margin-top: 12px; }
-.semaforo.verde { background: var(--ok-bg); box-shadow: inset 4px 0 0 var(--ok); }
-.semaforo.amarillo { background: var(--warn-bg); box-shadow: inset 4px 0 0 var(--warn); }
-.semaforo.sin_datos { background: var(--nd-bg); box-shadow: inset 4px 0 0 var(--muted); }
-.semaforo.rojo { background: var(--bad-bg); box-shadow: inset 4px 0 0 var(--bad); }
-.semaforo .badge { width: 44px; height: 44px; font-size: 24px; }
-.semaforo .titulo { font-size: 26px; font-weight: 700; line-height: 1.1; }
-
 .aviso { border-radius: 10px; padding: 10px 12px; margin-block: 10px; display: flex; gap: 10px; align-items: flex-start; }
 .aviso.warn { background: var(--warn-bg); box-shadow: inset 0 0 0 1px var(--warn); }
 .aviso.bad { background: var(--bad-bg); box-shadow: inset 0 0 0 1px var(--bad); }
@@ -117,16 +107,6 @@ a:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 2px 
 .nota { color: var(--ink-2); font-size: 13px; }
 
 /* Semana */
-.tira { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.dia {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0;
-  border-radius: 10px; background: var(--page); font-size: 10px; text-align: center; min-width: 0;
-}
-.dia.hoy { box-shadow: inset 0 0 0 2px var(--ink); }
-.dia .d { font-weight: 650; text-transform: uppercase; color: var(--ink-2); }
-.dia .g { font-size: 17px; line-height: 1; }
-.dia .badge { width: 16px; height: 16px; font-size: 10px; }
-.dia.futuro { opacity: .6; }
 .kv { display: flex; justify-content: space-between; gap: 12px; padding-block: 6px; border-top: 1px solid var(--grid); }
 .kv:first-of-type { border-top: 0; }
 .grande { font-size: 28px; font-weight: 700; line-height: 1.1; }
@@ -159,7 +139,6 @@ th:first-child, td:first-child { text-align: left; }
 
 @media (min-width: 700px) {
   body { font-size: 16px; }
-  .dia { font-size: 12px; }
 }
 
 /* meta 80 % en la barra de zonas */
@@ -242,3 +221,26 @@ details.ses > details > summary { margin-top: 8px; }
 .volver { display: inline-block; margin-top: 12px; padding: 6px 2px; font-weight: 600; text-decoration: none; }
 .tabla-scroll.ancha { max-height: 360px; overflow-x: auto; }
 .tabla-scroll.ancha th, .tabla-scroll.ancha td { padding-inline: 4px; white-space: nowrap; }
+
+/* v3.1: pantalla Hoy */
+.banner { margin: 12px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); font-weight: 600; font-size: 14px; }
+.grande .chico { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+/* Barra de progreso: un solo color de acento sobre rejilla; el valor va en texto */
+.prog { height: 12px; margin-top: 10px; background: var(--grid); border-radius: 6px; overflow: hidden; }
+.prog > div { height: 100%; background: var(--s1); border-radius: 6px; min-width: 0; }
+.prog-txt { margin: 6px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.corrida { padding-block: 12px; border-top: 1px solid var(--grid); }
+.corrida:first-of-type { border-top: 0; }
+.corrida .cab-c { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.corrida .n { font-weight: 650; }
+.corrida .datos { margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+.corrida .estado { margin: 4px 0; }
+.corrida.hoy { background: var(--page); box-shadow: inset 4px 0 0 var(--s1), 0 0 0 1px var(--ring); border-radius: 10px; padding: 12px 12px 12px 16px; margin-block: 6px; border-top: 0; }
+.corrida.hoy .aviso { margin-block: 8px; }
+.chip-hoy { font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--page); }
+details.ses.corrida { padding-block: 0; }
+details.ses.corrida > summary { padding-block: 12px; }
+details.recup { margin-block: 12px; }
+details.recup > summary { display: flex; align-items: center; gap: 8px; margin-top: 0; padding-block: 8px; color: var(--ink); font-size: 14px; }
+details.recup .badge { width: 18px; height: 18px; font-size: 11px; }
+details.recup .senales { margin-top: 6px; }

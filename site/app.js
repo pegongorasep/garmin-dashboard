@@ -48,10 +48,10 @@ function haceCuanto(iso) {
 // --- estado con ícono + texto ---
 
 const ESTADO_SEMAFORO = {
-  verde: { clase: "ok", icono: "✓", titulo: "Verde", texto: "Recuperado: sesión normal" },
-  amarillo: { clase: "warn", icono: "!", titulo: "Amarillo", texto: "Precaución: versión suave" },
-  rojo: { clase: "bad", icono: "✕", titulo: "Rojo", texto: "Alerta: descanso o caminata ligera" },
-  sin_datos: { clase: "nd", icono: "—", titulo: "Sin datos", texto: "No hay datos de anoche: decide por cómo te sientes" },
+  verde: { clase: "ok", icono: "✓", titulo: "Verde", texto: "Recuperación: todo bien" },
+  amarillo: { clase: "warn", icono: "!", titulo: "Amarillo", texto: "Recuperación: suave hoy" },
+  rojo: { clase: "bad", icono: "✕", titulo: "Rojo", texto: "Recuperación: descanso hoy" },
+  sin_datos: { clase: "nd", icono: "—", titulo: "Sin datos", texto: "Recuperación: sin datos de anoche" },
 };
 
 const badge = (clase, icono, etiqueta) =>
@@ -88,57 +88,6 @@ const mmss = (seg) => {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 };
 
-function semaforoCard(d) {
-  const sem = d.hoy.semaforo, est = ESTADO_SEMAFORO[sem.color] || ESTADO_SEMAFORO.sin_datos;
-  const nota = sem.color === "sin_datos" ? "Sin HRV, FC en reposo ni sueño de anoche" : sem.fuera === 0 ? "Ninguna señal fuera de rango"
-    : `${sem.fuera} señal${sem.fuera === 1 ? "" : "es"} fuera de rango`;
-  return h("div", { class: `semaforo ${sem.color}`, role: "group", "aria-label": `Semáforo ${est.titulo}` },
-    h("div", { class: "cab" },
-      badge(est.clase, est.icono, est.titulo),
-      h("div", {}, h("div", { class: "titulo" }, est.titulo), h("div", {}, est.texto), h("div", { class: "nota" }, nota))),
-    h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((s) =>
-      h("li", {}, badgeSenal(s.estado),
-        h("div", {}, h("div", { class: "nombre" }, NOMBRE_SENAL[s.id] || s.id), h("div", { class: "nota" }, s.texto))))));
-}
-
-function cuerpoSesion(t, plan) {
-  const s = t.sesion;
-  const aviso = t.aviso ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)) : null;
-  if (t.version === "descanso") {
-    return [h("h3", {}, "Hoy: descanso o caminata ligera"), aviso,
-      h("p", { class: "nota" }, `La sesión ${s ? s.name : ""} queda pendiente. Si la señal mejora, repónla otro día libre de esta semana.`)];
-  }
-  if (!s) return [h("h3", {}, t.texto), aviso];
-  const suave = t.version === "suave";
-  const ses = suave ? s.easy : s;
-  return [h("h3", {}, `Sesión ${s.name} · ${ses.minutes} min${suave ? " (versión suave)" : ""}`), aviso,
-    h("ul", { class: "pasos" }, ses.steps.map(pasoLi))];
-}
-
-function tarjetaHoy(d) {
-  const t = d.hoy.tarjeta, plan = d.plan || {};
-  const c = h("div", { class: "card" }, h("h2", {}, "Sesión de hoy"));
-  const poner = (...xs) => c.append(...xs.filter(Boolean));
-  const aviso = t.aviso && t.tipo !== "sesion" ? h("p", { class: "nota" }, t.aviso) : null;
-  if (t.tipo === "crossfit") {
-    poner(h("h3", {}, "Hoy es CrossFit"), h("p", { class: "nota" }, "Las corridas van en días sin CrossFit."), aviso);
-  } else if (t.tipo === "hecha_hoy") {
-    poner(h("h3", {}, "Corrida de hoy hecha"), h("p", { class: "nota" }, "Buen trabajo. Descansa el resto del día."), aviso);
-  } else if (t.tipo === "sin_plan") {
-    poner(h("h3", {}, plan.inicio && (d.generado || "").slice(0, 10) < plan.inicio ? `El plan arranca el ${fechaCorta(plan.inicio)}` : "Hoy no hay semana de plan activa"),
-      h("p", { class: "nota" }, "Mientras tanto, el semáforo ya muestra cómo amaneciste."), aviso);
-  } else if (t.tipo === "completa") {
-    poner(h("h3", {}, "Semana completa"), h("p", { class: "nota" }, "Ya hiciste las corridas de la semana. Descansa."), aviso);
-  } else if (t.tipo === "sesion") {
-    c.append(...cuerpoSesion(t, plan).filter(Boolean));
-  } else {
-    c.append(h("p", {}, t.texto));
-  }
-  return c;
-}
-
-// --- Última corrida: ¿lo hice bien? ---
-
 function barraRW(tr) {
   const total = tr.trote_min + tr.camina_min;
   if (total <= 0) return null;
@@ -163,21 +112,7 @@ function detalleTrote(u) {
   return [barraRW(tr), h("p", { class: "nota", style: "margin-top:8px" }, patron), ritmo ? h("p", {}, ritmo) : null].filter(Boolean);
 }
 
-function tarjetaUltima(d) {
-  const u = d.ultima_corrida;
-  const c = h("div", { class: "card" }, h("h2", {}, "Última corrida · ¿lo hice bien?"));
-  if (!u) { c.append(h("p", { class: "vacio" }, "Aún no hay corridas registradas.")); return c; }
-  const s = u.sesion;
-  const ses = s ? `${s.name}${s.version === "suave" ? " (suave)" : ""} · plan ${s.minutes_plan}'` : "sin sesión del plan";
-  const techo = u.techo_ok
-    ? h("p", { class: "estado" }, badge("ok", "✓", "dentro del techo"), `${fmt(u.min_sobre_techo)}' sobre el techo (tolerancia ${fmt(u.tolerancia_min, 0)}')`)
-    : h("p", { class: "estado" }, badge("warn", "!", "sobre el techo"), `${fmt(u.min_sobre_techo)}' sobre el techo (tolerancia ${fmt(u.tolerancia_min, 0)}')`);
-  c.append(h("div", { class: "nota" }, `${fechaCorta(u.fecha)} · ${ses}`),
-    h("div", { class: "grande" }, `${fmt(u.minutos, 0)} min · ${fmt(u.km)} km`), techo, ...detalleTrote(u));
-  return c;
-}
-
-// --- Semana y plan de la semana ---
+// --- Sesiones del plan ---
 
 function estadoSesion(est) {
   if (!est) return null;
@@ -189,71 +124,164 @@ function estadoSesion(est) {
 
 const GARMIN_COMO = "Entrenamientos → Crear entrenamiento → Correr. Agrega un paso por línea (los grupos “N× ( … )” van como repetición). En cada paso elige duración en minutos y, como objetivo, “Alerta de FC” con el rango de lpm de arriba.";
 
+/** Pasos, versión suave y cómo crearla en Garmin Connect (cuerpo desplegable de una sesión del plan). */
+function cuerpoPlan(s) {
+  return [h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
+    s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`),
+      h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null,
+    comoGarmin()];
+}
+
+const comoGarmin = () =>
+  h("details", {}, h("summary", {}, "Cómo crearla en Garmin Connect"), h("p", { class: "nota", style: "margin-top:6px" }, GARMIN_COMO));
+
 /** Fila compacta de una sesión: nombre, minutos y estado; al abrirla, pasos, versión suave y cómo crearla en Garmin. */
 function filaSesion(s, est) {
   return h("details", { class: "ses" },
     h("summary", {}, h("span", { class: "n" }, s.name), h("span", { class: "m" }, `${s.minutes} min`), estadoSesion(est)),
-    h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
-    s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`),
-      h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null,
-    h("details", {}, h("summary", {}, "Cómo crearla en Garmin Connect"), h("p", { class: "nota", style: "margin-top:6px" }, GARMIN_COMO)));
-}
-
-const NOMBRE_TIPO = { crossfit: "CrossFit", corrida: "Corrida", descanso: "Libre", hoy: "Hoy", futuro: "—" };
-const GLIFO_TIPO = { crossfit: "◆", corrida: "●", descanso: "○", hoy: "▸", futuro: "·" };
-const LUZ_BADGE = { verde: ["ok", "✓"], amarillo: ["warn", "!"], rojo: ["bad", "✕"], sin_datos: ["nd", "—"] };
-
-function tira(dias, hoyIso) {
-  return h("div", { class: "tira" }, dias.map((x) => {
-    const luz = x.luz ? LUZ_BADGE[x.luz] : null;
-    return h("div", { class: `dia ${x.tipo === "hoy" || x.fecha === hoyIso ? "hoy" : ""} ${x.tipo === "futuro" ? "futuro" : ""}` },
-      h("span", { class: "d" }, x.dia_semana),
-      h("span", { class: "g", "aria-hidden": "true" }, GLIFO_TIPO[x.tipo]),
-      h("span", {}, NOMBRE_TIPO[x.tipo]),
-      luz ? badge(luz[0], luz[1], `semáforo ${x.luz}`) : h("span", { class: "badge nd", "aria-hidden": "true", style: "visibility:hidden" }, "·"));
-  }));
-}
-
-function tarjetaSemana(d) {
-  const s = d.semana;
-  const hoyIso = (s.dias.find((x) => x.tipo === "hoy") || {}).fecha;
-  const partes = [];
-  partes.push(s.sesiones_total > 0 ? `${s.hechas} de ${s.sesiones_total} corridas` : "Sin plan activo");
-  partes.push(`${fmt(s.km)} km`, `${fmt(s.min_trote, 0)}' trotando`);
-  if (s.incompletas > 0) partes.push(`${s.incompletas} ${s.incompletas === 1 ? "incompleta" : "incompletas"}`);
-  return h("div", { class: "card" }, h("h2", {}, "Esta semana"), tira(s.dias, hoyIso),
-    h("p", { class: "resumen-sem" }, partes.join(" · ")),
-    h("p", { class: "nota" }, "Ícono bajo cada día: semáforo de ese día."));
-}
-
-function tarjetaPlanSemana(d) {
-  const plan = d.plan || {};
-  const semanas = plan.semanas || [];
-  const w = semanas.find((x) => x.n === plan.semana_actual);
-  const c = h("div", { class: "card" }, h("h2", {}, "Plan de la semana"));
-  if (!w) {
-    const antes = plan.inicio && (d.generado || "").slice(0, 10) < plan.inicio;
-    c.append(h("p", {}, antes ? `El plan arranca el ${fechaCorta(plan.inicio)}` : "No hay una semana del plan activa."));
-    return c;
-  }
-  c.append(h("h3", {}, `Semana ${w.n} de ${semanas.length} · bloque ${w.block} · ${w.kind}`), h("p", { class: "nota" }, w.focus || ""),
-    ...(w.sessions || []).map((s) => filaSesion(s, (plan.estado_sesiones || []).find((e) => e.id === s.id))));
-  return c;
+    ...cuerpoPlan(s));
 }
 
 const enlaceDetalles = () => h("a", { class: "enlace-detalles", href: "#detalles" }, "Detalles: zonas, reglas, intensidad y carga →");
 
+// --- vista Hoy ---
+
+const nombreSesion = (estado, id) => ((estado || []).find((e) => e.id === id) || {}).name;
+
+function banner(d) {
+  const t = d.hoy.tarjeta, plan = d.plan || {}, est = plan.estado_sesiones || [];
+  const prox = nombreSesion(est, t.proxima_id);
+  let texto = null;
+  if (t.tipo === "crossfit") texto = prox ? `Hoy CrossFit · próxima corrida: ${prox}` : "Hoy CrossFit";
+  else if (t.tipo === "hecha_hoy") texto = prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
+  else if (t.tipo === "sin_plan") {
+    texto = plan.inicio && (d.generado || "").slice(0, 10) < plan.inicio ? `El plan arranca el ${fechaCorta(plan.inicio)}` : "Hoy no hay semana de plan activa";
+  } else if (t.tipo === "completa") texto = "Semana completa: hiciste las 3";
+  return texto ? h("p", { class: "banner" }, texto) : null;
+}
+
+function flecha(delta, texto) {
+  return `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${texto}`;
+}
+
+function comparacion(s) {
+  const a = s.anterior;
+  if (!a) return null;
+  if (!a.minutos && !a.km) return "Semana pasada sin corridas";
+  const dm = Math.round((s.minutos || 0) - a.minutos), dk = Math.round(((s.km || 0) - a.km) * 10) / 10;
+  return `vs semana pasada: ${flecha(dm, `${Math.abs(dm)} min`)} · ${flecha(dk, `${fmt(Math.abs(dk))} km`)}`;
+}
+
+/** Barra de progreso: minutos hechos / minutos del plan; el relleno se corta en 100 %. */
+function barraProgreso(min, plan) {
+  if (!plan) return h("p", { class: "prog-txt" }, `${fmt(min, 0)} min`);
+  const pct = Math.round((min / plan) * 100);
+  return h("div", {},
+    h("div", { class: "prog", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": Math.min(pct, 100),
+      "aria-label": `${fmt(min, 0)} de ${fmt(plan, 0)} minutos` }, h("div", { style: `width:${Math.min(pct, 100)}%` })),
+    h("p", { class: "prog-txt" }, `${fmt(min, 0)} / ${fmt(plan, 0)} min · ${pct} %`));
+}
+
+function tarjetaEstaSemana(d) {
+  const s = d.semana, plan = d.plan || {}, semanas = plan.semanas || [];
+  const w = semanas.find((x) => x.n === plan.semana_actual);
+  const titulo = w ? `Esta semana · Semana ${w.n} de ${semanas.length} · ${w.kind}` : "Esta semana";
+  const c = h("div", { class: "card" }, h("h2", {}, titulo));
+  if (s.sesiones_total > 0) {
+    c.append(h("div", { class: "grande" }, `${s.hechas} de ${s.sesiones_total} corridas`,
+      s.incompletas > 0 ? h("span", { class: "chico" }, ` · ${s.incompletas} ${s.incompletas === 1 ? "incompleta" : "incompletas"}`) : null));
+  }
+  c.append(barraProgreso(s.minutos || 0, s.plan_min));
+  const partes = [s.km !== null && s.km !== undefined ? `${fmt(s.km)} km` : null,
+    s.min_trote ? `${fmt(s.min_trote, 0)}' trotando` : null,
+    s.pct_trote !== null && s.pct_trote !== undefined ? `${fmt(s.pct_trote, 0)} % trote` : null].filter(Boolean);
+  if (partes.length && s.minutos) c.append(h("p", { class: "resumen-sem" }, partes.join(" · ")));
+  const comp = comparacion(s);
+  if (comp) c.append(h("p", { class: "nota" }, comp));
+  const u = d.ultima_corrida;
+  if (u && s.hechas + s.incompletas === 0 && !s.minutos) {
+    c.append(h("p", { class: "nota" }, `Última corrida: ${fechaCorta(u.fecha)} · ${fmt(u.minutos, 0)}' · ${fmt(u.km)} km`));
+  }
+  return c;
+}
+
+function lineaTecho(c) {
+  const txt = `${fmt(c.min_sobre_techo)}' sobre el techo (tolerancia ${fmt(c.tolerancia_min, 0)}')`;
+  return c.techo_ok
+    ? h("p", { class: "estado" }, badge("ok", "✓", "dentro del techo"), txt)
+    : h("p", { class: "estado" }, badge("warn", "!", "sobre el techo"), txt);
+}
+
+function filaHecha(e) {
+  const c = e.corrida || {};
+  const datos = [c.minutos != null ? `${fmt(c.minutos, 0)}'` : null, c.km != null ? `${fmt(c.km)} km` : null,
+    c.pct_trote != null ? `${fmt(c.pct_trote, 0)} % trote` : null,
+    c.ritmo_trote_s ? `${mmss(c.ritmo_trote_s)} /km${c.caminadora ? " (caminadora)" : ""}` : null].filter(Boolean);
+  return h("div", { class: "corrida" },
+    h("div", { class: "cab-c" }, estadoSesion(e), h("span", { class: "n" }, `${e.name} · ${e.fecha ? fechaCorta(e.fecha) : ""}`)),
+    datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
+    c.techo_ok !== undefined ? lineaTecho(c) : null,
+    h("details", {}, h("summary", {}, "Ver detalle"),
+      ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora })));
+}
+
+function filaHoy(e, s, t) {
+  const suave = t.version === "suave";
+  const ses = s && suave ? s.easy : s;
+  const c = h("div", { class: "corrida hoy" },
+    h("div", { class: "cab-c" }, h("span", { class: "chip-hoy" }, "HOY"),
+      h("span", { class: "n" }, t.version === "descanso" ? e.name : `${e.name}${ses ? ` · ${ses.minutes} min` : ""}${suave ? " (versión suave)" : ""}`)));
+  if (t.motivo) c.append(h("p", { class: "nota" }, `Por: ${t.motivo}`));
+  if (t.version === "descanso") {
+    c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
+  } else if (ses) {
+    c.append(h("ul", { class: "pasos" }, ses.steps.map(pasoLi)));
+  }
+  if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
+  if (t.version !== "descanso" && ses) c.append(comoGarmin());
+  return c;
+}
+
+function filaPendiente(e, s) {
+  const larga = e.tipo === "larga";
+  return h("details", { class: "ses corrida" },
+    h("summary", {}, h("span", { class: "n" }, `○ ${e.name}`),
+      h("span", { class: "m" }, `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}`)),
+    ...(s ? cuerpoPlan(s) : []));
+}
+
+function tarjetaTusCorridas(d) {
+  const plan = d.plan || {}, est = plan.estado_sesiones || [], t = d.hoy.tarjeta;
+  const w = (plan.semanas || []).find((x) => x.n === plan.semana_actual);
+  if (!w || !est.length) return null;
+  const filas = est.map((e) => {
+    const s = (w.sessions || []).find((x) => x.id === e.id);
+    if (e.estado !== "pendiente") return filaHecha(e);
+    if (t.tipo === "sesion" && t.sesion_id === e.id) return filaHoy(e, t.sesion || s, t);
+    return filaPendiente(e, s);
+  });
+  return h("div", { class: "card" }, h("h2", {}, `Tus ${est.length} corridas`), ...filas);
+}
+
+function recuperacion(d) {
+  const sem = d.hoy.semaforo, est = ESTADO_SEMAFORO[sem.color] || ESTADO_SEMAFORO.sin_datos;
+  return h("details", { class: "recup" },
+    h("summary", {}, badge(est.clase, est.icono, est.titulo), est.texto),
+    h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((x) =>
+      h("li", {}, badgeSenal(x.estado),
+        h("div", {}, h("div", { class: "nombre" }, NOMBRE_SENAL[x.id] || x.id), h("div", { class: "nota" }, x.texto))))));
+}
+
 function renderHoy(d) {
   $("vista-hoy").replaceChildren(...[
-    semaforoCard(d),
     d.hoy.semaforo.repetir_semana
       ? h("div", { class: "aviso bad" }, badge("bad", "✕", "aviso"),
         h("div", {}, h("strong", {}, "Repetir la semana. "), "Dos días seguidos en rojo: repite la semana anterior del plan."))
       : null,
+    banner(d), tarjetaEstaSemana(d), tarjetaTusCorridas(d), recuperacion(d),
     d.aviso_zonas ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, d.aviso_zonas)) : null,
-    tarjetaHoy(d), tarjetaUltima(d), tarjetaSemana(d), tarjetaPlanSemana(d), enlaceDetalles()].filter(Boolean));
+    enlaceDetalles()].filter(Boolean));
 }
-
 function bloqueCarga(s) {
   const a = s.carga.total, b = s.carga_anterior.total;
   let delta = "Sin semana anterior para comparar";
