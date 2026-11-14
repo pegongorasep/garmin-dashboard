@@ -170,6 +170,35 @@ para ajustes grandes (subir volumen, repetir semana, recalcular zonas).
 - Botones manuales de hecha/no hecha (no hay dónde guardarlos).
 - Asignar corridas por el nombre de la actividad en Garmin (Pedro no les pone nombre).
 
+## 8. Cambios v3.2 (2026-11-14) — APROBADO por Pedro, falta plan de construcción
+
+Ya hecho: el plan arranca el **lun 9 nov 2026** (la corrida del jue 12 = Z2 #1).
+
+### 8.1 Pantalla Hoy, de arriba abajo
+1. **Esta semana — siempre arriba y con TODAS las corridas reales** (aunque no haya plan activo, sean
+   extra o en días no planeados): "N corridas · min · km · % trote". Lo del plan como dato secundario
+   ("Plan: 2 de 3 sesiones · 78 / 80 min"). Sigue el selector de semana (8.2).
+2. **Calendario de 7 días** (vuelve): corridas protagonistas (círculo de color, minutos, sesión);
+   CrossFit chico y gris con su intensidad = RPE si existe, si no **Training Effect aeróbico de Garmin**
+   (`aerobicTrainingEffect`, 0–5, 1 decimal); días futuros con lo planeado en tenue.
+3. **Tus corridas** con selector **‹ Semana n de 12 ›** arriba: semanas pasadas (hechas, sin hacer,
+   extras con sus datos), actual y futuras (plan con pasos). Las corridas que no caben en una sesión
+   salen como **"Extra"**. "Esta semana" y el calendario siguen a la semana elegida.
+4. **Cómo vas mejorando**: frase resumen + 2 mini gráficas (minutos por semana últimas 8 vs plan; % trote
+   por corrida) + una línea de InBody ("13 nov · Grasa 27.1 % ▼3.0 · Músculo 39.1 kg ▲1.1 · Visceral 10").
+   Tocar lleva a Progreso. Ritmo trotando solo en Progreso.
+5. **Recuperación** colapsada (como en v3.1).
+
+### 8.2 Composición corporal (InBody)
+- Datos en `plan/inbody.json` (se capturan a mano de la foto mensual; se publica todo menos nombre, ID
+  y fecha de nacimiento).
+- Principal: **% de grasa (PGC)** y **músculo esquelético (MME)**; secundarios: peso, puntuación,
+  grasa visceral (rango sano 1–9), masa grasa (kg = peso × PGC si no viene).
+- **Prime** = la mejor medición (menor % de grasa): 25 may 2024 (22.3 %, MME 38.4, 86.2 kg). Se marca en
+  las gráficas y se muestra la meta "superar tu prime" (cuánto falta en % de grasa; MME ≥ la del prime).
+- Progreso: sección "Composición corporal": gráfica de recomposición (masa grasa y masa muscular, kg,
+  un eje), % de grasa en el tiempo con la raya del prime, tabla de mediciones.
+
 ## 6. Preguntas abiertas
 1. ¿Algo del documento que quieras cambiar antes de aprobarlo?
 
