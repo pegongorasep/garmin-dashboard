@@ -168,8 +168,11 @@ function comparacion(s) {
   const a = s.anterior;
   if (!a) return null;
   if (!a.minutos && !a.km) return "Semana pasada sin corridas";
-  const dm = Math.round((s.minutos || 0) - a.minutos), dk = Math.round(((s.km || 0) - a.km) * 10) / 10;
-  return `vs semana pasada: ${flecha(dm, `${Math.abs(dm)} min`)} · ${flecha(dk, `${fmt(Math.abs(dk))} km`)}`;
+  const total = `Semana pasada: ${fmt(a.minutos, 0)} min · ${fmt(a.km)} km`;
+  // Solo se compara cuando esta semana ya la superó; a media semana una flecha ▼ asusta sin razón.
+  if ((s.minutos || 0) < a.minutos) return total;
+  const dm = Math.round(s.minutos - a.minutos), dk = Math.round(((s.km || 0) - a.km) * 10) / 10;
+  return `${total} · ya la superaste: ${flecha(dm, `${Math.abs(dm)} min`)} · ${flecha(dk, `${fmt(Math.abs(dk))} km`)}`;
 }
 
 /** Barra de progreso: minutos hechos / minutos del plan; el relleno se corta en 100 %. */
@@ -245,7 +248,7 @@ function filaHoy(e, s, t) {
 function filaPendiente(e, s) {
   const larga = e.tipo === "larga";
   return h("details", { class: "ses corrida" },
-    h("summary", {}, h("span", { class: "n" }, `○ ${e.name}`),
+    h("summary", {}, h("span", { class: "n" }, e.name),
       h("span", { class: "m" }, `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}`)),
     ...(s ? cuerpoPlan(s) : []));
 }
@@ -266,7 +269,7 @@ function tarjetaTusCorridas(d) {
 function recuperacion(d) {
   const sem = d.hoy.semaforo, est = ESTADO_SEMAFORO[sem.color] || ESTADO_SEMAFORO.sin_datos;
   return h("details", { class: "recup" },
-    h("summary", {}, badge(est.clase, est.icono, est.titulo), est.texto),
+    h("summary", {}, badge(est.clase, est.icono, est.titulo), est.texto, h("span", { class: "nota" }, " · ver señales")),
     h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((x) =>
       h("li", {}, badgeSenal(x.estado),
         h("div", {}, h("div", { class: "nombre" }, NOMBRE_SENAL[x.id] || x.id), h("div", { class: "nota" }, x.texto))))));

@@ -126,4 +126,4 @@ Al final regenera `data.json` sin flags. Actualiza la tabla de seguimiento de ab
 | F1 Datos | ✅ |
 | F2 Vista Hoy | ✅ |
 | F3 Capturas | ✅ |
-| Revisión Opus + publicar | ⬜ |
+| Revisión Opus + publicar | ✅ 2026-11-14 |
