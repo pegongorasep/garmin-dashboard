@@ -131,7 +131,7 @@ def week_runs(hoy: date, data: dict, config: dict) -> list:
     ini = monday(hoy)
     runs = sorted((a for a in data["activities"] if m.classify(a, config) == "run"
                    and ini <= m.day_of(a) <= hoy), key=lambda a: a["startTimeLocal"])
-    return [{"fecha": m.day_of(a).isoformat(),
+    return [{"fecha": m.day_of(a).isoformat(), "minutos": a["duration"] / 60,
              "luz": light_on(m.day_of(a), data, config)["color"]} for a in runs]
 
 
@@ -175,7 +175,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     n = m.week_index(hoy, date.fromisoformat(config["plan_start"]), repetidas)
     semanas = {w["n"]: w for w in plan["weeks"]}
     semana_plan = semanas.get(n)
-    estado = m.plan_status(semana_plan, week_runs(hoy, data, config)) if semana_plan else []
+    estado = m.assign_sessions(semana_plan, week_runs(hoy, data, config), config) if semana_plan else []
 
     tarjeta = m.today_card(hoy, luz, estado, data["activities"], config)
     if tarjeta["sesion_id"] and semana_plan:
@@ -199,8 +199,8 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                  "estado_sesiones": estado},
         "tendencias": build_trends(hoy, data, config),
         "corridas": [{**f, "minutos": r1(f["minutos"]), "pct_z1z2": r1(f["pct_z1z2"]),
-                      "eficiencia": None if f["eficiencia"] is None else round(f["eficiencia"], 3)}
-                     for f in m.run_rows(data["activities"], config)],
+                      }
+                     for f in m.run_rows(data["activities"], data["details"], config)],
         "fc_max": {**fc_max, "config": config["max_hr"], "fuente": "reloj" if reloj else "respaldo"},
         "umbrales": {k: config[k] for k in ("rhr_tolerance_bpm", "sleep_min_hours", "rpe_heavy",
                                             "max_hr", "max_hr_floor", "zone_pcts")},

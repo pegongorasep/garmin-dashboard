@@ -2,7 +2,7 @@
 
 Convenciones: `day` y `week_start` son objetos date; las fechas de Garmin
 (`calendarDate`, `startTimeLocal`) ya vienen en hora local de Mérida.
-Semáforo: "verde" | "amarillo" | "rojo".
+Semáforo: "verde" | "amarillo" | "rojo" | "sin_datos".
 """
 from datetime import date, timedelta
 
@@ -160,7 +160,12 @@ def signals(day: date, data: dict, config: dict) -> dict:
 
 
 def traffic_light(sigs: dict, prev_light) -> dict:
-    """Semáforo del día. `sin_dato` no cuenta como fuera. prev_light: color de ayer o None."""
+    """Semáforo del día. `sin_dato` no cuenta como fuera. prev_light: color de ayer o None.
+
+    Si HRV, FC en reposo y sueño están los tres sin dato, el color es "sin_datos" (no verde).
+    """
+    if all(sigs[k]["estado"] == "sin_dato" for k in ("hrv", "rhr", "sueno")):
+        return {"color": "sin_datos", "fuera": 0, "repetir_semana": False}
     fuera = sum(1 for s in sigs.values() if s["estado"] == "fuera")
     if sigs["hrv"].get("hrv_baja") or fuera >= 2:
         color = "rojo"
@@ -185,61 +190,200 @@ def week_index(day: date, plan_start: date, repetidas=()):
     return secuencia[i] if 0 <= i < len(secuencia) else None
 
 
-def plan_status(week: dict, runs_this_week: list) -> list:
-    """Asigna las corridas hechas, en orden, a las sesiones de la semana.
+def es_fin_de_semana(fecha) -> bool:
+    return date.fromisoformat(fecha).weekday() >= 5
 
-    runs_this_week: [{"fecha": "YYYY-MM-DD", "luz": "verde"|"amarillo"|"rojo"|None}] en orden.
-    Devuelve [{"id", "estado": "hecha"|"pendiente", "ajustada": bool, "fecha"}].
+
+def _ref_minutos(sesion: dict, luz) -> int:
+    """Minutos de referencia: los de la versión suave si ese día fue amarillo/rojo."""
+    return sesion["easy"]["minutes"] if luz in ("amarillo", "rojo") else sesion["minutes"]
+
+
+def _estado_sesion(sesion: dict, corrida, config: dict) -> dict:
+    base = {"id": sesion["id"], "name": sesion["name"], "tipo": sesion.get("tipo")}
+    if corrida is None:
+        return {**base, "estado": "pendiente", "ajustada": False, "fecha": None, "minutos": None}
+    suave = corrida.get("luz") in ("amarillo", "rojo")
+    hecha = corrida["minutos"] + 0.5 >= config["done_ratio"] * _ref_minutos(sesion, corrida.get("luz"))
+    return {**base, "estado": "hecha" if hecha else "incompleta", "ajustada": hecha and suave,
+            "fecha": corrida["fecha"], "minutos": corrida["minutos"]}
+
+
+def assign_sessions(week: dict, runs: list, config: dict) -> list:
+    """Asigna las corridas de la semana a sus sesiones (sin mirar nombres).
+
+    runs: [{"fecha", "minutos", "luz"}] en orden cronológico. Una corrida en sáb/dom con
+    minutos + 0.5 ≥ done_ratio × larga → Larga (la más larga si hay varias). Las demás, en
+    orden, llenan las Z2; las sobrantes son "extra" y no se asignan. `luz` "sin_datos" cuenta
+    como verde. Devuelve un dict por sesión, en el orden de la semana.
     """
-    out = []
-    for i, s in enumerate(week["sessions"]):
-        run = runs_this_week[i] if i < len(runs_this_week) else None
-        out.append({"id": s["id"], "estado": "hecha" if run else "pendiente",
-                    "ajustada": bool(run) and run.get("luz") in ("amarillo", "rojo"),
-                    "fecha": run["fecha"] if run else None})
-    return out
+    sesiones = week["sessions"]
+    larga = next((s for s in sesiones if s.get("tipo") == "larga"), None)
+    elegida = None
+    if larga:
+        candidatas = [r for r in runs if es_fin_de_semana(r["fecha"])
+                      and r["minutos"] + 0.5 >= config["done_ratio"] * larga["minutes"]]
+        elegida = max(candidatas, key=lambda r: r["minutos"], default=None)
+    resto = [r for r in runs if r is not elegida]
+    asignadas = {}
+    for s in sesiones:
+        if s is larga:
+            asignadas[s["id"]] = elegida
+        else:
+            asignadas[s["id"]] = resto.pop(0) if resto else None
+    return [_estado_sesion(s, asignadas[s["id"]], config) for s in sesiones]
+
+
+AVISO_LARGA = "La larga va el sábado o domingo"
+AVISO_SIN_DATOS = "Sin datos de anoche: decide por cómo te sientes"
+
+
+def _unir_avisos(*avisos):
+    unidos = " · ".join(a for a in avisos if a)
+    return unidos or None
+
+
+def _elegir_pendiente(day: date, status: list):
+    """(sesión pendiente, aviso). Sáb/dom: la Larga primero; entre semana: una Z2, y la Larga solo si no hay."""
+    pendientes = [s for s in status if s["estado"] == "pendiente"]
+    larga = next((s for s in pendientes if s["tipo"] == "larga"), None)
+    z2 = next((s for s in pendientes if s["tipo"] != "larga"), None)
+    if day.weekday() >= 5:
+        return (larga or z2), None
+    if z2:
+        return z2, None
+    return larga, (AVISO_LARGA if larga else None)
 
 
 def today_card(day: date, light: dict, status: list, activities: list, config: dict) -> dict:
-    """Qué mostrar hoy. light = resultado de traffic_light; status = plan_status."""
+    """Qué mostrar hoy. light = resultado de traffic_light; status = assign_sessions."""
     hoy = [a for a in activities if day_of(a) == day]
     hay_cf = any(classify(a, config) == "crossfit" for a in hoy)
     hay_run = any(classify(a, config) == "run" for a in hoy)
     aviso = "Repetir la semana" if light.get("repetir_semana") else None
-    if hay_cf or (day.weekday() in (0, 1, 3) and not hay_run):
-        return {"tipo": "crossfit", "texto": "Hoy es CrossFit", "version": None,
-                "sesion_id": None, "aviso": aviso}
+    base = {"version": None, "sesion_id": None, "aviso": aviso}
+    if hay_cf or (day.weekday() in config["crossfit_days"] and not hay_run):
+        return {"tipo": "crossfit", "texto": "Hoy es CrossFit", **base}
     if hay_run:
-        return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", "version": None,
-                "sesion_id": None, "aviso": aviso}
+        return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", **base}
     if not status:
-        return {"tipo": "sin_plan", "texto": "Hoy no hay semana de plan activa", "version": None,
-                "sesion_id": None, "aviso": aviso}
-    pendientes = [s for s in status if s["estado"] == "pendiente"]
-    if not pendientes:
-        return {"tipo": "completa", "texto": "Semana completa, descansa", "version": None,
-                "sesion_id": None, "aviso": aviso}
-    version = {"verde": "normal", "amarillo": "suave", "rojo": "descanso"}[light["color"]]
+        return {"tipo": "sin_plan", "texto": "Hoy no hay semana de plan activa", **base}
+    sesion, aviso_larga = _elegir_pendiente(day, status)
+    if sesion is None:
+        return {"tipo": "completa", "texto": "Semana completa", **base}
+    sin_datos = light["color"] == "sin_datos"
+    version = "normal" if sin_datos else {"verde": "normal", "amarillo": "suave", "rojo": "descanso"}[light["color"]]
+    aviso = _unir_avisos(aviso, aviso_larga, AVISO_SIN_DATOS if sin_datos else None)
     return {"tipo": "sesion", "texto": f"Siguiente sesión: versión {version}",
-            "version": version, "sesion_id": pendientes[0]["id"], "aviso": aviso}
+            "version": version, "sesion_id": sesion["id"], "aviso": aviso}
 
 
-def run_rows(activities: list, config: dict) -> list:
-    """Una fila por corrida: fecha, minutos, FC promedio, % en Z1–Z2 y eficiencia aeróbica."""
+# --- trote / caminata ---
+
+def _tramos(activity: dict, details: dict) -> list:
+    """Tramos RWD_* de details (con FC) o, si no hay, de splitSummaries de la lista (sin FC)."""
+    guardados = (details.get(str(activity["activityId"])) or {}).get("splits")
+    if guardados:
+        return guardados
+    return [{"tipo": t.get("splitType"), "seg": t.get("duration"), "m": t.get("distance"),
+             "fc": None, "n": t.get("noOfSplits")} for t in activity.get("splitSummaries") or []]
+
+
+def _suma_tramos(tramos: list, tipo: str) -> dict:
+    ts = [t for t in tramos if t.get("tipo") == tipo]
+    seg = sum(t.get("seg") or 0 for t in ts)
+    con_fc = [t for t in ts if t.get("fc") is not None and t.get("seg")]
+    peso = sum(t["seg"] for t in con_fc)
+    return {"seg": seg, "m": sum(t.get("m") or 0 for t in ts), "n": sum(t.get("n") or 0 for t in ts),
+            "fc": sum(t["fc"] * t["seg"] for t in con_fc) / peso if peso else None, "hay": bool(ts)}
+
+
+def run_walk(activity: dict, details: dict):
+    """Trote vs caminata de una corrida (RWD_RUN / RWD_WALK); None si no hay tramos."""
+    tramos = _tramos(activity, details)
+    run, walk = _suma_tramos(tramos, "RWD_RUN"), _suma_tramos(tramos, "RWD_WALK")
+    if not (run["hay"] or walk["hay"]):
+        return None
+    trote, camina = run["seg"] / 60, walk["seg"] / 60
+    total = trote + camina
+    return {"trote_min": trote, "camina_min": camina,
+            "pct_trote": trote / total * 100 if total else None,
+            "caminatas": walk["n"],
+            "patron_trote_min": trote / run["n"] if run["n"] else None,
+            "patron_camina_min": camina / walk["n"] if walk["n"] else None,
+            "km_trote": run["m"] / 1000,
+            "ritmo_trote_s": run["seg"] / (run["m"] / 1000) if run["m"] else None,
+            "fc_trote": run["fc"]}
+
+
+RW_CLAVES = ["trote_min", "camina_min", "pct_trote", "caminatas", "patron_trote_min",
+             "patron_camina_min", "km_trote", "ritmo_trote_s", "fc_trote"]
+
+
+def _tiene_opcionales(pasos: list) -> bool:
+    return any(p.get("optional") or _tiene_opcionales(p.get("steps", [])) for p in pasos)
+
+
+def run_check(activity: dict, session, config=None) -> dict:
+    """¿Lo hice bien?: minutos sobre el techo de Z2 (Z3+Z4+Z5) vs la tolerancia."""
+    zm = zone_minutes(activity)
+    sobre = round(zm["Z3"] + zm["Z4"] + zm["Z5"], 1)
+    tolerancia = (config or {}).get("ceiling_tolerance_min", 2)
+    if session and _tiene_opcionales(session.get("steps", [])):
+        tolerancia += 2
+    return {"min_sobre_techo": sobre, "tolerancia_min": tolerancia, "techo_ok": sobre <= tolerancia}
+
+
+def rolling_mean(valores: list, ventana: int = 7, minimo: int = 3) -> list:
+    """Media móvil de los valores no nulos de los últimos `ventana` puntos; None si hay menos de `minimo`."""
+    out = []
+    for i in range(len(valores)):
+        vs = [v for v in valores[max(0, i - ventana + 1):i + 1] if v is not None]
+        out.append(sum(vs) / len(vs) if len(vs) >= minimo else None)
+    return out
+
+
+def run_rows(activities: list, details: dict, config: dict) -> list:
+    """Una fila por corrida: fecha, minutos, km, FC promedio, % en Z1–Z2, caminadora y trote/caminata."""
     filas = []
-    for a in activities:
+    for a in sorted(activities, key=lambda a: a["startTimeLocal"]):
         if classify(a, config) != "run":
             continue
         zm = zone_minutes(a)
         total = sum(zm.values())
-        hr, vel = a.get("averageHR"), a.get("averageSpeed")
-        eficiencia = None
-        if a["activityType"]["typeKey"] == "running" and hr and vel:
-            eficiencia = vel * 60 / hr
+        rw = run_walk(a, details) or dict.fromkeys(RW_CLAVES)
         filas.append({"fecha": day_of(a).isoformat(), "minutos": a["duration"] / 60,
-                      "fc_prom": hr, "pct_z1z2": (zm["Z1"] + zm["Z2"]) / total * 100 if total else None,
-                      "eficiencia": eficiencia})
-    return sorted(filas, key=lambda f: f["fecha"])
+                      "km": (a.get("distance") or 0) / 1000, "fc_prom": a.get("averageHR"),
+                      "pct_z1z2": (zm["Z1"] + zm["Z2"]) / total * 100 if total else None,
+                      "caminadora": a["activityType"]["typeKey"] == "treadmill_running", **rw})
+    return filas
+
+
+def _promedio(valores: list):
+    vs = [v for v in valores if v is not None]
+    return sum(vs) / len(vs) if vs else None
+
+
+def _mmss(seg: float) -> str:
+    seg = round(seg)
+    return f"{seg // 60}:{seg % 60:02d}"
+
+
+def progress_summary(rows: list, hoy: date, semanas: int) -> str:
+    """Compara las corridas al aire libre de las últimas `semanas` contra las `semanas` anteriores."""
+    corte = hoy - timedelta(weeks=semanas)
+    antes_corte = corte - timedelta(weeks=semanas)
+    aire = [r for r in rows if not r["caminadora"] and r.get("pct_trote") is not None]
+    ahora = [r for r in aire if corte < date.fromisoformat(r["fecha"]) <= hoy]
+    antes = [r for r in aire if antes_corte < date.fromisoformat(r["fecha"]) <= corte]
+    if not ahora or not antes:
+        return "Aún no hay corridas suficientes para comparar"
+    pct_a, pct_b = (_promedio([r["pct_trote"] for r in g]) for g in (ahora, antes))
+    texto = f"Trotas {pct_a:.0f} % del tiempo (antes {pct_b:.0f} %)"
+    rit_a, rit_b = (_promedio([r["ritmo_trote_s"] for r in g]) for g in (ahora, antes))
+    if rit_a and rit_b:
+        texto += f" · ritmo trotando {_mmss(rit_b)} → {_mmss(rit_a)} /km"
+    return texto
 
 
 def max_hr_progress(activities: list, config: dict) -> dict:

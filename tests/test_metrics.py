@@ -10,6 +10,7 @@ CFG = {
     "strap_in_crossfit_since": "2026-10-26", "rhr_tolerance_bpm": 4,
     "sleep_min_hours": 6.5, "rpe_heavy": 8,
     "run_types": ["running", "treadmill_running"], "crossfit_types": ["hiit", "strength_training"],
+    "crossfit_days": [0, 1, 3], "done_ratio": 0.7, "ceiling_tolerance_min": 2,
 }
 
 
@@ -135,6 +136,8 @@ def test_traffic_light_tabla():
     casos = [
         (_sigs(), None, "verde", False),
         (_sigs(hrv="sin_dato", rhr="sin_dato"), None, "verde", False),
+        (_sigs(hrv="sin_dato", rhr="sin_dato", sueno="sin_dato"), None, "sin_datos", False),
+        (_sigs(hrv="sin_dato", rhr="sin_dato", sueno="sin_dato", rpe="fuera"), "rojo", "sin_datos", False),
         (_sigs(sueno="fuera"), None, "amarillo", False),
         (_sigs(sueno="fuera", rpe="fuera"), None, "rojo", False),
         (_sigs(hrv="fuera", baja=True), None, "rojo", False),
@@ -171,57 +174,206 @@ def test_week_index_con_repetidas():
     assert m.week_index(ini - timedelta(days=1), ini, rep) is None
 
 
-WEEK = {"sessions": [{"id": "A"}, {"id": "B"}]}
+def sesion(id_, tipo, name, minutos, suave):
+    return {"id": id_, "tipo": tipo, "name": name, "minutes": minutos,
+            "steps": [{"kind": "run", "minutes": minutos, "zone": "Z1-Z2"}],
+            "easy": {"name": "Suave", "minutes": suave, "steps": []}}
 
 
-def test_plan_status():
-    runs = [{"fecha": "2026-10-28", "luz": "verde"}, {"fecha": "2026-10-31", "luz": "amarillo"}]
-    assert [s["estado"] for s in m.plan_status(WEEK, [])] == ["pendiente", "pendiente"]
-    uno = m.plan_status(WEEK, runs[:1])
-    assert [s["estado"] for s in uno] == ["hecha", "pendiente"] and not uno[0]["ajustada"]
-    dos = m.plan_status(WEEK, runs)
-    assert dos[1]["estado"] == "hecha" and dos[1]["ajustada"] is True
+WEEK = {"sessions": [sesion("z2a", "z2", "Z2 #1", 20, 15), sesion("z2b", "z2", "Z2 #2", 20, 15),
+                     sesion("larga", "larga", "Larga", 40, 30)]}
+# 2026-11-16 es lunes: mié 18, vie 20, sáb 21, dom 22
+MIE, VIE, SAB, DOM = "2026-11-18", "2026-11-20", "2026-11-21", "2026-11-22"
+
+
+def corr(fecha, minutos, luz="verde"):
+    return {"fecha": fecha, "minutos": minutos, "luz": luz}
+
+
+def estados(runs):
+    return [(s["id"], s["estado"], s["fecha"]) for s in m.assign_sessions(WEEK, runs, CFG)]
+
+
+def test_assign_semana_completa():
+    r = m.assign_sessions(WEEK, [corr(MIE, 21), corr(VIE, 20), corr(DOM, 41)], CFG)
+    assert [s["estado"] for s in r] == ["hecha"] * 3
+    assert r[2]["fecha"] == DOM and r[2]["minutos"] == 41 and r[2]["name"] == "Larga"
+
+
+def test_assign_sabado_corto_no_es_larga():
+    r = estados([corr(SAB, 25)])          # 25 + 0.5 < 28
+    assert r[0] == ("z2a", "hecha", SAB) and r[2] == ("larga", "pendiente", None)
+
+
+def test_assign_larga_justo_en_el_umbral():
+    r = m.assign_sessions(WEEK, [corr(DOM, 27.6)], CFG)
+    assert r[2]["estado"] == "hecha" and r[0]["estado"] == "pendiente"
+
+
+def test_assign_z2_incompleta():
+    r = m.assign_sessions(WEEK, [corr(MIE, 12)], CFG)
+    assert r[0]["estado"] == "incompleta" and r[0]["ajustada"] is False
+
+
+def test_assign_dia_amarillo_ajustada():
+    r = m.assign_sessions(WEEK, [corr(MIE, 20, "amarillo")], CFG)
+    assert r[0]["estado"] == "hecha" and r[0]["ajustada"] is True
+    # 11' en día amarillo: 11.5 >= 0.7 * 15 = 10.5 -> hecha; 9' no
+    assert m.assign_sessions(WEEK, [corr(MIE, 11, "rojo")], CFG)[0]["estado"] == "hecha"
+    assert m.assign_sessions(WEEK, [corr(MIE, 9, "amarillo")], CFG)[0]["estado"] == "incompleta"
+
+
+def test_assign_sin_datos_cuenta_como_verde():
+    r = m.assign_sessions(WEEK, [corr(MIE, 12, "sin_datos")], CFG)
+    assert r[0]["estado"] == "incompleta" and r[0]["ajustada"] is False
+
+
+def test_assign_sobrante_y_larga_mas_larga():
+    r = estados([corr(MIE, 20), corr(VIE, 20), corr(SAB, 30), corr(DOM, 45)])
+    # la más larga del fin de semana (dom 45) es la Larga; sáb 30 llena z2a... pero z2a ya tiene mié
+    assert r == [("z2a", "hecha", MIE), ("z2b", "hecha", VIE), ("larga", "hecha", DOM)]
+
+
+def test_assign_cuatro_corridas_sin_larga():
+    r = estados([corr(MIE, 20), corr(VIE, 20), corr("2026-11-19", 20), corr(SAB, 20)])
+    assert [x[1:] for x in r] == [("hecha", MIE), ("hecha", VIE), ("pendiente", None)]
+
+
+def test_assign_sin_corridas():
+    assert [s["estado"] for s in m.assign_sessions(WEEK, [], CFG)] == ["pendiente"] * 3
+
+
+def ses(id_, tipo, estado="pendiente"):
+    return {"id": id_, "tipo": tipo, "estado": estado}
+
+
+VERDE = {"color": "verde", "repetir_semana": False}
 
 
 def test_today_card_ramas():
-    verde = {"color": "verde", "repetir_semana": False}
-    pend = [{"id": "A", "estado": "pendiente"}, {"id": "B", "estado": "pendiente"}]
-    hecha = [{"id": "A", "estado": "hecha"}, {"id": "B", "estado": "pendiente"}]
-    todas = [{"id": "A", "estado": "hecha"}, {"id": "B", "estado": "hecha"}]
-    lun, mie = date(2026, 10, 26), date(2026, 10, 28)
-    # lunes sin corrida -> CrossFit
-    assert m.today_card(lun, verde, pend, [], CFG)["tipo"] == "crossfit"
-    # miércoles con CrossFit registrado -> CrossFit
-    assert m.today_card(mie, verde, pend, [act(1, "2026-10-28")], CFG)["tipo"] == "crossfit"
-    # lunes con corrida hecha hoy -> hecha_hoy, aunque haya sesión pendiente
-    assert m.today_card(lun, verde, hecha, [act(2, "2026-10-26", "running")], CFG)["tipo"] == "hecha_hoy"
-    assert m.today_card(mie, verde, todas, [act(2, "2026-10-28", "running")], CFG)["tipo"] == "hecha_hoy"
-    # CrossFit manda sobre la corrida
-    assert m.today_card(mie, verde, hecha, [act(2, "2026-10-28", "running"), act(3, "2026-10-28")], CFG)["tipo"] == "crossfit"
-    # miércoles libre: versión según semáforo y siguiente pendiente
-    assert m.today_card(mie, verde, hecha, [], CFG)["sesion_id"] == "B"
-    assert m.today_card(mie, verde, pend, [], CFG)["version"] == "normal"
-    assert m.today_card(mie, {**verde, "color": "amarillo"}, pend, [], CFG)["version"] == "suave"
-    assert m.today_card(mie, {**verde, "color": "rojo"}, pend, [], CFG)["version"] == "descanso"
-    # semana completa
-    assert m.today_card(mie, verde, todas, [], CFG)["tipo"] == "completa"
-    # fuera del plan (sin sesiones)
-    assert m.today_card(mie, verde, [], [], CFG)["tipo"] == "sin_plan"
-    # aviso de repetir semana
+    pend = [ses("z2a", "z2"), ses("z2b", "z2"), ses("larga", "larga")]
+    hecha = [ses("z2a", "z2", "hecha"), ses("z2b", "z2"), ses("larga", "larga")]
+    todas = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga", "hecha")]
+    lun, mie, vie, dom = date(2026, 11, 16), date(2026, 11, 18), date(2026, 11, 20), date(2026, 11, 22)
+    assert m.today_card(lun, VERDE, pend, [], CFG)["tipo"] == "crossfit"
+    assert m.today_card(mie, VERDE, pend, [act(1, "2026-11-18")], CFG)["tipo"] == "crossfit"
+    assert m.today_card(lun, VERDE, hecha, [act(2, "2026-11-16", "running")], CFG)["tipo"] == "hecha_hoy"
+    assert m.today_card(mie, VERDE, hecha, [act(2, "2026-11-18", "running"), act(3, "2026-11-18")], CFG)["tipo"] == "crossfit"
+    assert m.today_card(mie, VERDE, hecha, [], CFG)["sesion_id"] == "z2b"
+    t = m.today_card(mie, VERDE, pend, [], CFG)
+    assert t["version"] == "normal" and t["sesion_id"] == "z2a" and t["aviso"] is None
+    assert m.today_card(mie, {**VERDE, "color": "amarillo"}, pend, [], CFG)["version"] == "suave"
+    assert m.today_card(mie, {**VERDE, "color": "rojo"}, pend, [], CFG)["version"] == "descanso"
+    assert m.today_card(mie, VERDE, todas, [], CFG)["texto"] == "Semana completa"
+    assert m.today_card(mie, VERDE, todas, [], CFG)["tipo"] == "completa"
+    assert m.today_card(mie, VERDE, [], [], CFG)["tipo"] == "sin_plan"
     rojo2 = {"color": "rojo", "repetir_semana": True}
     assert m.today_card(mie, rojo2, pend, [], CFG)["aviso"] == "Repetir la semana"
+    # fin de semana: la Larga primero; si ya no está pendiente, la primera Z2
+    assert m.today_card(dom, VERDE, hecha, [], CFG)["sesion_id"] == "larga"
+    solo_z2 = [ses("z2a", "z2"), ses("z2b", "z2", "hecha"), ses("larga", "larga", "hecha")]
+    assert m.today_card(dom, VERDE, solo_z2, [], CFG)["sesion_id"] == "z2a"
+    # entre semana, si solo falta la Larga: aviso
+    solo_larga = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "incompleta"), ses("larga", "larga")]
+    t = m.today_card(vie, VERDE, solo_larga, [], CFG)
+    assert t["tipo"] == "sesion" and t["sesion_id"] == "larga" and "sábado o domingo" in t["aviso"]
+    # incompleta no es pendiente
+    inc = [ses("z2a", "z2", "incompleta"), ses("z2b", "z2", "hecha"), ses("larga", "larga", "hecha")]
+    assert m.today_card(vie, VERDE, inc, [], CFG)["tipo"] == "completa"
+
+
+def test_today_card_sin_datos():
+    pend = [ses("z2a", "z2"), ses("larga", "larga")]
+    mie = date(2026, 11, 18)
+    t = m.today_card(mie, {"color": "sin_datos", "fuera": 0, "repetir_semana": False}, pend, [], CFG)
+    assert t["version"] == "normal" and t["aviso"] == "Sin datos de anoche: decide por cómo te sientes"
+    rojo = {"color": "sin_datos", "fuera": 0, "repetir_semana": True}
+    assert m.today_card(mie, rojo, pend, [], CFG)["aviso"].startswith("Repetir la semana · Sin datos")
+
+
+TRAMOS_12NOV = [{"tipo": "RWD_WALK", "seg": 657.949, "m": 892.64, "fc": 129.0, "n": 9},
+                {"tipo": "RWD_RUN", "seg": 1645.999, "m": 3466.89, "fc": 140.0, "n": 9},
+                {"tipo": "RWD_STAND", "seg": 30, "m": 0, "fc": 100.0, "n": 1}]
+
+
+def test_run_walk_caso_12_nov():
+    a = act(7, "2026-11-12", "running")
+    rw = m.run_walk(a, {"7": {"rpe": 2, "splits": TRAMOS_12NOV}})
+    assert round(rw["trote_min"], 1) == 27.4 and round(rw["camina_min"], 1) == 11.0
+    assert round(rw["pct_trote"], 1) == 71.4 and rw["caminatas"] == 9
+    assert round(rw["patron_trote_min"], 2) == 3.05 and round(rw["patron_camina_min"], 2) == 1.22
+    assert round(rw["ritmo_trote_s"]) == 475 and rw["fc_trote"] == 140.0
+    assert round(rw["km_trote"], 2) == 3.47
+
+
+def test_run_walk_sin_caminata_sin_tramos_y_respaldo():
+    solo = {"7": {"splits": [{"tipo": "RWD_RUN", "seg": 1200, "m": 3000, "fc": 141, "n": 1}]}}
+    rw = m.run_walk(act(7, "2026-11-12", "running"), solo)
+    assert rw["caminatas"] == 0 and rw["pct_trote"] == 100 and rw["patron_camina_min"] is None
+    assert m.run_walk(act(7, "2026-11-12", "running"), {}) is None
+    assert m.run_walk(act(7, "2026-11-12", "running"), {"7": {"splits": []}}) is None
+    resp = act(7, "2026-11-12", "running", splitSummaries=[
+        {"splitType": "RWD_RUN", "duration": 600, "distance": 1500, "noOfSplits": 2},
+        {"splitType": "RWD_WALK", "duration": 300, "distance": 400, "noOfSplits": 2}])
+    rw = m.run_walk(resp, {"7": {"rpe": None}})
+    assert rw["fc_trote"] is None and round(rw["pct_trote"], 1) == 66.7 and rw["ritmo_trote_s"] == 400
+
+
+def test_run_check():
+    a = act(1, "2026-11-12", "running", z=(0, 0, 90, 30, 0))           # 2.0' sobre el techo
+    assert m.run_check(a, None) == {"min_sobre_techo": 2.0, "tolerancia_min": 2, "techo_ok": True}
+    b = act(1, "2026-11-12", "running", z=(0, 0, 360, 0, 0))           # 6'
+    assert m.run_check(b, None)["techo_ok"] is False
+    con_picos = {"steps": [{"kind": "run"}, {"kind": "run", "optional": True}]}
+    r = m.run_check(b, con_picos)
+    assert r["tolerancia_min"] == 4 and r["techo_ok"] is False
+    assert m.run_check(act(1, "2026-11-12", "running", z=(0, 0, 240, 0, 0)), con_picos)["techo_ok"] is True
+    anidado = {"steps": [{"kind": "repeat", "steps": [{"kind": "run", "optional": True}]}]}
+    assert m.run_check(a, anidado)["tolerancia_min"] == 4
+
+
+def test_rolling_mean_con_huecos():
+    v = [10, None, 20, 30, None, None, None, None, None, 40]
+    r = m.rolling_mean(v)
+    assert r[0] is None and r[1] is None          # menos de 3 valores
+    assert r[3] == 20                             # 10, 20, 30
+    assert r[6] == 20
+    assert r[8] is None                           # ventana 2..8: solo 20 y 30
+    assert r[9] is None                           # ventana 3..9: 30 y 40
+    assert m.rolling_mean([1, 2, 3, 4], ventana=2, minimo=2) == [None, 1.5, 2.5, 3.5]
+    assert m.rolling_mean([]) == []
 
 
 def test_run_rows():
-    acts = [act(1, "2026-10-21", "running", dur=1800, z=(300, 900, 300, 300, 0),
-                averageHR=140.0, averageSpeed=3.0),
-            act(2, "2026-10-22", "treadmill_running", dur=1800, averageHR=140.0, averageSpeed=3.0),
+    acts = [act(2, "2026-10-22", "treadmill_running", dur=1800, averageHR=140.0, distance=2500.0),
+            act(1, "2026-10-21", "running", dur=1800, z=(300, 900, 300, 300, 0),
+                averageHR=140.0, distance=4000.0, splitSummaries=[
+                    {"splitType": "RWD_RUN", "duration": 1200, "distance": 3000, "noOfSplits": 3}]),
             act(3, "2026-10-23", "hiit")]
-    filas = m.run_rows(acts, CFG)
-    assert len(filas) == 2
-    assert round(filas[0]["eficiencia"], 4) == round(3.0 * 60 / 140, 4)
-    assert filas[0]["minutos"] == 30 and round(filas[0]["pct_z1z2"]) == 67
-    assert filas[1]["eficiencia"] is None and filas[1]["pct_z1z2"] is None
+    filas = m.run_rows(acts, {}, CFG)
+    assert [f["fecha"] for f in filas] == ["2026-10-21", "2026-10-22"]
+    assert "eficiencia" not in filas[0]
+    assert filas[0]["minutos"] == 30 and filas[0]["km"] == 4 and round(filas[0]["pct_z1z2"]) == 67
+    assert filas[0]["caminadora"] is False and filas[0]["pct_trote"] == 100
+    assert filas[1]["caminadora"] is True and filas[1]["pct_z1z2"] is None
+    assert filas[1]["pct_trote"] is None and filas[1]["ritmo_trote_s"] is None
+
+
+def fila(fecha, pct, ritmo, caminadora=False):
+    return {"fecha": fecha, "pct_trote": pct, "ritmo_trote_s": ritmo, "caminadora": caminadora}
+
+
+def test_progress_summary():
+    hoy = date(2026, 12, 14)
+    filas = [fila("2026-11-02", 58, 460), fila("2026-11-10", 58, 460),   # antes: 19 oct – 16 nov; ahora: 16 nov – 14 dic
+             fila("2026-10-25", 58, 460), fila("2026-10-30", 58, 460),
+             fila("2026-12-01", 70, 445), fila("2026-12-10", 66, 445),
+             fila("2026-12-05", 10, 300, caminadora=True)]               # caminadora: no cuenta
+    assert m.progress_summary(filas, hoy, 4) == "Trotas 68 % del tiempo (antes 58 %) · ritmo trotando 7:40 → 7:25 /km"
+    assert m.progress_summary(filas[:4], hoy, 4) == "Aún no hay corridas suficientes para comparar"
+    assert m.progress_summary([], hoy, 4) == "Aún no hay corridas suficientes para comparar"
+    sin_ritmo = [fila("2026-12-01", 70, None), fila("2026-10-25", 58, 460)]
+    assert m.progress_summary(sin_ritmo, hoy, 4) == "Trotas 70 % del tiempo (antes 58 %)"
 
 
 def test_max_hr_progress():

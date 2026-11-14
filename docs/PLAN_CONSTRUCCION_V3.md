@@ -301,7 +301,7 @@ Opus abre el sitio en vivo a 400 px y escritorio.
 |---|---|
 | F1 Plan y config | ✅ |
 | F2 Datos trote/caminata | ✅ |
-| F3 Métricas · R1 | ⬜ |
+| F3 Métricas · R1 | ✅ |
 | F4 Build · R2 | ⬜ |
 | F5 Frontend · R3 | ⬜ |
 | F6 Publicar · R4 | ⬜ |
