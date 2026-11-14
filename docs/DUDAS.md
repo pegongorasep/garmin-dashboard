@@ -60,3 +60,7 @@
 - Los links a docs apuntan a `https://github.com/pegongorasep/garmin-dashboard/blob/main/docs/` (repo previsto en F6); no resuelven hasta publicar.
 - Estados vacíos probados con un `data.json` recortado en una carpeta temporal (arreglos vacíos y nulos): ninguna vista lanza error ni muestra el mensaje de fallo. Cada vista además está envuelta en try/catch y muestra "No se pudo mostrar esta sección" si faltaran claves.
 - Se probó con un script en Chrome headless: la cruz y el tooltip de línea, el tooltip por barra, el selector de 4 semanas y el cambio de semana del plan funcionan.
+- **F5 colores**: la caminata usa un gris neutro (`--walk` `#8f8d86` claro / `#8a8882` oscuro) frente al azul del trote (`--s1`). `validate_palette.js` pasa separación (ΔE normal 18.5 / 17.0), CVD y contraste ≥ 3:1 en claro y oscuro, pero marca "chroma floor" (lee gris) a propósito: la caminata es lo "no trote" y siempre va con etiqueta directa y leyenda.
+- **F5 capturas**: Chrome headless sigue el modo del sistema, así que claro/oscuro se forzaron con `--blink-settings=preferredColorScheme=1/0`.
+- **F2/F3**: `run_check` recibe un tercer argumento opcional `config` para leer `ceiling_tolerance_min` (la firma del plan era `(activity, session)`; sin config usa 2).
+- **F4**: `ultima_corrida.sesion` y `progreso.corridas[].sesion` emparejan corrida y sesión por `(fecha, minutos)` de la asignación de su semana.

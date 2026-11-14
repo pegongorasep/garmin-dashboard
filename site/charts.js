@@ -45,7 +45,9 @@ function tooltipEn(cont) {
 /**
  * Gráfica de línea.
  * cfg: { ancho, alto, serie:[{fecha, y}], banda:[{lo,hi}] (misma longitud que serie, opcional),
- *        ref:{y, etiqueta}, dominio:[ms0, ms1], marcadores:boolean, texto:(punto)=>string, fmtY }
+ *        ref:{y, etiqueta}, dominio:[ms0, ms1], marcadores:boolean, texto:(punto)=>string, fmtY,
+ *        puntos:boolean (la serie son puntos de r=2.5 sin línea), promedio:[y] (misma longitud; línea de 2 px),
+ *        invertir:boolean (arriba = valor menor, p. ej. ritmo) }
  * Los y nulos cortan la línea (no se interpola).
  */
 function lineChart(cfg) {
@@ -55,7 +57,8 @@ function lineChart(cfg) {
   const t = serie.map((p) => parseFecha(p.fecha).getTime());
   const [t0, t1] = cfg.dominio || [Math.min(...t), Math.max(...t)];
   const x = (ms) => ml + (t1 === t0 ? (W - ml - mr) / 2 : ((ms - t0) / (t1 - t0)) * (W - ml - mr));
-  const ys = serie.map((p) => p.y).filter((v) => v !== null && v !== undefined);
+  const prom = cfg.promedio || [];
+  const ys = [...serie.map((p) => p.y), ...prom].filter((v) => v !== null && v !== undefined);
   if (!ys.length) return h("p", { class: "vacio" }, "Sin datos en este periodo.");
   const extra = [];
   (cfg.banda || []).forEach((b) => { if (b && b.lo != null) extra.push(b.lo, b.hi); });
@@ -65,7 +68,7 @@ function lineChart(cfg) {
   lo -= pad; hi += pad;
   const ticks = ticksNice(lo, hi, 3);
   lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
-  const y = (v) => mt + (1 - (v - lo) / (hi - lo)) * (H - mt - mb);
+  const y = (v) => mt + (cfg.invertir ? (v - lo) : (hi - v)) / (hi - lo) * (H - mt - mb);
   const fmtY = cfg.fmtY || ((v) => fmt(v, 1));
 
   const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Gráfica" });
@@ -98,13 +101,20 @@ function lineChart(cfg) {
     if (cfg.ref.etiqueta) svg.append(sv("text", { class: "eje ref-t", x: W - mr, y: y(cfg.ref.y) - 4, "text-anchor": "end" }, cfg.ref.etiqueta));
   }
   const validos = tramos((i) => serie[i].y != null);
+  if (cfg.promedio) {
+    for (const tr of tramos((i) => prom[i] != null)) {
+      if (tr.length > 1) svg.append(sv("polyline", { class: "ln", points: tr.map((i) => `${x(t[i])},${y(prom[i])}`).join(" ") }));
+    }
+  }
   for (const tr of validos) {
-    if (tr.length === 1) svg.append(sv("circle", { class: "pt", cx: x(t[tr[0]]), cy: y(serie[tr[0]].y), r: 3.5 }));
+    if (cfg.puntos) {
+      for (const i of tr) svg.append(sv("circle", { class: "pt-d", cx: x(t[i]), cy: y(serie[i].y), r: 2.5 }));
+    } else if (tr.length === 1) svg.append(sv("circle", { class: "pt", cx: x(t[tr[0]]), cy: y(serie[tr[0]].y), r: 3.5 }));
     else svg.append(sv("polyline", { class: "ln", points: tr.map((i) => `${x(t[i])},${y(serie[i].y)}`).join(" ") }));
   }
   if (cfg.marcadores) for (const i of validos.flat()) svg.append(sv("circle", { class: "pt", cx: x(t[i]), cy: y(serie[i].y), r: 4 }));
   const ult = validos.flat().pop();
-  if (ult !== undefined) svg.append(sv("circle", { class: "pt fin", cx: x(t[ult]), cy: y(serie[ult].y), r: 4.5 }));
+  if (ult !== undefined && !cfg.puntos) svg.append(sv("circle", { class: "pt fin", cx: x(t[ult]), cy: y(serie[ult].y), r: 4.5 }));
 
   // cruz + tooltip
   const cruz = sv("line", { class: "cruz", y1: mt, y2: H - mb, visibility: "hidden" });
@@ -118,7 +128,7 @@ function lineChart(cfg) {
   const ir = (i) => {
     cruz.setAttribute("x1", x(t[i])); cruz.setAttribute("x2", x(t[i])); cruz.setAttribute("visibility", "visible");
     punto.setAttribute("cx", x(t[i])); punto.setAttribute("cy", y(serie[i].y)); punto.setAttribute("visibility", "visible");
-    tip.mostrar(cfg.texto(serie[i]), x(t[i]), y(serie[i].y));
+    tip.mostrar(cfg.texto(serie[i], prom[i]), x(t[i]), y(serie[i].y));
   };
   const fuera = () => { cruz.setAttribute("visibility", "hidden"); punto.setAttribute("visibility", "hidden"); tip.ocultar(); };
   const cercano = (ev) => {
@@ -143,7 +153,8 @@ function lineChart(cfg) {
 }
 
 /**
- * Barras apiladas por semana. cfg: { ancho, alto, semanas:[{inicio, valores:[a,b], sin_rpe}], texto:(semana)=>string }
+ * Barras apiladas por semana. cfg: { ancho, alto, semanas:[{inicio, valores:[a,b], sin_rpe, meta}], texto:(semana)=>string,
+ *   clases:["s1","s2"] }  `meta` = raya fina horizontal (p. ej. minutos del plan), en color de texto secundario.
  * Segmentos separados por 2 px de superficie; barra de 24 px como máximo; extremo superior redondeado.
  */
 function barChart(cfg) {
@@ -151,7 +162,8 @@ function barChart(cfg) {
   const cont = h("div", { class: "chart" });
   const ml = 38, mr = 10, mt = 14, mb = 22;
   const total = (s) => s.valores.reduce((a, v) => a + v, 0);
-  const max = Math.max(...semanas.map(total), 0);
+  const clases = cfg.clases || ["s1", "s2"];
+  const max = Math.max(...semanas.map((s) => Math.max(total(s), s.meta || 0)), 0);
   if (max <= 0) return h("p", { class: "vacio" }, "Sin carga registrada en este periodo.");
   const ticks = ticksNice(0, max * 1.08, 3);
   const hi = ticks[ticks.length - 1];
@@ -179,9 +191,10 @@ function barChart(cfg) {
       const d = r > 0
         ? `M${x0},${base} V${top + r} Q${x0},${top} ${x0 + r},${top} H${x0 + ancho - r} Q${x0 + ancho},${top} ${x0 + ancho},${top + r} V${base} Z`
         : `M${x0},${base} V${top} H${x0 + ancho} V${base} Z`;
-      svg.append(sv("path", { class: `serie s${k + 1}`, d }));
+      svg.append(sv("path", { class: `serie ${clases[k] || "s" + (k + 1)}`, d }));
       base = top - 2;
     });
+    if (s.meta) svg.append(sv("line", { class: "meta", x1: cx - ancho / 2 - 3, x2: cx + ancho / 2 + 3, y1: y(s.meta), y2: y(s.meta) }));
     if (s.sin_rpe > 0) svg.append(sv("text", { class: "eje ast", x: cx, y: Math.max(base - 2, 12), "text-anchor": "middle" }, "*"));
     if (i % cada === 0) svg.append(sv("text", { class: "eje", x: cx, y: H - 6, "text-anchor": "middle" }, fechaCorta2(parseFecha(s.inicio).getTime())));
     const hit = sv("rect", { class: "capa", x: cx - slot / 2, y: 0, width: slot, height: H - mb, tabindex: 0,
