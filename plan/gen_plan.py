@@ -5,7 +5,7 @@ Uso: python plan/gen_plan.py
 import json
 from pathlib import Path
 
-INICIO = "2026-11-16"
+INICIO = "2026-11-09"
 # (n, bloque, tipo, z2a, z2b, larga, picos Z3 en z2a)
 TABLA = [
     (1, 1, "carga", 20, 20, 40, False),

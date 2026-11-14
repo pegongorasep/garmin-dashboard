@@ -3,7 +3,7 @@
 Estado: **APROBADO v2** (2026-11-14) por Pedro. Reemplaza al v1 (2 corridas/semana, 26 oct),
 que se dejó en la semana 3 por la cortada del pie.
 
-- **Inicio:** lunes 16 nov 2026 · **Fin:** domingo 7 feb 2027.
+- **Inicio:** lunes 9 nov 2026 · **Fin:** domingo 31 ene 2027 (se adelantó una semana el 14 nov para que la corrida del jue 12 cuente como Z2 #1).
 - **3 corridas por semana:** 2 cortas en Z2 + 1 larga el fin de semana.
 - **CrossFit 3 días** (lun · mar · jue) → queda **1 día de descanso total**.
 - Basado en tu volumen real (sep–nov): ~1 corrida/semana de 30–40'; mejor semana 3 corridas / 78' / 9 km;
