@@ -89,23 +89,39 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text()) if path.exists() else {}
 
 
+def tramos(summary: dict) -> list:
+    """Tramos de trote/caminata (RWD_*) del detalle: solo tiempos, distancias y FC, sin GPS."""
+    return [{"tipo": t.get("splitType"), "seg": t.get("duration"), "m": t.get("distance"),
+             "fc": t.get("averageHR"), "n": t.get("noOfSplits")}
+            for t in summary.get("splitSummaries") or []]
+
+
+def detalle_vigente(entrada: dict, es_corrida: bool) -> bool:
+    """Reusa la entrada guardada si tiene RPE y, en corridas, también sus tramos."""
+    return entrada.get("rpe") is not None and (not es_corrida or "splits" in entrada)
+
+
 def pull_activity_details(c: Client, activities: list) -> dict:
-    """Pide RPE y sensación de las corridas y CrossFit; reusa las que ya tienen RPE."""
+    """Pide RPE y sensación (y tramos de trote/caminata en corridas); reusa lo ya completo."""
     tipos = RUN_TYPES + CROSSFIT_TYPES
     path = DATA_DIR / "activity_details.json"
     cache = load_json(path)
     out = {}
     for a in activities:
-        if a["activityType"]["typeKey"] not in tipos:
+        tipo = a["activityType"]["typeKey"]
+        if tipo not in tipos:
             continue
-        key = str(a["activityId"])
-        if cache.get(key, {}).get("rpe") is not None:
+        key, es_corrida = str(a["activityId"]), tipo in RUN_TYPES
+        if detalle_vigente(cache.get(key, {}), es_corrida):
             out[key] = cache[key]
             continue
-        s = (c.get(f"/activity-service/activity/{key}") or {}).get("summaryDTO", {})
+        detalle = c.get(f"/activity-service/activity/{key}") or {}
+        s = detalle.get("summaryDTO", {})
         rpe = s.get("directWorkoutRpe")
         out[key] = {"rpe": rpe / 10 if rpe is not None else None,
                     "feel": s.get("directWorkoutFeel")}
+        if es_corrida:
+            out[key]["splits"] = tramos(detalle)
     path.write_text(json.dumps(out, indent=2))
     return out
 
