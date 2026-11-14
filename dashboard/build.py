@@ -69,13 +69,14 @@ def convert_steps(steps: list, zonas: list) -> list:
             out.append({"kind": "repeat", "times": s["times"], "steps": convert_steps(s["steps"], zonas)})
         else:
             out.append({"kind": s["kind"], "minutes": s["minutes"], "zone": s["zone"],
-                        "lpm": lpm_range(s["zone"], zonas), "note": s.get("note", "")})
+                        "lpm": lpm_range(s["zone"], zonas), "note": s.get("note", ""),
+                        "optional": s.get("optional", False)})
     return out
 
 
 def convert_session(s: dict, zonas: list) -> dict:
     easy = s["easy"]
-    return {"id": s["id"], "name": s["name"], "minutes": s["minutes"],
+    return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"],
             "steps": convert_steps(s["steps"], zonas),
             "easy": {"name": easy["name"], "minutes": easy["minutes"],
                      "steps": convert_steps(easy["steps"], zonas)}}

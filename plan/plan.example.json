@@ -2,67 +2,200 @@
   "start": "2026-10-26",
   "weeks": [
     {
-      "n": 1, "block": 1, "kind": "carga", "focus": "Ejemplo: arranque conservador",
+      "n": 1,
+      "block": 1,
+      "kind": "carga",
+      "focus": "Larga 40'",
       "sessions": [
         {
-          "id": "A", "name": "Espiga (ejemplo)", "minutes": 30,
+          "id": "z2a",
+          "tipo": "z2",
+          "name": "Z2 #1",
+          "minutes": 20,
           "steps": [
-            {"kind": "warmup", "minutes": 5, "zone": "Z1", "note": "caminata"},
-            {"kind": "repeat", "times": 3, "steps": [
-              {"kind": "run", "minutes": 3, "zone": "Z2", "note": ""},
-              {"kind": "walk", "minutes": 2, "zone": "Z1", "note": ""}
-            ]},
-            {"kind": "run", "minutes": 5, "zone": "Z1-Z2", "note": ""},
-            {"kind": "cooldown", "minutes": 5, "zone": "Z1", "note": ""}
+            {
+              "kind": "run",
+              "minutes": 20,
+              "zone": "Z1-Z2",
+              "note": "arranca suave; camina si pasas el techo"
+            }
           ],
-          "easy": {"name": "Suave (ejemplo)", "minutes": 20, "steps": [
-            {"kind": "warmup", "minutes": 5, "zone": "Z1", "note": ""},
-            {"kind": "run", "minutes": 10, "zone": "Z1-Z2", "note": ""},
-            {"kind": "cooldown", "minutes": 5, "zone": "Z1", "note": ""}
-          ]}
+          "easy": {
+            "name": "Suave",
+            "minutes": 15,
+            "steps": [
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              }
+            ]
+          }
         },
         {
-          "id": "B", "name": "Continua suave (ejemplo)", "minutes": 25,
+          "id": "z2b",
+          "tipo": "z2",
+          "name": "Z2 #2",
+          "minutes": 20,
           "steps": [
-            {"kind": "warmup", "minutes": 5, "zone": "Z1", "note": ""},
-            {"kind": "run", "minutes": 15, "zone": "Z2", "note": "trota hasta el techo, camina hasta bajar"},
-            {"kind": "cooldown", "minutes": 5, "zone": "Z1", "note": ""}
+            {
+              "kind": "run",
+              "minutes": 20,
+              "zone": "Z1-Z2",
+              "note": "arranca suave; camina si pasas el techo"
+            }
           ],
-          "easy": {"name": "Suave corta (ejemplo)", "minutes": 18, "steps": [
-            {"kind": "run", "minutes": 18, "zone": "Z1-Z2", "note": ""}
-          ]}
+          "easy": {
+            "name": "Suave",
+            "minutes": 15,
+            "steps": [
+              {
+                "kind": "run",
+                "minutes": 15,
+                "zone": "Z1-Z2",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "larga",
+          "tipo": "larga",
+          "name": "Larga",
+          "minutes": 40,
+          "steps": [
+            {
+              "kind": "run",
+              "minutes": 40,
+              "zone": "Z1-Z2",
+              "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
+            }
+          ],
+          "easy": {
+            "name": "Suave",
+            "minutes": 30,
+            "steps": [
+              {
+                "kind": "run",
+                "minutes": 30,
+                "zone": "Z1-Z2",
+                "note": ""
+              }
+            ]
+          }
         }
       ]
     },
     {
-      "n": 2, "block": 1, "kind": "carga", "focus": "Ejemplo: sube la duración",
+      "n": 2,
+      "block": 2,
+      "kind": "carga",
+      "focus": "Larga 50' · picos Z3 opcionales",
       "sessions": [
         {
-          "id": "A", "name": "Pirámide 1-2-3 (ejemplo)", "minutes": 32,
+          "id": "z2a",
+          "tipo": "z2",
+          "name": "Z2 #1",
+          "minutes": 25,
           "steps": [
-            {"kind": "warmup", "minutes": 5, "zone": "Z1", "note": ""},
-            {"kind": "run", "minutes": 1, "zone": "Z2", "note": ""},
-            {"kind": "walk", "minutes": 1, "zone": "Z1", "note": ""},
-            {"kind": "run", "minutes": 2, "zone": "Z2", "note": ""},
-            {"kind": "walk", "minutes": 2, "zone": "Z1", "note": ""},
-            {"kind": "run", "minutes": 3, "zone": "Z2", "note": ""},
-            {"kind": "walk", "minutes": 3, "zone": "Z1", "note": ""},
-            {"kind": "cooldown", "minutes": 15, "zone": "Z1", "note": ""}
+            {
+              "kind": "run",
+              "minutes": 10,
+              "zone": "Z1-Z2",
+              "note": "arranca suave; camina si pasas el techo"
+            },
+            {
+              "kind": "run",
+              "minutes": 1,
+              "zone": "Z3",
+              "note": "opcional",
+              "optional": true
+            },
+            {
+              "kind": "run",
+              "minutes": 3,
+              "zone": "Z2",
+              "note": ""
+            },
+            {
+              "kind": "run",
+              "minutes": 1,
+              "zone": "Z3",
+              "note": "opcional",
+              "optional": true
+            },
+            {
+              "kind": "run",
+              "minutes": 10,
+              "zone": "Z1-Z2",
+              "note": ""
+            }
           ],
-          "easy": {"name": "Suave (ejemplo)", "minutes": 20, "steps": [
-            {"kind": "run", "minutes": 20, "zone": "Z1-Z2", "note": ""}
-          ]}
+          "easy": {
+            "name": "Suave",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "run",
+                "minutes": 20,
+                "zone": "Z1-Z2",
+                "note": ""
+              }
+            ]
+          }
         },
         {
-          "id": "B", "name": "Continua suave (ejemplo)", "minutes": 30,
+          "id": "z2b",
+          "tipo": "z2",
+          "name": "Z2 #2",
+          "minutes": 25,
           "steps": [
-            {"kind": "warmup", "minutes": 5, "zone": "Z1", "note": ""},
-            {"kind": "run", "minutes": 20, "zone": "Z2", "note": ""},
-            {"kind": "cooldown", "minutes": 5, "zone": "Z1", "note": ""}
+            {
+              "kind": "run",
+              "minutes": 25,
+              "zone": "Z1-Z2",
+              "note": "arranca suave; camina si pasas el techo"
+            }
           ],
-          "easy": {"name": "Suave corta (ejemplo)", "minutes": 20, "steps": [
-            {"kind": "run", "minutes": 20, "zone": "Z1-Z2", "note": ""}
-          ]}
+          "easy": {
+            "name": "Suave",
+            "minutes": 20,
+            "steps": [
+              {
+                "kind": "run",
+                "minutes": 20,
+                "zone": "Z1-Z2",
+                "note": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": "larga",
+          "tipo": "larga",
+          "name": "Larga",
+          "minutes": 50,
+          "steps": [
+            {
+              "kind": "run",
+              "minutes": 50,
+              "zone": "Z1-Z2",
+              "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
+            }
+          ],
+          "easy": {
+            "name": "Suave",
+            "minutes": 35,
+            "steps": [
+              {
+                "kind": "run",
+                "minutes": 35,
+                "zone": "Z1-Z2",
+                "note": ""
+              }
+            ]
+          }
         }
       ]
     }

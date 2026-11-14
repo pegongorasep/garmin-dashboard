@@ -11,6 +11,8 @@ sys.path.insert(0, str(ROOT / "dashboard"))
 import build  # noqa: E402
 
 CONFIG = json.loads((ROOT / "dashboard" / "config.json").read_text())
+# El fixture es de la semana del 26 oct: usa una copia del config con ese inicio de plan.
+CONFIG_FIXTURE = {**CONFIG, "plan_start": "2026-10-26"}
 AHORA = datetime(2026, 11, 4, 12, 0, tzinfo=ZoneInfo("America/Merida"))  # miércoles, semana 2
 
 PROHIBIDAS = ["activityId", "activityName", "ownerDisplayName", "ownerFullName", "userProfilePk",
@@ -66,7 +68,7 @@ def revisar_privacidad(out: dict, extras=()):
 @pytest.fixture
 def salida():
     plan = build.load(ROOT / "plan" / "plan.example.json")
-    return build.build(fixture(), plan, CONFIG, AHORA)
+    return build.build(fixture(), plan, CONFIG_FIXTURE, AHORA)
 
 
 def test_forma_y_json_valido(salida):
@@ -81,15 +83,22 @@ def test_forma_y_json_valido(salida):
 
 
 def test_plan_convertido_a_lpm(salida):
-    pasos = salida["plan"]["semanas"][0]["sessions"][0]["steps"]
-    assert pasos[0]["lpm"] == [125, 138]          # Z1 con reposo 60
-    assert pasos[1]["steps"][0]["lpm"] == [138, 151]  # Z2
-    assert pasos[2]["zone"] == "Z1-Z2" and pasos[2]["lpm"] == [125, 151]
+    ses = salida["plan"]["semanas"][0]["sessions"][0]
+    assert ses["tipo"] == "z2"
+    assert ses["steps"][0]["lpm"] == [125, 151]   # Z1-Z2 con reposo 60 y máx 190
+    assert ses["steps"][0]["optional"] is False
+
+
+def test_paso_z3_opcional_con_lpm(salida):
+    pasos = salida["plan"]["semanas"][1]["sessions"][0]["steps"]   # semana con picos
+    z3 = [p for p in pasos if p["zone"] == "Z3"]
+    assert len(z3) == 2 and all(p["optional"] is True for p in z3)
+    assert z3[0]["lpm"] == [151, 164]
 
 
 def test_corrida_asignada_a_sesion(salida):
     est = salida["plan"]["estado_sesiones"]
-    assert [e["estado"] for e in est] == ["hecha", "pendiente"]
+    assert [e["estado"] for e in est] == ["hecha", "pendiente", "pendiente"]
     assert salida["hoy"]["tarjeta"]["tipo"] in ("sesion", "hecha_hoy", "crossfit")
 
 
