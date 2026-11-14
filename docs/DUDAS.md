@@ -64,3 +64,13 @@
 - **F5 capturas**: Chrome headless sigue el modo del sistema, así que claro/oscuro se forzaron con `--blink-settings=preferredColorScheme=1/0`.
 - **F2/F3**: `run_check` recibe un tercer argumento opcional `config` para leer `ceiling_tolerance_min` (la firma del plan era `(activity, session)`; sin config usa 2).
 - **F4**: `ultima_corrida.sesion` y `progreso.corridas[].sesion` emparejan corrida y sesión por `(fecha, minutos)` de la asignación de su semana.
+
+## v3.1
+
+- `proxima_id` en `today_card` solo se llena en `crossfit` y `hecha_hoy`; si no hay `status` (sin plan activo) queda `None`.
+- `estado_sesiones[].corrida` va en plano (sin objeto `trote` anidado); si Garmin no dio tramos, los campos de trote/caminata son `null` y la vista dice que no hubo tramos.
+- "Última corrida: …" en la tarjeta Esta semana solo sale si además no hay minutos de corrida esta semana (si no, repetía lo que ya muestra la tarjeta, p. ej. antes del plan).
+- La tarjeta de "HOY" se resalta con fondo de página y borde azul de acento (no amarillo) para no confundirla con una alerta.
+- La barra de progreso es un solo color de acento (`--s1`) sobre la rejilla; el valor siempre va en texto ("38 / 80 min · 48 %") y con `role="progressbar"`.
+- La función de `app.js` se llama `tarjetaTusCorridas` porque `vistas.js` ya tenía `tarjetaCorridas` (tabla de Progreso).
+- La fecha de la fila hecha usa `fechaCorta` existente ("jueves 12 nov"), no la abreviada del esquema.
