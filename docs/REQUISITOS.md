@@ -1,6 +1,7 @@
 # Requisitos — Garmin: dashboard + plan de base aeróbica
 
-Estado: **APROBADO v2** (2026-10-24) por Pedro.
+Estado: **APROBADO v3** (2026-11-14) por Pedro — los cambios de v3 están en la §7 y **mandan sobre las
+§4–5** donde choquen. v2 aprobado el 2026-10-24.
 
 ## 0. Objetivo
 
@@ -118,6 +119,56 @@ para ajustes grandes (subir volumen, repetir semana, recalcular zonas).
 
 ### 5.7 Fase 2 (opcional, semana 5+)
 - Si todo va bien: 10 min de bici suave Z1–Z2 al final del CrossFit. Se decide con datos.
+
+## 7. Cambios v3 (2026-11-14)
+
+### 7.1 Plan
+- Pasa al **plan v2** de [`PLAN_ENTRENAMIENTO.md`](PLAN_ENTRENAMIENTO.md) (aprobado): inicio **lun 16 nov 2026**,
+  12 semanas, **3 sesiones por semana: Z2 #1, Z2 #2 y Larga**. CrossFit lun/mar/jue.
+- Solo progresa el tiempo. Desde la semana 5, la Z2 #1 trae 2×1' de Z3 **opcionales**, dentro del tiempo.
+- El tiempo de una sesión es el **tiempo de reloj** (incluye el arranque suave y las caminatas).
+- `semanas_repetidas` vuelve a `[]`; el historial anterior se sigue viendo en las corridas.
+
+### 7.2 Navegación: de 5 pestañas a 2
+1. **Hoy** — todo lo de entrenar, en una pantalla:
+   - Semáforo + la sesión de hoy (Z2 / Larga / CrossFit / Descanso) con pasos en lpm.
+   - **Última corrida — "¿lo hice bien?"** (§7.4).
+   - **Semana**: tira de 7 días, corridas "x de 3", km y minutos trotando de la semana.
+   - **Plan de la semana** (semana n de 12): las 3 sesiones con su estado y pasos para copiar a Garmin.
+2. **Progreso** — selector 4 / 8 / 12 semanas:
+   - Una **frase de conclusión** arriba (ej. "Trotas 68 % del tiempo (hace 4 sem: 58 %) · ritmo trotando 7:40 → 7:25").
+   - **% del tiempo trotando** por corrida y **ritmo trotando** por corrida.
+   - **Volumen semanal**: minutos hechos vs plan, con km.
+   - **Recuperación**: HRV, FC en reposo y sueño — punto diario + **línea de promedio de 7 días** (HRV con banda base).
+   - Línea de las 12 semanas (bloques, descargas, semana actual) y lista de corridas.
+3. **Detalles** (enlace al final, no pestaña): FC máx y zonas, cómo funciona, barra de intensidad 80/20 y
+   carga RPE del CrossFit (solo referencia).
+
+### 7.3 Semáforo
+- Si **no hay datos de anoche** (HRV, FC reposo y sueño los tres sin dato) → estado **"sin datos"** (gris),
+  no verde: muestra la sesión normal con "decide por cómo te sientes".
+- Si falta solo alguna señal, decide con las que hay y marca las faltantes como "sin dato" (no como ✓).
+- El resto de reglas no cambia.
+
+### 7.4 Corridas
+- **Trote vs caminata**: de los tramos que detecta Garmin (`splitSummaries` RWD_RUN / RWD_WALK) por corrida:
+  minutos y % trotando, número de caminatas, **patrón detectado** (≈ trote/caminata promedio por tramo),
+  **ritmo y FC trotando**. Barra trote/caminata en cada corrida.
+- **Km** por corrida y por semana.
+- **Asignación a sesiones** (automática, sin nombres): una corrida en sáb/dom que dure ≥ 70 % de la Larga
+  → Larga; las demás llenan Z2 #1 y Z2 #2 en orden.
+- **Estado de la sesión**: *hecha* si duró ≥ 70 % de lo planeado (o de su versión suave si ese día era 🟡/🔴,
+  y entonces "ajustada"); si duró menos, *incompleta*; si no hay corrida, *pendiente*.
+- **"¿Lo hice bien?"**: plan vs hecho — tiempo, km, minutos por encima del techo de Z2 (✓ si ≤ 2'; en la Z2 #1
+  con picos opcionales se permiten 2' más), barra trote/caminata, ritmo trotando.
+
+### 7.5 Privacidad
+- Igual que v2. De los tramos solo se publican tiempos, distancias, ritmos y FC; nada de GPS ni nombres.
+
+### 7.6 Fuera de v3
+- Semáforo "estable" (que una sola noche baja de HRV no dé rojo). Se puede revisar después con datos.
+- Botones manuales de hecha/no hecha (no hay dónde guardarlos).
+- Asignar corridas por el nombre de la actividad en Garmin (Pedro no les pone nombre).
 
 ## 6. Preguntas abiertas
 1. ¿Algo del documento que quieras cambiar antes de aprobarlo?

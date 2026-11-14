@@ -1,64 +1,83 @@
-# Plan de 12 semanas — base aeróbica corriendo
+# Plan de 12 semanas — base aeróbica corriendo (v2)
 
-Estado: **BORRADOR** (2026-10-24) — para revisión de Pedro. Basado en [`REQUISITOS.md`](REQUISITOS.md) §5.
+Estado: **APROBADO v2** (2026-11-14) por Pedro. Reemplaza al v1 (2 corridas/semana, 26 oct),
+que se dejó en la semana 3 por la cortada del pie.
 
-- **Inicio:** lunes 26 oct 2026 · **Fin:** domingo 17 ene 2027.
-- **2 corridas por semana** (A y B), en días sin CrossFit, por la tarde-noche. Orden libre.
-- Todo **por tiempo**, con techo de FC: *trota hasta el techo de la zona; si lo pasas, camina hasta bajar*.
+- **Inicio:** lunes 16 nov 2026 · **Fin:** domingo 7 feb 2027.
+- **3 corridas por semana:** 2 cortas en Z2 + 1 larga el fin de semana.
+- **CrossFit 3 días** (lun · mar · jue) → queda **1 día de descanso total**.
+- Basado en tu volumen real (sep–nov): ~1 corrida/semana de 30–40'; mejor semana 3 corridas / 78' / 9 km;
+  corrida más larga 44' / 5.3 km. La semana 1 (80') ≈ tu mejor semana.
 
-## Zonas (provisionales: FC máx 190, reposo 60)
+## Cómo se mide
+
+- **Por tiempo de reloj**, con techo de pulso: *trota hasta el techo; si lo pasas, camina hasta bajar*.
+  Alternar trote y caminata es parte del entrenamiento.
+- **El tiempo incluye el arranque suave**: no hay calentamiento aparte; empiezas caminando o trotando lento y
+  dejas que el pulso suba solo. **Enfriamiento**: 3–5' caminando *después* de parar el reloj (no cuenta).
+- **La distancia mide el progreso**: más km en el mismo tiempo y con el mismo pulso = mejor base aeróbica.
+  Cuando trotes 30–40' seguidos sin caminar, se puede pasar a prescribir por distancia.
+
+## Zonas (FC máx 189 del reloj, reposo 62)
 
 | Zona | lpm | Sensación |
 |---|---|---|
-| Z1 | 125–138 | Caminata rápida / trote muy suave |
+| Z1 | 126–138 | Caminata rápida / trote muy suave |
 | Z2 | 138–151 | Trote cómodo, puedes platicar |
-| Z3 | 151–164 | "Limbo": frases cortas. Solo en picos cortos de la Corrida A |
+| Z3 | 151–164 | Frases cortas. Solo 2 picos de 1' opcionales en la Z2 #1, desde la semana 5 |
 
-Los lpm se recalculan cuando cambie la FC máx o tu reposo (el dashboard siempre muestra los vigentes).
+El dashboard siempre muestra los lpm vigentes (se recalculan solos si cambia la FC máx del reloj o tu reposo).
+
+## Semana tipo
+
+| Lun | Mar | Mié | Jue | Vie | Sáb | Dom |
+|---|---|---|---|---|---|---|
+| CrossFit | CrossFit | **Z2 #1** | CrossFit | **Z2 #2** | Descanso | **Larga** |
+
+Los días son flexibles (nunca el mismo día que CrossFit); la larga va el sábado o el domingo.
 
 ## Lógica
 
-| Bloque | Semanas | Qué cambia (una sola variable) |
-|---|---|---|
-| 1 · Adaptación | 1–3 + descarga 4 | **Duración** de A y B |
-| 2 · Introducir Z3 | 5–7 + descarga 8 | **Intensidad** de A (minutos en Z3: 3 → 4 → 6). B fija en 35' |
-| 3 · Volumen | 9–11 + descarga 12 | **Duración** de B (40 → 45 → 50). A fija con 6' de Z3, cambia solo el formato |
-
-Volumen semanal: 55' → 85' (semana 11). Las descargas bajan ~30 % y son todo continuo Z1–Z2.
+- **Lo único que progresa es el volumen (tiempo)**, sobre todo la larga: 40' → 70'. Sube ~5–10 % por semana.
+- Bloques de 3 semanas subiendo + 1 de descarga (~30 % menos, todo Z1–Z2).
+- **Z3 no es una variable del plan**: desde la semana 5, la Z2 #1 trae 2 picos de 1' en Z3 *opcionales*
+  (siempre iguales, ~2 % de la semana). Si no los haces, esos 2' van en Z2. Nunca reemplazan volumen.
 
 ## Semana a semana
 
-Notación: `6' Z1` = 6 minutos en Z1. `6×(2' Z2 / 1' Z1)` = repetir 6 veces.
+| Sem | Tipo | Z2 #1 (mié) | Z2 #2 (vie) | Larga (dom) | Total |
+|---|---|---|---|---|---|
+| 1 | carga | 20' | 20' | 40' | 80' |
+| 2 | carga | 20' | 20' | 45' | 85' |
+| 3 | carga | 20' | 25' | 50' | 95' |
+| 4 | descarga | 20' | 20' | 30' | 70' |
+| 5 | carga | 25' (+ 2×1' Z3 opc.) | 25' | 50' | 100' |
+| 6 | carga | 25' (+ 2×1' Z3 opc.) | 25' | 55' | 105' |
+| 7 | carga | 25' (+ 2×1' Z3 opc.) | 30' | 60' | 115' |
+| 8 | descarga | 20' | 20' | 40' | 80' |
+| 9 | carga | 30' (+ 2×1' Z3 opc.) | 30' | 60' | 120' |
+| 10 | carga | 30' (+ 2×1' Z3 opc.) | 30' | 65' | 125' |
+| 11 | carga | 30' (+ 2×1' Z3 opc.) | 30' | 70' | 130' |
+| 12 | descarga | 25' | 25' | 45' | 95' |
 
-| Sem | Tipo | Corrida A | Corrida B | Total |
-|---|---|---|---|---|
-| 1 | carga | **Intervalos 2:1** — 6' Z1 · 6×(2' Z2 / 1' Z1) · 6' Z1 = **30'** | 5' Z1 · 15' Z1–Z2 · 5' Z1 = **25'** | 55' |
-| 2 | carga | **Intervalos 2:1** — 6' Z1 · 7×(2' Z2 / 1' Z1) · 6' Z1 = **33'** | 5' Z1 · 20' Z1–Z2 · 5' Z1 = **30'** | 63' |
-| 3 | carga | **Intervalos 2:1** — 6' Z1 · 8×(2' Z2 / 1' Z1) · 6' Z1 = **36'** | 5' Z1 · 25' Z1–Z2 · 5' Z1 = **35'** | 71' |
-| 4 | descarga | Continua — 5' Z1 · 15' Z1–Z2 · 5' Z1 = **25'** | igual = **25'** | 50' |
-| 5 | carga | **Espiga** — 8' Z1 · 8' Z2 · **3' Z3** · 8' Z2 · 8' Z1 = **35'** | 5' Z1 · 25' Z1–Z2 · 5' Z1 = **35'** | 70' |
-| 6 | carga | **Pirámide 1-2-1** — 8' Z1 · 5' Z2 · (**1' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **1' Z3**) · 6' Z2 · 8' Z1 = **35'** | igual que sem 5 = **35'** | 70' |
-| 7 | carga | **Ascendente 1-2-3** — 8' Z1 · 5' Z2 · (**1' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **3' Z3**) · 5' Z2 · 7' Z1 = **35'** | igual = **35'** | 70' |
-| 8 | descarga | Continua — 5' Z1 · 15' Z1–Z2 · 5' Z1 = **25'** | igual = **25'** | 50' |
-| 9 | carga | **Espiga doble** — 8' Z1 · 5' Z2 · **3' Z3** · 4' Z2 · **3' Z3** · 5' Z2 · 7' Z1 = **35'** | 5' Z1 · 30' Z1–Z2 · 5' Z1 = **40'** | 75' |
-| 10 | carga | **Intervalos Z3** — 8' Z1 · 5' Z2 · 3×(**2' Z3** / 2' Z2) · 4' Z2 · 6' Z1 = **35'** | 5' Z1 · 35' Z1–Z2 · 5' Z1 = **45'** | 80' |
-| 11 | carga | **Descendente 3-2-1** — 8' Z1 · 5' Z2 · (**3' Z3** · 2' Z2 · **2' Z3** · 2' Z2 · **1' Z3**) · 5' Z2 · 7' Z1 = **35'** | 5' Z1 · 40' Z1–Z2 · 5' Z1 = **50'** | 85' |
-| 12 | descarga | Continua — 5' Z1 · 20' Z1–Z2 · 5' Z1 = **30'** | igual = **30'** | 60' |
+Todas en Z1–Z2. Los picos opcionales van a la mitad de la corrida, con 3' de Z2 entre uno y otro, y cuentan
+dentro del tiempo (no lo alargan).
 
-Después de la semana 12: revisión con datos (eficiencia aeróbica, FC máx medida) y se decide el siguiente ciclo.
+Después de la semana 12: revisión con datos (km en el mismo tiempo, pulso, cuánto caminas) y siguiente ciclo.
 
 ## Versiones según el semáforo
 
 - 🟢 **Normal:** la sesión tal cual.
-- 🟡 **Suave:** continua Z1–Z2, **sin Z3**, ~70 % del tiempo (redondeado a 5'): 25'→20', 30'→20', 33'→25', 35'→25', 36'→25', 40'→30', 45'→30', 50'→35'.
+- 🟡 **Suave:** sin Z3 y ~70 % del tiempo (redondeado a 5'): 20'→15', 25'→20', 30'→20', 40'→30',
+  45'→30', 50'→35', 55'→40', 60'→40', 65'→45', 70'→50'.
 - 🔴 **Descanso** o caminata ligera de 20–30' en Z1.
-- 🔴 dos días seguidos o enfermedad → **repetir la semana**.
+- 🔴 dos días seguidos o enfermedad/lesión → **repetir la semana**.
 - CrossFit de ayer con **RPE ≥ 8** → versión suave.
-- Semana pesada aunque el semáforo esté verde → repetir la anterior.
 
 ## Reglas de la semana
 
-- Nunca el mismo día que CrossFit. Preferencia: miércoles + viernes o sábado.
-- Si fallas una, se repone en otro día libre **de la misma semana**; no se arrastra.
-- Por el calor de Mérida: lleva agua, y si la FC se dispara, camina sin culpa. El techo manda, no el ritmo.
+- Nunca el mismo día que CrossFit.
+- **Si solo puedes correr 2 veces: la larga + la Z2 #1.** La larga es la que más construye base.
+- Si fallas una, se repone en otro día libre de la misma semana; no se arrastra a la siguiente.
+- La larga nunca lleva Z3: si el pulso pasa 151, caminas.
 - Pantorrillas: elevaciones de talón a una pierna, 2–3 × 10–15, 2 veces por semana (recomendación, sin registro).
