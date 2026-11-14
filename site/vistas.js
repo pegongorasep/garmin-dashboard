@@ -178,11 +178,11 @@ function tarjetaFcMax(d) {
       h("div", { class: "kv" }, h("span", {}, "Pico"), h("span", {}, `${fmt(f.pico, 0)} lpm`)),
       h("div", { class: "kv" }, h("span", {}, "FC máx estimada (pico + 3, mín 183)"), h("span", {}, `${fmt(f.estimacion, 0)} lpm`)),
       h("p", { class: "estado" }, f.listo ? badge("ok", "✓", "listo") : badge("nd", "—", "en curso"),
-        f.listo ? "Lista para actualizar la FC máx" : `Faltan ${faltan} ${faltan === 1 ? "semana" : "semanas"} de medición`),
+        f.listo ? "Medición lista" : `Faltan ${faltan} ${faltan === 1 ? "semana" : "semanas"} de medición`),
       f.revisar ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, "La estimación pasa de 200 lpm: revísala antes de usarla.")) : null];
   const zonas = d.zonas || [];
   return h("div", { class: "card" }, h("h2", {}, "FC máxima y zonas"), ...cuerpo,
-    zonas.length ? h("div", {}, h("p", { class: "nota", style: "margin-top:10px" }, `FC máx en uso: ${fmt(f.config, 0)} lpm · reposo promedio 7 días: ${fmt(d.rhr_promedio_7d, 0)} lpm (Karvonen)`),
+    zonas.length ? h("div", {}, h("p", { class: "nota", style: "margin-top:10px" }, `FC máx en uso: ${fmt(f.config, 0)} lpm (${f.fuente === "reloj" ? "del reloj" : "respaldo, el reloj no la dio"}) · reposo promedio 7 días: ${fmt(d.rhr_promedio_7d, 0)} lpm (Karvonen)`),
       h("table", {}, h("thead", {}, h("tr", {}, ["Zona", "Rango (lpm)"].map((c) => h("th", {}, c)))),
         h("tbody", {}, zonas.map((z) => h("tr", {}, h("td", {}, h("span", { class: "zchip" }, h("i", { style: `background:var(--${z.zona.toLowerCase()})`, "aria-hidden": "true" }), z.zona)), h("td", {}, `${z.piso}–${z.techo}`)))))) : h("p", { class: "vacio" }, "Sin zonas calculadas."));
 }

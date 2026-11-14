@@ -237,7 +237,13 @@ def test_max_hr_progress():
     assert m.max_hr_progress([], CFG)["estimacion"] is None
 
 
-def test_watch_zone_mismatch():
-    assert m.watch_zone_mismatch([{"sport": "DEFAULT", "maxHeartRateUsed": 190}], CFG) is None
-    assert "203" in m.watch_zone_mismatch([{"sport": "DEFAULT", "maxHeartRateUsed": 203}], CFG)
-    assert m.watch_zone_mismatch([], CFG) is None
+def test_watch_max_hr():
+    assert m.watch_max_hr([{"sport": "RUNNING", "maxHeartRateUsed": 195},
+                           {"sport": "DEFAULT", "maxHeartRateUsed": 189}]) == 189
+    assert m.watch_max_hr([]) is None
+
+
+def test_max_hr_above_watch():
+    assert m.max_hr_above_watch(189, 189) is None
+    assert m.max_hr_above_watch(None, 189) is None
+    assert "192" in m.max_hr_above_watch(192, 189)

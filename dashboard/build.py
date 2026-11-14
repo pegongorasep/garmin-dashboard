@@ -157,6 +157,10 @@ def build_trends(hoy: date, data: dict, config: dict) -> dict:
 
 
 def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
+    # La FC máx viene del reloj; config["max_hr"] es solo respaldo si Garmin no la da.
+    reloj = m.watch_max_hr(data["hr_zones"])
+    config = {**config, "max_hr": reloj or config["max_hr"]}
+    fc_max = m.max_hr_progress(data["activities"], config)
     hoy = ahora.date()
     ayer = hoy - timedelta(days=1)
     rhr = m.rhr_7d(data["daily_summaries"], hoy) or 60
@@ -186,7 +190,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "datos_al": datos_al,
         "zonas": [{"zona": z, "piso": lo, "techo": hi} for z, lo, hi in zonas],
         "rhr_promedio_7d": r1(rhr),
-        "aviso_zonas": m.watch_zone_mismatch(data["hr_zones"], config),
+        "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], config["max_hr"]),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "tarjeta": tarjeta},
         "semana": build_week(hoy, data, config),
         "plan": {"inicio": plan["start"], "semana_actual": n, "semanas_repetidas": repetidas,
@@ -196,7 +200,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "corridas": [{**f, "minutos": r1(f["minutos"]), "pct_z1z2": r1(f["pct_z1z2"]),
                       "eficiencia": None if f["eficiencia"] is None else round(f["eficiencia"], 3)}
                      for f in m.run_rows(data["activities"], config)],
-        "fc_max": {**m.max_hr_progress(data["activities"], config), "config": config["max_hr"]},
+        "fc_max": {**fc_max, "config": config["max_hr"], "fuente": "reloj" if reloj else "respaldo"},
         "umbrales": {k: config[k] for k in ("rhr_tolerance_bpm", "sleep_min_hours", "rpe_heavy",
                                             "max_hr", "max_hr_floor", "zone_pcts")},
     }

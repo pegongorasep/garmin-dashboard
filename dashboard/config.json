@@ -1,6 +1,6 @@
 {
   "timezone": "America/Merida",
-  "max_hr": 190,
+  "max_hr": 189,
   "max_hr_floor": 183,
   "max_hr_review_above": 200,
   "zone_pcts": [

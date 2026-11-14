@@ -40,7 +40,7 @@ def fixture():
         "activities": [act(1, "2026-11-02", "hiit"), act(2, "2026-11-03", "running"),
                        act(3, "2026-10-28", "running"), act(4, "2026-11-03", "hiit")],
         "details": {"1": {"rpe": 6.0, "feel": 50}, "2": {"rpe": 4.0, "feel": 50}, "3": {"rpe": None, "feel": None}},
-        "hr_zones": [{"sport": "DEFAULT", "maxHeartRateUsed": 203, "restingHeartRateUsed": 64}],
+        "hr_zones": [{"sport": "DEFAULT", "maxHeartRateUsed": 190, "restingHeartRateUsed": 64}],
         "meta": {"pulled_at_utc": "2026-11-04T17:00:00+00:00"},
     }
 
@@ -126,3 +126,7 @@ def _flat(o):
     elif isinstance(o, list):
         for v in o:
             yield from _flat(v)
+
+
+def test_fc_max_viene_del_reloj(salida):
+    assert salida["fc_max"]["config"] == 190 and salida["fc_max"]["fuente"] == "reloj"

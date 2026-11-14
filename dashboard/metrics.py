@@ -257,12 +257,16 @@ def max_hr_progress(activities: list, config: dict) -> dict:
             "semanas_medidas": len(semanas), "listo": len(semanas) >= 2}
 
 
-def watch_zone_mismatch(hr_zones, config: dict):
-    """Aviso si la FC máx del reloj difiere de la del config; None si coincide o no hay dato."""
+def watch_max_hr(hr_zones):
+    """FC máx que usa el reloj (perfil DEFAULT); None si Garmin no la da."""
     perfiles = hr_zones if isinstance(hr_zones, list) else [hr_zones or {}]
     perfil = next((p for p in perfiles if p.get("sport") == "DEFAULT"), perfiles[0] if perfiles else {})
-    reloj = perfil.get("maxHeartRateUsed")
-    if reloj is None or reloj == config["max_hr"]:
+    return perfil.get("maxHeartRateUsed")
+
+
+def max_hr_above_watch(estimacion, max_hr):
+    """Aviso si la FC máx medida supera la que se usa; None si no."""
+    if estimacion is None or estimacion <= max_hr:
         return None
-    return (f"El reloj usa FC máx {reloj} y el dashboard {config['max_hr']}: "
-            "las zonas por actividad no coinciden. Corrígelo en Garmin Connect.")
+    return (f"Tu FC máx medida ({estimacion}) es mayor que la del reloj ({max_hr}). "
+            "Súbela en Garmin Connect y el dashboard la tomará sola.")
