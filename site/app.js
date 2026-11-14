@@ -90,7 +90,7 @@ const mmss = (seg) => {
 
 function semaforoCard(d) {
   const sem = d.hoy.semaforo, est = ESTADO_SEMAFORO[sem.color] || ESTADO_SEMAFORO.sin_datos;
-  const nota = sem.color === "sin_datos" ? "Las 4 señales aparecen abajo" : sem.fuera === 0 ? "Ninguna señal fuera de rango"
+  const nota = sem.color === "sin_datos" ? "Sin HRV, FC en reposo ni sueño de anoche" : sem.fuera === 0 ? "Ninguna señal fuera de rango"
     : `${sem.fuera} señal${sem.fuera === 1 ? "" : "es"} fuera de rango`;
   return h("div", { class: `semaforo ${sem.color}`, role: "group", "aria-label": `Semáforo ${est.titulo}` },
     h("div", { class: "cab" },
