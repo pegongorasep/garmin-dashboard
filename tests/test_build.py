@@ -326,3 +326,23 @@ def test_crossfit_del_dia_toma_te_maximo_y_suma_minutos():
     s = _semana(data, date(2026, 11, 4), date(2026, 11, 2))
     assert s["dias"][0]["crossfit"] == {"te": 3.4, "rpe": 7.0, "minutos": 30}
     assert s["dias"][1]["crossfit"] is None
+
+
+# --- v3.2 F2 ---
+
+def test_mejora_y_composicion_en_el_json(salida):
+    mj = salida["progreso"]["mejora"]
+    assert set(mj) == {"frase", "semanas", "corridas"} and len(mj["semanas"]) == 8
+    assert mj["semanas"][-1]["inicio"] == "2026-11-02" and mj["semanas"][-1]["minutos"] == 30
+    assert [c["pct_trote"] for c in mj["corridas"]] == [66.7, 66.7]
+    assert salida["composicion"] is None                      # el fixture no trae inbody
+
+
+def test_composicion_real():
+    if not (ROOT / "plan" / "inbody.json").exists():
+        pytest.skip("no hay inbody.json")
+    out = build.build({**fixture(), "inbody": json.loads((ROOT / "plan" / "inbody.json").read_text())},
+                      build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    c = out["composicion"]
+    assert c["meta"]["faltan_pgc"] == 4.8 and c["meta"]["mme_ok"] is True and len(c["mediciones"]) == 4
+    revisar_privacidad(out)

@@ -30,6 +30,7 @@ def load_data() -> dict:
         "details": load(d / "activity_details.json", {}),
         "hr_zones": load(d / "hr_zones.json", []),
         "meta": load(d / "meta.json", {}),
+        "inbody": load(ROOT / "plan" / "inbody.json"),
     }
 
 
@@ -342,6 +343,13 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
     return out
 
 
+def build_mejora(hoy: date, filas: list, semanas: list) -> dict:
+    """Cómo vas mejorando: frase, minutos de las últimas 8 semanas (con plan) y % trote de las últimas 12 corridas."""
+    return {"frase": m.mejora_frase(filas, hoy),
+            "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"]} for s in semanas[-8:]],
+            "corridas": [{"fecha": f["fecha"], "pct_trote": r1(f["pct_trote"])} for f in filas[-12:]]}
+
+
 def build_days(hoy: date, data: dict) -> list:
     """84 días de recuperación con promedios de 7 días (se calculan con 6 días extra antes)."""
     hrv = {r["calendarDate"]: r for r in data["hrv"]}
@@ -414,6 +422,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         datos_al = datetime.fromisoformat(pulled).astimezone(ahora.tzinfo).isoformat(timespec="minutes")
     filas = m.run_rows(data["activities"], data["details"], config)
     semanas_hoy, semana_hoy_idx = build_semanas(hoy, data, config, plan)
+    semanas_12 = build_weeks(hoy, data, config, plan)
     return {
         "generado": ahora.isoformat(timespec="minutes"),
         "datos_al": datos_al,
@@ -430,8 +439,10 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
         "progreso": {"resumen": {str(k): m.progress_summary(filas, hoy, k) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
-                     "semanas": build_weeks(hoy, data, config, plan),
+                     "semanas": semanas_12,
+                     "mejora": build_mejora(hoy, filas, semanas_12),
                      "dias": build_days(hoy, data)},
+        "composicion": m.composicion(data.get("inbody")),
         "detalles": build_details(hoy, data, config, fc_max, reloj),
     }
 

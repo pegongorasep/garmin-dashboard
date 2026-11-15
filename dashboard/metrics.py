@@ -399,6 +399,63 @@ def progress_summary(rows: list, hoy: date, semanas: int) -> str:
     return texto
 
 
+def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
+    """Corridas y minutos por semana y % trote promedio de las corridas con ini <= fecha < fin; None si no hay corridas."""
+    g = [f for f in filas if ini <= date.fromisoformat(f["fecha"]) < fin]
+    if not g:
+        return None
+    return {"corridas": len(g) / semanas, "minutos": sum(f["minutos"] for f in g) / semanas,
+            "pct_trote": _promedio([f.get("pct_trote") for f in g])}
+
+
+def mejora_frase(filas: list, hoy: date) -> str:
+    """Compara las últimas 4 semanas calendario completas contra las 4 anteriores (filas = run_rows)."""
+    lunes = hoy - timedelta(days=hoy.weekday())
+    ahora = _grupo_mejora(filas, lunes - timedelta(weeks=4), lunes, 4)
+    antes = _grupo_mejora(filas, lunes - timedelta(weeks=8), lunes - timedelta(weeks=4), 4)
+    if not ahora and not antes:
+        return "Aún no hay corridas suficientes para comparar."
+    if not ahora:
+        return f"Últimas 4 semanas: sin corridas (antes {antes['corridas']:.1f} y {antes['minutos']:.0f} min por semana)."
+    texto = f"Últimas 4 semanas: {ahora['corridas']:.1f} corridas y {ahora['minutos']:.0f} min por semana"
+    if antes:
+        texto += f" (antes {antes['corridas']:.1f} y {antes['minutos']:.0f})"
+    if ahora["pct_trote"] is not None:
+        texto += f"; trote {ahora['pct_trote']:.0f} %"
+        if antes and antes["pct_trote"] is not None:
+            texto += f" (antes {antes['pct_trote']:.0f} %)"
+    return texto + "."
+
+
+def _medicion(x: dict) -> dict:
+    """Una medición InBody para publicar (lista blanca: sin nota ni hora); masa grasa calculada si falta."""
+    grasa = x.get("masa_grasa_kg")
+    out = {"fecha": x["fecha"], "peso_kg": x["peso_kg"], "mme_kg": x["mme_kg"], "pgc": x["pgc"],
+           "masa_grasa_kg": grasa if grasa is not None else round(x["peso_kg"] * x["pgc"] / 100, 1)}
+    for k in ("puntuacion", "grasa_visceral"):
+        if x.get(k) is not None:
+            out[k] = x[k]
+    return out
+
+
+def composicion(inbody):
+    """Composición corporal: mediciones por fecha, prime, última con deltas y meta de superar el prime. None sin datos."""
+    if not inbody or not inbody.get("mediciones"):
+        return None
+    meds = sorted((_medicion(x) for x in inbody["mediciones"]), key=lambda x: x["fecha"])
+    prime = next((x for x in meds if x["fecha"] == inbody.get("prime")), None) or min(meds, key=lambda x: x["pgc"])
+    ultima, previa = meds[-1], (meds[-2] if len(meds) > 1 else None)
+    delta = lambda k: None if previa is None else round(ultima[k] - previa[k], 1)  # noqa: E731
+    rango = next((x.get("grasa_visceral_rango") for x in reversed(inbody["mediciones"]) if x.get("grasa_visceral_rango")), [1, 9])
+    return {"mediciones": meds,
+            "prime": {k: prime[k] for k in ("fecha", "pgc", "mme_kg", "peso_kg", "masa_grasa_kg")},
+            "ultima": {**ultima, "delta_pgc": delta("pgc"), "delta_mme": delta("mme_kg"), "delta_peso": delta("peso_kg")},
+            "meta": {"faltan_pgc": max(0.0, round(ultima["pgc"] - prime["pgc"], 1)),
+                     "mme_ok": ultima["mme_kg"] >= prime["mme_kg"],
+                     "faltan_mme": max(0.0, round(prime["mme_kg"] - ultima["mme_kg"], 1))},
+            "visceral_rango": rango}
+
+
 def max_hr_progress(activities: list, config: dict) -> dict:
     """Progreso de la medición de FC máx con correa en CrossFit."""
     desde = date.fromisoformat(config["strap_in_crossfit_since"])

@@ -421,3 +421,59 @@ def test_today_card_proxima_id():
     assert m.today_card(vie, VERDE, z2_hechas, run_hoy, CFG)["proxima_id"] == "larga"  # mañana sábado
     assert m.today_card(mie, VERDE, pend, [], CFG)["proxima_id"] is None   # tipo sesion
     assert m.today_card(mar, VERDE, [], [], CFG)["proxima_id"] is None
+
+
+# --- v3.2 F2: mejora y composición corporal ---
+
+def c_mej(fecha, minutos, pct=None):
+    return {"fecha": fecha, "minutos": minutos, "pct_trote": pct}
+
+
+HOY = date(2026, 11, 14)   # lunes de esa semana: 9 nov; ventanas 12 oct–8 nov y 14 sep–11 oct
+
+
+def test_mejora_frase_con_datos():
+    filas = [c_mej("2026-09-20", 34, 66), c_mej("2026-10-01", 34, 66),
+             c_mej("2026-10-14", 50, 70), c_mej("2026-10-21", 54, 72), c_mej("2026-10-31", 50, 70),
+             c_mej("2026-11-05", 54, 72), c_mej("2026-11-09", 99, 99)]   # la de esta semana no cuenta
+    assert m.mejora_frase(filas, HOY) == (
+        "Últimas 4 semanas: 1.0 corridas y 52 min por semana (antes 0.5 y 17); trote 71 % (antes 66 %).")
+
+
+def test_mejora_frase_sin_datos():
+    assert m.mejora_frase([], HOY) == "Aún no hay corridas suficientes para comparar."
+    assert m.mejora_frase([c_mej("2026-11-12", 38, 71)], HOY) == "Aún no hay corridas suficientes para comparar."
+
+
+def test_mejora_frase_con_la_mitad_vacia():
+    solo_ahora = [c_mej("2026-10-20", 40, 60), c_mej("2026-10-27", 40)]
+    assert m.mejora_frase(solo_ahora, HOY) == "Últimas 4 semanas: 0.5 corridas y 20 min por semana; trote 60 %."
+    solo_antes = [c_mej("2026-09-20", 40, 60)]
+    assert m.mejora_frase(solo_antes, HOY) == "Últimas 4 semanas: sin corridas (antes 0.2 y 10 min por semana)."
+
+
+INBODY = {"prime": "2024-05-25", "mediciones": [
+    {"fecha": "2026-11-13", "hora": "08:29", "peso_kg": 93.8, "mme_kg": 39.1, "pgc": 27.1,
+     "masa_grasa_kg": 25.5, "puntuacion": 75, "grasa_visceral": 10, "grasa_visceral_rango": [1, 9], "nota": "x"},
+    {"fecha": "2024-05-25", "hora": "08:34", "peso_kg": 86.2, "mme_kg": 38.4, "pgc": 22.3},
+    {"fecha": "2026-10-08", "peso_kg": 94.8, "mme_kg": 38.0, "pgc": 30.1}]}
+
+
+def test_composicion_deltas_y_meta():
+    c = m.composicion(INBODY)
+    assert [x["fecha"] for x in c["mediciones"]] == ["2024-05-25", "2026-10-08", "2026-11-13"]
+    u = c["ultima"]
+    assert (u["delta_pgc"], u["delta_mme"], u["delta_peso"]) == (-3.0, 1.1, -1.0)
+    assert c["meta"] == {"faltan_pgc": 4.8, "mme_ok": True, "faltan_mme": 0.0}
+    assert c["prime"]["fecha"] == "2024-05-25" and c["visceral_rango"] == [1, 9]
+    texto = str(c)
+    assert "nota" not in texto and "hora" not in texto
+
+
+def test_composicion_masa_grasa_calculada_y_sin_prime():
+    c = m.composicion({"mediciones": INBODY["mediciones"][1:]})
+    assert c["mediciones"][0]["masa_grasa_kg"] == 19.2          # 86.2 × 22.3 %
+    assert c["prime"]["fecha"] == "2024-05-25"                  # sin `prime`: la de menor % de grasa
+    una = m.composicion({"mediciones": INBODY["mediciones"][1:2]})
+    assert una["ultima"]["delta_pgc"] is None and una["meta"]["faltan_pgc"] == 0
+    assert m.composicion(None) is None and m.composicion({"mediciones": []}) is None
