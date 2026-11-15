@@ -255,4 +255,4 @@ corre `pytest` y actualiza la tabla de seguimiento.
 | F3 Vista Hoy | ✅ |
 | F4 Progreso composición | ✅ |
 | F5 Capturas | ✅ |
-| Revisión Opus + publicar | ⬜ |
+| Revisión Opus + publicar | ✅ 2026-11-14 |
