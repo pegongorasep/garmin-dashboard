@@ -243,3 +243,86 @@ def test_escenario_real_12_nov():
     out = build.build(build.load_data(), build.load_plan(), cfg, ahora)
     c = out["plan"]["estado_sesiones"][0]["corrida"]
     assert c["km"] == 4.36 and c["pct_trote"] == 71.4 and c["techo_ok"] is False
+
+
+# --- v3.2 F1: semanas navegables ---
+
+def _act(i, dia, tipo, minutos=30, hora="18:00:00", **kw):
+    return {"activityId": i, "startTimeLocal": f"{dia} {hora}", "duration": minutos * 60.0,
+            "activityType": {"typeKey": tipo}, "distance": 3000.0, "hrTimeInZone_2": 600, **kw}
+
+
+def _semana(data, hoy, ini, config=CONFIG_FIXTURE):
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    return build.build_semana(ini, hoy, data, config, plan)
+
+
+def test_semanas_hoy_escenario_real():
+    if not (ROOT / "data" / "activities.json").exists():
+        pytest.skip("no hay data/ local")
+    cfg = {**CONFIG, "plan_start": "2026-11-09"}
+    ahora = datetime(2026, 11, 14, 12, 0, tzinfo=ZoneInfo("America/Merida"))
+    out = build.build(build.load_data(), build.load_plan(), cfg, ahora)
+    semanas = out["semanas_hoy"]
+    assert len(semanas) == 12
+    s = semanas[out["semana_hoy_idx"]]
+    assert s["n"] == 1 and s["estado"] == "actual" and s["stats"]["corridas"] == 1
+    assert s["sesiones"][0]["estado"] == "hecha" and s["extras"] == []
+    assert s["dias"][3]["corrida"]["sesion_nombre"] == "Z2 #1"
+    futura = semanas[1]
+    assert futura["estado"] == "futura" and futura["stats"]["corridas"] == 0
+    assert {e["estado"] for e in futura["sesiones"]} == {"pendiente"}
+
+
+def test_semanas_hoy_fuera_del_plan(salida):
+    out = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG, AHORA)
+    assert len(out["semanas_hoy"]) == 3                       # 2 del plan de ejemplo + la semana de hoy (sin plan)
+    s = out["semanas_hoy"][out["semana_hoy_idx"]]
+    assert s["n"] is None and s["plan"] is None and s["sesiones"] == []
+    assert s["inicio"] == "2026-11-02" and s["stats"]["corridas"] == 1 and len(s["extras"]) == 1
+
+
+def test_semana_con_cuatro_corridas_trae_un_extra():
+    data = fixture()
+    data["activities"] = [_act(10, "2026-11-02", "running"), _act(11, "2026-11-03", "running"),
+                          _act(12, "2026-11-07", "running", minutos=50), _act(13, "2026-11-08", "running", minutos=30)]
+    s = _semana(data, date(2026, 11, 8), date(2026, 11, 2))
+    assert s["stats"]["corridas"] == 4 and s["estado"] == "actual"
+    assert [e["estado"] for e in s["sesiones"]] == ["hecha", "hecha", "hecha"]
+    assert len(s["extras"]) == 1 and s["extras"][0]["fecha"] == "2026-11-08" and s["extras"][0]["minutos"] == 30
+    assert s["dias"][6]["corrida"] == {"minutos": 30, "sesion_nombre": "Extra", "estado": "extra"}
+    assert s["dias"][5]["corrida"]["sesion_nombre"] == "Larga"
+
+
+def test_semana_pasada_sesion_sin_hacer_es_no_hecha():
+    data = fixture()
+    data["activities"] = [_act(10, "2026-11-03", "running")]
+    s = _semana(data, date(2026, 11, 12), date(2026, 11, 2))
+    assert s["estado"] == "pasada"
+    assert [e["estado"] for e in s["sesiones"]] == ["hecha", "no_hecha", "no_hecha"]
+    assert s["sesiones"][1]["corrida"] is None
+    assert s["plan"] == {"total": 3, "hechas": 1, "incompletas": 0, "plan_min": 100}
+
+
+def test_semana_futura_todo_pendiente_y_planeado():
+    data = {**fixture(), "activities": []}
+    s = _semana(data, date(2026, 10, 28), date(2026, 11, 2))
+    assert s["estado"] == "futura" and s["stats"]["corridas"] == 0
+    assert {e["estado"] for e in s["sesiones"]} == {"pendiente"}
+    assert [d["planeado"] for d in s["dias"]] == ["cf", "cf", None, "cf", None, "larga", "larga"]
+    assert all(d["luz"] is None for d in s["dias"])
+
+
+def test_dia_futuro_martes_planeado_cf():
+    s = _semana({**fixture(), "activities": []}, date(2026, 11, 2), date(2026, 11, 2))
+    assert s["dias"][1]["planeado"] == "cf" and s["dias"][2]["planeado"] is None
+
+
+def test_crossfit_del_dia_toma_te_maximo_y_suma_minutos():
+    data = fixture()
+    data["activities"] = [_act(20, "2026-11-02", "strength_training", minutos=14, aerobicTrainingEffect=2.2),
+                          _act(21, "2026-11-02", "hiit", minutos=16, aerobicTrainingEffect=3.4)]
+    data["details"] = {"20": {"rpe": 5.0}, "21": {"rpe": 7.0}}
+    s = _semana(data, date(2026, 11, 4), date(2026, 11, 2))
+    assert s["dias"][0]["crossfit"] == {"te": 3.4, "rpe": 7.0, "minutos": 30}
+    assert s["dias"][1]["crossfit"] is None
