@@ -250,7 +250,7 @@ function dibujarDetalles() {
 
 // --- arranque ---
 
-const REDIBUJAR = { progreso: dibujarProgreso, detalles: dibujarDetalles };
+const REDIBUJAR = { hoy: dibujarMejora, progreso: dibujarProgreso, detalles: dibujarDetalles };
 let vistaActual = null;
 let vistaAnterior = "hoy";
 
@@ -261,7 +261,8 @@ function actualizarEncabezado() {
 }
 
 function mostrarVista() {
-  const v = VISTAS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "hoy";
+  const nombre = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
+  const v = VISTAS.includes(nombre) ? nombre : "hoy";
   if (vistaActual && vistaActual !== v && v === "detalles") vistaAnterior = vistaActual;
   vistaActual = v;
   for (const id of VISTAS) $(`vista-${id}`).hidden = id !== v;
@@ -278,6 +279,7 @@ function aviso(id, msg) {
 }
 
 async function iniciar() {
+  leerSemanaInicial();
   window.addEventListener("hashchange", mostrarVista);
   let resizeT;
   window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { for (const f of Object.values(REDIBUJAR)) f(); }, 150); });

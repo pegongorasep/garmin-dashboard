@@ -47,7 +47,7 @@ function tooltipEn(cont) {
  * cfg: { ancho, alto, serie:[{fecha, y}], banda:[{lo,hi}] (misma longitud que serie, opcional),
  *        ref:{y, etiqueta}, dominio:[ms0, ms1], marcadores:boolean, texto:(punto)=>string, fmtY,
  *        puntos:boolean (la serie son puntos de r=2.5 sin línea), promedio:[y] (misma longitud; línea de 2 px),
- *        invertir:boolean (arriba = valor menor, p. ej. ritmo) }
+ *        invertir:boolean (arriba = valor menor, p. ej. ritmo), etiquetaFinal:string (valor del último punto, escrito sobre él) }
  * Los y nulos cortan la línea (no se interpola).
  */
 function lineChart(cfg) {
@@ -115,6 +115,9 @@ function lineChart(cfg) {
   if (cfg.marcadores) for (const i of validos.flat()) svg.append(sv("circle", { class: "pt", cx: x(t[i]), cy: y(serie[i].y), r: 4 }));
   const ult = validos.flat().pop();
   if (ult !== undefined && !cfg.puntos) svg.append(sv("circle", { class: "pt fin", cx: x(t[ult]), cy: y(serie[ult].y), r: 4.5 }));
+  if (ult !== undefined && cfg.etiquetaFinal) {
+    svg.append(sv("text", { class: "eje valor-fin", x: Math.min(x(t[ult]) + 4, W - 2), y: Math.max(y(serie[ult].y) - 9, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
+  }
 
   // cruz + tooltip
   const cruz = sv("line", { class: "cruz", y1: mt, y2: H - mb, visibility: "hidden" });
@@ -154,7 +157,7 @@ function lineChart(cfg) {
 
 /**
  * Barras apiladas por semana. cfg: { ancho, alto, semanas:[{inicio, valores:[a,b], sin_rpe, meta}], texto:(semana)=>string,
- *   clases:["s1","s2"] }  `meta` = raya fina horizontal (p. ej. minutos del plan), en color de texto secundario.
+ *   clases:["s1","s2"], etiquetaFinal:string (valor de la última barra, escrito sobre ella) }  `meta` = raya fina horizontal (p. ej. minutos del plan), en color de texto secundario.
  * Segmentos separados por 2 px de superficie; barra de 24 px como máximo; extremo superior redondeado.
  */
 function barChart(cfg) {
@@ -195,6 +198,9 @@ function barChart(cfg) {
       base = top - 2;
     });
     if (s.meta) svg.append(sv("line", { class: "meta", x1: cx - ancho / 2 - 3, x2: cx + ancho / 2 + 3, y1: y(s.meta), y2: y(s.meta) }));
+    if (cfg.etiquetaFinal && i === semanas.length - 1) {
+      svg.append(sv("text", { class: "eje valor-fin", x: Math.min(cx + 6, W - 2), y: Math.max(y(Math.max(total(s), s.meta || 0)) - 5, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
+    }
     if (s.sin_rpe > 0) svg.append(sv("text", { class: "eje ast", x: cx, y: Math.max(base - 2, 12), "text-anchor": "middle" }, "*"));
     if (i % cada === 0) svg.append(sv("text", { class: "eje", x: cx, y: H - 6, "text-anchor": "middle" }, fechaCorta2(parseFecha(s.inicio).getTime())));
     const hit = sv("rect", { class: "capa", x: cx - slot / 2, y: 0, width: slot, height: H - mb, tabindex: 0,

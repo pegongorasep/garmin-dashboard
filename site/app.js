@@ -160,52 +160,131 @@ function banner(d) {
   return texto ? h("p", { class: "banner" }, texto) : null;
 }
 
-function flecha(delta, texto) {
-  return `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${texto}`;
+// --- semanas navegables: selector, esta semana, calendario ---
+
+let semIdx = null;           // índice en d.semanas_hoy de la semana elegida
+let semInicial = 0;          // desplazamiento pedido por #hoy?sem=+1 (solo se lee al arrancar)
+
+function leerSemanaInicial() {
+  const m = location.hash.match(/[?&]sem=([+-]?\d+)/);
+  semInicial = m ? parseInt(m[1], 10) : 0;
+}
+
+const semanasHoy = (d) => d.semanas_hoy || [];
+
+function rangoSemana(s) {
+  const a = parseFecha(s.inicio), b = parseFecha(s.fin);
+  return a.getMonth() === b.getMonth()
+    ? `${a.getDate()}–${b.getDate()} ${MESES[b.getMonth()]}`
+    : `${a.getDate()} ${MESES[a.getMonth()]}–${b.getDate()} ${MESES[b.getMonth()]}`;
+}
+
+function etiquetaSelector(d, s) {
+  const total = ((d.plan || {}).semanas || []).length;
+  return s.n !== null && s.n !== undefined
+    ? `Semana ${s.n}${total ? ` de ${total}` : ""} · ${rangoSemana(s)}${s.kind ? ` · ${s.kind}` : ""}`
+    : `Semana del ${rangoSemana(s)}`;
+}
+
+function selectorSemana(d) {
+  const sems = semanasHoy(d), s = sems[semIdx];
+  const mover = (delta) => () => { semIdx = Math.min(Math.max(semIdx + delta, 0), sems.length - 1); pintarSemana(d); };
+  const hoyIdx = d.semana_hoy_idx ?? 0;
+  return h("div", { class: "selector" },
+    h("div", { class: "selector-fila" },
+      h("button", { type: "button", "aria-label": "Semana anterior", disabled: semIdx <= 0, onclick: mover(-1) }, "‹"),
+      h("div", { class: "selector-txt", "aria-live": "polite" }, etiquetaSelector(d, s)),
+      h("button", { type: "button", "aria-label": "Semana siguiente", disabled: semIdx >= sems.length - 1, onclick: mover(1) }, "›")),
+    semIdx !== hoyIdx
+      ? h("button", { type: "button", class: "volver-sem", onclick: () => { semIdx = hoyIdx; pintarSemana(d); } }, "Volver a esta semana")
+      : null);
+}
+
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+function tituloSemana(d, s) {
+  if (s.estado === "actual") return "Esta semana";
+  return s.estado === "pasada" && semIdx === (d.semana_hoy_idx ?? 0) - 1 ? "Semana pasada" : "Esa semana";
 }
 
 function comparacion(s) {
-  const a = s.anterior;
-  if (!a) return null;
-  if (!a.minutos && !a.km) return "Semana pasada sin corridas";
-  const total = `Semana pasada: ${fmt(a.minutos, 0)} min · ${fmt(a.km)} km`;
+  const a = s.anterior, st = s.stats;
+  if (!a || s.estado === "futura") return null;
+  const previa = s.estado === "actual" ? "Semana pasada" : "Semana anterior";
+  if (!a.minutos && !a.km) return `${previa} sin corridas`;
+  const total = `${previa}: ${fmt(a.minutos, 0)} min · ${fmt(a.km)} km`;
   // Solo se compara cuando esta semana ya la superó; a media semana una flecha ▼ asusta sin razón.
-  if ((s.minutos || 0) < a.minutos) return total;
-  const dm = Math.round(s.minutos - a.minutos), dk = Math.round(((s.km || 0) - a.km) * 10) / 10;
+  if ((st.minutos || 0) < a.minutos) return total;
+  const dm = Math.round(st.minutos - a.minutos), dk = Math.round(((st.km || 0) - a.km) * 10) / 10;
   return `${total} · ya la superaste: ${flecha(dm, `${Math.abs(dm)} min`)} · ${flecha(dk, `${fmt(Math.abs(dk))} km`)}`;
 }
 
+const flecha = (delta, texto) => `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${texto}`;
+
 /** Barra de progreso: minutos hechos / minutos del plan; el relleno se corta en 100 %. */
 function barraProgreso(min, plan) {
-  if (!plan) return h("p", { class: "prog-txt" }, `${fmt(min, 0)} min`);
   const pct = Math.round((min / plan) * 100);
   return h("div", {},
-    h("div", { class: "prog", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": Math.min(pct, 100),
+    h("div", { class: "prog fina", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": Math.min(pct, 100),
       "aria-label": `${fmt(min, 0)} de ${fmt(plan, 0)} minutos` }, h("div", { style: `width:${Math.min(pct, 100)}%` })),
     h("p", { class: "prog-txt" }, `${fmt(min, 0)} / ${fmt(plan, 0)} min · ${pct} %`));
 }
 
-function tarjetaEstaSemana(d) {
-  const s = d.semana, plan = d.plan || {}, semanas = plan.semanas || [];
-  const w = semanas.find((x) => x.n === plan.semana_actual);
-  const titulo = w ? `Esta semana · Semana ${w.n} de ${semanas.length} · ${w.kind}` : "Esta semana";
-  const c = h("div", { class: "card" }, h("h2", {}, titulo));
-  if (s.sesiones_total > 0) {
-    c.append(h("div", { class: "grande" }, `${s.hechas} de ${s.sesiones_total} corridas`,
-      s.incompletas > 0 ? h("span", { class: "chico" }, ` · ${s.incompletas} ${s.incompletas === 1 ? "incompleta" : "incompletas"}`) : null));
+function tarjetaEstaSemana(d, s) {
+  const st = s.stats || {};
+  const c = h("div", { class: "card" }, h("h2", {}, tituloSemana(d, s)));
+  const partes = st.corridas
+    ? [plural(st.corridas, "corrida", "corridas"), st.minutos != null ? `${fmt(st.minutos, 0)} min` : null,
+      st.km != null ? `${fmt(st.km)} km` : null, st.pct_trote != null ? `${fmt(st.pct_trote, 0)} % trote` : null].filter(Boolean)
+    : [s.estado === "futura" ? "Aún no empieza" : "Sin corridas"];
+  c.append(h("div", { class: "grande" }, partes.join(" · ")));
+  const p = s.plan;
+  if (p) {
+    if (s.estado === "futura") c.append(h("p", { class: "nota" }, `Plan: ${p.total} sesiones · ${fmt(p.plan_min, 0)} min`));
+    else {
+      c.append(h("p", { class: "nota", style: "margin-top:8px" },
+        `Plan: ${p.hechas} de ${p.total} sesiones${p.incompletas ? ` · ${plural(p.incompletas, "incompleta", "incompletas")}` : ""}`),
+        barraProgreso(st.minutos || 0, p.plan_min));
+    }
   }
-  c.append(barraProgreso(s.minutos || 0, s.plan_min));
-  const partes = [s.km !== null && s.km !== undefined ? `${fmt(s.km)} km` : null,
-    s.min_trote ? `${fmt(s.min_trote, 0)}' trotando` : null,
-    s.pct_trote !== null && s.pct_trote !== undefined ? `${fmt(s.pct_trote, 0)} % trote` : null].filter(Boolean);
-  if (partes.length && s.minutos) c.append(h("p", { class: "resumen-sem" }, partes.join(" · ")));
   const comp = comparacion(s);
   if (comp) c.append(h("p", { class: "nota" }, comp));
-  const u = d.ultima_corrida;
-  if (u && s.hechas + s.incompletas === 0 && !s.minutos) {
-    c.append(h("p", { class: "nota" }, `Última corrida: ${fechaCorta(u.fecha)} · ${fmt(u.minutos, 0)}' · ${fmt(u.km)} km`));
-  }
   return c;
+}
+
+const diaTexto = (x) => {
+  const partes = [];
+  if (x.corrida) partes.push(`corrida de ${fmt(x.corrida.minutos, 0)} min (${x.corrida.sesion_nombre}, ${{ hecha: "hecha", incompleta: "incompleta", extra: "sin sesión" }[x.corrida.estado] || x.corrida.estado})`);
+  if (x.corridas_n > 1) partes.push(`${x.corridas_n} corridas ese día`);
+  if (x.crossfit) {
+    const cf = x.crossfit;
+    partes.push(`CrossFit${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.te != null ? `, Training Effect aeróbico ${cf.te.toFixed(1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
+  }
+  if (x.planeado) partes.push(x.planeado === "cf" ? "planeado: CrossFit" : "la Larga sigue pendiente");
+  return `${fechaCorta(x.fecha)}: ${partes.length ? partes.join("; ") : "sin actividad"}`;
+};
+
+function diaCalendario(x, hoyIso) {
+  const cf = x.crossfit;
+  const cfTxt = cf ? (cf.rpe != null ? `RPE ${fmt(cf.rpe, 0)}` : cf.te != null ? cf.te.toFixed(1) : null) : null;
+  let marca = null;
+  if (x.corrida) {
+    const cls = x.corrida.estado === "hecha" ? "hecha" : x.corrida.estado === "incompleta" ? "incompleta" : "extra";
+    marca = [h("span", { class: `circ ${cls}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
+      h("span", { class: "sn" }, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))];
+  }
+  const cfMarca = cf ? h("span", { class: "cf" }, h("b", {}, "CF"), cfTxt ? h("span", {}, cfTxt) : null) : null;
+  const plan = x.planeado ? h("span", { class: "cf tenue" }, x.planeado === "cf" ? h("b", {}, "CF") : h("b", {}, "Larga?")) : null;
+  return h("div", { class: `dia${x.fecha === hoyIso ? " es-hoy" : ""}`, role: "group", title: diaTexto(x), "aria-label": diaTexto(x) },
+    h("span", { class: "dn" }, x.dia_semana), h("span", { class: "df" }, parseFecha(x.fecha).getDate()),
+    marca, cfMarca, plan);
+}
+
+function tarjetaCalendario(d, s) {
+  const hoyIso = (d.generado || "").slice(0, 10);
+  return h("div", { class: "card cal" },
+    h("div", { class: "dias7" }, (s.dias || []).map((x) => diaCalendario(x, hoyIso))),
+    h("p", { class: "nota leyenda-cal" }, "CF = CrossFit · número = Training Effect aeróbico de Garmin (0–5)"));
 }
 
 function lineaTecho(c) {
@@ -215,17 +294,30 @@ function lineaTecho(c) {
     : h("p", { class: "estado" }, badge("warn", "!", "sobre el techo"), txt);
 }
 
-function filaHecha(e) {
-  const c = e.corrida || {};
+/** Fila de una corrida hecha: cabecera (estado + título), datos, techo y detalle de trote/caminata. */
+function filaCorrida(cabeza, titulo, c) {
+  c = c || {};
   const datos = [c.minutos != null ? `${fmt(c.minutos, 0)}'` : null, c.km != null ? `${fmt(c.km)} km` : null,
     c.pct_trote != null ? `${fmt(c.pct_trote, 0)} % trote` : null,
     c.ritmo_trote_s ? `${mmss(c.ritmo_trote_s)} /km${c.caminadora ? " (caminadora)" : ""}` : null].filter(Boolean);
   return h("div", { class: "corrida" },
-    h("div", { class: "cab-c" }, estadoSesion(e), h("span", { class: "n" }, `${e.name} · ${e.fecha ? fechaCorta(e.fecha) : ""}`)),
+    h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo)),
     datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
     c.techo_ok !== undefined ? lineaTecho(c) : null,
     h("details", {}, h("summary", {}, "Ver detalle"),
       ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora })));
+}
+
+const filaHecha = (e) => filaCorrida(estadoSesion(e), `${e.name} · ${e.fecha ? fechaCorta(e.fecha) : ""}`, e.corrida);
+
+function filaExtra(x) {
+  return filaCorrida(h("span", { class: "estado" }, badge("nd", "+", "extra")), `Extra · ${fechaCorta(x.fecha)}`, x);
+}
+
+function filaNoHecha(e, s) {
+  return h("div", { class: "corrida no-hecha" },
+    h("div", { class: "cab-c" }, h("span", { class: "estado" }, badge("nd", "✗", "no hecha"), "No hecha"),
+      h("span", { class: "n" }, `${e.name}${s ? ` · ${s.minutes} min` : ""}`)));
 }
 
 function filaHoy(e, s, t) {
@@ -253,17 +345,89 @@ function filaPendiente(e, s) {
     ...(s ? cuerpoPlan(s) : []));
 }
 
-function tarjetaTusCorridas(d) {
-  const plan = d.plan || {}, est = plan.estado_sesiones || [], t = d.hoy.tarjeta;
-  const w = (plan.semanas || []).find((x) => x.n === plan.semana_actual);
-  if (!w || !est.length) return null;
-  const filas = est.map((e) => {
-    const s = (w.sessions || []).find((x) => x.id === e.id);
-    if (e.estado !== "pendiente") return filaHecha(e);
-    if (t.tipo === "sesion" && t.sesion_id === e.id) return filaHoy(e, t.sesion || s, t);
-    return filaPendiente(e, s);
+function tarjetaTusCorridas(d, s) {
+  const plan = d.plan || {}, t = d.hoy.tarjeta;
+  const w = s.n != null ? (plan.semanas || []).find((x) => x.n === s.n) : null;
+  const filas = (s.sesiones || []).map((e) => {
+    const ses = w ? (w.sessions || []).find((x) => x.id === e.id) : null;
+    if (e.estado === "hecha" || e.estado === "incompleta") return filaHecha(e);
+    if (e.estado === "no_hecha") return filaNoHecha(e, ses);
+    if (s.estado === "actual" && t.tipo === "sesion" && t.sesion_id === e.id) return filaHoy(e, t.sesion || ses, t);
+    return filaPendiente(e, ses);
   });
-  return h("div", { class: "card" }, h("h2", {}, `Tus ${est.length} corridas`), ...filas);
+  filas.push(...(s.extras || []).map(filaExtra));
+  return h("div", { class: "card" }, h("h2", {}, "Tus corridas"),
+    ...(filas.length ? filas : [h("p", { class: "vacio" }, "Sin corridas esta semana")]));
+}
+
+// --- cómo vas mejorando ---
+
+const MEJ = {};
+const mesAnio = (iso) => { const f = parseFecha(iso); return `${f.getDate()} ${MESES[f.getMonth()]} ${f.getFullYear()}`; };
+
+/** Cambio respecto a la medición anterior: ▼/▲ con 1 decimal; verde si es bueno, tinta neutra si no (sin rojo). */
+function deltaInbody(delta, buenoSiBaja) {
+  if (delta === null || delta === undefined) return null;
+  if (delta === 0) return h("span", { class: "delta" }, "= 0.0");
+  const bueno = buenoSiBaja ? delta < 0 : delta > 0;
+  return h("span", { class: `delta${bueno ? " bien" : ""}` }, `${delta > 0 ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}`);
+}
+
+function lineasInbody(c) {
+  const u = c.ultima, rango = c.visceral_rango || [1, 9], meta = c.meta || {};
+  const visceral = u.grasa_visceral == null ? null
+    : u.grasa_visceral > rango[1]
+      ? h("span", { class: "estado" }, badge("warn", "!", "fuera de rango"), `Visceral ${fmt(u.grasa_visceral, 0)} (sano ${rango[0]}–${rango[1]}): por encima`)
+      : `Visceral ${fmt(u.grasa_visceral, 0)} (sano ${rango[0]}–${rango[1]})`;
+  const sep = () => h("span", { class: "sep", "aria-hidden": "true" }, "·");
+  const items = [fechaCorta(u.fecha).split(" ").slice(1).join(" "),
+    h("span", {}, `Grasa ${fmt(u.pgc, 1)} % `, deltaInbody(u.delta_pgc, true)),
+    h("span", {}, `Músculo ${fmt(u.mme_kg, 1)} kg `, deltaInbody(u.delta_mme, false))];
+  const prime = c.prime;
+  const metaGrasa = meta.faltan_pgc > 0 ? `te faltan ${fmt(meta.faltan_pgc, 1)} puntos de grasa` : "ya superaste tu prime en grasa ✓";
+  const metaMusculo = meta.mme_ok ? "Músculo ya arriba de tu prime ✓" : `Te faltan ${fmt(meta.faltan_mme, 1)} kg de músculo para tu prime`;
+  return [h("p", { class: "inbody" }, ...items.flatMap((x, i) => (i ? [sep(), x] : [x]))),
+    visceral ? h("p", { class: "inbody v" }, visceral) : null,
+    h("p", { class: "nota" }, `Tu prime (${mesAnio(prime.fecha)}): ${fmt(prime.pgc, 1)} % · ${metaGrasa}`),
+    h("p", { class: "nota" }, metaMusculo)].filter(Boolean);
+}
+
+function tarjetaMejora(d) {
+  const mj = (d.progreso || {}).mejora;
+  if (!mj) return null;
+  const hayMin = (mj.semanas || []).some((s) => (s.minutos || 0) > 0);
+  const hayPct = (mj.corridas || []).some((c) => c.pct_trote != null);
+  MEJ.min = h("div", { class: "chart-wrap" });
+  MEJ.pct = h("div", { class: "chart-wrap" });
+  const graficas = hayMin || hayPct
+    ? h("div", { class: "mini2" },
+      h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
+      h("div", {}, h("h3", {}, "% trote por corrida"), MEJ.pct))
+    : null;
+  return h("div", { class: "card" }, h("h2", {}, "Cómo vas mejorando"),
+    h("p", { class: "frase-mej" }, mj.frase), graficas,
+    ...(d.composicion ? lineasInbody(d.composicion) : []),
+    h("a", { class: "ver-progreso", href: "#progreso" }, "Ver progreso →"));
+}
+
+function dibujarMejora() {
+  if (!MEJ.min || !datos) return;
+  const mj = (datos.progreso || {}).mejora;
+  if (!mj) return;
+  const dibujar = (cont, fn) => { const w = cont.clientWidth; if (w) cont.replaceChildren(fn(w)); };
+  const semanas = mj.semanas || [];
+  const ult = semanas[semanas.length - 1];
+  dibujar(MEJ.min, (ancho) => barChart({
+    ancho, alto: 100, clases: ["s1"], etiqueta: "Minutos por semana, últimas 8 semanas, con raya del plan",
+    semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.minutos || 0], meta: s.plan_min || 0, s })),
+    etiquetaFinal: ult ? `${fmt(ult.minutos, 0)}'` : null,
+    texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}`,
+  }));
+  const pts = (mj.corridas || []).filter((c) => c.pct_trote != null).map((c) => ({ fecha: c.fecha, y: c.pct_trote }));
+  dibujar(MEJ.pct, (ancho) => pts.length
+    ? lineChart({ ancho, alto: 100, serie: pts, marcadores: true, fmtY: (v) => fmt(v, 0), etiqueta: "Porcentaje del tiempo trotando por corrida",
+      etiquetaFinal: `${fmt(pts[pts.length - 1].y, 0)} %`, texto: (p) => `${fechaLarga(p.fecha)} · ${fmt(p.y, 0)} % trotando` })
+    : h("p", { class: "vacio" }, "Aún no hay corridas con trote y caminata."));
 }
 
 function recuperacion(d) {
@@ -275,15 +439,25 @@ function recuperacion(d) {
         h("div", {}, h("div", { class: "nombre" }, NOMBRE_SENAL[x.id] || x.id), h("div", { class: "nota" }, x.texto))))));
 }
 
+function pintarSemana(d) {
+  const sems = semanasHoy(d), s = sems[semIdx];
+  const caja = $("hoy-semana");
+  if (!s) { caja.replaceChildren(); return; }
+  caja.replaceChildren(selectorSemana(d), tarjetaEstaSemana(d, s), tarjetaCalendario(d, s), tarjetaTusCorridas(d, s));
+}
+
 function renderHoy(d) {
+  const sems = semanasHoy(d);
+  if (semIdx === null) semIdx = Math.min(Math.max((d.semana_hoy_idx ?? 0) + semInicial, 0), Math.max(sems.length - 1, 0));
   $("vista-hoy").replaceChildren(...[
     d.hoy.semaforo.repetir_semana
       ? h("div", { class: "aviso bad" }, badge("bad", "✕", "aviso"),
         h("div", {}, h("strong", {}, "Repetir la semana. "), "Dos días seguidos en rojo: repite la semana anterior del plan."))
       : null,
-    banner(d), tarjetaEstaSemana(d), tarjetaTusCorridas(d), recuperacion(d),
+    banner(d), h("div", { id: "hoy-semana" }), tarjetaMejora(d), recuperacion(d),
     d.aviso_zonas ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, d.aviso_zonas)) : null,
     enlaceDetalles()].filter(Boolean));
+  pintarSemana(d);
 }
 function bloqueCarga(s) {
   const a = s.carga.total, b = s.carga_anterior.total;
