@@ -74,3 +74,20 @@
 - La barra de progreso es un solo color de acento (`--s1`) sobre la rejilla; el valor siempre va en texto ("38 / 80 min · 48 %") y con `role="progressbar"`.
 - La función de `app.js` se llama `tarjetaTusCorridas` porque `vistas.js` ya tenía `tarjetaCorridas` (tabla de Progreso).
 - La fecha de la fila hecha usa `fechaCorta` existente ("jueves 12 nov"), no la abreviada del esquema.
+
+## v3.2 (2026-11-14)
+
+Decisiones que se apartan del plan o que el plan dejaba abiertas:
+
+- **Parámetro de captura.** `#hoy?sem=+1` / `#hoy?sem=-2` es un desplazamiento **relativo** a la semana de hoy (`semana_hoy_idx`); solo se lee al arrancar (`leerSemanaInicial`). `mostrarVista` ignora lo que va después de `?`.
+- **Captura 3.** Con `--day 2026-11-24` la semana de hoy es la 3, así que la semana 1 se ve con `sem=-2` (no `-1`).
+- **Captura 5.** Con `--day 2026-11-04` la semana 2–8 nov no tiene corridas hasta hoy (las de Garmin en caché son del 5 nov en adelante), así que no sale ningún "Extra". Se agregó `esc5b` con `--day 2026-11-08` (corrida del jue 5 nov sin sesión = Extra, y CrossFit con TE). Las dos quedan en las capturas.
+- **Claves v3.1.** `semana` y `plan.estado_sesiones` se dejaron en `data.json` (el plan permitía borrarlas, pero los tests de v3.1 las usan y cuestan pocos KB); el JS ya no lee `semana`.
+- **`corrida_de_sesion`** ahora devuelve `None` cuando `e["fecha"]` es `None` (pendiente o no hecha) y la lógica común de la corrida quedó en `corrida_plana`, usada también por los extras.
+- **`mejora`.** El % trote promedio de la frase y la gráfica incluyen corridas en caminadora (el trote/caminata viene de los tramos de Garmin y no depende del lugar); Progreso sigue excluyéndolas del % trote. La frase cuenta corridas por semana = corridas ÷ 4, y omite "(antes …)" si las 4 semanas anteriores no tienen corridas. Si solo las anteriores tienen: "Últimas 4 semanas: sin corridas (antes … por semana)."
+- **`composicion`** se carga desde `plan/inbody.json` vía `load_data()` (clave `inbody` en `data`), para que `build()` siga con la misma firma. `puntuacion` y `grasa_visceral` solo salen si existen.
+- **Calendario.** Día con corrida y CrossFit a la vez muestra ambos (círculo + "CF" abajo). Estados del círculo: hecha = acento, incompleta = advertencia, Extra = neutro con borde. El TE se muestra siempre con 1 decimal.
+- **Línea InBody** se parte en dos líneas a 400 px: fecha · grasa · músculo, y debajo la visceral con su badge ("por encima" si > 9); así no desborda ni deja separadores colgando. Color bueno = `--bien-ink` (verde de texto, más oscuro que `--ok` para contraste).
+- **`lineChart`/`barChart` extendidos** sin romper usos previos: `clase`, `nombre`, `extra` (más series, mismo eje), `verticales`, `fmtX`, `etiquetaFinal` (la etiqueta va abajo del punto si la serie venía bajando). Paleta s1/s2 validada con `validate_palette.js`: claro `#2a78d6,#eb6834` sobre `#fcfcfb` y oscuro `#3987e5,#d95926` sobre `#1a1a19`, todo PASS (CVD ΔE ≥ 24.7). Masa grasa = s2 (naranja), músculo = s1 (azul), en las dos gráficas de composición.
+- **Capturas.** Claro/oscuro con `--blink-settings=preferredColorScheme=1|0` (el sistema está en oscuro y `--force-dark-mode` no basta). Un iframe de 5000 px sale en blanco; Progreso se captura a 4300 px. Con `--day` pasados, `progreso` usa también actividades posteriores del caché (solo afecta pruebas visuales).
+- **Semanas futuras** muestran "Plan: 3 sesiones · 85 min" (sin barra) en vez de "0 de 3".

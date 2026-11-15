@@ -250,9 +250,9 @@ corre `pytest` y actualiza la tabla de seguimiento.
 
 | Fase | Estado |
 |---|---|
-| F1 Semanas navegables | ⬜ |
-| F2 Mejora y composición | ⬜ |
-| F3 Vista Hoy | ⬜ |
-| F4 Progreso composición | ⬜ |
-| F5 Capturas | ⬜ |
+| F1 Semanas navegables | ✅ |
+| F2 Mejora y composición | ✅ |
+| F3 Vista Hoy | ✅ |
+| F4 Progreso composición | ✅ |
+| F5 Capturas | ✅ |
 | Revisión Opus + publicar | ⬜ |
