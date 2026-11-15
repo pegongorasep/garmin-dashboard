@@ -47,7 +47,10 @@ function tooltipEn(cont) {
  * cfg: { ancho, alto, serie:[{fecha, y}], banda:[{lo,hi}] (misma longitud que serie, opcional),
  *        ref:{y, etiqueta}, dominio:[ms0, ms1], marcadores:boolean, texto:(punto)=>string, fmtY,
  *        puntos:boolean (la serie son puntos de r=2.5 sin línea), promedio:[y] (misma longitud; línea de 2 px),
- *        invertir:boolean (arriba = valor menor, p. ej. ritmo), etiquetaFinal:string (valor del último punto, escrito sobre él) }
+ *        invertir:boolean (arriba = valor menor, p. ej. ritmo), etiquetaFinal:string (valor del último punto, escrito sobre él),
+ *        clase:"s1"|"s2" (color de la serie principal), nombre:string (etiqueta directa de la serie principal),
+ *        extra:[{y:[...] (misma longitud que serie), clase, nombre}] (más series en el mismo eje, con marcadores),
+ *        verticales:[{fecha, etiqueta}] (rayas verticales tenues), fmtX:(ms)=>string (rótulos del eje x) }
  * Los y nulos cortan la línea (no se interpola).
  */
 function lineChart(cfg) {
@@ -58,7 +61,7 @@ function lineChart(cfg) {
   const [t0, t1] = cfg.dominio || [Math.min(...t), Math.max(...t)];
   const x = (ms) => ml + (t1 === t0 ? (W - ml - mr) / 2 : ((ms - t0) / (t1 - t0)) * (W - ml - mr));
   const prom = cfg.promedio || [];
-  const ys = [...serie.map((p) => p.y), ...prom].filter((v) => v !== null && v !== undefined);
+  const ys = [...serie.map((p) => p.y), ...prom, ...(cfg.extra || []).flatMap((e) => e.y)].filter((v) => v !== null && v !== undefined);
   if (!ys.length) return h("p", { class: "vacio" }, "Sin datos en este periodo.");
   const extra = [];
   (cfg.banda || []).forEach((b) => { if (b && b.lo != null) extra.push(b.lo, b.hi); });
@@ -80,7 +83,7 @@ function lineChart(cfg) {
   const nx = W < 300 ? 3 : 4;
   for (let i = 0; i < nx; i++) {
     const ms = t0 + ((t1 - t0) * i) / (nx - 1);
-    svg.append(sv("text", { class: "eje", x: x(ms), y: H - 6, "text-anchor": i === 0 ? "start" : i === nx - 1 ? "end" : "middle" }, fechaCorta2(ms)));
+    svg.append(sv("text", { class: "eje", x: x(ms), y: H - 6, "text-anchor": i === 0 ? "start" : i === nx - 1 ? "end" : "middle" }, (cfg.fmtX || fechaCorta2)(ms)));
   }
   // banda: un polígono por tramo continuo
   const tramos = (ok) => {
@@ -100,6 +103,12 @@ function lineChart(cfg) {
     svg.append(sv("line", { class: "ref", x1: ml, x2: W - mr, y1: y(cfg.ref.y), y2: y(cfg.ref.y) }));
     if (cfg.ref.etiqueta) svg.append(sv("text", { class: "eje ref-t", x: W - mr, y: y(cfg.ref.y) - 4, "text-anchor": "end" }, cfg.ref.etiqueta));
   }
+  for (const v of cfg.verticales || []) {
+    const vx = x(parseFecha(v.fecha).getTime());
+    svg.append(sv("line", { class: "vert", x1: vx, x2: vx, y1: mt, y2: H - mb }),
+      sv("text", { class: "eje vert-t", x: vx + 4, y: mt + 9, "text-anchor": "start" }, v.etiqueta));
+  }
+  const cl = cfg.clase || "s1";
   const validos = tramos((i) => serie[i].y != null);
   if (cfg.promedio) {
     for (const tr of tramos((i) => prom[i] != null)) {
@@ -108,20 +117,37 @@ function lineChart(cfg) {
   }
   for (const tr of validos) {
     if (cfg.puntos) {
-      for (const i of tr) svg.append(sv("circle", { class: "pt-d", cx: x(t[i]), cy: y(serie[i].y), r: 2.5 }));
+      for (const i of tr) svg.append(sv("circle", { class: `pt-d ${cl}`, cx: x(t[i]), cy: y(serie[i].y), r: 2.5 }));
     } else if (tr.length === 1) svg.append(sv("circle", { class: "pt", cx: x(t[tr[0]]), cy: y(serie[tr[0]].y), r: 3.5 }));
-    else svg.append(sv("polyline", { class: "ln", points: tr.map((i) => `${x(t[i])},${y(serie[i].y)}`).join(" ") }));
+    else svg.append(sv("polyline", { class: `ln ${cl}`, points: tr.map((i) => `${x(t[i])},${y(serie[i].y)}`).join(" ") }));
   }
-  if (cfg.marcadores) for (const i of validos.flat()) svg.append(sv("circle", { class: "pt", cx: x(t[i]), cy: y(serie[i].y), r: 4 }));
+  // series extra: misma escala y mismas fechas; línea de 2 px con marcadores y etiqueta directa
+  const dibujarExtra = (e) => {
+    const idx = serie.map((_, i) => i).filter((i) => e.y[i] != null);
+    if (idx.length > 1) svg.append(sv("polyline", { class: `ln ${e.clase}`, points: idx.map((i) => `${x(t[i])},${y(e.y[i])}`).join(" ") }));
+    for (const i of idx) svg.append(sv("circle", { class: `pt ${e.clase}`, cx: x(t[i]), cy: y(e.y[i]), r: 4 }));
+    return idx;
+  };
+  // la etiqueta va arriba del último punto, o abajo si la serie venía bajando (así no tapa la línea)
+  const etiquetaDirecta = (nombre, i, v, previo) => svg.append(sv("text", { class: "eje valor-fin", x: Math.min(x(t[i]) + 4, W - 2),
+    y: previo != null && previo > v ? Math.min(y(v) + 16, H - mb - 2) : Math.max(y(v) - 9, 10), "text-anchor": "end" }, nombre));
+  for (const e of cfg.extra || []) {
+    const idx = dibujarExtra(e);
+    if (e.nombre && idx.length) etiquetaDirecta(e.nombre, idx[idx.length - 1], e.y[idx[idx.length - 1]], idx.length > 1 ? e.y[idx[idx.length - 2]] : null);
+  }
+  if (cfg.marcadores) for (const i of validos.flat()) svg.append(sv("circle", { class: `pt ${cl}`, cx: x(t[i]), cy: y(serie[i].y), r: 4 }));
   const ult = validos.flat().pop();
-  if (ult !== undefined && !cfg.puntos) svg.append(sv("circle", { class: "pt fin", cx: x(t[ult]), cy: y(serie[ult].y), r: 4.5 }));
+  const valoresValidos = validos.flat();
+  const prev = valoresValidos.length > 1 ? serie[valoresValidos[valoresValidos.length - 2]].y : null;
+  if (ult !== undefined && cfg.nombre) etiquetaDirecta(cfg.nombre, ult, serie[ult].y, prev);
+  if (ult !== undefined && !cfg.puntos) svg.append(sv("circle", { class: `pt fin ${cl}`, cx: x(t[ult]), cy: y(serie[ult].y), r: 4.5 }));
   if (ult !== undefined && cfg.etiquetaFinal) {
-    svg.append(sv("text", { class: "eje valor-fin", x: Math.min(x(t[ult]) + 4, W - 2), y: Math.max(y(serie[ult].y) - 9, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
+    etiquetaDirecta(cfg.etiquetaFinal, ult, serie[ult].y, prev);
   }
 
   // cruz + tooltip
   const cruz = sv("line", { class: "cruz", y1: mt, y2: H - mb, visibility: "hidden" });
-  const punto = sv("circle", { class: "pt fin", r: 4.5, visibility: "hidden" });
+  const punto = sv("circle", { class: `pt fin ${cl}`, r: 4.5, visibility: "hidden" });
   const capa = sv("rect", { class: "capa", x: ml, y: 0, width: W - ml - mr, height: H, tabindex: 0,
     "aria-label": "Recorre los puntos con las flechas" });
   svg.append(cruz, punto, capa);

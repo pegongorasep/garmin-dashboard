@@ -50,6 +50,7 @@ function renderProgreso(d) {
       bloqueRec("hrv", "HRV nocturna"), bloqueRec("rhr", "FC en reposo"), bloqueRec("sueno", "Sueño")),
     tarjetaDoceSemanas(d),
     tarjetaCorridas(prog.corridas || []),
+    ...seccionComposicion(d.composicion),
     enlaceDetalles());
 }
 
@@ -96,6 +97,68 @@ function tarjetaCorridas(corridas) {
     orden.some((r) => r.caminadora) ? h("p", { class: "nota", style: "margin-top:8px" }, "cam. = caminadora (su ritmo no se compara).") : null);
 }
 
+// --- Composición corporal (InBody) ---
+
+const COMP = {};
+const fechaMes = (ms) => { const f = new Date(ms); return `${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}`; };
+
+function seccionComposicion(c) {
+  if (!c || !(c.mediciones || []).length) return [];
+  const u = c.ultima, p = c.prime, meta = c.meta || {};
+  const grasaTxt = meta.faltan_pgc > 0 ? `${fmt(u.pgc, 1)} % (faltan ${fmt(meta.faltan_pgc, 1)})` : `${fmt(u.pgc, 1)} % ✓`;
+  const mmeTxt = meta.mme_ok ? h("span", { class: "estado" }, `${fmt(u.mme_kg, 1)} kg`, badge("ok", "✓", "ya superas tu prime"))
+    : `${fmt(u.mme_kg, 1)} kg (faltan ${fmt(meta.faltan_mme, 1)})`;
+  COMP.rec = h("div", { class: "chart-wrap" });
+  COMP.pct = h("div", { class: "chart-wrap" });
+  const meds = c.mediciones;
+  const tabla = h("div", { class: "tabla-scroll ancha comp" }, h("table", {},
+    h("thead", {}, h("tr", {}, ["Fecha", "Peso", "% grasa", "Grasa kg", "MME", "Punt.", "Visc."].map((x) => h("th", {}, x)))),
+    h("tbody", {}, meds.slice().reverse().map((x) => {
+      const esPrime = x.fecha === p.fecha, f = parseFecha(x.fecha);
+      return h("tr", {}, h("td", { class: "celda-prime" }, `${f.getDate()} ${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}`, esPrime ? h("small", {}, "★ prime") : null),
+        ...[x.peso_kg, x.pgc, x.masa_grasa_kg, x.mme_kg].map((v) => h("td", {}, v == null ? "—" : v.toFixed(1))),
+        h("td", {}, x.puntuacion == null ? "—" : fmt(x.puntuacion, 0)), h("td", {}, x.grasa_visceral == null ? "—" : fmt(x.grasa_visceral, 0)));
+    }))));
+  return [
+    h("div", { class: "card" }, h("h2", {}, "Composición corporal"),
+      h("p", { class: "meta-prime" }, `Superar tu prime: ${fmt(p.pgc, 1)} % grasa · MME ≥ ${fmt(p.mme_kg, 1)} kg`),
+      h("div", { class: "kv" }, h("span", {}, "Grasa hoy"), h("span", {}, grasaTxt)),
+      h("div", { class: "kv" }, h("span", {}, "Músculo hoy"), h("span", {}, mmeTxt)),
+      h("p", { class: "nota", style: "margin-top:6px" }, `Medición del ${fechaLarga(u.fecha)}. Tu prime es del ${fechaLarga(p.fecha)} ${parseFecha(p.fecha).getFullYear()}.`)),
+    h("div", { class: "card" }, h("h2", {}, "Recomposición"),
+      h("p", { class: "nota" }, "Masa grasa y músculo esquelético en kg, en un solo eje. El eje x es la fecha real: los huecos son meses sin medir."),
+      COMP.rec, leyenda([["sw s2", "Masa grasa (kg)"], ["sw s1", "Músculo esquelético (kg)"]]),
+      tablaDatos(["Fecha", "Masa grasa", "MME"], meds.slice().reverse().map((x) => [fechaLarga(x.fecha), fmt(x.masa_grasa_kg, 1), fmt(x.mme_kg, 1)]))),
+    h("div", { class: "card" }, h("h2", {}, "% de grasa en el tiempo"), COMP.pct,
+      tablaDatos(["Fecha", "% grasa"], meds.slice().reverse().map((x) => [fechaLarga(x.fecha), `${fmt(x.pgc, 1)} %`]))),
+    h("div", { class: "card" }, h("h2", {}, "Mediciones"), tabla,
+      h("p", { class: "nota", style: "margin-top:8px" }, "MME = masa muscular esquelética. Visc. = grasa visceral (sano: 1–9). — = sin dato."))];
+}
+
+function dibujarComposicion() {
+  const c = datos && datos.composicion;
+  if (!c || !COMP.rec) return;
+  const ancho = COMP.rec.clientWidth;
+  if (!ancho) return;
+  const meds = c.mediciones, fechas = meds.map((x) => parseFecha(x.fecha).getTime());
+  const dominio = [Math.min(...fechas), Math.max(...fechas)];
+  const prime = { fecha: c.prime.fecha, etiqueta: "prime" };
+  const texto = (x) => `${fechaLarga(x.fecha)} ${parseFecha(x.fecha).getFullYear()}`;
+  COMP.rec.replaceChildren(lineChart({
+    ancho, alto: 190, dominio, fmtX: fechaMes, marcadores: true, clase: "s1", nombre: "Músculo",
+    serie: meds.map((x) => ({ fecha: x.fecha, y: x.mme_kg, r: x })),
+    extra: [{ y: meds.map((x) => x.masa_grasa_kg), clase: "s2", nombre: "Grasa" }],
+    verticales: [prime], fmtY: (v) => fmt(v, 0), etiqueta: "Recomposición: masa grasa y músculo esquelético en kg",
+    texto: (p) => `${texto(p.r)} · grasa ${fmt(p.r.masa_grasa_kg, 1)} kg · músculo ${fmt(p.r.mme_kg, 1)} kg`,
+  }));
+  COMP.pct.replaceChildren(lineChart({
+    ancho, alto: 170, dominio, fmtX: fechaMes, marcadores: true, clase: "s2", etiquetaFinal: `${fmt(c.ultima.pgc, 1)} %`,
+    serie: meds.map((x) => ({ fecha: x.fecha, y: x.pgc, r: x })), ref: { y: c.prime.pgc, etiqueta: `prime ${fmt(c.prime.pgc, 1)} %` },
+    fmtY: (v) => fmt(v, 0), etiqueta: "Porcentaje de grasa corporal por medición",
+    texto: (p) => `${texto(p.r)} · ${fmt(p.r.pgc, 1)} % de grasa${p.r.fecha === c.prime.fecha ? " · prime" : ""}`,
+  }));
+}
+
 const ultimoValor = (serie) => { for (let i = serie.length - 1; i >= 0; i--) if (serie[i].y != null) return serie[i]; return null; };
 
 function dibujarProgreso() {
@@ -124,6 +187,7 @@ function dibujarProgreso() {
 
   dibujarVolumen(ancho, prog);
   dibujarRecuperacion(ancho, prog, dominio);
+  dibujarComposicion();
 }
 
 function dibujarVolumen(ancho, prog) {
