@@ -396,6 +396,8 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     # La FC máx viene del reloj; config["max_hr"] es solo respaldo si Garmin no la da.
     reloj = m.watch_max_hr(data["hr_zones"])
     config = {**config, "max_hr": reloj or config["max_hr"]}
+    # La FC en reposo solo cuenta si esa noche hubo sueño registrado (señal, promedio 7 días, zonas y gráfica).
+    data = {**data, "daily_summaries": m.rhr_con_sueno(data["daily_summaries"], data["sleep"])}
     fc_max = m.max_hr_progress(data["activities"], config)
     hoy = ahora.date()
     ayer = hoy - timedelta(days=1)

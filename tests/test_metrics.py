@@ -38,6 +38,17 @@ def test_rhr_7d_con_huecos():
     assert m.rhr_7d(ds, date(2026, 10, 1)) is None
 
 
+def test_rhr_solo_con_noche_de_sueno():
+    ds = [{"calendarDate": "2026-11-12", "heartRate": {"minValue": 60, "restingValue": 61}},
+          {"calendarDate": "2026-11-14", "heartRate": {"minValue": 69, "restingValue": 69}}]
+    sleep = [{"calendarDate": "2026-11-12", "sleepTimeSeconds": 24720},
+             {"calendarDate": None, "sleepTimeSeconds": None}]
+    out = m.rhr_con_sueno(ds, sleep)
+    assert out[0]["heartRate"]["restingValue"] == 61
+    assert out[1]["heartRate"] == {"minValue": 69, "restingValue": None}
+    assert ds[1]["heartRate"]["restingValue"] == 69  # no muta la entrada
+
+
 def test_classify():
     assert m.classify(act(1, "2026-10-01", "running"), CFG) == "run"
     assert m.classify(act(1, "2026-10-01", "treadmill_running"), CFG) == "run"

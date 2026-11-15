@@ -20,6 +20,15 @@ def zones(max_hr: float, rhr: float, pcts: list) -> list:
     return [(f"Z{i + 1}", pisos[i], techos[i]) for i in range(len(pcts))]
 
 
+def rhr_con_sueno(daily_summaries: list, sleep: list) -> list:
+    """Quita la FC en reposo de los días sin noche de sueño registrada: sin reloj de noche, Garmin
+    la saca de unos minutos despierto y sale inflada."""
+    noches = {s.get("calendarDate") for s in sleep if (s.get("sleepTimeSeconds") or 0) > 0}
+    return [d if d.get("calendarDate") in noches
+            else {**d, "heartRate": {**(d.get("heartRate") or {}), "restingValue": None}}
+            for d in daily_summaries]
+
+
 def rhr_7d(daily_summaries: list, day: date):
     """Promedio de la FC en reposo de los 7 días anteriores a `day`, ignorando vacíos."""
     desde, valores = day - timedelta(days=7), []
