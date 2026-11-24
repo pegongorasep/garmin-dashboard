@@ -78,7 +78,8 @@ function pasoLi(p) {
     return h("li", {}, h("span", { class: "min" }, `${p.times}× (`), h("ul", {}, p.steps.map(pasoLi)), h("span", { class: "min" }, ")"));
   }
   const z = p.zone;
-  const color = z.startsWith("Z") ? `var(--z${z.slice(1, 2)})` : "var(--axis)";
+  // Mismos colores que la silueta de la sesión (zonas de Garmin); Z1-Z2 se pinta como Z2, igual que en la silueta.
+  const color = z.startsWith("Z") ? `var(--g${z === "Z1-Z2" ? 2 : z.slice(1, 2)})` : "var(--axis)";
   const nota = p.note && !(p.optional && p.note === "opcional") && p.note !== ETIQUETA_PASO[p.kind] ? ` · ${p.note}` : "";
   return h("li", {},
     h("span", { class: "min" }, `${p.minutes} min`),
