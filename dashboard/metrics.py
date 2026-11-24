@@ -6,7 +6,7 @@ Semáforo: "verde" | "amarillo" | "rojo" | "sin_datos".
 """
 import re
 import unicodedata
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 ZONAS = ["Z1", "Z2", "Z3", "Z4", "Z5"]
 
@@ -486,10 +486,26 @@ def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
             "ritmo_z2": promedio([f.get("ritmo_z2_s") for f in g])}
 
 
+def sin_repetidas(activities: list, config: dict, horas: float = 3) -> list:
+    """Quita las actividades no-corrida que empiezan a menos de `horas` de la anterior que se quedó de su misma categoría
+    (p. ej. un CrossFit grabado en dos partes cuenta como una sola sesión). Las corridas no se tocan."""
+    out, ultima = [], {}
+    for a in sorted(activities, key=lambda a: a["startTimeLocal"]):
+        c = classify(a, config)
+        if c and c != "run":
+            t = datetime.fromisoformat(a["startTimeLocal"])
+            if c in ultima and t - ultima[c] < timedelta(hours=horas):
+                continue
+            ultima[c] = t
+        out.append(a)
+    return out
+
+
 def conteos_otras(activities: list, config: dict, ini: date, fin: date) -> dict:
-    """{id de categoría: número de sesiones} de las actividades no-corrida con ini <= fecha < fin (solo las que hubo)."""
+    """{id de categoría: número de sesiones} de las actividades no-corrida con ini <= fecha < fin (solo las que hubo).
+    Dos de la misma categoría a menos de 3 h cuentan como una (sin_repetidas)."""
     out = {}
-    for a in activities:
+    for a in sin_repetidas(activities, config):
         c = classify(a, config)
         if c and c != "run" and ini <= day_of(a) < fin:
             out[c] = out.get(c, 0) + 1

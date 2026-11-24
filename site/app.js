@@ -166,7 +166,7 @@ function cuerpoPlan(s) {
 }
 
 /** Silueta a color dentro de la fila cerrada (sin globito: tocarla abre la fila). */
-const silFila = (sil) => (sil && sil.length ? h("div", { class: "sil-fila" }, siluetaSesion(sil, 30, false)) : null);
+const silFila = (sil) => (sil && sil.length ? h("div", { class: "sil-fila" }, siluetaSesion(sil, 36, false)) : null);
 
 /** Fila compacta de una sesión: nombre, minutos, estado y su silueta; al abrirla, pasos y versión suave. */
 function filaSesion(s, est) {
@@ -426,10 +426,10 @@ function deltaInbody(delta, buenoSiBaja) {
   return h("span", { class: `delta${bueno ? " bien" : ""}` }, `${delta > 0 ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}`);
 }
 
-/** Leyenda de la gráfica de minutos: la raya del plan y los íconos de entreno que aparecen arriba de las barras. */
-function leyendaMinutos(mj) {
-  const hay = new Set((mj.semanas || []).flatMap((s) => s.iconos || []));
-  const ley = leyenda([["raya", "Plan"]]);
+/** Leyenda con los íconos de entreno que aparecen arriba de las barras (`semanas[].iconos`), detrás de `base`. */
+function leyendaIconos(semanas, base) {
+  const hay = new Set(semanas.flatMap((s) => s.iconos || []));
+  const ley = leyenda(base);
   const items = [["correr", "Corrida"], ["medalla", "Carrera"], ...ui().categorias.map((c) => [c.icono, c.nombre])]
     .filter(([ic], i, a) => hay.has(ic) && a.findIndex(([x]) => x === ic) === i);
   ley.append(...items.map(([ic, nombre]) => h("span", {}, icono(ic, 14), nombre)));
@@ -449,7 +449,7 @@ function tarjetaMejora(d) {
   const hayOtras = cats.length > 0;
   const graficas = hayMin || hayPct
     ? h("div", { class: "mini2" },
-      h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyendaMinutos(mj)),
+      h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
       h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct),
       hayOtras ? h("div", {}, h("h3", {}, "Otros entrenos por semana"), MEJ.otras,
         h("div", { class: "leyenda" }, cats.map((c) => h("span", {}, h("i", { class: `sw ${c.clase}`, "aria-hidden": "true" }), icono(c.icono, 14), c.nombre)))) : null)
@@ -482,8 +482,7 @@ function dibujarMejora() {
     ancho, alto: 100, clases: ["s1"], etiqueta: "Minutos por semana, últimas 8 semanas, con raya del plan",
     semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.minutos || 0], meta: s.plan_min || 0, s })),
     etiquetaFinal: ult ? `${fmt(ult.minutos, 0)}'` : null,
-    iconos: semanas.some((s) => (s.iconos || []).length) ? (b) => b.s.iconos || [] : null,
-    texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}${textoEntrenos(b.s.iconos)}`,
+    texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}`,
   }));
   const cats = ui().categorias.filter((c) => (mj.otras || []).some((o) => (o.conteos || {})[c.id] > 0));
   if (cats.length && MEJ.otras) {

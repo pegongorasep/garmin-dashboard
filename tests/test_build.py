@@ -585,16 +585,18 @@ def test_iconos_en_data_json_y_validador():
 
 def test_mejora_otras_e_intensidad_por_semana():
     data = fixture()
-    data["activities"] = [*data["activities"], _act(30, "2026-11-02", "hiit"), _act(31, "2026-11-03", "strength_training"),
-                          _act(32, "2026-11-03", "hiit"), _act(33, "2026-10-13", "hiit"), _act(34, "2026-10-14", "hiit")]
+    # el fixture ya trae CrossFit el 2 y el 3 nov a las 18:00; la de las 19:30 es la misma clase grabada en dos partes
+    data["activities"] = [*data["activities"], _act(30, "2026-11-02", "hiit", hora="07:00:00"),
+                          _act(31, "2026-11-03", "strength_training", hora="07:00:00"), _act(32, "2026-11-03", "hiit", hora="19:30:00"),
+                          _act(33, "2026-10-13", "hiit"), _act(34, "2026-10-14", "hiit")]
     out = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
     mj = out["progreso"]["mejora"]
     assert len(mj["otras"]) == 8 and mj["otras"][-1]["semana"] == "2026-11-02"
-    assert mj["otras"][-1]["conteos"] == {"crossfit": 5}            # 2 del fixture + 3 nuevas; las corridas no cuentan
+    assert mj["otras"][-1]["conteos"] == {"crossfit": 4}   # 2 del fixture + 3 nuevas - 1 a menos de 3 h; las corridas no cuentan
     assert mj["frase"].endswith(" · CrossFit 0.5 por semana (antes 0.0).")
-    # un ícono por entreno de la semana, en orden: corridas y rayo (CrossFit)
-    ult = mj["semanas"][-1]["iconos"]
-    assert ult.count("rayo") == 5 and len(ult) == 5 + sum(1 for a in data["activities"]
+    # un ícono por entreno de la semana (en Progreso › Corridas): primero corridas, luego rayo (CrossFit)
+    ult = out["progreso"]["semanas"][-1]["iconos"]
+    assert ult.count("rayo") == 4 and ult[-4:] == ["rayo"] * 4 and len(ult) == 4 + sum(1 for a in data["activities"]
                                                           if build.m.classify(a, CONFIG_FIXTURE) == "run" and a["startTimeLocal"] >= "2026-11-02")
     assert set(ult) <= {"correr", "medalla", "rayo"}
     sin =build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)

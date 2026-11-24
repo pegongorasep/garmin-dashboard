@@ -200,3 +200,10 @@ Corrige lo que encuentres y actualiza la tabla.
   resumen y pasos (sin repetir la silueta). Se quitó "Cómo crearla en Garmin Connect".
 - Progreso › Cómo vas mejorando: arriba de cada barra de "Minutos por semana", un ícono por entreno de la semana
   (corrida/medalla primero, luego cada categoría). Python manda `progreso.mejora.semanas[].iconos`; `validar.py` revisa los nombres.
+
+## Ajuste v4.2.2 (2026-11-24, pedido de Pedro)
+
+- Siluetas de sesión: arrancan abajo (zona 0), suben en rampa a su primer tramo y bajan al final, como las del catálogo.
+- Los íconos de entrenos pasan de "Cómo vas mejorando" a Progreso › Corridas › Volumen (`progreso.semanas[].iconos`).
+- Dos actividades de la misma categoría (no corrida) a menos de 3 h cuentan como una (`metrics.sin_repetidas`): íconos,
+  "Otros entrenos por semana" y la frase de mejora.

@@ -192,7 +192,7 @@ function barChart(cfg) {
   const ml = 38, mr = 10, mb = 22;
   // `iconos`: (semana) => [nombre]; una franja arriba con un ícono por entreno, en columnas sobre cada barra
   const slot = (W - ml - mr) / semanas.length;
-  const ICO = 12, PASO = ICO + 1;
+  const ICO = slot >= 60 ? 16 : 12, PASO = ICO + 1;
   const porFila = Math.max(1, Math.min(3, Math.floor(slot / PASO)));
   const filasIco = cfg.iconos ? Math.max(0, ...semanas.map((s) => Math.ceil(cfg.iconos(s).length / porFila))) : 0;
   const franja = filasIco ? filasIco * PASO + 6 : 0;
@@ -334,13 +334,16 @@ function silueta(tramos, opts = {}) {
     for (const { t, x0, x1 } of caja) { pts.push([x0, y(t.n)], [x1, y(t.n2 ?? t.n)]); }
     svg.append(sv("path", { d: trazoRedondo(pts, 5), class: "sil-ln" }));
   } else {
-    // cada tramo es horizontal; el color cambia a media altura de cada salto vertical
+    // cada tramo es horizontal; el color cambia a media altura de cada salto vertical. Como en el catálogo, la sesión
+    // arranca abajo (zona 0), sube en rampa a su primer tramo y al final baja otra vez.
+    const piso = y(0.1), rampa = (t0, t1) => Math.min((t1 - t0) / 2, W * 0.05);
     caja.forEach(({ t, x0, x1 }, i) => {
       const yy = y(t.n), ant = caja[i - 1], sig = caja[i + 1];
       const pts = [];
-      if (ant) pts.push([x0, (y(ant.t.n) + yy) / 2]);
-      pts.push([x0, yy], [x1, yy]);
-      if (sig) pts.push([x1, (yy + y(sig.t.n)) / 2]);
+      if (ant) pts.push([x0, (y(ant.t.n) + yy) / 2], [x0, yy]);
+      else pts.push([x0, piso], [x0 + rampa(x0, x1), yy]);
+      if (sig) pts.push([x1, yy], [x1, (yy + y(sig.t.n)) / 2]);
+      else pts.push([x1 - rampa(x0, x1), yy], [x1, piso]);
       svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `sil-ln ${t.clase}${t.opcional ? " opc" : ""}` }));
     });
     const tip = tooltipEn(cont);

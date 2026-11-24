@@ -390,7 +390,7 @@ def build_carreras(hoy: date, data: dict, config: dict) -> list:
 
 
 def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
-    """12 semanas: minutos, km y trote/caminata de las corridas, y los minutos del plan."""
+    """12 semanas: minutos, km y trote/caminata de las corridas, los minutos del plan y un ícono por entreno."""
     filas = m.run_rows(data["activities"], data["details"], config)
     inicio_plan = date.fromisoformat(config["plan_start"])
     out = []
@@ -403,7 +403,8 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
                     "km": r1(sum(f["km"] for f in fs)),
                     "min_trote": r1(sum(f["trote_min"] or 0 for f in fs)),
                     "min_camina": r1(sum(f["camina_min"] or 0 for f in fs)),
-                    "plan_min": sum(s["minutes"] for s in semana["sessions"]) if semana else None})
+                    "plan_min": sum(s["minutes"] for s in semana["sessions"]) if semana else None,
+                    "iconos": iconos_semana(ini, data, config)})
     return out
 
 
@@ -421,12 +422,13 @@ def con_ritmo_z2(filas: list, zonas: list) -> list:
 
 def iconos_semana(ini: date, data, config) -> list:
     """Un ícono por entreno registrado en la semana: primero las corridas (medalla si fue carrera), luego las demás
-    actividades con el ícono de su categoría; cada grupo en orden de fecha."""
+    actividades con el ícono de su categoría; cada grupo en orden de fecha. Dos de la misma categoría a menos de 3 h
+    son un solo ícono (m.sin_repetidas)."""
     if data is None or config is None:
         return []
     iconos = {c["id"]: c["icono"] for c in config["categorias"]}
     out = []
-    for a in sorted(data["activities"], key=lambda a: a["startTimeLocal"]):
+    for a in m.sin_repetidas(data["activities"], config):
         c = m.classify(a, config)
         if not c or not ini <= m.day_of(a) < ini + timedelta(days=7):
             continue
@@ -452,8 +454,7 @@ def build_mejora(hoy: date, filas: list, semanas: list, zonas: list, data=None, 
         frase_otras = [{"nombre": c["nombre"], "ahora": ahora.get(c["id"], 0) / 4, "antes": antes.get(c["id"], 0) / 4}
                        for c in config["categorias"]]
     out = {"frase": m.mejora_frase(filas, hoy, modo, frase_otras), "modo": modo, "otras": otras,
-           "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"],
-                        "iconos": iconos_semana(date.fromisoformat(s["inicio"]), data, config)} for s in semanas[-8:]],
+           "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"]} for s in semanas[-8:]],
            "corridas": [{"fecha": f["fecha"], "pct_trote": r1(f["pct_trote"])} for f in filas[-12:]]}
     if modo == "ritmo":
         out["ritmo"] = [{"fecha": f["fecha"], "ritmo_s": round(f["ritmo_z2_s"])} for f in filas if f["ritmo_z2_s"]][-12:]
