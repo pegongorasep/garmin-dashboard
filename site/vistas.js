@@ -233,16 +233,17 @@ const DET = {};
 
 function tarjetaFcMax(d) {
   const f = (d.detalles || {}).fc_max || {};
+  const u = (d.detalles || {}).umbrales || {};
   const ses = f.sesiones || [];
   const faltan = Math.max(0, 2 - (f.semanas_medidas || 0));
   const cuerpo = !ses.length
-    ? [h("p", { class: "nota" }, "Aún no hay clases de CrossFit medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva.")]
+    ? [h("p", { class: "nota" }, ui().textos.fcmax_vacia || "Aún no hay sesiones medidas con correa.")]
     : [h("div", { class: "kv" }, h("span", {}, "Clases medidas"), h("span", {}, ses.length)),
       h("div", { class: "kv" }, h("span", {}, "Pico"), h("span", {}, `${fmt(f.pico, 0)} lpm`)),
-      h("div", { class: "kv" }, h("span", {}, "FC máx estimada (pico + 3, mín 183)"), h("span", {}, `${fmt(f.estimacion, 0)} lpm`)),
+      h("div", { class: "kv" }, h("span", {}, `FC máx estimada (pico + 3, mín ${fmt(u.max_hr_floor, 0)})`), h("span", {}, `${fmt(f.estimacion, 0)} lpm`)),
       h("p", { class: "estado" }, f.listo ? badge("ok", "✓", "listo") : badge("nd", "—", "en curso"),
         f.listo ? "Medición lista" : `Faltan ${faltan} ${faltan === 1 ? "semana" : "semanas"} de medición`),
-      f.revisar ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, "La estimación pasa de 200 lpm: revísala antes de usarla.")) : null];
+      f.revisar ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, `La estimación pasa de ${fmt(u.max_hr_review_above, 0)} lpm: revísala antes de usarla.`)) : null];
   const zonas = d.zonas || [];
   return h("div", { class: "card" }, h("h2", {}, "FC máxima y zonas"), ...cuerpo,
     zonas.length ? h("div", {}, h("p", { class: "nota", style: "margin-top:10px" }, `FC máx en uso: ${fmt(f.config, 0)} lpm (${f.fuente === "reloj" ? "del reloj" : "respaldo, el reloj no la dio"}) · reposo promedio 7 días: ${fmt(d.rhr_promedio_7d, 0)} lpm (Karvonen)`),
@@ -259,7 +260,7 @@ function tarjetaComoFunciona(d) {
       li(h("strong", {}, "HRV: "), "fuera si anoche quedó por debajo de tu rango base. Si el reloj la marca “baja”, el semáforo va directo a rojo."),
       li(h("strong", {}, "FC en reposo: "), `fuera si supera el promedio de 7 días + ${fmt(u.rhr_tolerance_bpm, 0)} lpm.`),
       li(h("strong", {}, "Sueño: "), `fuera si dormiste menos de ${fmt(u.sleep_min_hours, 1)} h.`),
-      li(h("strong", {}, "RPE del CrossFit de ayer: "), `fuera si fue ${fmt(u.rpe_heavy, 0)} o más.`)),
+      li(h("strong", {}, `${nombreSenal("rpe")}: `), `fuera si fue ${fmt(u.rpe_heavy, 0)} o más.`)),
     h("ul", { class: "reglas" },
       li(badge("ok", "✓", "verde"), " Verde: ninguna señal fuera → sesión normal."),
       li(badge("warn", "!", "amarillo"), " Amarillo: una señal fuera → versión suave."),
@@ -268,7 +269,7 @@ function tarjetaComoFunciona(d) {
     h("p", { class: "nota" }, "Una señal sin dato no cuenta como fuera."),
     h("h3", { style: "margin-top:12px" }, "Tus 3 corridas"),
     h("ul", { class: "reglas" },
-      li("Cada semana: Z2 #1, Z2 #2 y la Larga (sábado o domingo). CrossFit lunes, martes y jueves."),
+      li(ui().textos.semana || "Cada semana: tus sesiones del plan; la Larga va sábado o domingo."),
       li(h("strong", {}, "Asignación automática: "), "una corrida de sábado o domingo que dure al menos el ", fmt((u.done_ratio ?? 0.7) * 100, 0), " % de la Larga cuenta como Larga; las demás llenan Z2 #1 y Z2 #2 en orden. Si haces más, las sobrantes no se asignan."),
       li(h("strong", {}, "Hecha / incompleta: "), "hecha si duró al menos el ", fmt((u.done_ratio ?? 0.7) * 100, 0), " % de lo planeado (o de la versión suave si ese día era amarillo o rojo, y entonces sale “ajustada”); si duró menos, incompleta."),
       li(h("strong", {}, "¿Lo hice bien?: "), `los minutos sobre el techo de Z2 (zonas 3 a 5) deben ser ${fmt(u.ceiling_tolerance_min ?? 2, 0)}' o menos; en la Z2 #1 con picos opcionales de Z3 se permiten 2' más.`),
@@ -300,16 +301,19 @@ function dibujarDetalles() {
   if (!ancho) return;
   const t = DET.carga;
   const semanas = ((datos.detalles || {}).carga_semanas || []);
-  const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [s.carga_crossfit || 0, s.carga_corrida || 0], sin_rpe: s.sin_rpe || 0 }));
+  const cats = ui().categorias, clases = [...cats.map((c) => c.clase), "s2"];
+  const nombres = [...cats.map((c) => c.nombre), "Corrida"];
+  const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [...cats.map((c) => (s.cargas || {})[c.id] || 0), s.carga_corrida || 0], sin_rpe: s.sin_rpe || 0 }));
+  const suma = (s) => s.valores.reduce((a, v) => a + v, 0);
   const sinRpe = semanas.filter((s) => s.sin_rpe > 0);
   t.sub.textContent = "RPE × minutos por semana (lun–dom). Solo referencia.";
   t.chart.replaceChildren(barChart({
-    ancho, semanas: barras, etiqueta: "Carga semanal apilada",
-    texto: (s) => `Semana del ${fechaLarga(s.inicio)} · CrossFit ${fmt(s.valores[0], 0)} · Corrida ${fmt(s.valores[1], 0)} · Total ${fmt(s.valores[0] + s.valores[1], 0)}${s.sin_rpe ? ` · ${s.sin_rpe} sin RPE` : ""}`,
+    ancho, semanas: barras, etiqueta: "Carga semanal apilada", clases,
+    texto: (s) => `Semana del ${fechaLarga(s.inicio)} · ${nombres.map((n, i) => `${n} ${fmt(s.valores[i], 0)}`).join(" · ")} · Total ${fmt(suma(s), 0)}${s.sin_rpe ? ` · ${s.sin_rpe} sin RPE` : ""}`,
   }));
-  t.extra.replaceChildren(leyenda([["sw s1", "CrossFit"], ["sw s2", "Corrida"]]),
+  t.extra.replaceChildren(leyenda(clases.map((c, i) => [`sw ${c}`, nombres[i]])),
     sinRpe.length ? h("p", { class: "nota" }, `* ${sinRpe.length === 1 ? "Una semana tiene" : `${sinRpe.length} semanas tienen`} sesiones sin RPE: la carga real es mayor.`) : "",
-    barras.length ? tablaDatos(["Semana", "CrossFit", "Corrida", "Sin RPE"], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), fmt(s.valores[0], 0), fmt(s.valores[1], 0), s.sin_rpe])) : "");
+    barras.length ? tablaDatos(["Semana", ...nombres, "Sin RPE"], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), ...s.valores.map((v) => fmt(v, 0)), s.sin_rpe])) : "");
 }
 
 // --- arranque ---
@@ -317,6 +321,14 @@ function dibujarDetalles() {
 const REDIBUJAR = { hoy: dibujarMejora, progreso: dibujarProgreso, detalles: dibujarDetalles };
 let vistaActual = null;
 let vistaAnterior = "hoy";
+
+/** Título y enlace de GitHub Actions vienen de data.json (ui), no del HTML. */
+function pintarEncabezado() {
+  const u = ui();
+  if (u.titulo) { $("titulo").textContent = u.titulo; document.title = `Garmin · ${u.titulo}`; }
+  $("acciones").hidden = !u.acciones_url;
+  if (u.acciones_url) $("acciones-link").href = u.acciones_url;
+}
 
 function actualizarEncabezado() {
   const iso = datos && (datos.datos_al || datos.generado);
@@ -357,6 +369,7 @@ async function iniciar() {
     aviso("hoy", "No se pudieron cargar los datos. Intenta de nuevo en unos minutos.");
     return;
   }
+  pintarEncabezado();
   actualizarEncabezado();
   setInterval(actualizarEncabezado, 60000);
   const vistas = { hoy: renderHoy, progreso: renderProgreso, detalles: renderDetalles };

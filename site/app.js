@@ -65,7 +65,10 @@ function badgeSenal(estado) {
 
 // --- vista Hoy ---
 
-const NOMBRE_SENAL = { hrv: "HRV de anoche", rhr: "FC en reposo", sueno: "Sueño", rpe: "RPE del CrossFit de ayer" };
+const NOMBRE_SENAL = { hrv: "HRV de anoche", rhr: "FC en reposo", sueno: "Sueño" };
+const ui = () => (datos && datos.ui) || { categorias: [], textos: {} };
+const categoria = (id) => ui().categorias.find((c) => c.id === id) || { id, nombre: id, letra: id.slice(0, 2).toUpperCase(), clase: "azul" };
+const nombreSenal = (id) => (id === "rpe" ? ui().textos.rpe_ayer || "RPE de tu sesión intensa de ayer" : NOMBRE_SENAL[id] || id);
 const ETIQUETA_PASO = { warmup: "calentamiento", run: "trote", walk: "caminata", cooldown: "enfriamiento" };
 
 function pasoLi(p) {
@@ -152,7 +155,7 @@ function banner(d) {
   const t = d.hoy.tarjeta, plan = d.plan || {}, est = plan.estado_sesiones || [];
   const prox = nombreSesion(est, t.proxima_id);
   let texto = null;
-  if (t.tipo === "crossfit") texto = prox ? `Hoy CrossFit · próxima corrida: ${prox}` : "Hoy CrossFit";
+  if (t.tipo === "otra") texto = prox ? `Hoy ${t.categoria} · próxima corrida: ${prox}` : `Hoy ${t.categoria}`;
   else if (t.tipo === "hecha_hoy") texto = prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
   else if (t.tipo === "sin_plan") {
     texto = plan.inicio && (d.generado || "").slice(0, 10) < plan.inicio ? `El plan arranca el ${fechaCorta(plan.inicio)}` : "Hoy no hay semana de plan activa";
@@ -256,35 +259,43 @@ const diaTexto = (x) => {
   const partes = [];
   if (x.corrida) partes.push(`corrida de ${fmt(x.corrida.minutos, 0)} min (${x.corrida.sesion_nombre}, ${{ hecha: "hecha", incompleta: "incompleta", extra: "sin sesión" }[x.corrida.estado] || x.corrida.estado})`);
   if (x.corridas_n > 1) partes.push(`${x.corridas_n} corridas ese día`);
-  if (x.crossfit) {
-    const cf = x.crossfit;
-    partes.push(`CrossFit${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.te != null ? `, Training Effect aeróbico ${cf.te.toFixed(1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
+  for (const cf of x.otras || []) {
+    partes.push(`${categoria(cf.cat).nombre}${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.te != null ? `, Training Effect aeróbico ${cf.te.toFixed(1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
   }
-  if (x.planeado) partes.push(x.planeado === "cf" ? "planeado: CrossFit" : "la Larga sigue pendiente");
+  if (x.planeado) partes.push(x.planeado === "larga" ? "la Larga sigue pendiente" : `planeado: ${categoria(x.planeado).nombre}`);
   return `${fechaCorta(x.fecha)}: ${partes.length ? partes.join("; ") : "sin actividad"}`;
 };
 
 function diaCalendario(x, hoyIso) {
-  const cf = x.crossfit;
-  const cfTxt = cf ? (cf.rpe != null ? `RPE ${fmt(cf.rpe, 0)}` : cf.te != null ? cf.te.toFixed(1) : null) : null;
+  const varias = ui().categorias.length > 1;   // con una sola categoría no hace falta distinguir por color
+  const marcaCat = (cat, cfTxt, tenue) => {
+    const c = categoria(cat);
+    return h("span", { class: `cf${tenue ? " tenue" : ""}${varias ? ` cat ${c.clase}` : ""}` }, h("b", {}, c.letra), cfTxt ? h("span", {}, cfTxt) : null);
+  };
   let marca = null;
   if (x.corrida) {
     const cls = x.corrida.estado === "hecha" ? "hecha" : x.corrida.estado === "incompleta" ? "incompleta" : "extra";
     marca = [h("span", { class: `circ ${cls}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
       h("span", { class: "sn" }, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))];
   }
-  const cfMarca = cf ? h("span", { class: "cf" }, h("b", {}, "CF"), cfTxt ? h("span", {}, cfTxt) : null) : null;
-  const plan = x.planeado ? h("span", { class: "cf tenue" }, x.planeado === "cf" ? h("b", {}, "CF") : h("b", {}, "Larga?")) : null;
+  const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.rpe != null ? `RPE ${fmt(cf.rpe, 0)}` : cf.te != null ? cf.te.toFixed(1) : null));
+  const plan = x.planeado ? (x.planeado === "larga" ? h("span", { class: "cf tenue" }, h("b", {}, "Larga?")) : marcaCat(x.planeado, null, true)) : null;
   return h("div", { class: `dia${x.fecha === hoyIso ? " es-hoy" : ""}`, role: "group", title: diaTexto(x), "aria-label": diaTexto(x) },
     h("span", { class: "dn" }, x.dia_semana), h("span", { class: "df" }, parseFecha(x.fecha).getDate()),
     marca, cfMarca, plan);
+}
+
+/** "CF = CrossFit · " solo con las categorías que aparecen (hechas o planeadas) en esa semana. */
+function leyendaCategorias(s) {
+  const ids = new Set((s.dias || []).flatMap((x) => [...(x.otras || []).map((o) => o.cat), x.planeado && x.planeado !== "larga" ? x.planeado : null]));
+  return ui().categorias.filter((c) => ids.has(c.id)).map((c) => `${c.letra} = ${c.nombre} · `).join("");
 }
 
 function tarjetaCalendario(d, s) {
   const hoyIso = (d.generado || "").slice(0, 10);
   return h("div", { class: "card cal" },
     h("div", { class: "dias7" }, (s.dias || []).map((x) => diaCalendario(x, hoyIso))),
-    h("p", { class: "nota leyenda-cal" }, "CF = CrossFit · número = Training Effect aeróbico de Garmin (0–5)"));
+    h("p", { class: "nota leyenda-cal" }, `${leyendaCategorias(s)}número = Training Effect aeróbico de Garmin (0–5)`));
 }
 
 function lineaTecho(c) {
@@ -436,7 +447,7 @@ function recuperacion(d) {
     h("summary", {}, badge(est.clase, est.icono, est.titulo), est.texto, h("span", { class: "nota" }, " · ver señales")),
     h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((x) =>
       h("li", {}, badgeSenal(x.estado),
-        h("div", {}, h("div", { class: "nombre" }, NOMBRE_SENAL[x.id] || x.id), h("div", { class: "nota" }, x.texto))))));
+        h("div", {}, h("div", { class: "nombre" }, nombreSenal(x.id)), h("div", { class: "nota" }, x.texto))))));
 }
 
 function pintarSemana(d) {
@@ -469,7 +480,7 @@ function bloqueCarga(s) {
   return h("div", { class: "card" }, h("h2", {}, "Carga semanal (RPE × min)"),
     h("div", { class: "grande" }, fmt(a, 0)),
     h("p", { class: "nota" }, delta),
-    h("div", { class: "kv" }, h("span", {}, "CrossFit"), h("span", {}, fmt(s.carga.crossfit, 0))),
+    ...ui().categorias.map((c) => h("div", { class: "kv" }, h("span", {}, c.nombre), h("span", {}, fmt(s.carga[c.id], 0)))),
     h("div", { class: "kv" }, h("span", {}, "Corridas"), h("span", {}, fmt(s.carga.run, 0))),
     s.carga.sin_rpe > 0
       ? h("p", { class: "nota" }, `${s.carga.sin_rpe} ${s.carga.sin_rpe === 1 ? "sesión sin RPE" : "sesiones sin RPE"} (no cuentan en la carga)`)
@@ -524,7 +535,7 @@ function zonaBar(dist) {
     grupo(["Z1", "Z2"], "Bajo", dist.bajo, "· meta 80 %"),
     grupo(["Z3"], "Limbo", dist.limbo, "· lo menos posible"),
     grupo(["Z4", "Z5"], "Alto", dist.alto, "· 20 %")));
-  raiz.append(h("p", { class: "nota", style: "margin-top:10px" }, "Incluye CrossFit y corridas. Solo referencia: no cambia el plan. El tiempo bajo Z1 (Z0) es descanso y no cuenta."));
+  raiz.append(h("p", { class: "nota", style: "margin-top:10px" }, `${ui().textos.incluye || "Incluye tus actividades y corridas."} Solo referencia: no cambia el plan. El tiempo bajo Z1 (Z0) es descanso y no cuenta.`));
   raiz.append(h("details", {}, h("summary", {}, "Ver como tabla"),
     h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Zona"), h("th", {}, "Min"), h("th", {}, "%"))),
       h("tbody", {}, z.map((k) => h("tr", {}, h("td", {}, k), h("td", {}, fmt(dist.minutos[k])), h("td", {}, fmt(pct(k), 0))))))));

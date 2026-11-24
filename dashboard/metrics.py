@@ -40,13 +40,25 @@ def rhr_7d(daily_summaries: list, day: date):
     return sum(valores) / len(valores) if valores else None
 
 
-def classify(activity: dict, config: dict) -> str:
+def classify(activity: dict, config: dict):
+    """"run", el `id` de la categoría de actividad (config["categorias"]) o None si no se muestra."""
     tipo = activity["activityType"]["typeKey"]
     if tipo in config["run_types"]:
         return "run"
-    if tipo in config["crossfit_types"]:
-        return "crossfit"
-    return "other"
+    for c in config.get("categorias", []):
+        if tipo in c["tipos"]:
+            return c["id"]
+    return None
+
+
+def categorias_intensas(config: dict) -> list:
+    return [c for c in config.get("categorias", []) if c.get("intensa")]
+
+
+def nombre_intensa(config: dict):
+    """Nombre de la categoría intensa si hay una sola; None si hay varias o ninguna."""
+    ints = categorias_intensas(config)
+    return ints[0]["nombre"] if len(ints) == 1 else None
 
 
 def zone_minutes(activity: dict) -> dict:
@@ -78,19 +90,20 @@ def session_load(activity: dict, details: dict):
 
 
 def week_load(activities: list, details: dict, week_start: date, config: dict) -> dict:
-    """Carga de la semana: {crossfit, run, total, sin_rpe}."""
+    """Carga de la semana: {<id de cada categoría>, run, total, sin_rpe}."""
     fin = week_start + timedelta(days=7)
-    out = {"crossfit": 0.0, "run": 0.0, "sin_rpe": 0}
+    ids = [c["id"] for c in config.get("categorias", [])]
+    out = {**dict.fromkeys(ids, 0.0), "run": 0.0, "sin_rpe": 0}
     for a in activities:
         tipo = classify(a, config)
-        if tipo == "other" or not (week_start <= day_of(a) < fin):
+        if tipo is None or not (week_start <= day_of(a) < fin):
             continue
         carga = session_load(a, details)
         if carga is None:
             out["sin_rpe"] += 1
         else:
             out[tipo] += carga
-    out["total"] = out["crossfit"] + out["run"]
+    out["total"] = sum(out[k] for k in (*ids, "run"))
     return out
 
 
@@ -147,14 +160,17 @@ def signal_sleep(day: date, sleep: list, config: dict) -> dict:
 
 def signal_rpe(day: date, activities: list, details: dict, config: dict) -> dict:
     ayer = day - timedelta(days=1)
-    cf = [a for a in activities if classify(a, config) == "crossfit" and day_of(a) == ayer]
+    intensas = {c["id"] for c in categorias_intensas(config)}
+    nombre = nombre_intensa(config)
+    sesion = nombre or "sesión intensa"
+    cf = [a for a in activities if classify(a, config) in intensas and day_of(a) == ayer]
     if not cf:
-        return _senal("ok", None, config["rpe_heavy"], "sin CrossFit ayer")
+        return _senal("ok", None, config["rpe_heavy"], f"sin {sesion} ayer")
     rpes = [r for a in cf if (r := (details.get(str(a["activityId"])) or {}).get("rpe")) is not None]
     if not rpes:
-        return _senal("sin_dato", None, config["rpe_heavy"], "CrossFit de ayer sin RPE")
+        return _senal("sin_dato", None, config["rpe_heavy"], f"{nombre or 'Sesión intensa'} de ayer sin RPE")
     v = max(rpes)
-    texto = f"RPE de CrossFit de ayer {v:g}, pesado desde {config['rpe_heavy']}"
+    texto = f"RPE de {sesion} de ayer {v:g}, pesado desde {config['rpe_heavy']}"
     return _senal("fuera" if v >= config["rpe_heavy"] else "ok", v, config["rpe_heavy"], texto)
 
 
@@ -186,13 +202,14 @@ def traffic_light(sigs: dict, prev_light) -> dict:
             "repetir_semana": color == "rojo" and prev_light == "rojo"}
 
 
-MOTIVOS = {"hrv": "HRV baja", "rhr": "FC en reposo alta", "sueno": "Dormiste poco",
-           "rpe": "CrossFit pesado ayer"}
+MOTIVOS = {"hrv": "HRV baja", "rhr": "FC en reposo alta", "sueno": "Dormiste poco"}
 
 
-def motivo(sigs: dict):
+def motivo(sigs: dict, config=None):
     """Por qué la sesión va suave o en descanso: textos de las señales `fuera`, unidos con ' · '; None si no hay."""
-    textos = [MOTIVOS[k] for k in ("hrv", "rhr", "sueno", "rpe") if sigs[k]["estado"] == "fuera"]
+    nombre = nombre_intensa(config or {})
+    motivos = {**MOTIVOS, "rpe": f"{nombre} pesado ayer" if nombre else "Sesión intensa pesada ayer"}
+    textos = [motivos[k] for k in ("hrv", "rhr", "sueno", "rpe") if sigs[k]["estado"] == "fuera"]
     if sigs["hrv"].get("hrv_baja") and MOTIVOS["hrv"] not in textos:
         textos.insert(0, MOTIVOS["hrv"])
     return " · ".join(textos) or None
@@ -276,16 +293,35 @@ def _elegir_pendiente(day: date, status: list):
     return larga, (AVISO_LARGA if larga else None)
 
 
+def aviso_pierna(day: date, sesion: dict, activities: list, config: dict):
+    """Si ayer fue día de pierna (planeado o real) y hoy toca la Larga o la calidad, avisa."""
+    ayer = day - timedelta(days=1)
+    if ayer.weekday() not in config.get("dias_pierna", []) or sesion.get("tipo") not in ("larga", "calidad"):
+        return None
+    hubo = ayer.weekday() in config.get("semana_tipica", {}) or any(
+        classify(a, config) in {c["id"] for c in config.get("categorias", [])} for a in activities if day_of(a) == ayer)
+    if not hubo:
+        return None
+    resto = "la Larga" if sesion["tipo"] == "larga" else "la calidad"
+    return f"Ayer pierna: hoy mejor la Z2 y deja {resto} para mañana"
+
+
 def today_card(day: date, light: dict, status: list, activities: list, config: dict) -> dict:
     """Qué mostrar hoy. light = resultado de traffic_light; status = assign_sessions."""
     hoy = [a for a in activities if day_of(a) == day]
-    hay_cf = any(classify(a, config) == "crossfit" for a in hoy)
-    hay_run = any(classify(a, config) == "run" for a in hoy)
+    cats = {c["id"]: c for c in config.get("categorias", [])}
+    hechas = [classify(a, config) for a in hoy]
+    hay_run = "run" in hechas
+    # Una actividad intensa hecha hoy, o el día típico de una categoría sin corrida, ocupan el día.
+    intensa_hoy = next((i for i in hechas if i in cats and cats[i]["intensa"]), None)
+    tipica = config.get("semana_tipica", {}).get(day.weekday())
+    otra = intensa_hoy or (tipica if tipica and not hay_run else None)
     aviso = "Repetir la semana" if light.get("repetir_semana") else None
     base = {"version": None, "sesion_id": None, "aviso": aviso, "proxima_id": None}
     manana = (_elegir_pendiente(day + timedelta(days=1), status)[0] or {}).get("id") if status else None
-    if hay_cf or (day.weekday() in config["crossfit_days"] and not hay_run):
-        return {"tipo": "crossfit", "texto": "Hoy es CrossFit", **{**base, "proxima_id": manana}}
+    if otra:
+        nombre = cats[otra]["nombre"]
+        return {"tipo": "otra", "categoria": nombre, "texto": f"Hoy es {nombre}", **{**base, "proxima_id": manana}}
     if hay_run:
         return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", **{**base, "proxima_id": manana}}
     if not status:
@@ -295,7 +331,8 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
         return {"tipo": "completa", "texto": "Semana completa", **base}
     sin_datos = light["color"] == "sin_datos"
     version = "normal" if sin_datos else {"verde": "normal", "amarillo": "suave", "rojo": "descanso"}[light["color"]]
-    aviso = _unir_avisos(aviso, aviso_larga, AVISO_SIN_DATOS if sin_datos else None)
+    aviso = _unir_avisos(aviso, aviso_larga, aviso_pierna(day, sesion, activities, config),
+                         AVISO_SIN_DATOS if sin_datos else None)
     return {"tipo": "sesion", "texto": f"Siguiente sesión: versión {version}",
             "version": version, "sesion_id": sesion["id"], "aviso": aviso, "proxima_id": None}
 
@@ -466,9 +503,14 @@ def composicion(inbody):
 
 
 def max_hr_progress(activities: list, config: dict) -> dict:
-    """Progreso de la medición de FC máx con correa en CrossFit."""
-    desde = date.fromisoformat(config["strap_in_crossfit_since"])
-    ses = [a for a in activities if classify(a, config) == "crossfit"
+    """Progreso de la medición de FC máx con correa en las sesiones intensas (desde `fc_max_correa_desde`)."""
+    desde = config.get("fc_max_correa_desde")
+    if not desde:
+        return {"sesiones": [], "pico": None, "estimacion": None, "revisar": False,
+                "semanas_medidas": 0, "listo": False, "configurada": False}
+    desde = date.fromisoformat(desde)
+    intensas = {c["id"] for c in categorias_intensas(config)}
+    ses = [a for a in activities if classify(a, config) in intensas
            and day_of(a) >= desde and a.get("maxHR")]
     sesiones = sorted(({"fecha": day_of(a).isoformat(), "max_hr": a["maxHR"]} for a in ses),
                       key=lambda s: s["fecha"])
@@ -477,7 +519,7 @@ def max_hr_progress(activities: list, config: dict) -> dict:
     semanas = {day_of(a) - timedelta(days=day_of(a).weekday()) for a in ses}
     return {"sesiones": sesiones, "pico": pico, "estimacion": estimacion,
             "revisar": estimacion is not None and estimacion > config["max_hr_review_above"],
-            "semanas_medidas": len(semanas), "listo": len(semanas) >= 2}
+            "semanas_medidas": len(semanas), "listo": len(semanas) >= 2, "configurada": True}
 
 
 def watch_max_hr(hr_zones):

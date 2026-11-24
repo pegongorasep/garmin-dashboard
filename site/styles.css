@@ -17,6 +17,8 @@
   --ok-bg: #e6f5e6; --warn-bg: #fdf3d9; --bad-bg: #fae3e3;
   --focus: #2a78d6;
   --s1: #2a78d6; --s2: #eb6834;
+  /* categorías de actividad (azul = s1, el naranja s2 es de la corrida): validadas con dataviz */
+  --cat-azul: #2a78d6; --cat-aqua: #1baf7a; --cat-violeta: #6250d6; --cat-amarillo: #eda100;
   --walk: #8f8d86; --nd-bg: #ececea;
 }
 @media (prefers-color-scheme: dark) {
@@ -28,6 +30,7 @@
     --ok-bg: #12301a; --warn-bg: #33290c; --bad-bg: #3a1717;
     --focus: #6da7ec;
     --s1: #3987e5; --s2: #d95926;
+    --cat-azul: #3987e5; --cat-aqua: #199e70; --cat-violeta: #9085e9; --cat-amarillo: #c98500;
     --walk: #8a8882; --nd-bg: #262624;
   }
 }
@@ -39,6 +42,7 @@
   --ok-bg: #12301a; --warn-bg: #33290c; --bad-bg: #3a1717;
   --focus: #6da7ec;
   --s1: #3987e5; --s2: #d95926;
+  --cat-azul: #3987e5; --cat-aqua: #199e70; --cat-violeta: #9085e9; --cat-amarillo: #c98500;
   --walk: #8a8882; --nd-bg: #262624;
 }
 
@@ -177,6 +181,7 @@ th:first-child, td:first-child { text-align: left; }
 .capa { fill: transparent; cursor: crosshair; }
 .capa:focus-visible { outline: 2px solid var(--focus); }
 .serie.s1 { fill: var(--s1); } .serie.s2 { fill: var(--s2); }
+.serie.azul { fill: var(--cat-azul); } .serie.aqua { fill: var(--cat-aqua); } .serie.violeta { fill: var(--cat-violeta); } .serie.amarillo { fill: var(--cat-amarillo); }
 .leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); margin-top: 6px; }
 .leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .leyenda i.s1 { background: var(--s1); } .leyenda i.s2 { background: var(--s2); }
@@ -296,6 +301,10 @@ details.recup .senales { margin-top: 6px; }
 .vert { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: .55; }
 .vert-t { fill: var(--ink-2); }
 .leyenda i.sw.s1 { background: var(--s1); } .leyenda i.sw.s2 { background: var(--s2); }
+.leyenda i.sw.azul { background: var(--cat-azul); } .leyenda i.sw.aqua { background: var(--cat-aqua); } .leyenda i.sw.violeta { background: var(--cat-violeta); } .leyenda i.sw.amarillo { background: var(--cat-amarillo); }
+/* con varias categorías, la letra lleva una raya de su color; el texto sigue en tinta */
+.cf.cat { border-bottom: 3px solid var(--muted); padding-bottom: 1px; }
+.cf.cat.azul { border-color: var(--cat-azul); } .cf.cat.aqua { border-color: var(--cat-aqua); } .cf.cat.violeta { border-color: var(--cat-violeta); } .cf.cat.amarillo { border-color: var(--cat-amarillo); }
 .meta-prime { margin: 4px 0 2px; font-size: 17px; font-weight: 650; line-height: 1.3; }
 .celda-prime small { display: block; color: var(--ink-2); font-size: 11px; font-weight: 600; }
 .tabla-scroll.ancha.comp table { font-size: 12px; }

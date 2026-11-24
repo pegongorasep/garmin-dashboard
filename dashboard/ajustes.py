@@ -17,7 +17,10 @@ NIVELES = ("novato", "intermedio", "corredor")
 INTENSIDADES = ("solo_z2", "z2_poca_z3", "calidad")
 CALIDAD_TIPOS = ("tempo_z3", "threshold", "intervalos")
 MAX_CATEGORIAS = 4
-CLASES = ["c1", "c2", "c3", "c4"]  # clase de color por orden de categoría
+# Color de cada categoría según cuántas hay (validado con el skill dataviz, claro y oscuro: el naranja
+# es de la corrida y nunca queda junto al amarillo ni al magenta en la pila de la carga semanal).
+CLASES = {1: ["azul"], 2: ["azul", "aqua"], 3: ["azul", "aqua", "violeta"],
+          4: ["azul", "amarillo", "violeta", "aqua"]}
 
 
 class ConfigError(ValueError):
@@ -68,14 +71,14 @@ def _categorias(brutas: list) -> list:
             raise ConfigError(f"El id de categoría '{c['id']}' está repetido o reservado")
         ids.add(c["id"])
         out.append({"id": c["id"], "nombre": c["nombre"], "letra": c["letra"], "tipos": list(c["tipos"]),
-                    "intensa": bool(c.get("intensa", False)), "clase": CLASES[i]})
+                    "intensa": bool(c.get("intensa", False)), "clase": CLASES[len(brutas)][i]})
     return out
 
 
 def cargar_config(user_dir=None) -> dict:
     """Config plana lista para build/metrics/garmin_connect. Truena con ConfigError si falta algo."""
     user_dir = Path(user_dir) if user_dir else USER_DIR
-    ruta = user_dir / "config.yaml"
+    ruta = user_dir if user_dir.is_file() else user_dir / "config.yaml"   # acepta el archivo o su carpeta
     if not ruta.exists():
         raise ConfigError(f"No existe {ruta}. Corre /setup en Claude Code para crearlo "
                           "(o copia config.example.yaml como config.yaml).")
@@ -130,8 +133,5 @@ def cargar_config(user_dir=None) -> dict:
         "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base,
         "categorias": categorias, "semana_tipica": semana, "dias_pierna": pierna,
         "inbody": bool(cfg.get("inbody", True)),
-        # compatibilidad F0 (se quitan en F1)
-        "crossfit_types": categorias[0]["tipos"], "strap_in_crossfit_since": desde and _fecha(desde, "x"),
-        "crossfit_days": sorted(semana),
         "tipos_con_detalle": umbrales["run_types"] + [t for c in categorias for t in c["tipos"]],
     }

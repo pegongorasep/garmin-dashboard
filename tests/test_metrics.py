@@ -7,10 +7,12 @@ import metrics as m  # noqa: E402
 
 CFG = {
     "max_hr": 190, "max_hr_floor": 183, "max_hr_review_above": 200,
-    "strap_in_crossfit_since": "2026-10-26", "rhr_tolerance_bpm": 4,
+    "fc_max_correa_desde": "2026-10-26", "rhr_tolerance_bpm": 4,
     "sleep_min_hours": 6.5, "rpe_heavy": 8,
-    "run_types": ["running", "treadmill_running"], "crossfit_types": ["hiit", "strength_training"],
-    "crossfit_days": [0, 1, 3], "done_ratio": 0.7, "ceiling_tolerance_min": 2,
+    "run_types": ["running", "treadmill_running"],
+    "categorias": [{"id": "crossfit", "nombre": "CrossFit", "letra": "CF", "tipos": ["hiit", "strength_training"],
+                    "intensa": True, "clase": "azul"}],
+    "semana_tipica": {0: "crossfit", 1: "crossfit", 3: "crossfit"}, "dias_pierna": [], "done_ratio": 0.7, "ceiling_tolerance_min": 2,
 }
 
 
@@ -53,7 +55,7 @@ def test_classify():
     assert m.classify(act(1, "2026-10-01", "running"), CFG) == "run"
     assert m.classify(act(1, "2026-10-01", "treadmill_running"), CFG) == "run"
     assert m.classify(act(1, "2026-10-01", "hiit"), CFG) == "crossfit"
-    assert m.classify(act(1, "2026-10-01", "indoor_cycling"), CFG) == "other"
+    assert m.classify(act(1, "2026-10-01", "indoor_cycling"), CFG) is None
 
 
 def test_zone_minutes_sin_z0():
@@ -266,10 +268,10 @@ def test_today_card_ramas():
     hecha = [ses("z2a", "z2", "hecha"), ses("z2b", "z2"), ses("larga", "larga")]
     todas = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga", "hecha")]
     lun, mie, vie, dom = date(2026, 11, 16), date(2026, 11, 18), date(2026, 11, 20), date(2026, 11, 22)
-    assert m.today_card(lun, VERDE, pend, [], CFG)["tipo"] == "crossfit"
-    assert m.today_card(mie, VERDE, pend, [act(1, "2026-11-18")], CFG)["tipo"] == "crossfit"
+    assert m.today_card(lun, VERDE, pend, [], CFG)["tipo"] == "otra"
+    assert m.today_card(mie, VERDE, pend, [act(1, "2026-11-18")], CFG)["tipo"] == "otra"
     assert m.today_card(lun, VERDE, hecha, [act(2, "2026-11-16", "running")], CFG)["tipo"] == "hecha_hoy"
-    assert m.today_card(mie, VERDE, hecha, [act(2, "2026-11-18", "running"), act(3, "2026-11-18")], CFG)["tipo"] == "crossfit"
+    assert m.today_card(mie, VERDE, hecha, [act(2, "2026-11-18", "running"), act(3, "2026-11-18")], CFG)["tipo"] == "otra"
     assert m.today_card(mie, VERDE, hecha, [], CFG)["sesion_id"] == "z2b"
     t = m.today_card(mie, VERDE, pend, [], CFG)
     assert t["version"] == "normal" and t["sesion_id"] == "z2a" and t["aviso"] is None
@@ -415,7 +417,7 @@ def test_max_hr_above_watch():
 def test_motivo():
     assert m.motivo(_sigs()) is None
     assert m.motivo(_sigs(rhr="fuera")) == "FC en reposo alta"
-    assert m.motivo(_sigs(hrv="fuera", rpe="fuera")) == "HRV baja · CrossFit pesado ayer"
+    assert m.motivo(_sigs(hrv="fuera", rpe="fuera"), CFG) == "HRV baja · CrossFit pesado ayer"
     assert m.motivo(_sigs(sueno="fuera", rhr="fuera")) == "FC en reposo alta · Dormiste poco"
     assert m.motivo(_sigs(baja=True)) == "HRV baja"
     assert m.motivo(_sigs(hrv="fuera", baja=True)) == "HRV baja"
@@ -488,3 +490,69 @@ def test_composicion_masa_grasa_calculada_y_sin_prime():
     una = m.composicion({"mediciones": INBODY["mediciones"][1:2]})
     assert una["ultima"]["delta_pgc"] is None and una["meta"]["faltan_pgc"] == 0
     assert m.composicion(None) is None and m.composicion({"mediciones": []}) is None
+
+
+# --- v4 F1: categorías genéricas ---
+
+CFG3 = {**CFG, "categorias": [
+    {"id": "fuerza", "nombre": "Fuerza", "letra": "F", "tipos": ["strength_training"], "intensa": False, "clase": "azul"},
+    {"id": "hiit", "nombre": "HIIT", "letra": "H", "tipos": ["hiit"], "intensa": True, "clase": "aqua"},
+    {"id": "cardio", "nombre": "Cardio", "letra": "B", "tipos": ["cycling"], "intensa": False, "clase": "violeta"}],
+    "semana_tipica": {0: "fuerza", 2: "hiit", 4: "cardio"}, "dias_pierna": [0]}
+
+
+def test_classify_categorias():
+    assert m.classify(act(1, "2026-10-01", "strength_training"), CFG3) == "fuerza"
+    assert m.classify(act(1, "2026-10-01", "cycling"), CFG3) == "cardio"
+    assert m.classify(act(1, "2026-10-01", "walking"), CFG3) is None
+
+
+def test_week_load_por_categoria():
+    lun = date(2026, 10, 19)
+    acts = [act(1, "2026-10-19", "strength_training", dur=3600), act(2, "2026-10-20", "hiit", dur=1800),
+            act(3, "2026-10-21", "running", dur=1800), act(4, "2026-10-22", "walking")]
+    c = m.week_load(acts, {"1": {"rpe": 5.0}, "2": {"rpe": 8.0}, "3": {"rpe": 4.0}}, lun, CFG3)
+    assert c == {"fuerza": 300.0, "hiit": 240.0, "cardio": 0.0, "run": 120.0, "sin_rpe": 0, "total": 660.0}
+
+
+def test_signal_rpe_solo_categorias_intensas():
+    d = date(2026, 10, 21)
+    acts = [act(1, "2026-10-20", "strength_training"), act(2, "2026-10-20", "hiit")]
+    s = m.signal_rpe(d, acts, {"1": {"rpe": 9.0}, "2": {"rpe": 6.0}}, CFG3)
+    assert s["valor"] == 6.0 and s["estado"] == "ok" and "HIIT" in s["texto"]
+
+
+def test_signal_rpe_nombre_unico_y_varias_intensas():
+    d = date(2026, 10, 21)
+    sin = m.signal_rpe(d, [], {}, CFG3)
+    assert sin["texto"] == "sin HIIT ayer"
+    dos = {**CFG3, "categorias": [{**c, "intensa": True} for c in CFG3["categorias"]]}
+    assert m.signal_rpe(d, [], {}, dos)["texto"] == "sin sesión intensa ayer"
+    assert m.motivo(_sigs(rpe="fuera"), dos) == "Sesión intensa pesada ayer"
+
+
+def test_today_card_otra_con_nombre_de_categoria():
+    lun = date(2026, 11, 16)
+    t = m.today_card(lun, VERDE, [ses("z2a", "z2")], [], CFG3)
+    assert (t["tipo"], t["categoria"], t["texto"]) == ("otra", "Fuerza", "Hoy es Fuerza")
+    # una categoría no intensa hecha en un día sin plan de otra cosa no tapa la corrida
+    mar = date(2026, 11, 17)
+    t = m.today_card(mar, VERDE, [ses("z2a", "z2")], [act(1, "2026-11-17", "strength_training")], CFG3)
+    assert t["tipo"] == "sesion"
+
+
+def test_aviso_dia_de_pierna():
+    mar = date(2026, 11, 17)   # ayer lunes = pierna
+    solo_larga = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga")]
+    t = m.today_card(mar, VERDE, solo_larga, [], CFG3)
+    assert t["sesion_id"] == "larga" and "Ayer pierna: hoy mejor la Z2 y deja la Larga para mañana" in t["aviso"]
+    cal = [ses("z2a", "z2", "hecha"), ses("cal", "calidad")]
+    assert "deja la calidad para mañana" in m.today_card(mar, VERDE, cal, [], CFG3)["aviso"]
+    # una Z2 pendiente no lleva aviso, y otro día tampoco
+    assert m.today_card(mar, VERDE, [ses("z2a", "z2")], [], CFG3)["aviso"] is None
+    assert m.today_card(date(2026, 11, 19), VERDE, solo_larga, [], CFG3)["aviso"] == "La larga va el sábado o domingo"
+
+
+def test_max_hr_progress_sin_correa_configurada():
+    p = m.max_hr_progress([act(1, "2026-10-27", maxHR=180)], {**CFG, "fc_max_correa_desde": None})
+    assert p["configurada"] is False and p["estimacion"] is None and p["sesiones"] == []

@@ -5,6 +5,7 @@ Es el único lugar con reloj: "hoy" se calcula en la zona horaria del config.
 """
 import argparse
 import json
+import os
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -98,8 +99,9 @@ def signals_list(sigs: dict) -> list:
 
 def day_type(day: date, hoy: date, acts: list, config: dict) -> str:
     tipos = {m.classify(a, config) for a in acts if m.day_of(a) == day}
-    if "crossfit" in tipos:
-        return "crossfit"
+    for c in config["categorias"]:
+        if c["id"] in tipos:
+            return c["id"]
     if "run" in tipos:
         return "corrida"
     if day > hoy:
@@ -224,19 +226,22 @@ def corrida_de_sesion(e: dict, semana: dict, data: dict, config: dict):
     return corrida_plana(a, plan_ses, data, config)
 
 
-def crossfit_del_dia(d: date, data: dict, config: dict):
-    """CrossFit del día: TE aeróbico máximo, RPE máximo y minutos sumados; None si no hubo."""
-    cf = [a for a in data["activities"] if m.classify(a, config) == "crossfit" and m.day_of(a) == d]
-    if not cf:
-        return None
-    tes = [a["aerobicTrainingEffect"] for a in cf if a.get("aerobicTrainingEffect") is not None]
-    rpes = [r for a in cf if (r := (data["details"].get(str(a["activityId"])) or {}).get("rpe")) is not None]
-    return {"te": r1(max(tes)) if tes else None, "rpe": max(rpes) if rpes else None,
-            "minutos": r1(sum(a["duration"] for a in cf) / 60)}
+def otras_del_dia(d: date, data: dict, config: dict) -> list:
+    """Actividades no-corrida del día, una entrada por categoría: TE aeróbico máx, RPE máx y minutos sumados."""
+    out = []
+    for c in config["categorias"]:
+        acts = [a for a in data["activities"] if m.classify(a, config) == c["id"] and m.day_of(a) == d]
+        if not acts:
+            continue
+        tes = [a["aerobicTrainingEffect"] for a in acts if a.get("aerobicTrainingEffect") is not None]
+        rpes = [r for a in acts if (r := (data["details"].get(str(a["activityId"])) or {}).get("rpe")) is not None]
+        out.append({"cat": c["id"], "te": r1(max(tes)) if tes else None, "rpe": max(rpes) if rpes else None,
+                    "minutos": r1(sum(a["duration"] for a in acts) / 60)})
+    return out
 
 
 def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, config: dict) -> dict:
-    """Un día del calendario: corrida más larga (con su sesión), CrossFit y lo planeado si es futuro."""
+    """Un día del calendario: corrida más larga (con su sesión), otras actividades y lo planeado si es futuro."""
     del_dia = [a for a in runs if m.day_of(a) == d]
     corrida = None
     if del_dia:
@@ -244,17 +249,17 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
         e = next((e for e in sesiones if e["fecha"] == d.isoformat() and e["minutos"] == a["duration"] / 60), None)
         corrida = {"minutos": r1(a["duration"] / 60), "sesion_nombre": e["name"] if e else "Extra",
                    "estado": e["estado"] if e else "extra"}
-    cf = crossfit_del_dia(d, data, config)
+    otras = otras_del_dia(d, data, config)
     planeado = None
-    if d > hoy and not corrida and not cf:
+    if d > hoy and not corrida and not otras:
         larga_pendiente = any(e["tipo"] == "larga" and e["estado"] == "pendiente" for e in sesiones)
-        if d.weekday() in config["crossfit_days"]:
-            planeado = "cf"
+        if d.weekday() in config["semana_tipica"]:
+            planeado = config["semana_tipica"][d.weekday()]
         elif d.weekday() >= 5 and larga_pendiente:
             planeado = "larga"
     return {"fecha": d.isoformat(), "dia_semana": DIAS[d.weekday()],
             "luz": light_on(d, data, config)["color"] if d <= hoy else None,
-            "corrida": corrida, "corridas_n": len(del_dia), "crossfit": cf, "planeado": planeado}
+            "corrida": corrida, "corridas_n": len(del_dia), "otras": otras, "planeado": planeado}
 
 
 def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> dict:
@@ -380,7 +385,8 @@ def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj) -> d
     for i in range(11, -1, -1):
         s = ini - timedelta(weeks=i)
         c = m.week_load(acts, data["details"], s, config)
-        semanas.append({"inicio": s.isoformat(), "carga_crossfit": r1(c["crossfit"]),
+        semanas.append({"inicio": s.isoformat(),
+                        "cargas": {k["id"]: r1(c[k["id"]]) for k in config["categorias"]},
                         "carga_corrida": r1(c["run"]), "sin_rpe": c["sin_rpe"]})
     return {
         "distribucion": {"minutos": {z: r1(v) for z, v in dist["minutos"].items()},
@@ -388,8 +394,49 @@ def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj) -> d
         "carga": carga(ini), "carga_anterior": carga(ini - timedelta(days=7)), "carga_semanas": semanas,
         "fc_max": {**fc_max, "config": config["max_hr"], "fuente": "reloj" if reloj else "respaldo"},
         "umbrales": {k: config[k] for k in ("rhr_tolerance_bpm", "sleep_min_hours", "rpe_heavy",
-                                            "max_hr", "max_hr_floor", "zone_pcts",
+                                            "max_hr", "max_hr_floor", "max_hr_review_above", "zone_pcts",
                                             "ceiling_tolerance_min", "done_ratio")},
+    }
+
+
+def lista_es(items: list) -> str:
+    """['a', 'b', 'c'] -> 'a, b y c'."""
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " y " + items[-1] if items else ""
+
+
+DIAS_LARGO = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
+
+def build_ui(config: dict, plan: dict) -> dict:
+    """Todo lo que el sitio necesita de la config: título, categorías y textos ya armados."""
+    cats = config["categorias"]
+    nombre = m.nombre_intensa(config)
+    sesiones = [s["name"] for s in plan["weeks"][0]["sessions"]] if plan.get("weeks") else []
+    partes = []
+    if sesiones:
+        partes.append("Cada semana: " + (", ".join(sesiones[:-1]) + " y la " + sesiones[-1] if len(sesiones) > 1 else sesiones[0])
+                      + " (sábado o domingo)")
+    for c in cats:
+        dias = [DIAS_LARGO[d] for d, cid in sorted(config["semana_tipica"].items()) if cid == c["id"]]
+        if dias:
+            partes.append(f"{c['nombre']} {lista_es(dias)}")
+    if config["dias_pierna"]:
+        partes.append("Día de pierna: " + lista_es([DIAS_LARGO[d] for d in config["dias_pierna"]]))
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    return {
+        "titulo": config["titulo"],
+        "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase")} for c in cats],
+        "nombre_intensa": nombre,
+        "acciones_url": f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None,
+        "textos": {
+            "semana": ". ".join(partes) + ".",
+            "rpe_ayer": f"RPE del {nombre} de ayer" if nombre else "RPE de tu sesión intensa de ayer",
+            "incluye": f"Incluye {lista_es([c['nombre'] for c in cats] + ['corridas'])}.",
+            "fcmax_vacia": (f"Aún no hay clases de {nombre} medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva."
+                            if nombre else "Aún no hay sesiones intensas medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva.")
+            if config["fc_max_correa_desde"] else
+            "Sin fecha de correa en la configuración: la FC máx sale del reloj. Si usas correa en tus sesiones intensas, agrega `fc_max_correa_desde` en config.yaml.",
+        },
     }
 
 
@@ -417,7 +464,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     if tarjeta["sesion_id"] and semana_plan:
         ses = next(s for s in semana_plan["sessions"] if s["id"] == tarjeta["sesion_id"])
         tarjeta["sesion"] = convert_session(ses, zonas)
-    tarjeta["motivo"] = m.motivo(sigs) if tarjeta["version"] in ("suave", "descanso") else None
+    tarjeta["motivo"] = m.motivo(sigs, config) if tarjeta["version"] in ("suave", "descanso") else None
 
     pulled = data["meta"].get("pulled_at_utc")
     datos_al = None
@@ -446,6 +493,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "mejora": build_mejora(hoy, filas, semanas_12),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody")),
+        "ui": build_ui(config, plan),
         "detalles": build_details(hoy, data, config, fc_max, reloj),
     }
 

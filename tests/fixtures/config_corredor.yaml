@@ -1,0 +1,19 @@
+# Corredor con calidad, 3 categorías (fuerza, hiit, cardio) y día de pierna.
+perfil:
+  titulo: Mi base
+  zona_horaria: America/Mexico_City
+  edad: 35
+corrida:
+  nivel: corredor
+  intensidad: calidad
+  calidad_tipos: [tempo_z3, threshold, intervalos]
+  inicio: 2026-11-09
+  semanas: 12
+  base_min: {z2: 30, larga: 60}
+actividades:
+  categorias:
+    - {id: fuerza, nombre: Fuerza, letra: F, tipos: [strength_training]}
+    - {id: hiit, nombre: HIIT, letra: H, tipos: [hiit], intensa: true}
+    - {id: cardio, nombre: Cardio, letra: B, tipos: [cycling, indoor_cycling]}
+  semana: {lun: fuerza, mié: hiit, vie: cardio}
+  dias_pierna: [lun]

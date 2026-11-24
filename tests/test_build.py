@@ -60,6 +60,8 @@ def fixture():
 def revisar_privacidad(out: dict, extras=()):
     texto = json.dumps(out, ensure_ascii=False)
 
+    acciones = (out.get("ui") or {}).get("acciones_url")  # única URL permitida: el enlace a GitHub Actions
+
     def recorrer(o):
         if isinstance(o, dict):
             for k, v in o.items():
@@ -69,7 +71,7 @@ def revisar_privacidad(out: dict, extras=()):
             for v in o:
                 recorrer(v)
         elif isinstance(o, str):
-            assert not o.startswith("http"), f"URL en el JSON: {o}"
+            assert not o.startswith("http") or o == acciones, f"URL en el JSON: {o}"
     recorrer(out)
     for s in [*SECRETOS, *extras]:
         assert s and s not in texto, f"valor privado en el JSON: {s}"
@@ -129,7 +131,7 @@ def test_ultima_corrida_fuera_del_plan_y_sin_corridas():
     data, plan = fixture(), build.load(ROOT / "plan" / "plan.example.json")
     fuera = build.build(data, plan, CONFIG, AHORA)      # plan_start real: 16 nov
     assert fuera["ultima_corrida"]["sesion"] is None and fuera["plan"]["semana_actual"] is None
-    assert fuera["hoy"]["tarjeta"]["tipo"] in ("sin_plan", "crossfit")
+    assert fuera["hoy"]["tarjeta"]["tipo"] in ("sin_plan", "otra")
     vacia = build.build({**data, "activities": []}, plan, CONFIG_FIXTURE, AHORA)
     assert vacia["ultima_corrida"] is None and vacia["progreso"]["corridas"] == []
 
@@ -174,7 +176,7 @@ def test_corrida_asignada_a_sesion(salida):
     est = salida["plan"]["estado_sesiones"]
     assert [e["estado"] for e in est] == ["hecha", "pendiente", "pendiente"]
     assert salida["plan"]["estado_sesiones"][0]["name"] == "Z2 #1"
-    assert salida["hoy"]["tarjeta"]["tipo"] in ("sesion", "hecha_hoy", "crossfit")
+    assert salida["hoy"]["tarjeta"]["tipo"] in ("sesion", "hecha_hoy", "otra")
 
 
 def test_privacidad_con_fixture(salida):
@@ -221,7 +223,7 @@ def test_hoy_motivo_y_semana_nueva(salida):
     data, plan = fixture(), build.load(ROOT / "plan" / "plan.example.json")
     data["sleep"] = [{**r, "sleepTimeSeconds": 18000} if r["calendarDate"] == "2026-11-04" else r
                      for r in data["sleep"]]
-    out = build.build(data, plan, {**CONFIG_FIXTURE, "crossfit_days": []}, AHORA)
+    out = build.build(data, plan, {**CONFIG_FIXTURE, "semana_tipica": {}}, AHORA)
     t = out["hoy"]["tarjeta"]
     assert t["version"] == "suave" and t["motivo"] == "Dormiste poco"
     s = salida["semana"]
@@ -311,23 +313,23 @@ def test_semana_futura_todo_pendiente_y_planeado():
     s = _semana(data, date(2026, 10, 28), date(2026, 11, 2))
     assert s["estado"] == "futura" and s["stats"]["corridas"] == 0
     assert {e["estado"] for e in s["sesiones"]} == {"pendiente"}
-    assert [d["planeado"] for d in s["dias"]] == ["cf", "cf", None, "cf", None, "larga", "larga"]
+    assert [d["planeado"] for d in s["dias"]] == ["crossfit", "crossfit", None, "crossfit", None, "larga", "larga"]
     assert all(d["luz"] is None for d in s["dias"])
 
 
 def test_dia_futuro_martes_planeado_cf():
     s = _semana({**fixture(), "activities": []}, date(2026, 11, 2), date(2026, 11, 2))
-    assert s["dias"][1]["planeado"] == "cf" and s["dias"][2]["planeado"] is None
+    assert s["dias"][1]["planeado"] == "crossfit" and s["dias"][2]["planeado"] is None
 
 
-def test_crossfit_del_dia_toma_te_maximo_y_suma_minutos():
+def test_otras_del_dia_toma_te_maximo_y_suma_minutos():
     data = fixture()
     data["activities"] = [_act(20, "2026-11-02", "strength_training", minutos=14, aerobicTrainingEffect=2.2),
                           _act(21, "2026-11-02", "hiit", minutos=16, aerobicTrainingEffect=3.4)]
     data["details"] = {"20": {"rpe": 5.0}, "21": {"rpe": 7.0}}
     s = _semana(data, date(2026, 11, 4), date(2026, 11, 2))
-    assert s["dias"][0]["crossfit"] == {"te": 3.4, "rpe": 7.0, "minutos": 30}
-    assert s["dias"][1]["crossfit"] is None
+    assert s["dias"][0]["otras"] == [{"cat": "crossfit", "te": 3.4, "rpe": 7.0, "minutos": 30}]
+    assert s["dias"][1]["otras"] == []
 
 
 # --- v3.2 F2 ---
@@ -348,3 +350,35 @@ def test_composicion_real():
     c = out["composicion"]
     assert c["meta"]["faltan_pgc"] == 4.8 and c["meta"]["mme_ok"] is True and len(c["mediciones"]) == 4
     revisar_privacidad(out)
+
+
+# --- v4 F1: config con 3 categorías y día de pierna ---
+
+CONFIG_CORREDOR = {**cargar_config(ROOT / "tests" / "fixtures" / "config_corredor.yaml"), "plan_start": "2026-10-26"}
+
+
+def test_build_con_tres_categorias():
+    data = fixture()
+    data["activities"] = [*data["activities"], {**data["activities"][0], "activityId": 7, "activityUUID": "u7",
+                                                 "startTimeLocal": "2026-11-02 07:00:00",
+                                                 "activityType": {"typeKey": "strength_training"}}]
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    out = build.build(data, plan, CONFIG_CORREDOR, AHORA)
+    revisar_privacidad(out)
+    ui = out["ui"]
+    assert [c["id"] for c in ui["categorias"]] == ["fuerza", "hiit", "cardio"]
+    assert [c["clase"] for c in ui["categorias"]] == ["azul", "aqua", "violeta"]
+    assert ui["nombre_intensa"] == "HIIT" and ui["titulo"] == "Mi base" and ui["acciones_url"] is None
+    assert ui["textos"]["semana"].endswith("Fuerza lunes. HIIT miércoles. Cardio viernes. Día de pierna: lunes.")
+    assert ui["textos"]["incluye"] == "Incluye Fuerza, HIIT, Cardio y corridas."
+    lun = next(d for s in out["semanas_hoy"] for d in s["dias"] if d["fecha"] == "2026-11-02")
+    assert sorted(o["cat"] for o in lun["otras"]) == ["fuerza", "hiit"]
+    assert set(out["detalles"]["carga"]) >= {"fuerza", "hiit", "cardio", "run", "total"}
+    assert set(out["detalles"]["carga_semanas"][0]["cargas"]) == {"fuerza", "hiit", "cardio"}
+    assert out["detalles"]["fc_max"]["configurada"] is False
+
+
+def test_acciones_url_desde_variable(monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "amigo/mi-dashboard")
+    ui = build.build_ui(CONFIG_CORREDOR, build.load(ROOT / "plan" / "plan.example.json"))
+    assert ui["acciones_url"] == "https://github.com/amigo/mi-dashboard/actions/workflows/deploy.yml"
