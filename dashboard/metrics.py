@@ -364,16 +364,17 @@ def assign_sessions(week: dict, runs: list, config: dict) -> list:
     """Asigna las corridas de la semana a sus sesiones (sin mirar nombres).
 
     runs: [{"fecha", "minutos", "luz"}] en orden cronológico. Una corrida en sáb/dom con
-    minutos + 0.5 ≥ done_ratio × larga → Larga (la más larga si hay varias). Las demás, en
+    minutos + 0.5 ≥ done_ratio × larga → Larga (la más larga si hay varias); la prueba de la última semana se asigna
+    igual pero en cualquier día. Las demás, en
     orden, llenan las Z2; las sobrantes son "extra" y no se asignan. `luz` "sin_datos" cuenta
     como verde. Devuelve un dict por sesión, en el orden de la semana.
     """
     sesiones = week["sessions"]
-    larga = next((s for s in sesiones if s.get("tipo") == "larga"), None)
+    larga = next((s for s in sesiones if s.get("tipo") in ("larga", "prueba")), None)   # la prueba ocupa su lugar
     calidad = next((s for s in sesiones if s.get("tipo") == "calidad"), None)
     elegida = None
     if larga:
-        candidatas = [r for r in runs if es_fin_de_semana(r["fecha"])
+        candidatas = [r for r in runs if (es_fin_de_semana(r["fecha"]) or larga["tipo"] == "prueba")
                       and r["minutos"] + 0.5 >= config["done_ratio"] * larga["minutes"]]
         elegida = max(candidatas, key=lambda r: r["minutos"], default=None)
     resto = [r for r in runs if r is not elegida]
@@ -550,8 +551,11 @@ def run_check(activity: dict, session, config=None, minutos_z=None, suave: bool 
         tolerancia += 2
     if (session or {}).get("tipo") == "variada":   # su Z3 corto es parte del plan
         tolerancia += _min_z3_planeados(session.get("steps", []))
-    out = {"min_sobre_techo": sobre, "tolerancia_min": tolerancia, "techo_ok": sobre <= tolerancia}
-    if session and minutos_z is not None:
+    es_5k = (session or {}).get("prueba") == "5k"
+    if es_5k:   # 5 km a tope: pasarse de Z2 es la idea
+        tolerancia = activity["duration"] / 60
+    out = {"min_sobre_techo": sobre, "tolerancia_min": round(tolerancia, 1), "techo_ok": sobre <= tolerancia}
+    if session and minutos_z is not None and not es_5k:
         pasos = session["easy"]["steps"] if suave else session["steps"]
         out["plan_vs_real"] = plan_vs_real(pasos, minutos_z, (config or {}).get("done_ratio", 0.7))
     return out
@@ -807,6 +811,52 @@ def mejora_frase(filas: list, hoy: date, modo: str = "trote", otras=None, fc_ref
     if rit and (ahora["ritmo_ref"] or antes):
         texto += f"; {rit}"
     return texto + (frase_otras(otras) if otras else "") + "."
+
+
+# --- prueba al terminar el plan ---
+
+def distancia_en_tiempo(serie: list, seg: float):
+    """Metros recorridos en los primeros `seg` segundos de una serie [seg, metros, fc] (interpola); None si no llega."""
+    if not serie or serie[-1][0] < seg:
+        return None
+    for (t0, d0, _), (t1, d1, _) in zip(serie, serie[1:]):
+        if t0 <= seg <= t1:
+            return d0 if t1 == t0 else d0 + (d1 - d0) * (seg - t0) / (t1 - t0)
+    return None
+
+
+def tiempo_en_distancia(serie: list, metros: float):
+    """Segundos en llegar a `metros` de una serie [seg, metros, fc] (interpola); None si no llega."""
+    if not serie or serie[-1][1] < metros:
+        return None
+    for (t0, d0, _), (t1, d1, _) in zip(serie, serie[1:]):
+        if d0 <= metros <= d1:
+            return t0 if d1 == d0 else t0 + (t1 - t0) * (metros - d0) / (d1 - d0)
+    return None
+
+
+PRUEBA_FC_FIJA_S = 1800
+
+
+def valor_prueba(tipo: str, serie: list, pct_trote=None):
+    """Lo que mide cada prueba. `fc_fija`: ritmo (s/km) de los primeros 30'; `trote_continuo`: % de trote; `5k`: segundos
+    de los 5 km. Devuelve {"valor", "km"} o None si la serie no alcanza."""
+    if tipo == "fc_fija":
+        metros = distancia_en_tiempo(serie, PRUEBA_FC_FIJA_S)
+        return {"valor": round(PRUEBA_FC_FIJA_S / (metros / 1000)), "km": round(metros / 1000, 2)} if metros else None
+    if tipo == "trote_continuo":
+        return None if pct_trote is None else {"valor": round(pct_trote, 1), "km": None}
+    t = tiempo_en_distancia(serie, 5000)
+    return None if t is None else {"valor": round(t), "km": 5.0}
+
+
+def comparar_prueba(tipo: str, valor: float, base):
+    """Contra la base {"fuente", "fecha", "valor"}: {"dif", "mejor"} (dif = ahora − antes; en ritmo y tiempo menos es
+    mejor, en % de trote más es mejor). None si no hay base."""
+    if base is None:
+        return None
+    dif = round(valor - base["valor"], 1)
+    return {"dif": dif, "mejor": None if dif == 0 else (dif > 0 if tipo == "trote_continuo" else dif < 0)}
 
 
 # --- carreras y mejores marcas ---

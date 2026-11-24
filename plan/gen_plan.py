@@ -284,6 +284,29 @@ def sesion_variada(tipo: str, minutos: int, caminatas: bool, z3: bool, bloque: i
     return con_suave_caminatas(s, caminatas, bloque)
 
 
+# --- prueba de la última semana ---
+
+PRUEBA_MIN = 30        # minutos de la prueba a FC fija y de trote continuo
+PRUEBA_5K_MIN = 35     # estimado de unos 5 km a tope (los minutos reales dependen de la persona)
+NOTA_FC_FIJA = "FC fija a la mitad de Z2 en ruta plana; alerta en el reloj"
+NOTA_TROTE_CONTINUO = "trote continuo en Z2; camina solo si pasas el techo"
+NOTA_5K = "5 km a tope; lo que cuenta es tu tiempo"
+
+
+def sesion_prueba(cfg: dict) -> dict:
+    """La Larga de la última semana se cambia por una prueba (id `prueba`, tipo `prueba`) para medir la mejora:
+    calidad → 5 km a tope; con caminatas → trote continuo; si no → 30' a FC fija. No hay versión suave de una prueba."""
+    if cfg["intensidad"] == "calidad":
+        tipo, minutos, pasos, nombre = "5k", PRUEBA_5K_MIN, [paso(PRUEBA_5K_MIN, "Z4", NOTA_5K)], "Prueba · 5 km"
+    elif cfg["caminatas"]:
+        tipo, minutos, pasos, nombre = "trote_continuo", PRUEBA_MIN, [paso(PRUEBA_MIN, "Z2", NOTA_TROTE_CONTINUO)], "Prueba · trote continuo"
+    else:
+        tipo, minutos, pasos, nombre = "fc_fija", PRUEBA_MIN, [paso(PRUEBA_MIN, "Z2", NOTA_FC_FIJA)], "Prueba · 30 min a FC fija"
+    s = sesion("prueba", "prueba", nombre, minutos, pasos, prueba=tipo)
+    s["easy"] = {"name": "Prueba", "minutes": minutos, "steps": [dict(p) for p in pasos]}
+    return s
+
+
 def escala(tabla, base, ref, bloque, pos, minimo=10):
     return max(minimo, redondea5(base + tabla[bloque][pos] * base / ref))
 
@@ -323,8 +346,12 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
         focus += f" · variada: {POR_ID[tipo]['nombre']}"
     else:
         sesiones.append(z2("z2b", "Z2 #2", z2b))
-    sesiones.append(con_suave_caminatas(
-        sesion("larga", "larga", "Larga", larga, pasos_z2(larga, True, caminatas, nb)), caminatas, nb))
+    if n == cfg["plan_semanas"]:   # última semana: la Larga se cambia por la prueba
+        sesiones.append(sesion_prueba(cfg))
+        focus = "Descarga · prueba" if descarga else focus.replace(f"Larga {larga}'", "Prueba")
+    else:
+        sesiones.append(con_suave_caminatas(
+            sesion("larga", "larga", "Larga", larga, pasos_z2(larga, True, caminatas, nb)), caminatas, nb))
     if picos:
         focus += " · picos Z3 opcionales"
     if caminatas:
@@ -343,6 +370,13 @@ def verificar(plan: dict, cfg: dict = None) -> None:
     for w in plan["weeks"]:
         con_z3 = 0
         for s in w["sessions"]:
+            if s["tipo"] == "prueba":
+                assert suma(s["steps"]) == s["minutes"] == s["easy"]["minutes"], (w["n"], "prueba")
+                assert s["prueba"] in ("fc_fija", "trote_continuo", "5k"), (w["n"], "tipo de prueba")
+                assert w["n"] == len(plan["weeks"]), (w["n"], "la prueba va solo en la última semana")
+                if intensidad == "solo_z2":
+                    assert not zonas_de(s["steps"]) & {"Z3", "Z4", "Z5"}, (w["n"], "prueba solo_z2 con Z3+")
+                continue
             assert suma(s["steps"]) == s["minutes"], (w["n"], s["id"])
             assert suma(s["easy"]["steps"]) == s["easy"]["minutes"], (w["n"], s["id"], "suave")
             assert not zonas_de(s["easy"]["steps"]) & {"Z3", "Z4", "Z5"}, (w["n"], s["id"], "suave con Z3+")

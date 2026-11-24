@@ -587,6 +587,8 @@ function tarjetaComoFunciona(d) {
       li(h("strong", {}, "¿Lo hice bien?: "), `los minutos sobre el techo de Z2 (zonas 3 a 5) deben ser ${fmt(u.ceiling_tolerance_min ?? 2, 0)}' o menos; en la Z2 #1 con picos opcionales de Z3 se permiten 2' más.`),
       li(h("strong", {}, "Tiempo: "), "es tiempo de reloj, caminatas incluidas. Trote y caminata vienen de los tramos que detecta Garmin; el ritmo trotando no cuenta la caminata.")),
     h("p", { class: "nota" }, "Las zonas usan Karvonen (% de la reserva de FC)."),
+    h("h3", { style: "margin-top:12px" }, "La prueba de la última semana"),
+    h("p", {}, "En la última semana del plan la Larga se cambia por una prueba para medir tu mejora: 30 min a FC fija (la mitad de Z2, en ruta plana, con alerta en el reloj; cuentan los km), trote continuo en Z2 si hacías caminatas (cuenta el % de trote) o 5 km a tope si haces calidad (cuenta el tiempo). Se compara con el inicio del plan y, después, con tu prueba anterior. Al terminar el plan, Hoy muestra el resultado y te dice que corras /ajustar para el siguiente bloque."),
     h("h3", { style: "margin-top:12px" }, "Cómo medimos tu mejora"),
     h("ul", { class: "reglas" },
       li(h("strong", {}, "Ritmo a FC de referencia: "), `llevamos el ritmo de cada corrida al aire libre a ${(d.progreso || {}).fc_ref ?? "la mitad de Z2"} lpm (la mitad de tu Z2): ritmo × FC que llevaste ÷ FC de referencia. Es tu eficiencia aeróbica: si mejoras, a la misma FC vas más rápido. Solo cuentan corridas cuyo trote cayó en Z2; no carreras ni caminadora. El calor y el cansancio suben la FC, así que mira la tendencia (la línea de 4 corridas), no una corrida suelta.`),

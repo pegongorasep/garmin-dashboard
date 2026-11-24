@@ -715,3 +715,71 @@ def test_resumen_de_la_semana_pasada():
     revisar_privacidad(out)
     vacia = build.build({**fixture(), "activities": []}, plan, CONFIG_FIXTURE, datetime(2026, 12, 20, 12, 0, tzinfo=ZoneInfo("America/Merida")))
     assert vacia["hoy"]["semana_pasada"] is None
+
+
+# --- v4.3 F6: la prueba y "Plan terminado" ---
+
+def _plan_corto(**kw):
+    cfg = {**CONFIG_FIXTURE, "plan_semanas": 4, **kw}
+    return gen_plan.generar(cfg), cfg
+
+
+def _datos_prueba(ritmo=400, minutos=35):
+    """Una corrida de la semana 4 (16–22 nov) que cuenta como la prueba, con serie a ritmo constante."""
+    data = fixture()
+    serie = [[t, round(t / ritmo * 1000), 144] for t in range(0, minutos * 60 + 1, 5)]
+    data["activities"].append({"activityId": 900, "startTimeLocal": "2026-11-18 07:00:00", "duration": minutos * 60.0,
+                               "activityType": {"typeKey": "running"}, "averageHR": 144.0, "distance": minutos * 60 / ritmo * 1000,
+                               "hrTimeInZone_1": 0, "hrTimeInZone_2": minutos * 60, "hrTimeInZone_3": 0, "hrTimeInZone_4": 0,
+                               "hrTimeInZone_5": 0})
+    data["details"]["900"] = {"rpe": 3.0, "feel": 50, "splits": [], "serie": serie}
+    return data
+
+
+AHORA_FIN = datetime(2026, 11, 25, 12, 0, tzinfo=ZoneInfo("America/Merida"))
+
+
+def test_plan_terminado_con_prueba_contra_el_inicio():
+    plan, cfg = _plan_corto()
+    out = build.build(_datos_prueba(), plan, cfg, AHORA_FIN)
+    t = out["hoy"]["tarjeta"]
+    assert t["tipo"] == "plan_terminado" and t["texto"] == "Plan terminado" and "/ajustar" in t["siguiente"]
+    p = t["prueba"]
+    assert (p["tipo"], p["fecha"], p["estado"]) == ("fc_fija", "2026-11-18", "hecha")
+    assert p["valor"] == 400 and p["km"] == 4.5
+    assert p["base"]["fuente"] == "inicio" and p["dif"] == round(400 - p["base"]["valor"], 1)
+    revisar_privacidad(out)
+    assert validar.problemas(json.loads(json.dumps(out))) == []
+
+
+def test_plan_terminado_prueba_contra_la_prueba_anterior_de_la_config():
+    plan, cfg = _plan_corto(pruebas=[{"fecha": "2026-08-01", "tipo": "fc_fija", "valor": 430.0},
+                                     {"fecha": "2026-09-15", "tipo": "5k", "valor": 1500.0}])
+    p = build.build(_datos_prueba(), plan, cfg, AHORA_FIN)["hoy"]["tarjeta"]["prueba"]
+    assert p["base"] == {"fuente": "prueba", "fecha": "2026-08-01", "valor": 430.0}
+    assert p["dif"] == -30.0 and p["mejor"] is True
+
+
+def test_plan_terminado_sin_la_prueba_dice_que_falta():
+    plan, cfg = _plan_corto()
+    t = build.build(fixture(), plan, cfg, AHORA_FIN)["hoy"]["tarjeta"]
+    assert t["tipo"] == "plan_terminado" and t["prueba"] is None
+
+
+def test_plan_no_terminado_no_muestra_la_prueba():
+    plan, cfg = _plan_corto()
+    t = build.build(_datos_prueba(), plan, cfg, datetime(2026, 11, 22, 20, 0, tzinfo=ZoneInfo("America/Merida")))["hoy"]["tarjeta"]
+    assert t["tipo"] != "plan_terminado"
+    assert build.plan_terminado(date(2026, 11, 23), cfg, plan) and not build.plan_terminado(date(2026, 11, 22), cfg, plan)
+    assert not build.plan_terminado(date(2027, 1, 1), cfg, {"weeks": []})
+
+
+def test_prueba_5k_usa_la_mejor_marca_antes_del_plan_y_no_pide_techo():
+    plan, cfg = _plan_corto(intensidad="calidad", calidad_tipos=["tempo_z3"])
+    data = _datos_prueba(ritmo=300, minutos=26)           # 5 km en 25:00
+    data["historial"] = [{"startTimeLocal": "2026-05-03 07:00:00", "activityType": {"typeKey": "running"}, "distance": 5100.0,
+                          "duration": 1600.0, "eventType": {"typeKey": "race"}, "fastestSplit_5000": 1560.0}]
+    out = build.build(data, plan, cfg, AHORA_FIN)
+    p = out["hoy"]["tarjeta"]["prueba"]
+    assert p["tipo"] == "5k" and p["valor"] == 1500 and p["base"] == {"fuente": "mejor_5k", "fecha": "2026-05-03", "valor": 1560}
+    assert p["dif"] == -60.0 and p["mejor"] is True

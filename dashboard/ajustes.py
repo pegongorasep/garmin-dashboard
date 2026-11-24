@@ -93,6 +93,23 @@ def _categorias(brutas: list) -> list:
     return out
 
 
+PRUEBAS_TIPOS = ("fc_fija", "trote_continuo", "5k")
+
+
+def _pruebas(brutas: list) -> list:
+    """Resultados de pruebas anteriores [{fecha, tipo, valor}], por fecha. `valor` es lo que publica el sitio:
+    ritmo (s/km) a FC fija, % de trote continuo o segundos de los 5 km."""
+    out = []
+    for i, p in enumerate(brutas):
+        for k in ("fecha", "tipo", "valor"):
+            if p.get(k) in (None, ""):
+                raise ConfigError(f"La prueba {i + 1} de `corrida.pruebas` no tiene `{k}`")
+        if p["tipo"] not in PRUEBAS_TIPOS:
+            raise ConfigError(f"corrida.pruebas: tipo '{p['tipo']}' no válido; usa: {', '.join(PRUEBAS_TIPOS)}")
+        out.append({"fecha": _fecha(p["fecha"], "corrida.pruebas"), "tipo": p["tipo"], "valor": float(p["valor"])})
+    return sorted(out, key=lambda x: x["fecha"])
+
+
 def cargar_config(user_dir=None) -> dict:
     """Config plana lista para build/metrics/garmin_connect. Truena con ConfigError si falta algo."""
     user_dir = Path(user_dir) if user_dir else USER_DIR
@@ -130,6 +147,7 @@ def cargar_config(user_dir=None) -> dict:
     if intensidad == "calidad" and not tipos_cal:
         raise ConfigError("corrida.intensidad es `calidad` pero `calidad_tipos` está vacío")
     base = {"z2": 20, "larga": 40, **(corrida.get("base_min") or {})}
+    pruebas = _pruebas(corrida.get("pruebas") or [])
 
     categorias = _categorias(act.get("categorias") or defaults["categorias"])
     # `actividades.semana` (v4.1 y antes) se tolera y se ignora: ya no se asume ninguna semana típica.
@@ -147,7 +165,7 @@ def cargar_config(user_dir=None) -> dict:
         "plan_start": inicio, "semanas_repetidas": list(corrida.get("semanas_repetidas") or []),
         "nivel": nivel, "intensidad": intensidad, "calidad_tipos": tipos_cal,
         "caminatas": bool(corrida.get("caminatas", False)), "variada": variada,
-        "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base,
+        "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base, "pruebas": pruebas,
         "categorias": categorias, "dias_pierna": pierna,
         "inbody": bool(cfg.get("inbody", True)),
         "tipos_con_detalle": umbrales["run_types"] + [t for c in categorias for t in c["tipos"]],

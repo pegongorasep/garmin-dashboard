@@ -23,6 +23,9 @@ corrida:
   semanas: 12
   base_min: {z2: 20, larga: 40}    # minutos con los que arrancas (lo que corres hoy cómodo, sin pasarte)
   semanas_repetidas: []            # semanas del plan que repetiste, p. ej. [3]
+  pruebas: []                      # resultados de pruebas de bloques anteriores; /ajustar los agrega solo
+  #   Ejemplo: [{fecha: 2027-02-26, tipo: fc_fija, valor: 462}]  (tipo: fc_fija | trote_continuo | 5k;
+  #   valor: ritmo s/km a FC fija, % de trote continuo o segundos de los 5 km). Así la próxima prueba se compara con esta.
   carreras: []                     # fechas de carreras pasadas (AAAA-MM-DD) que Garmin no marcó como Carrera
   #   Las nuevas se detectan solas si en Garmin marcas la actividad como Carrera o su nombre dice carrera, 5k, 10k...
 

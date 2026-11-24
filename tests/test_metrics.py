@@ -916,3 +916,41 @@ def test_sugerencia_semana_reglas_en_orden():
     assert sug(0, None, 0, 100, 100) is None             # sin plan no se pide mínimo de sesiones
     assert sug(0, None, 2, 100, 100) == "repetir"
     assert m.sugerencia_semana(3, 3, 0, 100, 100, cfg)["texto"] == "Sigue el plan"
+
+
+# --- v4.3 F6: prueba ---
+
+def test_valor_prueba_por_tipo():
+    serie = [[t, round(t / 400 * 1000), 144] for t in range(0, 2401, 5)]        # 400 s/km durante 40 min
+    assert m.valor_prueba("fc_fija", serie) == {"valor": 400, "km": 4.5}           # solo cuentan los primeros 30'
+    assert m.valor_prueba("fc_fija", serie[:100]) is None                          # menos de 30': no hay prueba
+    assert m.valor_prueba("5k", serie) == {"valor": 2000, "km": 5.0}
+    assert m.valor_prueba("5k", serie[:300]) is None                               # no llegó a 5 km
+    assert m.valor_prueba("trote_continuo", [], 93.44) == {"valor": 93.4, "km": None}
+    assert m.valor_prueba("trote_continuo", [], None) is None
+
+
+def test_comparar_prueba_mejor_segun_el_tipo():
+    base = {"fuente": "inicio", "fecha": None, "valor": 450}
+    assert m.comparar_prueba("fc_fija", 420, base) == {"dif": -30, "mejor": True}
+    assert m.comparar_prueba("5k", 1600, {**base, "valor": 1500}) == {"dif": 100, "mejor": False}
+    assert m.comparar_prueba("trote_continuo", 95, {**base, "valor": 80}) == {"dif": 15, "mejor": True}
+    assert m.comparar_prueba("fc_fija", 450, base) == {"dif": 0, "mejor": None}
+    assert m.comparar_prueba("fc_fija", 450, None) is None
+
+
+def test_la_prueba_se_asigna_en_cualquier_dia():
+    semana = {"sessions": [{"id": "z2a", "tipo": "z2", "name": "Z2 #1", "minutes": 20, "easy": {"minutes": 15}},
+                           {"id": "prueba", "tipo": "prueba", "name": "Prueba", "minutes": 30, "easy": {"minutes": 30}}]}
+    runs = [{"fecha": "2026-11-17", "minutos": 31, "luz": "verde"}, {"fecha": "2026-11-18", "minutos": 18, "luz": "verde"}]   # mar y mié
+    est = {e["id"]: e for e in m.assign_sessions(semana, runs, CFG)}
+    assert est["prueba"]["estado"] == "hecha" and est["prueba"]["fecha"] == "2026-11-17"
+    assert est["z2a"]["fecha"] == "2026-11-18"
+
+
+def test_run_check_5k_no_exige_el_techo():
+    ses = {"tipo": "prueba", "prueba": "5k", "steps": [{"kind": "run", "minutes": 35, "zone": "Z4", "note": ""}],
+           "easy": {"steps": []}}
+    a = act(1, "2026-11-18", "running", dur=1500, z=(0, 2, 5, 10, 8))
+    r = m.run_check(a, ses, CFG, {"Z0": 0, "Z1": 0, "Z2": 2, "Z3": 5, "Z4": 10, "Z5": 8})
+    assert r["techo_ok"] is True and "plan_vs_real" not in r

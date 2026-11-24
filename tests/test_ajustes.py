@@ -107,3 +107,19 @@ def test_iconos_por_tipo_de_garmin_y_de_config(tmp_path):
     assert c["categorias"][0]["icono"] == "rayo"
     with pytest.raises(ajustes.ConfigError):
         cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: cf, nombre: CF, letra: CF, tipos: [hiit], icono: dragon}\n")
+
+
+PRUEBAS_CFG = "perfil: {zona_horaria: America/Merida, edad: 30}\ncorrida:\n  inicio: 2026-11-09\n  pruebas: %s\n"
+
+
+def test_pruebas_de_la_config(tmp_path):
+    assert cfg(tmp_path, MINIMA)["pruebas"] == []
+    c = cfg(tmp_path, PRUEBAS_CFG % "[{fecha: 2027-02-01, tipo: 5k, valor: 1500}, {fecha: 2026-08-01, tipo: fc_fija, valor: 430}]")
+    assert [p["fecha"] for p in c["pruebas"]] == ["2026-08-01", "2027-02-01"] and c["pruebas"][1]["valor"] == 1500.0
+
+
+def test_pruebas_invalidas(tmp_path):
+    with pytest.raises(ajustes.ConfigError, match="tipo"):
+        cfg(tmp_path, PRUEBAS_CFG % "[{fecha: 2027-02-01, tipo: 10k, valor: 1}]")
+    with pytest.raises(ajustes.ConfigError, match="valor"):
+        cfg(tmp_path, PRUEBAS_CFG % "[{fecha: 2027-02-01, tipo: 5k}]")

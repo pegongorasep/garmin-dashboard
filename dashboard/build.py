@@ -392,6 +392,59 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
             "intensidad": intensidad_semana(data["activities"], ini)}
 
 
+def ultima_semana(config: dict, plan: dict) -> date:
+    """Lunes de la última semana del plan (cuenta las semanas repetidas)."""
+    total = len(plan["weeks"]) + len(config.get("semanas_repetidas", []))
+    return monday(date.fromisoformat(config["plan_start"])) + timedelta(weeks=total - 1)
+
+
+def plan_terminado(hoy: date, config: dict, plan: dict) -> bool:
+    return bool(plan.get("weeks")) and hoy >= ultima_semana(config, plan) + timedelta(days=7)
+
+
+def base_prueba(tipo: str, filas: list, data: dict, config: dict):
+    """Contra qué se compara la primera prueba: ritmo a FC ref (fc_fija) o % de trote (trote_continuo) promedio de las
+    semanas 1–2 del plan; en 5k, la mejor marca de 5 km antes del inicio del plan. None si no hay."""
+    inicio = date.fromisoformat(config["plan_start"])
+    if tipo == "5k":
+        previas = [(a["fastestSplit_5000"], a["startTimeLocal"][:10]) for a in historial_corridas(data, config)
+                   if a.get("fastestSplit_5000") and a["startTimeLocal"][:10] < inicio.isoformat()]
+        mejor = min(previas, default=None)
+        return None if mejor is None else {"fuente": "mejor_5k", "fecha": mejor[1], "valor": round(mejor[0])}
+    primeras = [f for f in filas if inicio <= date.fromisoformat(f["fecha"]) < inicio + timedelta(days=14)]
+    v = m.promedio([f["ritmo_ref_s"] if tipo == "fc_fija" else f["pct_trote"] for f in primeras])
+    return None if v is None else {"fuente": "inicio", "fecha": None, "valor": round(v, 1 if tipo == "trote_continuo" else 0)}
+
+
+def prueba_resultado(data: dict, config: dict, plan: dict):
+    """Resultado de la prueba de la última semana del plan y su comparación; None si el plan no trae prueba o no se hizo.
+    {tipo, fecha, estado, valor, km, base, dif, mejor}. Se compara contra la última prueba del mismo tipo de
+    `corrida.pruebas` y, si no hay, contra la base (semanas 1–2, o la mejor marca de 5 km)."""
+    ini = ultima_semana(config, plan)
+    semana, estado = week_assignment(ini, data, config, plan, hasta=ini + timedelta(days=6))
+    ses = next((s for s in (semana or {}).get("sessions", []) if s.get("tipo") == "prueba"), None)
+    e = next((e for e in estado if ses and e["id"] == "prueba" and e["fecha"]), None)
+    if ses is None or e is None:
+        return None
+    a = next(a for a in data["activities"] if m.classify(a, config) == "run"
+             and m.day_of(a).isoformat() == e["fecha"] and a["duration"] / 60 == e["minutos"])
+    fila = m.run_rows([a], data["details"], config)[0]
+    serie = (data["details"].get(str(a["activityId"])) or {}).get("serie") or []
+    medido = m.valor_prueba(ses["prueba"], serie, fila["pct_trote"])
+    km = (data["details"].get(str(a["activityId"])) or {}).get("ritmos_km") or []
+    if medido is None and ses["prueba"] == "5k" and len(km) >= 5:   # sin serie, el ritmo por km de una carrera sirve
+        medido = {"valor": sum(km[:5]), "km": 5.0}
+    previas = [p for p in config.get("pruebas", []) if p["tipo"] == ses["prueba"] and p["fecha"] < e["fecha"]]
+    base = ({"fuente": "prueba", "fecha": previas[-1]["fecha"], "valor": previas[-1]["valor"]} if previas
+            else base_prueba(ses["prueba"], m.run_rows([a2 for a2 in data["activities"] if m.classify(a2, config) == "run"],
+                                                         data["details"], config), data, config))
+    out = {"tipo": ses["prueba"], "fecha": e["fecha"], "estado": e["estado"], "valor": None, "km": None,
+           "base": base, "dif": None, "mejor": None}
+    if medido:
+        out.update(valor=medido["valor"], km=medido["km"], **(m.comparar_prueba(ses["prueba"], medido["valor"], base) or {}))
+    return out
+
+
 def resumen_semana_pasada(hoy: date, data: dict, config: dict, plan: dict):
     """Resumen de la semana pasada (lun–dom antes de la de hoy) para Hoy, sin Claude: sesiones hechas, minutos, km,
     % trote, días verdes, 80/20, carga contra la anterior, ritmo a FC ref contra la anterior, plan vs real y una
@@ -693,6 +746,10 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         tarjeta = {**tarjeta, "tipo": "primera_sync", "texto": texto, "version": None, "sesion_id": None}
     elif tarjeta["tipo"] == "sin_plan" and hoy < inicio_plan:
         tarjeta = {**tarjeta, "texto": texto_inicio_plan(inicio_plan)}
+    elif plan_terminado(hoy, config, plan):   # pasó la última semana: resultado de la prueba y a pedir el siguiente bloque
+        tarjeta = {**tarjeta, "tipo": "plan_terminado", "texto": "Plan terminado", "version": None, "sesion_id": None,
+                   "prueba": prueba_resultado(data, config, plan),
+                   "siguiente": "Corre /ajustar para el siguiente bloque"}
     ayer_dato = m.ayer_duro(hoy, data["activities"], data["details"], config)
     tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None
 

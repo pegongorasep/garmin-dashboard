@@ -201,6 +201,7 @@ function textoBanner(d) {
   if (t.tipo === "hecha_hoy") return prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
   if (t.tipo === "sin_plan" || t.tipo === "primera_sync") return t.texto;
   if (t.tipo === "completa") return "Semana completa: hiciste las 3";
+  if (t.tipo === "plan_terminado") return "Plan terminado";
   return null;
 }
 
@@ -217,6 +218,35 @@ function bannerHoy(d) {
         h("li", {}, badgeSenal(x.estado),
           h("div", {}, h("div", { class: "nombre" }, nombreSenal(x.id)), h("div", { class: "nota" }, x.texto))))),
       d.hoy.ayer ? h("p", { class: "nota ayer" }, `Ayer: ${d.hoy.ayer.categoria}${d.hoy.ayer.esfuerzo != null ? `, esfuerzo ${fmt(d.hoy.ayer.esfuerzo, 1)}` : ""}`) : null));
+}
+
+const PRUEBA_NOMBRE = { fc_fija: "30 min a FC fija", trote_continuo: "trote continuo", "5k": "5 km" };
+
+/** "7:42 /km", "93 % de trote" o "25:00" según la prueba. */
+function valorPrueba(tipo, v) {
+  return tipo === "trote_continuo" ? `${fmt(v, 0)} % de trote` : tipo === "5k" ? tiempoLargo(v) : `${mmss(v)} /km`;
+}
+
+/** Tarjeta "Plan terminado": resultado de la prueba contra el inicio (o contra la prueba anterior) y el siguiente paso. */
+function tarjetaPlanTerminado(d) {
+  const t = d.hoy.tarjeta;
+  if (t.tipo !== "plan_terminado") return null;
+  const p = t.prueba;
+  const c = h("div", { class: "card ancha plan-fin" }, h("h2", {}, "Plan terminado"));
+  if (!p) c.append(h("p", { class: "estado" }, badge("nd", "—", "falta"), "Falta la prueba: no hay una corrida de la última semana que cuente como prueba."));
+  else {
+    c.append(h("p", { class: "grande" }, p.valor == null ? `Prueba de ${PRUEBA_NOMBRE[p.tipo]}: sin resultado` : valorPrueba(p.tipo, p.valor)),
+      h("p", { class: "nota" }, `Prueba de ${PRUEBA_NOMBRE[p.tipo]} · ${fechaCorta(p.fecha)}${p.km ? ` · ${fmt(p.km, 2)} km` : ""}`));
+    if (p.base && p.dif != null) {
+      const donde = p.base.fuente === "prueba" ? `tu prueba del ${fechaCorta(p.base.fecha)}` : p.base.fuente === "mejor_5k" ? `tu mejor 5 km (${fechaCorta(p.base.fecha)})` : "el inicio del plan (semanas 1–2)";
+      const mag = p.tipo === "trote_continuo" ? `${fmt(Math.abs(p.dif), 0)} puntos de trote` : p.tipo === "5k" ? tiempoLargo(Math.abs(p.dif)) : `${fmt(Math.abs(p.dif), 0)} s/km`;
+      const mejor = p.tipo === "trote_continuo" ? "más trote" : "más rápido", peor = p.tipo === "trote_continuo" ? "menos trote" : "más lento";
+      c.append(h("p", { class: "estado" }, p.mejor == null ? badge("nd", "=", "igual") : badge(p.mejor ? "ok" : "warn", p.mejor ? "✓" : "!", p.mejor ? "mejor" : "peor"),
+        p.mejor == null ? `Igual que ${donde} (${valorPrueba(p.tipo, p.base.valor)})` : `${mag} ${p.mejor ? mejor : peor} que ${donde} (${valorPrueba(p.tipo, p.base.valor)})`));
+    } else if (!p.base) c.append(h("p", { class: "nota" }, "Sin base para comparar: la próxima prueba se comparará con esta."));
+  }
+  c.append(h("p", {}, t.siguiente || "Corre /ajustar para el siguiente bloque"));
+  return c;
 }
 
 /** Resumen de la semana pasada (calculado en Python): una línea y, al tocarla, el resto. */
@@ -574,7 +604,7 @@ function renderHoy(d) {
       ? h("div", { class: "aviso bad ancha" }, badge("bad", "✕", "aviso"),
         h("div", {}, h("strong", {}, "Repetir la semana. "), "Dos días seguidos en rojo: repite la semana anterior del plan."))
       : null,
-    bannerHoy(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
+    bannerHoy(d), tarjetaPlanTerminado(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
     d.aviso_zonas ? h("div", { class: "aviso warn ancha" }, badge("warn", "!", "aviso"), h("div", {}, d.aviso_zonas)) : null].filter(Boolean));
   pintarSemana(d);
 }

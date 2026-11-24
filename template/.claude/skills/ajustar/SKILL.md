@@ -14,6 +14,11 @@ Habla en español, claro y corto. No pidas la key ni leas `.env`.
      `corrida.carreras` (lista de fechas AAAA-MM-DD). Es solo para carreras pasadas que Garmin no marcó; las nuevas se
      detectan solas si en Garmin las marcas como Carrera o su nombre dice carrera, 5k, 10k, medio maratón, etc.
      No se regenera el plan.
+   - **Bloque nuevo (el plan terminó):** la última semana trae una prueba (`prueba` en Hoy › "Plan terminado":
+     `hoy.tarjeta.prueba` en `data.json` con `tipo`, `fecha`, `valor`, `base` y `mejor`). Antes de generar el plan nuevo,
+     agrega su resultado a `corrida.pruebas` como `{fecha, tipo, valor}` (usa tal cual `valor`; si la prueba es `null`,
+     no se hizo: pregunta si quiere repetirla). Úsalo para proponer el siguiente plan: si `mejor` es verdadero y la
+     mejora es clara, sube nivel o `base_min`; si no mejoró, repite el nivel y revisa sueño y carga. Nuevo `inicio` (lunes).
 3. Si cambió algo **del plan** (nivel, intensidad, calidad_tipos, caminatas, variada, inicio, semanas, base_min), hay que
    regenerarlo; si solo cambió actividades, días o título, **no** se regenera.
    - Asegura el motor: si no existe `.motor/`, clónalo (`git clone --depth 1 --branch stable

@@ -42,11 +42,12 @@ def test_cli_escribe_el_archivo(tmp_path, monkeypatch):
 def test_novato_con_caminatas():
     p, w = planes(nivel="novato", intensidad="solo_z2", caminatas=True, base_min={"z2": 15, "larga": 20})
     assert len(p["weeks"]) == 12
-    for sem in p["weeks"]:
+    for sem in p["weeks"][:-1]:
         assert [s["id"] for s in sem["sessions"]] == ["z2a", "z2b", "larga"]
         for s in sem["sessions"]:
             assert not tiene(s["steps"], "Z3") and "siguiente escalón" in s["nota"]
             assert g.suma(s["steps"]) == s["minutes"]
+    assert [s["id"] for s in p["weeks"][-1]["sessions"]] == ["z2a", "z2b", "prueba"]
     # bloque 1: 3'/1'; bloque 2: 5'/1'; bloque 3: 8'/1'
     for n, trote in ((1, 3), (5, 5), (9, 8)):
         rep = w[n]["sessions"][0]["steps"][0]
@@ -86,7 +87,8 @@ def test_corredor_con_calidad(tipos):
     cargas = [wk for wk in p["weeks"] if wk["kind"] == "carga"]
     for wk in p["weeks"]:
         tipos_s = [s["tipo"] for s in wk["sessions"]]
-        assert tipos_s == (["z2", "calidad", "larga"] if wk["kind"] == "carga" else ["z2", "z2", "larga"])
+        larga = "prueba" if wk["n"] == 12 else "larga"
+        assert tipos_s == (["z2", "calidad", larga] if wk["kind"] == "carga" else ["z2", "z2", larga])
     # rota entre los tipos elegidos solo en semanas de carga
     usados = [wk["sessions"][1]["calidad_tipo"] for wk in cargas]
     assert usados == [tipos[i % len(tipos)] for i in range(len(cargas))]
@@ -247,7 +249,7 @@ def test_variada_estructura_de_la_semana():
     assert not _z3(carga[0]["steps"]) and not _z3(carga[2]["steps"])      # Z2 #1 sin picos aunque sea z2_poca_z3
     assert carga[1]["minutes"] == g.escala(g.DELTA_Z2B, 20, g.REF_Z2, 0, 1)   # mismos minutos que Z2 #2
     for n in (4, 8, 12):                                                   # descarga: todo continuo
-        assert [s["tipo"] for s in w[n]["sessions"]] == ["z2", "z2", "larga"]
+        assert [s["tipo"] for s in w[n]["sessions"]] == ["z2", "z2", "prueba" if n == 12 else "larga"]
 
 
 def test_variada_rotacion_por_intensidad():
@@ -339,3 +341,31 @@ def test_variada_empieza_en_z1_a_lo_mas_2_minutos():
                 continue
             m, z = g.tramos_variada(tipo, M, z3, g.tope_z3(M))[0]
             assert z != "Z1" or m <= g.Z1_INICIO_MAX, (tipo, M, z3)
+
+
+# --- v4.3 F6: prueba de la última semana ---
+
+@pytest.mark.parametrize("kw,prueba,zona", [
+    ({"intensidad": "solo_z2"}, "fc_fija", "Z2"), ({"intensidad": "z2_poca_z3"}, "fc_fija", "Z2"),
+    ({"intensidad": "solo_z2", "caminatas": True}, "trote_continuo", "Z2"),
+    ({"intensidad": "calidad", "calidad_tipos": ["tempo_z3"]}, "5k", "Z4")])
+def test_la_larga_de_la_ultima_semana_es_la_prueba(kw, prueba, zona):
+    p, w = planes(**kw)
+    ult = w[12]["sessions"][-1]
+    assert (ult["id"], ult["tipo"], ult["prueba"]) == ("prueba", "prueba", prueba)
+    assert [x["zone"] for x in ult["steps"]] == [zona] and g.suma(ult["steps"]) == ult["minutes"]
+    assert ult["easy"]["minutes"] == ult["minutes"] and ult["easy"]["steps"] == ult["steps"]     # no hay versión suave
+    assert "prueba" in w[12]["focus"].lower()
+    assert all(s["tipo"] != "prueba" for n, wk in w.items() if n != 12 for s in wk["sessions"])
+    g.verificar(p, cfg(**kw))
+
+
+def test_prueba_en_otras_duraciones_del_plan():
+    p = g.generar(cfg(plan_semanas=8))
+    assert p["weeks"][-1]["sessions"][-1]["id"] == "prueba" and p["weeks"][-2]["sessions"][-1]["id"] == "larga"
+
+
+def test_solo_cambia_la_larga_de_la_semana_12():
+    p, antes = planes(intensidad="z2_poca_z3"), None
+    sin = g.generar(cfg(intensidad="z2_poca_z3", plan_semanas=13))["weeks"][:11]
+    assert sin == p[0]["weeks"][:11]

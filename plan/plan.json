@@ -1107,7 +1107,7 @@
       "n": 12,
       "block": 3,
       "kind": "descarga",
-      "focus": "Descarga",
+      "focus": "Descarga · prueba",
       "sessions": [
         {
           "id": "z2a",
@@ -1162,27 +1162,28 @@
           }
         },
         {
-          "id": "larga",
-          "tipo": "larga",
-          "name": "Larga",
-          "minutes": 45,
+          "id": "prueba",
+          "tipo": "prueba",
+          "name": "Prueba · 30 min a FC fija",
+          "minutes": 30,
           "steps": [
             {
               "kind": "run",
-              "minutes": 45,
+              "minutes": 30,
               "zone": "Z2",
-              "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
+              "note": "FC fija a la mitad de Z2 en ruta plana; alerta en el reloj"
             }
           ],
+          "prueba": "fc_fija",
           "easy": {
-            "name": "Suave",
+            "name": "Prueba",
             "minutes": 30,
             "steps": [
               {
                 "kind": "run",
                 "minutes": 30,
                 "zone": "Z2",
-                "note": ""
+                "note": "FC fija a la mitad de Z2 en ruta plana; alerta en el reloj"
               }
             ]
           }

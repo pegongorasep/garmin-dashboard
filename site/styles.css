@@ -513,3 +513,5 @@ details.ses > summary .ley-sil { margin-left: 20px; }
 .sp-cuerpo { padding: 6px 0 4px; font-size: 13px; }
 .sp-cuerpo p { margin: 2px 0; }
 .pvr .estado { margin: 2px 0; }
+.plan-fin .grande { margin: 0; }
+.plan-fin .estado { margin: 6px 0; }
