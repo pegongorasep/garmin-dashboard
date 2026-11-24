@@ -11,7 +11,7 @@ ROOT = Path(__file__).parent.parent
 # Claves de primer nivel que puede tener data.json (lista blanca).
 CLAVES = {"generado", "datos_al", "zonas", "rhr_promedio_7d", "aviso_zonas", "hoy", "ultima_corrida", "semana",
           "semanas_hoy", "semana_hoy_idx", "plan", "progreso", "composicion", "detalles", "ui",
-          "carreras", "mejores_marcas"}
+          "carreras", "mejores_marcas", "tipos"}
 OBLIGATORIAS = {"generado", "zonas", "hoy", "plan", "progreso", "detalles", "ui", "semanas_hoy"}
 # Nada de esto puede aparecer como clave en ningún nivel: IDs de Garmin, nombres, GPS, tramos crudos.
 PROHIBIDAS = {"activityId", "activityName", "ownerDisplayName", "ownerFullName", "userProfilePk", "userProfilePK",

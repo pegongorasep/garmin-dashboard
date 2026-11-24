@@ -1,6 +1,6 @@
 ---
 name: ajustar
-description: Cambia nivel, tipo de plan (solo Z2, poca Z3, calidad), tipos de calidad, caminatas, actividades, días de pierna, título, carreras pasadas o fecha de inicio, y vuelve a publicar.
+description: Cambia nivel, tipo de plan (solo Z2, poca Z3, calidad), tipos de calidad, corrida variada (`variada: true|false`), caminatas, actividades, días de pierna, título, carreras pasadas o fecha de inicio, y vuelve a publicar.
 ---
 
 # /ajustar: cambiar la configuración
@@ -14,7 +14,7 @@ Habla en español, claro y corto. No pidas la key ni leas `.env`.
      `corrida.carreras` (lista de fechas AAAA-MM-DD). Es solo para carreras pasadas que Garmin no marcó; las nuevas se
      detectan solas si en Garmin las marcas como Carrera o su nombre dice carrera, 5k, 10k, medio maratón, etc.
      No se regenera el plan.
-3. Si cambió algo **del plan** (nivel, intensidad, calidad_tipos, caminatas, inicio, semanas, base_min), hay que
+3. Si cambió algo **del plan** (nivel, intensidad, calidad_tipos, caminatas, variada, inicio, semanas, base_min), hay que
    regenerarlo; si solo cambió actividades, días o título, **no** se regenera.
    - Asegura el motor: si no existe `.motor/`, clónalo (`git clone --depth 1 --branch stable
      https://github.com/pegongorasep/garmin-dashboard .motor`); si existe, `git -C .motor pull`.

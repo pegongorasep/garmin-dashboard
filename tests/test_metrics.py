@@ -684,3 +684,12 @@ def test_hoja_rangos_con_zona():
     assert r["TMB"]["zona"] == "bajo" and r["TMB"]["min"] == 1919 and r["TMB"]["valor"] == 1846
     assert r["Agua corporal"]["zona"] == "alto" and r["Relación cintura-cadera"]["zona"] == "alto"
     assert r["Grado de obesidad"]["grupo"] == "Parámetros de investigación" and r["Peso"]["grupo"] == "Composición corporal"
+
+
+def test_run_check_variada_suma_su_z3_planeado_a_la_tolerancia():
+    ses = {"tipo": "variada", "steps": [{"kind": "run", "minutes": 5, "zone": "Z1"},
+                                        {"kind": "repeat", "times": 2, "steps": [{"kind": "run", "minutes": 2, "zone": "Z3"}]}]}
+    a = act(1, "2026-11-18", "running", dur=1800, z=(300, 900, 240, 0, 0))   # 4' en Z3
+    assert m.run_check(a, ses, CFG)["tolerancia_min"] == CFG["ceiling_tolerance_min"] + 4
+    assert m.run_check(a, ses, CFG)["techo_ok"] is True
+    assert m.run_check(a, {**ses, "tipo": "z2"}, CFG)["techo_ok"] is False

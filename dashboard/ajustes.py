@@ -15,7 +15,7 @@ DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 _DIA_IDX = {"lun": 0, "mar": 1, "mie": 2, "mié": 2, "jue": 3, "vie": 4, "sab": 5, "sáb": 5, "dom": 6}
 NIVELES = ("novato", "intermedio", "corredor")
 INTENSIDADES = ("solo_z2", "z2_poca_z3", "calidad")
-CALIDAD_TIPOS = ("tempo_z3", "threshold", "intervalos")
+CALIDAD_TIPOS = ("tempo_z3", "threshold", "intervalos", "progresivo", "fartlek")
 MAX_CATEGORIAS = 4
 # Color de cada categoría según cuántas hay (validado con el skill dataviz, claro y oscuro: el naranja
 # es de la corrida y nunca queda junto al amarillo ni al magenta en la pila de la carga semanal).
@@ -106,6 +106,9 @@ def cargar_config(user_dir=None) -> dict:
     for t in tipos_cal:
         if t not in CALIDAD_TIPOS:
             raise ConfigError(f"corrida.calidad_tipos: '{t}' no válido; usa: {', '.join(CALIDAD_TIPOS)}")
+    variada = bool(corrida.get("variada", False))
+    if intensidad == "calidad" and not tipos_cal and variada:
+        tipos_cal = list(CALIDAD_TIPOS)   # variada + calidad sin elegir: rotan los 5 avanzados
     if intensidad == "calidad" and not tipos_cal:
         raise ConfigError("corrida.intensidad es `calidad` pero `calidad_tipos` está vacío")
     base = {"z2": 20, "larga": 40, **(corrida.get("base_min") or {})}
@@ -125,7 +128,7 @@ def cargar_config(user_dir=None) -> dict:
         "carreras": sorted({_fecha(f, "corrida.carreras") for f in corrida.get("carreras") or []}),
         "plan_start": inicio, "semanas_repetidas": list(corrida.get("semanas_repetidas") or []),
         "nivel": nivel, "intensidad": intensidad, "calidad_tipos": tipos_cal,
-        "caminatas": bool(corrida.get("caminatas", False)),
+        "caminatas": bool(corrida.get("caminatas", False)), "variada": variada,
         "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base,
         "categorias": categorias, "dias_pierna": pierna,
         "inbody": bool(cfg.get("inbody", True)),

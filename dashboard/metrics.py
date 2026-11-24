@@ -393,6 +393,11 @@ def _tiene_opcionales(pasos: list) -> bool:
     return any(p.get("optional") or _tiene_opcionales(p.get("steps", [])) for p in pasos)
 
 
+def _min_z3_planeados(pasos: list) -> int:
+    return sum(p["times"] * _min_z3_planeados(p["steps"]) if p["kind"] == "repeat"
+               else p["minutes"] if p["zone"] in ("Z3", "Z4", "Z5") else 0 for p in pasos)
+
+
 def run_check(activity: dict, session, config=None) -> dict:
     """¿Lo hice bien?: minutos sobre el techo de Z2 (Z3+Z4+Z5) vs la tolerancia."""
     zm = zone_minutes(activity)
@@ -400,6 +405,8 @@ def run_check(activity: dict, session, config=None) -> dict:
     tolerancia = (config or {}).get("ceiling_tolerance_min", 2)
     if session and _tiene_opcionales(session.get("steps", [])):
         tolerancia += 2
+    if (session or {}).get("tipo") == "variada":   # su Z3 corto es parte del plan
+        tolerancia += _min_z3_planeados(session.get("steps", []))
     out = {"min_sobre_techo": sobre, "tolerancia_min": tolerancia, "techo_ok": sobre <= tolerancia}
     objetivo = (session or {}).get("objetivo")
     if (session or {}).get("tipo") == "calidad" and objetivo:

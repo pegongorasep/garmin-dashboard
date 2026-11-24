@@ -15,7 +15,9 @@ corrida:
   #   solo_z2      -> todo en zona 2 (ideal si ya haces tu zona 3-4 en HIIT, CrossFit, etc.)
   #   z2_poca_z3   -> zona 2 con unos picos opcionales de zona 3 en los bloques 2 y 3
   #   calidad      -> zona 2 + 1 sesión de calidad por semana + la larga (para corredores)
-  calidad_tipos: []                # solo si intensidad = calidad; de: tempo_z3, threshold, intervalos
+  calidad_tipos: []                # solo si intensidad = calidad; de: tempo_z3, threshold, intervalos, progresivo, fartlek
+  variada: true                    # true = una de tus 3 corridas es "variada" (espiga, pirámide, escalera...) en vez de la Z2 #2
+  #   Con calidad y calidad_tipos vacío rotan los 5 tipos. En las semanas de descarga todo es continuo.
   caminatas: false                 # true = sesiones de trote/caminata (si aún no corres 20' seguidos)
   inicio: 2026-12-07               # el lunes en que empieza el plan
   semanas: 12

@@ -152,3 +152,14 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **F6 correcciones tras revisar.** La etiqueta "prime" chocaba con las fechas del eje en la mini gráfica de PGC (más espacio inferior); la zona Normal sombreada era casi invisible en oscuro (ahora 13 % de la tinta); las tablas de "Ver hoja completa" se cortaban a 400 px (texto más chico y con salto de línea).
 - **F6 no verificado.** Contraste medido a ojo (no se corrió `validate_palette.js` de nuevo: no hay colores nuevos de serie; Peso usa `--ink-2`). Cuerpo en 1100 px con `grid-auto-flow: dense` coloca FC y zonas junto a Recuperación.
 
+
+## v4.2
+
+- **F1 banner.** Sin actividad intensa hoy, el banner dice "Próxima corrida: <sesión>" (antes no decía nada con la sesión de hoy). Con una actividad intensa registrada: "Hoy: CrossFit ✓ · próxima corrida: …". `today_card.categoria` y `tipo: "otra"` se conservan; ya no hay `semana_tipica` en la config plana.
+- **F1 `actividades.semana`.** Ya no se valida (ni siquiera una categoría inexistente truena); se ignora. El fixture de pruebas la conserva a propósito para vigilar la tolerancia.
+- **F2 id y tipo de la variada.** La sesión variada conserva `id: "z2b"` (así lo asignan las corridas y `proxima_id`) pero con `tipo: "variada"` y `variada_tipo: "<id del catálogo>"` (solo en planes con `variada: true`, así el plan de Pedro sigue byte a byte).
+- **F2 sesiones muy cortas.** Calentar/enfriar son 5' con sesión ≥ 20'; con 14–19' son 3' y con menos, 2' (si no, el cuerpo quedaba vacío con bases chicas de novato). La pirámide pide ≥ 13' de cuerpo (4 pausas + 1-2-3-2-1); si toca y no cabe, se usa el siguiente tipo de la rotación que no repita al de la semana vecina (ocurre con z2b ≤ 25').
+- **F2 forma de cada tipo en la sesión.** Con solo Z1/Z2 la "escalera" solo tiene dos escalones (Z1 → Z2); con z2_poca_z3 son tres (Z1 → Z2 → Z3 corto). La densidad usa picos de 1' (Z3) con descansos de 1', 1', 2', 2' en Z1 (con solo Z2: picos de Z2) y el sobrante de minutos va al inicio.
+- **F2 Z3 de la variada.** `tope = min(6', 20 % de la sesión)`; sale de la fórmula `int(min * 0.2)`. Z4/Z5 nunca. La tolerancia de "minutos sobre el techo" de esa corrida sube lo que el plan pide en Z3 (`run_check`).
+- **F2 calidad.** `progresivo` = 10' Z2 · 6' Z2 · (8/10/12)' Z3 · 5' suave; `fartlek` = 5 o 6 tramos Z3 irregulares con pausas de 2' (objetivo = minutos en Z3). Con `variada: true` y calidad sin `calidad_tipos`, rotan los 5 (se llena en `ajustes.cargar_config`).
+- **F2 `tipos` en data.json.** `{catalogo, grupos, en_plan}`; `en_plan` sale de las formas derivadas de todas las sesiones del plan (también las de semanas pasadas).

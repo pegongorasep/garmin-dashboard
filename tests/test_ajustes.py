@@ -79,3 +79,12 @@ def test_carrera_con_fecha_mala(tmp_path):
 def test_actividades_semana_vieja_se_tolera_y_se_ignora(tmp_path):
     c = cfg(tmp_path, MINIMA + "actividades:\n  semana: {lun: nada, mar: inexistente}\n")
     assert "semana_tipica" not in c and c["categorias"]
+
+
+def test_variada_default_false_y_calidad_con_variada_rota_los_5(tmp_path):
+    assert cfg(tmp_path, MINIMA)["variada"] is False
+    c = cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {variada: true, intensidad: calidad, "))
+    assert c["variada"] is True and c["calidad_tipos"] == list(ajustes.CALIDAD_TIPOS) and len(c["calidad_tipos"]) == 5
+    with pytest.raises(ajustes.ConfigError):   # sin variada, calidad sigue pidiendo tipos
+        cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {intensidad: calidad, "))
+    assert cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {intensidad: calidad, calidad_tipos: [fartlek], "))["calidad_tipos"] == ["fartlek"]

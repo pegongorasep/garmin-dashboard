@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "dashboard"))
 from ajustes import USER_DIR, cargar_config  # noqa: E402
+from tipos import POR_ID  # noqa: E402
 
 # Incrementos sobre la base (z2 = 20', larga = 40'), por posición en el bloque: (carga1, carga2, carga3, descarga)
 DELTA_Z2A = [(0, 0, 0, 0), (5, 5, 5, 0), (10, 10, 10, 5)]
@@ -33,6 +34,20 @@ CALIDAD = {
     "threshold": ("Z4", [(4, 5, 2), (5, 5, 2), (4, 6, 2)], "Threshold"),
     "intervalos": ("Z4", [(6, 2, 2), (8, 2, 2), (6, 3, 2)], "Intervalos"),
 }
+# Calidad sin la estructura "calentar · N×(trabajo, recuperación) · enfriar".
+# progresivo: (minutos Z2 tranquilos, minutos Z3 al final) por bloque.
+PROGRESIVO = [(6, 8), (6, 10), (6, 12)]
+# fartlek: (trabajo Z3, recuperación) irregulares por bloque; la última recuperación no se hace.
+FARTLEK = [[(2, 2), (3, 2), (1, 2), (3, 2), (2, 2)],
+           [(3, 2), (4, 2), (2, 2), (4, 2), (3, 2)],
+           [(3, 2), (5, 2), (2, 2), (5, 2), (4, 2), (2, 2)]]
+ETIQUETA_CALIDAD = {"progresivo": "Progresivo", "fartlek": "Fartlek"}
+CALIDAD_TODOS = ["tempo_z3", "threshold", "intervalos", "progresivo", "fartlek"]
+# Corrida variada (solo con `corrida.variada: true`): tipos que rotan por semana de carga.
+VARIADA_TIPOS = {"solo_z2": ["ascendente", "densidad", "rotativo", "descendente"],
+                 "z2_poca_z3": ["espiga", "piramide", "ascendente", "rotativo", "descendente", "densidad"]}
+Z3_VARIADA_MAX = 6      # minutos máximos de Z3 en una variada de z2_poca_z3
+Z3_VARIADA_PCT = 0.20   # ... y como máximo 20 % de la sesión
 
 
 def redondea5(x: float) -> int:
@@ -93,16 +108,168 @@ def con_suave_caminatas(s: dict, caminatas: bool, bloque: int) -> dict:
     return s
 
 
+def pasos_calidad_libre(tipo: str, bloque: int):
+    """(pasos, minutos de trabajo en Z3) de progresivo y fartlek."""
+    b = min(bloque, 3) - 1
+    calen, enfria = paso(10, "Z2", "calentamiento", kind="warmup"), paso(5, "Z1-Z2", "enfriamiento", kind="cooldown")
+    if tipo == "progresivo":
+        tranq, z3 = PROGRESIVO[b]
+        return [calen, paso(tranq, "Z2", "ritmo cómodo"), paso(z3, "Z3", "sube hasta aquí poco a poco"), enfria], z3
+    pares, pasos = FARTLEK[b], [calen]
+    for i, (trabajo, rec) in enumerate(pares):
+        pasos.append(paso(trabajo, "Z3"))
+        if i < len(pares) - 1:
+            pasos.append(paso(rec, kind="run", nota="suave"))
+    return pasos + [enfria], sum(t for t, _ in pares)
+
+
 def sesion_calidad(tipo: str, bloque: int) -> dict:
-    zona, bloques, etiqueta = CALIDAD[tipo]
-    veces, trabajo, rec = bloques[min(bloque, 3) - 1]
-    pasos = [paso(10, "Z2", "calentamiento", kind="warmup"),
-             {"kind": "repeat", "times": veces, "steps": [paso(trabajo, zona), paso(rec, kind="run", nota="suave")]},
-             paso(5, "Z1-Z2", "enfriamiento", kind="cooldown")]
+    if tipo in ETIQUETA_CALIDAD:
+        pasos, trabajo_z3 = pasos_calidad_libre(tipo, bloque)
+        zona, minutos_obj, etiqueta = "Z3", trabajo_z3, ETIQUETA_CALIDAD[tipo]
+    else:
+        zona, bloques, etiqueta = CALIDAD[tipo]
+        veces, trabajo, rec = bloques[min(bloque, 3) - 1]
+        minutos_obj = veces * trabajo
+        pasos = [paso(10, "Z2", "calentamiento", kind="warmup"),
+                 {"kind": "repeat", "times": veces, "steps": [paso(trabajo, zona), paso(rec, kind="run", nota="suave")]},
+                 paso(5, "Z1-Z2", "enfriamiento", kind="cooldown")]
     s = sesion("calidad", "calidad", f"Calidad · {etiqueta}", suma(pasos), pasos,
-               calidad_tipo=tipo, objetivo={"zona": zona, "minutos": veces * trabajo})
+               calidad_tipo=tipo, objetivo={"zona": zona, "minutos": minutos_obj})
     s["easy"]["steps"] = [paso(s["easy"]["minutes"])]
     return s
+
+
+# --- corrida variada ---
+
+def tope_z3(minutos: int) -> int:
+    """Máximo de minutos en Z3 de una variada de z2_poca_z3: 6' y ≤ 20 % de la sesión."""
+    return min(Z3_VARIADA_MAX, int(minutos * Z3_VARIADA_PCT))
+
+
+def _escalera(B, z3, cap3, sube):
+    if z3:
+        c = min(cap3, max(1, round(B * 0.2)))
+        a = max(1, round((B - c) * 0.4))
+        tramos = [(a, "Z1"), (B - c - a, "Z2"), (c, "Z3")]
+    else:
+        a = max(1, round(B * 0.4))
+        tramos = [(a, "Z1"), (B - a, "Z2")]
+    return tramos if sube else tramos[::-1]
+
+
+def _espiga(B, cap3):
+    c = min(cap3, max(1, round(B * 0.15)))
+    resto = B - c
+    a = max(1, round(resto * 0.2))
+    medio = resto - 2 * a
+    b = medio // 2
+    return [(a, "Z1"), (medio - b, "Z2"), (c, "Z3"), (b, "Z2"), (a, "Z1")]
+
+
+PIRAMIDE_MIN = 13   # minutos de cuerpo: 4 pausas de 1' + bloques 1-2-3-2-1 de al menos 1' por unidad
+
+
+def _piramide(B, cap3):
+    if B < PIRAMIDE_MIN:   # no cabe (el plan ya evita pedirla así); queda una espiga
+        return _espiga(B, cap3)
+    trabajo = B - 4   # 4 pausas de 1' en Z1
+    b1 = max(1, round(trabajo / 9))
+    b2 = max(b1 + 1, round(2 * trabajo / 9))
+    while trabajo - 2 * b1 - 2 * b2 <= b2 and b2 > b1 + 1:
+        b2 -= 1
+    b3 = trabajo - 2 * b1 - 2 * b2
+    c = max(0, min(cap3, b3 - 1))
+    centro = [(b3 - c, "Z2")] + ([(c, "Z3")] if c else [])
+    return [(b1, "Z2"), (1, "Z1"), (b2, "Z2"), (1, "Z1"), *centro, (1, "Z1"), (b2, "Z2"), (1, "Z1"), (b1, "Z2")]
+
+
+def _densidad(B, z3, cap3):
+    """Picos iguales; descansos de 1× y luego 2× el pico. El sobrante va al inicio (Z2 con Z3, Z1 sin Z3)."""
+    for n in range(5, 1, -1):
+        descansos = [1, 1, 2, 2][:n - 1]
+        unidades = n + sum(descansos)
+        if B >= unidades and (not z3 or n <= cap3):
+            break
+    u = 1 if z3 else B // unidades
+    sobra = B - u * unidades
+    tramos = [(sobra, "Z2" if z3 else "Z1")] if sobra else []
+    for i in range(n):
+        tramos.append((u, "Z3" if z3 else "Z2"))
+        if i < n - 1:
+            tramos.append((u * descansos[i], "Z1"))
+    return tramos
+
+
+def _rotativo(B, z3, cap3):
+    """Ciclos iguales de bajo-medio(-alto); se elige el tamaño de ciclo que deja menos sobrante (va al inicio en Z1)."""
+    if z3:
+        opciones = [(k, B // k) for k in range(min(cap3, 4), 0, -1) if B // k >= 3]
+        k, largo = min(opciones, key=lambda o: B - o[0] * o[1])
+        a = max(1, round((largo - 1) * 0.3))
+        ciclo = [(a, "Z1"), (largo - 1 - a, "Z2"), (1, "Z3")]
+    else:
+        largo = min((3, 4, 5), key=lambda L: (B % L, L))
+        k, a = B // largo, 1 if largo == 3 else 2
+        ciclo = [(a, "Z1"), (largo - a, "Z2")]
+    sobra = B - k * largo
+    return ([(sobra, "Z1")] if sobra else []) + ciclo * k
+
+
+def tramos_variada(tipo: str, B: int, z3: bool, cap3: int) -> list:
+    """[(minutos, zona)] del cuerpo de la variada (sin calentar ni enfriar); suma exactamente B."""
+    if tipo == "ascendente":
+        return _escalera(B, z3, cap3, True)
+    if tipo == "descendente":
+        return _escalera(B, z3, cap3, False)
+    if tipo == "espiga":
+        return _espiga(B, cap3)
+    if tipo == "piramide":
+        return _piramide(B, cap3)
+    if tipo == "densidad":
+        return _densidad(B, z3, cap3)
+    if tipo == "rotativo":
+        return _rotativo(B, z3, cap3)
+    raise ValueError(f"tipo de variada desconocido: {tipo}")
+
+
+def comprimir(tramos: list) -> list:
+    """Agrupa tramos consecutivos que se repiten (periodo 2–4, ≥ 2 veces) en {"veces", "tramos"}."""
+    out, i = [], 0
+    while i < len(tramos):
+        for p in (2, 3, 4):
+            k = 1
+            while tramos[i:i + p] == tramos[i + k * p:i + (k + 1) * p] and len(tramos[i + k * p:i + (k + 1) * p]) == p:
+                k += 1
+            if k >= 2:
+                out.append({"veces": k, "tramos": tramos[i:i + p]})
+                i += k * p
+                break
+        else:
+            out.append(tramos[i])
+            i += 1
+    return out
+
+
+def pasos_variada(tipo: str, minutos: int, caminatas: bool, z3: bool) -> list:
+    """Calentar 5' Z1 · cuerpo del tipo · enfriar 5' Z1 (con sesiones muy cortas, 2–3'). Z1 = caminata si `caminatas`."""
+    wc = 5 if minutos >= 20 else 3 if minutos >= 14 else 2
+    B = minutos - 2 * wc
+    mk = lambda m, z, **kw: paso(m, z, kind="walk", **kw) if caminatas and z == "Z1" else paso(m, z, **kw)  # noqa: E731
+    pasos = [mk(wc, "Z1", nota="calentamiento", **({} if caminatas else {"kind": "warmup"}))]
+    for t in comprimir(tramos_variada(tipo, B, z3, tope_z3(minutos))):
+        if isinstance(t, dict):
+            pasos.append({"kind": "repeat", "times": t["veces"], "steps": [mk(m, z) for m, z in t["tramos"]]})
+        else:
+            pasos.append(mk(*t))
+    pasos.append(mk(wc, "Z1", nota="enfriamiento", **({} if caminatas else {"kind": "cooldown"})))
+    return pasos
+
+
+def sesion_variada(tipo: str, minutos: int, caminatas: bool, z3: bool, bloque: int) -> dict:
+    pasos = pasos_variada(tipo, minutos, caminatas, z3)
+    s = sesion("z2b", "variada", f"Variada · {POR_ID[tipo]['nombre']}", minutos, pasos, variada_tipo=tipo)
+    return con_suave_caminatas(s, caminatas, bloque)
 
 
 def escala(tabla, base, ref, bloque, pos, minimo=10):
@@ -118,8 +285,9 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
     z2b = escala(DELTA_Z2B, b["z2"], REF_Z2, bloque, pos)
     larga = escala(DELTA_LARGA, b["larga"], REF_LARGA, bloque, pos)
     caminatas, intensidad = cfg["caminatas"], cfg["intensidad"]
+    variada = cfg.get("variada", False)
     nb = bloque + 1
-    picos = intensidad == "z2_poca_z3" and not caminatas and bloque >= 1 and not descarga
+    picos = intensidad == "z2_poca_z3" and not caminatas and bloque >= 1 and not descarga and not variada
 
     def z2(id_, nombre, minutos, con_picos=False):
         pasos = pasos_con_picos(minutos) if con_picos else pasos_z2(minutos, False, caminatas, nb)
@@ -128,9 +296,20 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
     sesiones = [z2("z2a", "Z2 #1", z2a, picos)]
     focus = f"Larga {larga}'" if not descarga else "Descarga"
     if intensidad == "calidad" and not descarga:
-        tipo = cfg["calidad_tipos"][n_carga % len(cfg["calidad_tipos"])]
+        tipos = cfg["calidad_tipos"] or (CALIDAD_TODOS if variada else [])
+        tipo = tipos[n_carga % len(tipos)]
         sesiones.append(sesion_calidad(tipo, nb))
-        focus += f" · calidad: {CALIDAD[tipo][2]}"
+        focus += f" · calidad: {ETIQUETA_CALIDAD.get(tipo) or CALIDAD[tipo][2]}"
+    elif variada and intensidad != "calidad" and not descarga:
+        tipos = VARIADA_TIPOS[intensidad]
+        wc = 5 if z2b >= 20 else 3 if z2b >= 14 else 2
+        tipo = tipos[n_carga % len(tipos)]
+        if tipo == "piramide" and z2b - 2 * wc < PIRAMIDE_MIN:   # sesión muy corta: el siguiente tipo que no repita al vecino
+            vecinos = {tipos[(n_carga - 1) % len(tipos)], tipos[(n_carga + 1) % len(tipos)]}
+            tipo = next(t for t in (tipos[(n_carga + j) % len(tipos)] for j in range(1, len(tipos)))
+                        if t not in vecinos and t != "piramide")
+        sesiones.append(sesion_variada(tipo, z2b, caminatas, intensidad == "z2_poca_z3", nb))
+        focus += f" · variada: {POR_ID[tipo]['nombre']}"
     else:
         sesiones.append(z2("z2b", "Z2 #2", z2b))
     sesiones.append(con_suave_caminatas(
@@ -143,19 +322,32 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
             "sessions": sesiones}
 
 
-def verificar(plan: dict) -> None:
+def minutos_en(pasos: list, zonas: set) -> int:
+    return sum(p["times"] * minutos_en(p["steps"], zonas) if p["kind"] == "repeat" else
+               (p["minutes"] if p["zone"] in zonas else 0) for p in pasos)
+
+
+def verificar(plan: dict, cfg: dict = None) -> None:
+    intensidad = (cfg or {}).get("intensidad")
     for w in plan["weeks"]:
         con_z3 = 0
         for s in w["sessions"]:
             assert suma(s["steps"]) == s["minutes"], (w["n"], s["id"])
             assert suma(s["easy"]["steps"]) == s["easy"]["minutes"], (w["n"], s["id"], "suave")
             assert not zonas_de(s["easy"]["steps"]) & {"Z3", "Z4", "Z5"}, (w["n"], s["id"], "suave con Z3+")
+            if intensidad == "solo_z2":
+                assert not zonas_de(s["steps"]) & {"Z3", "Z4", "Z5"}, (w["n"], s["id"], "solo_z2 con Z3+")
+            if s["tipo"] == "variada":
+                assert w["kind"] == "carga", (w["n"], "variada en descarga")
+                z3 = minutos_en(s["steps"], {"Z3", "Z4", "Z5"})
+                assert z3 <= min(Z3_VARIADA_MAX, s["minutes"] * Z3_VARIADA_PCT), (w["n"], "variada con demasiada Z3")
+                assert not minutos_en(s["steps"], {"Z4", "Z5"}), (w["n"], "variada con Z4+")
             if s["tipo"] == "larga":
                 assert not zonas_de(s["steps"]) & {"Z3", "Z4", "Z5"}, (w["n"], "larga con Z3+")
             con_z3 += bool(zonas_de(s["steps"]) & {"Z3", "Z4", "Z5"})
         assert con_z3 <= 1, (w["n"], "más de una sesión con Z3+")
         if w["kind"] == "descarga":
-            assert not any(s["tipo"] == "calidad" for s in w["sessions"]), (w["n"], "descarga con calidad")
+            assert not any(s["tipo"] in ("calidad", "variada") for s in w["sessions"]), (w["n"], "descarga con calidad o variada")
 
 
 def generar(cfg: dict) -> dict:
@@ -165,7 +357,7 @@ def generar(cfg: dict) -> dict:
         n_carga += w["kind"] == "carga"
         semanas.append(w)
     plan = {"start": cfg["plan_start"], "weeks": semanas}
-    verificar(plan)
+    verificar(plan, cfg)
     return plan
 
 

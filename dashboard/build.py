@@ -11,6 +11,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import metrics as m
+import tipos
 from ajustes import USER_DIR, cargar_config
 
 ROOT = Path(__file__).parent.parent  # el motor (aquí vive site/)
@@ -79,14 +80,23 @@ def convert_steps(steps: list, zonas: list) -> list:
     return out
 
 
-ETIQUETA_CALIDAD = {"tempo_z3": "tempo Z3", "threshold": "threshold", "intervalos": "intervalos"}
+ETIQUETA_CALIDAD = {"tempo_z3": "tempo Z3", "threshold": "threshold", "intervalos": "intervalos",
+                    "progresivo": "progresivo", "fartlek": "fartlek"}
 
 
 def estructura_calidad(s: dict) -> str:
     """"10' Z2 · 4×5' threshold (2' suave) · 5' suave" a partir de los pasos de una sesión de calidad."""
-    cal, extras = [], s["steps"]
+    extras = s["steps"]
     calen = next(p for p in extras if p["kind"] == "warmup")
     enfria = next(p for p in extras if p["kind"] == "cooldown")
+    if s.get("calidad_tipo") == "progresivo":
+        medio = [p for p in extras if p["kind"] not in ("warmup", "cooldown")]
+        return (f"{calen['minutes']}' {calen['zone']} · " + " · ".join(f"{p['minutes']}' {p['zone']}" for p in medio)
+                + f" progresivo · {enfria['minutes']}' suave")
+    if s.get("calidad_tipo") == "fartlek":
+        trabajo = [p["minutes"] for p in extras if p["kind"] == "run" and p["zone"] == "Z3"]
+        return (f"{calen['minutes']}' {calen['zone']} · fartlek {'-'.join(str(t) for t in trabajo)}' en Z3 "
+                f"(con pausas de 2' suave) · {enfria['minutes']}' suave")
     rep = next(p for p in extras if p["kind"] == "repeat")
     trabajo, rec = rep["steps"][0], rep["steps"][1]
     return (f"{calen['minutes']}' {calen['zone']} · {rep['times']}×{trabajo['minutes']}' "
@@ -95,13 +105,15 @@ def estructura_calidad(s: dict) -> str:
 
 def convert_session(s: dict, zonas: list) -> dict:
     easy = s["easy"]
-    extra = {k: s[k] for k in ("nota", "calidad_tipo") if k in s}
+    extra = {k: s[k] for k in ("nota", "calidad_tipo", "variada_tipo") if k in s}
     if "objetivo" in s:
         extra["objetivo"] = {**s["objetivo"], "lpm": lpm_range(s["objetivo"]["zona"], zonas)}
         extra["estructura"] = estructura_calidad(s)
     return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"], **extra,
+            "forma": tipos.forma_de(s), "silueta": tipos.silueta_de(s["steps"]),
             "steps": convert_steps(s["steps"], zonas),
             "easy": {"name": easy["name"], "minutes": easy["minutes"],
+                     "silueta": tipos.silueta_de(easy["steps"]),
                      "steps": convert_steps(easy["steps"], zonas)}}
 
 
@@ -593,6 +605,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": build_ui(config, plan),
+        "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),
         "detalles": build_details(hoy, data, config, fc_max, reloj),
     }
 

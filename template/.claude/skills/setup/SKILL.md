@@ -21,7 +21,9 @@ si hace HIIT, CrossFit o algo intenso. Clasifica y **sugiere**; la persona acept
 |---|---|---|
 | novato | < 3 meses o no corre 20' seguidos | `intensidad: solo_z2`, `caminatas: true` si no corre 20' seguidos |
 | intermedio | 20–40' seguidos, 1–3 veces/semana | `intensidad: z2_poca_z3` |
-| corredor | 45'+ seguidos, 3+ veces/semana por 3+ meses | `intensidad: calidad`; pregunta qué tipos quiere (`tempo_z3`, `threshold`, `intervalos`) |
+| corredor | 45'+ seguidos, 3+ veces/semana por 3+ meses | `intensidad: calidad`; pregunta qué tipos quiere (`tempo_z3`, `threshold`, `intervalos`, `progresivo`, `fartlek`; si no elige, rotan los 5) |
+
+En el config pon siempre `variada: true` (una corrida por semana es "variada": formatos como espiga, pirámide o escalera según su nivel; es lo que verá en la pestaña Plan). Solo ponla en `false` si la persona prefiere todo continuo.
 
 Si hace algo intenso, dilo así: "Tu 20 % intenso ya sale de tu {actividad}; te sugiero `solo_z2`". Cualquiera puede
 elegir `solo_z2`.

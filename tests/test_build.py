@@ -9,6 +9,7 @@ import pytest
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "dashboard"))
 import build  # noqa: E402
+import validar  # noqa: E402
 
 from ajustes import cargar_config  # noqa: E402
 
@@ -513,3 +514,59 @@ def test_numeros_de_progreso():
     ritmo = {i["id"]: i for i in build.build_numeros(date(2026, 11, 4), filas[:1] + [{**filas[2], "fecha": "2026-10-05", "ritmo_z2_s": 530}], "ritmo")["periodos"]["4"]}
     assert ritmo["ritmo_z2"]["delta"] == -30 and ritmo["ritmo_z2"]["bueno"] is True
     assert build.build_numeros(date(2026, 11, 4), [], "trote")["periodos"]["4"][3] == {"id": "pct_trote", "valor": None, "anterior": None, "delta": None, "bueno": None}
+
+
+# --- v4.2 F2: catálogo, forma y silueta ---
+
+def test_catalogo_de_tipos():
+    import tipos
+    ids = [t["id"] for t in tipos.CATALOGO]
+    assert len(ids) == len(set(ids)) == 14
+    for t in tipos.CATALOGO:
+        assert t["grupo"] in ("continuos", "variados", "calidad") and t["descripcion"] and t["forma"]
+        assert not any(ch.isdigit() for ch in t["descripcion"].replace("1-2-3-2-1", ""))   # sin números de zona
+        for tramo in t["forma"]:
+            assert len(tramo) in (2, 3) and tramo[0] > 0 and all(0 <= n <= 1 for n in tramo[1:])
+    assert {t["grupo"] for t in tipos.CATALOGO if t["id"] in ("espiga", "piramide", "densidad")} == {"variados"}
+
+
+def test_forma_derivada_y_silueta_sin_tocar_el_plan():
+    import tipos
+    plan = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "z2_poca_z3", "variada": True, "caminatas": False})
+    s = plan["weeks"][1]["sessions"]
+    assert all("forma" not in x for x in s)                       # el plan no lleva `forma`: se deriva
+    assert [tipos.forma_de(x) for x in s][0] == "continuo" and tipos.forma_de(s[1]) == s[1]["variada_tipo"]
+    cam = gen_plan.generar({**CONFIG_CORREDOR, "caminatas": True})["weeks"][0]["sessions"][0]
+    assert tipos.forma_de(cam) == "trote_caminata"
+    cal = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "calidad", "calidad_tipos": ["threshold"]})["weeks"][0]["sessions"][1]
+    assert tipos.forma_de(cal) == "umbral"
+
+
+def test_silueta_despliega_repeat_caminata_z1_y_opcionales():
+    import tipos
+    pasos = [{"kind": "warmup", "minutes": 5, "zone": "Z1-Z2"},
+             {"kind": "repeat", "times": 2, "steps": [{"kind": "run", "minutes": 3, "zone": "Z3"},
+                                                      {"kind": "walk", "minutes": 1, "zone": "Z1-Z2"}]},
+             {"kind": "run", "minutes": 1, "zone": "Z3", "optional": True}]
+    assert tipos.silueta_de(pasos) == [[5, "Z2"], [3, "Z3"], [1, "Z1"], [3, "Z3"], [1, "Z1"], [1, "Z3", True]]
+
+
+def test_data_json_trae_forma_silueta_y_tipos():
+    plan = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "z2_poca_z3", "variada": True})
+    out = build.build(fixture(), plan, {**CONFIG_CORREDOR, "plan_start": "2026-10-26", "intensidad": "z2_poca_z3"}, AHORA)
+    revisar_privacidad(out)
+    ses = out["plan"]["semanas"][1]["sessions"]
+    assert ses[1]["forma"] == ses[1]["variada_tipo"] and ses[0]["forma"] == "continuo"
+    assert sum(m for m, *_ in ses[1]["silueta"]) == ses[1]["minutes"]
+    assert sum(m for m, *_ in ses[1]["easy"]["silueta"]) == ses[1]["easy"]["minutes"]
+    assert out["tipos"]["en_plan"][:1] == ["continuo"] and ses[1]["forma"] in out["tipos"]["en_plan"]
+    assert len(out["tipos"]["catalogo"]) == 14 and [g["id"] for g in out["tipos"]["grupos"]] == ["continuos", "variados", "calidad"]
+    assert "tipos" in validar.CLAVES
+
+
+def test_estructura_de_progresivo_y_fartlek():
+    for tipo, esperado in (("progresivo", "progresivo"), ("fartlek", "fartlek")):
+        plan = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "calidad", "calidad_tipos": [tipo]})
+        s = build.convert_session(plan["weeks"][0]["sessions"][1], [("Z1", 100, 110), ("Z2", 110, 120), ("Z3", 120, 130),
+                                                                   ("Z4", 130, 140), ("Z5", 140, 150)])
+        assert esperado in s["estructura"] and s["forma"] == tipo and s["objetivo"]["zona"] == "Z3"
