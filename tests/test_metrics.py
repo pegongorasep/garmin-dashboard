@@ -627,3 +627,48 @@ def test_mejores_marcas():
     assert out["5k"]["tiempo_s"] == 2422 and out["5k"]["ritmo_s"] == 484 and out["5k"]["nuevo"] is True
     assert out["larga"]["distancia_km"] == 5.51 and out["larga"]["tiempo_s"] == 2778 and out["larga"]["fecha"] == "2025-09-28"
     assert m.mejores_marcas([]) == []
+
+
+# --- hoja InBody ---
+
+def _inbody_pedro():
+    import json
+    return json.loads((Path(__file__).parent.parent / "plan" / "inbody.json").read_text())
+
+
+def test_pos_escala_por_tramos():
+    escala = [40, 60, 80, 100, 160, 220, 280, 340, 400, 460, 520]   # no lineal: cada tick mide lo mismo
+    assert m.pos_escala(40, escala) == 0 and m.pos_escala(10, escala) == 0 and m.pos_escala(600, escala) == 1
+    assert m.pos_escala(100, escala) == 0.3 and m.pos_escala(130, escala) == 0.35
+    assert 0.5 < m.pos_escala(240, escala) < 0.6   # entre 220 y 280
+
+
+def test_composicion_hoja_inbody_de_pedro():
+    c = m.composicion(_inbody_pedro())
+    filas = {f["id"]: f for f in c["hoja"]["musculo_grasa"]}
+    assert list(filas) == ["peso", "mme", "masa_grasa"]
+    peso = filas["peso"]
+    assert peso["zona"] == "alto" and peso["valor"] == 93.8 and peso["pct"] == 133
+    assert 0.5 < peso["pos"] < 0.55 and peso["normal_pos"] == [0.2, 0.4]       # 133 % entre 130 y 145
+    assert filas["mme"]["estimado"] is True and "estimado" not in peso and 0.45 < filas["mme"]["pos"] < 0.5
+    assert 0.52 < filas["masa_grasa"]["pos"] < 0.54 and filas["masa_grasa"]["zona"] == "alto"   # 240 % entre 220 y 280
+    obes = {f["id"]: f for f in c["hoja"]["obesidad"]}
+    assert obes["imc"]["zona"] == "alto" and obes["pgc"]["valor"] == 27.1 and 0.5 < obes["pgc"]["pos"] < 0.6
+    assert c["hoja"]["control_peso"]["peso_ideal_kg"] == 80.4 and c["hoja"]["segmental_grasa"]["tronco"] == [14.0, 314.4]
+    assert c["hoja"]["investigacion"]["tmb_kcal"][0] == 1846 and c["hoja"]["composicion_corporal"]["agua_l"][0] == 49.9
+
+
+def test_composicion_historial_puntuacion_visceral():
+    c = m.composicion(_inbody_pedro())
+    assert [h["fecha"] for h in c["historial"]][0] == "2024-05-25" and len(c["historial"]) == 4
+    assert [h["es_prime"] for h in c["historial"]] == [True, False, False, False]
+    assert c["puntuacion"] == [{"fecha": "2026-11-13", "puntos": 75, "delta": None}]
+    assert c["visceral"]["valor"] == 10 and c["visceral"]["rango"] == [1, 9] and c["visceral"]["zona"] == "alto"
+
+
+def test_composicion_puntuacion_con_dos_mediciones_y_sin_hoja():
+    inb = {"mediciones": [{"fecha": "2026-01-01", "peso_kg": 90, "mme_kg": 38, "pgc": 30, "puntuacion": 70},
+                          {"fecha": "2026-02-01", "peso_kg": 89, "mme_kg": 38.5, "pgc": 29, "puntuacion": 74}]}
+    c = m.composicion(inb)
+    assert [p["delta"] for p in c["puntuacion"]] == [None, 4]
+    assert "hoja" not in c and "visceral" not in c and len(c["historial"]) == 2
