@@ -7,7 +7,7 @@ description: Cambia nivel, tipo de plan (solo Z2, poca Z3, calidad), tipos de ca
 
 Habla en español, claro y corto. No pidas la key ni leas `.env`.
 
-1. Pregunta qué quiere cambiar (nivel, intensidad, tipos de calidad, caminatas, actividades, días, pierna, inicio,
+1. Pregunta qué quiere cambiar (nivel, intensidad, tipos de calidad, caminatas, actividades (cómo las registra en Garmin), días de pierna, inicio,
    minutos base, título de la página) y por qué, si no es obvio.
 2. Edita **solo** `config.yaml`. Valores válidos: ver `config.example.yaml`.
    - "La del 21 nov fue carrera" (o "marca esa corrida como carrera"): agrega la fecha `2026-11-21` a

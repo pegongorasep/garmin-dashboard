@@ -19,6 +19,5 @@ corrida:
 actividades:
   categorias:
     - {id: crossfit, nombre: CrossFit, letra: CF, tipos: [hiit, strength_training], intensa: true}
-  semana: {lun: crossfit, mar: crossfit, jue: crossfit}
   dias_pierna: []                  # p. ej. [lun]
 inbody: true

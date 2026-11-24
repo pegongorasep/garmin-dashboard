@@ -32,9 +32,9 @@ Mejor quedarse corto: el plan sube solo.
 
 ## 4. Perfil
 Pregunta y anota: el título de su página (sugiere "Mi entreno"; va en `perfil.titulo`); edad y FC máxima si la sabe (si no, déjalo: se usa 220 - edad y el reloj la corrige);
-zona horaria; qué otras actividades hace y en qué días, **cómo las registra en Garmin** (para mapear los tipos:
+zona horaria; qué otras actividades hace y **cómo las registra en Garmin** (no preguntes en qué días: solo se marca lo que Garmin registró) (para mapear los tipos:
 `strength_training`, `hiit`, `cycling`, `yoga`...; máximo 4 categorías, `intensa: true` a las intensas); días de
-pierna; fecha de inicio (el próximo lunes); y si tiene InBody (`inbody: true`; luego pasa la foto de la hoja y tú
+pierna (solo si quiere el aviso de la larga tras pierna); fecha de inicio (el próximo lunes); y si tiene InBody (`inbody: true`; luego pasa la foto de la hoja y tú
 llenas `plan/inbody.json` con el formato de `plan/inbody.json` del motor, `.motor/plan/inbody.json`).
 
 ## 5. Escribir y generar

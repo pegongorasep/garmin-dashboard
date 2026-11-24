@@ -23,7 +23,7 @@ def test_config_de_pedro_da_el_dict_plano():
     assert c["timezone"] == "America/Merida" and c["max_hr"] == 189 and c["max_hr_floor"] == 183
     assert c["plan_start"] == "2026-11-09" and c["fc_max_correa_desde"] == "2026-10-26"
     assert c["zone_pcts"] == [50, 60, 70, 80, 90] and c["done_ratio"] == 0.7 and c["rpe_heavy"] == 8
-    assert c["semana_tipica"] == {0: "crossfit", 1: "crossfit", 3: "crossfit"}
+    assert "semana_tipica" not in c   # actividades.semana vieja se tolera y se ignora
     assert c["categorias"][0]["tipos"] == ["hiit", "strength_training"]
 
 
@@ -47,7 +47,6 @@ def test_umbrales_se_sobreescriben(tmp_path):
     (MINIMA.replace("2026-11-09", "2026-11-10"), "lunes"),
     (MINIMA + "corrida: {inicio: 2026-11-09, nivel: pro}\n", "nivel"),
     ("perfil: {zona_horaria: America/Merida, edad: 30}\ncorrida: {inicio: 2026-11-09, intensidad: calidad}\n", "calidad_tipos"),
-    (MINIMA + "actividades: {semana: {lun: nada}}\n", "nada"),
 ])
 def test_errores_claros(tmp_path, texto, frag):
     with pytest.raises(ajustes.ConfigError, match=frag):
@@ -75,3 +74,8 @@ def test_titulo_por_defecto_y_carreras(tmp_path):
 def test_carrera_con_fecha_mala(tmp_path):
     with pytest.raises(ajustes.ConfigError):
         cfg(tmp_path, MINIMA.replace("{inicio: 2026-11-09}", "{inicio: 2026-11-09, carreras: [mañana]}"))
+
+
+def test_actividades_semana_vieja_se_tolera_y_se_ignora(tmp_path):
+    c = cfg(tmp_path, MINIMA + "actividades:\n  semana: {lun: nada, mar: inexistente}\n")
+    assert "semana_tipica" not in c and c["categorias"]

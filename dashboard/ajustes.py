@@ -111,12 +111,7 @@ def cargar_config(user_dir=None) -> dict:
     base = {"z2": 20, "larga": 40, **(corrida.get("base_min") or {})}
 
     categorias = _categorias(act.get("categorias") or defaults["categorias"])
-    ids = {c["id"] for c in categorias}
-    semana = {}
-    for dia, cat in (act.get("semana") or {}).items():
-        if cat not in ids:
-            raise ConfigError(f"actividades.semana: '{cat}' no es una categoría (hay: {', '.join(sorted(ids))})")
-        semana[_dia(dia, "actividades.semana")] = cat
+    # `actividades.semana` (v4.1 y antes) se tolera y se ignora: ya no se asume ninguna semana típica.
     pierna = sorted(_dia(d, "actividades.dias_pierna") for d in act.get("dias_pierna") or [])
 
     umbrales = {**defaults["umbrales"], **(cfg.get("umbrales") or {})}
@@ -132,7 +127,7 @@ def cargar_config(user_dir=None) -> dict:
         "nivel": nivel, "intensidad": intensidad, "calidad_tipos": tipos_cal,
         "caminatas": bool(corrida.get("caminatas", False)),
         "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base,
-        "categorias": categorias, "semana_tipica": semana, "dias_pierna": pierna,
+        "categorias": categorias, "dias_pierna": pierna,
         "inbody": bool(cfg.get("inbody", True)),
         "tipos_con_detalle": umbrales["run_types"] + [t for c in categorias for t in c["tipos"]],
     }

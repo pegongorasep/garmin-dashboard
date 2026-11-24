@@ -12,7 +12,7 @@ CFG = {
     "run_types": ["running", "treadmill_running"],
     "categorias": [{"id": "crossfit", "nombre": "CrossFit", "letra": "CF", "tipos": ["hiit", "strength_training"],
                     "intensa": True, "clase": "azul"}],
-    "semana_tipica": {0: "crossfit", 1: "crossfit", 3: "crossfit"}, "dias_pierna": [], "done_ratio": 0.7, "ceiling_tolerance_min": 2,
+    "dias_pierna": [], "done_ratio": 0.7, "ceiling_tolerance_min": 2,
 }
 
 
@@ -268,7 +268,7 @@ def test_today_card_ramas():
     hecha = [ses("z2a", "z2", "hecha"), ses("z2b", "z2"), ses("larga", "larga")]
     todas = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga", "hecha")]
     lun, mie, vie, dom = date(2026, 11, 16), date(2026, 11, 18), date(2026, 11, 20), date(2026, 11, 22)
-    assert m.today_card(lun, VERDE, pend, [], CFG)["tipo"] == "otra"
+    assert m.today_card(lun, VERDE, pend, [], CFG)["tipo"] == "sesion"   # nunca se adivina CrossFit por el día
     assert m.today_card(mie, VERDE, pend, [act(1, "2026-11-18")], CFG)["tipo"] == "otra"
     assert m.today_card(lun, VERDE, hecha, [act(2, "2026-11-16", "running")], CFG)["tipo"] == "hecha_hoy"
     assert m.today_card(mie, VERDE, hecha, [act(2, "2026-11-18", "running"), act(3, "2026-11-18")], CFG)["tipo"] == "otra"
@@ -427,9 +427,9 @@ def test_today_card_proxima_id():
     pend = [ses("z2a", "z2"), ses("z2b", "z2"), ses("larga", "larga")]
     z2_hechas = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga")]
     mar, vie, mie = date(2026, 11, 17), date(2026, 11, 20), date(2026, 11, 18)
-    assert m.today_card(mar, VERDE, pend, [], CFG)["proxima_id"] == "z2a"
+    assert m.today_card(mar, VERDE, pend, [act(1, "2026-11-17")], CFG)["proxima_id"] == "z2a"   # CrossFit registrado hoy
     jue = date(2026, 11, 19)
-    assert m.today_card(jue, VERDE, z2_hechas, [], CFG)["proxima_id"] == "larga"   # mañana viernes
+    assert m.today_card(jue, VERDE, z2_hechas, [act(1, "2026-11-19")], CFG)["proxima_id"] == "larga"   # mañana viernes
     run_hoy = [act(2, "2026-11-20", "running")]
     assert m.today_card(vie, VERDE, z2_hechas, run_hoy, CFG)["proxima_id"] == "larga"  # mañana sábado
     assert m.today_card(mie, VERDE, pend, [], CFG)["proxima_id"] is None   # tipo sesion
@@ -498,7 +498,7 @@ CFG3 = {**CFG, "categorias": [
     {"id": "fuerza", "nombre": "Fuerza", "letra": "F", "tipos": ["strength_training"], "intensa": False, "clase": "azul"},
     {"id": "hiit", "nombre": "HIIT", "letra": "H", "tipos": ["hiit"], "intensa": True, "clase": "aqua"},
     {"id": "cardio", "nombre": "Cardio", "letra": "B", "tipos": ["cycling"], "intensa": False, "clase": "violeta"}],
-    "semana_tipica": {0: "fuerza", 2: "hiit", 4: "cardio"}, "dias_pierna": [0]}
+    "dias_pierna": [0]}
 
 
 def test_classify_categorias():
@@ -534,8 +534,10 @@ def test_signal_rpe_nombre_unico_y_varias_intensas():
 def test_today_card_otra_con_nombre_de_categoria():
     lun = date(2026, 11, 16)
     t = m.today_card(lun, VERDE, [ses("z2a", "z2")], [], CFG3)
-    assert (t["tipo"], t["categoria"], t["texto"]) == ("otra", "Fuerza", "Hoy es Fuerza")
-    # una categoría no intensa hecha en un día sin plan de otra cosa no tapa la corrida
+    assert t["tipo"] == "sesion" and "categoria" not in t and "CrossFit" not in t["texto"]   # sin actividad hoy
+    t = m.today_card(lun, VERDE, [ses("z2a", "z2")], [act(1, "2026-11-16", "hiit")], CFG3)
+    assert (t["tipo"], t["categoria"], t["texto"]) == ("otra", "HIIT", "Hoy: HIIT ✓")
+    # una categoría no intensa hecha no tapa la corrida
     mar = date(2026, 11, 17)
     t = m.today_card(mar, VERDE, [ses("z2a", "z2")], [act(1, "2026-11-17", "strength_training")], CFG3)
     assert t["tipo"] == "sesion"
@@ -544,10 +546,13 @@ def test_today_card_otra_con_nombre_de_categoria():
 def test_aviso_dia_de_pierna():
     mar = date(2026, 11, 17)   # ayer lunes = pierna
     solo_larga = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga")]
-    t = m.today_card(mar, VERDE, solo_larga, [], CFG3)
+    ayer = [act(1, "2026-11-16", "strength_training")]
+    t = m.today_card(mar, VERDE, solo_larga, ayer, CFG3)
     assert t["sesion_id"] == "larga" and "Ayer pierna: hoy mejor la Z2 y deja la Larga para mañana" in t["aviso"]
     cal = [ses("z2a", "z2", "hecha"), ses("cal", "calidad")]
-    assert "deja la calidad para mañana" in m.today_card(mar, VERDE, cal, [], CFG3)["aviso"]
+    assert "deja la calidad para mañana" in m.today_card(mar, VERDE, cal, ayer, CFG3)["aviso"]
+    # Garmin no registró nada ayer: sin aviso (solo cuenta lo registrado)
+    assert "Ayer pierna" not in m.today_card(mar, VERDE, solo_larga, [], CFG3)["aviso"]
     # una Z2 pendiente no lleva aviso, y otro día tampoco
     assert m.today_card(mar, VERDE, [ses("z2a", "z2")], [], CFG3)["aviso"] is None
     assert m.today_card(date(2026, 11, 19), VERDE, solo_larga, [], CFG3)["aviso"] == "La larga va el sábado o domingo"

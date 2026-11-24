@@ -307,13 +307,12 @@ def _elegir_pendiente(day: date, status: list):
 
 
 def aviso_pierna(day: date, sesion: dict, activities: list, config: dict):
-    """Si ayer fue día de pierna (planeado o real) y hoy toca la Larga o la calidad, avisa."""
+    """Si ayer fue día de pierna (y Garmin registró una actividad) y hoy toca la Larga o la calidad, avisa."""
     ayer = day - timedelta(days=1)
     if ayer.weekday() not in config.get("dias_pierna", []) or sesion.get("tipo") not in ("larga", "calidad"):
         return None
-    hubo = ayer.weekday() in config.get("semana_tipica", {}) or any(
-        classify(a, config) in {c["id"] for c in config.get("categorias", [])} for a in activities if day_of(a) == ayer)
-    if not hubo:
+    ids = {c["id"] for c in config.get("categorias", [])}
+    if not any(classify(a, config) in ids for a in activities if day_of(a) == ayer):   # solo lo que Garmin registró
         return None
     resto = "la Larga" if sesion["tipo"] == "larga" else "la calidad"
     return f"Ayer pierna: hoy mejor la Z2 y deja {resto} para mañana"
@@ -325,16 +324,14 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
     cats = {c["id"]: c for c in config.get("categorias", [])}
     hechas = [classify(a, config) for a in hoy]
     hay_run = "run" in hechas
-    # Una actividad intensa hecha hoy, o el día típico de una categoría sin corrida, ocupan el día.
-    intensa_hoy = next((i for i in hechas if i in cats and cats[i]["intensa"]), None)
-    tipica = config.get("semana_tipica", {}).get(day.weekday())
-    otra = intensa_hoy or (tipica if tipica and not hay_run else None)
+    # Solo una actividad intensa que Garmin ya registró hoy ocupa el día; nunca se adivina por el día de la semana.
+    otra = next((i for i in hechas if i in cats and cats[i]["intensa"]), None)
     aviso = "Repetir la semana" if light.get("repetir_semana") else None
     base = {"version": None, "sesion_id": None, "aviso": aviso, "proxima_id": None}
     manana = (_elegir_pendiente(day + timedelta(days=1), status)[0] or {}).get("id") if status else None
     if otra:
         nombre = cats[otra]["nombre"]
-        return {"tipo": "otra", "categoria": nombre, "texto": f"Hoy es {nombre}", **{**base, "proxima_id": manana}}
+        return {"tipo": "otra", "categoria": nombre, "texto": f"Hoy: {nombre} ✓", **{**base, "proxima_id": manana}}
     if hay_run:
         return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", **{**base, "proxima_id": manana}}
     if not status:

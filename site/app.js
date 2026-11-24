@@ -164,7 +164,8 @@ const nombreSesion = (estado, id) => ((estado || []).find((e) => e.id === id) ||
 function textoBanner(d) {
   const t = d.hoy.tarjeta, plan = d.plan || {}, est = plan.estado_sesiones || [];
   const prox = nombreSesion(est, t.proxima_id);
-  if (t.tipo === "otra") return prox ? `Hoy ${t.categoria} · próxima corrida: ${prox}` : `Hoy ${t.categoria}`;
+  if (t.tipo === "otra") return prox ? `Hoy: ${t.categoria} ✓ · próxima corrida: ${prox}` : `Hoy: ${t.categoria} ✓`;
+  if (t.tipo === "sesion") { const sig = nombreSesion(est, t.sesion_id); return sig ? `Próxima corrida: ${sig}` : null; }
   if (t.tipo === "hecha_hoy") return prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
   if (t.tipo === "sin_plan" || t.tipo === "primera_sync") return t.texto;
   if (t.tipo === "completa") return "Semana completa: hiciste las 3";
@@ -286,7 +287,6 @@ const diaTexto = (x) => {
   for (const cf of x.otras || []) {
     partes.push(`${categoria(cf.cat).nombre}${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.te != null ? `, Training Effect aeróbico ${cf.te.toFixed(1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
   }
-  if (x.planeado) partes.push(x.planeado === "larga" ? "la Larga sigue pendiente" : `planeado: ${categoria(x.planeado).nombre}`);
   return `${fechaCorta(x.fecha)}: ${partes.length ? partes.join("; ") : "sin actividad"}`;
 };
 
@@ -304,15 +304,14 @@ function diaCalendario(x, hoyIso) {
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, "carrera") : null];
   }
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.rpe != null ? `RPE ${fmt(cf.rpe, 0)}` : cf.te != null ? cf.te.toFixed(1) : null));
-  const plan = x.planeado ? (x.planeado === "larga" ? h("span", { class: "cf tenue" }, h("b", {}, "Larga?")) : marcaCat(x.planeado, null, true)) : null;
   return h("div", { class: `dia${x.fecha === hoyIso ? " es-hoy" : ""}`, role: "group", title: diaTexto(x), "aria-label": diaTexto(x) },
     h("span", { class: "dn" }, x.dia_semana), h("span", { class: "df" }, parseFecha(x.fecha).getDate()),
-    marca, cfMarca, plan);
+    marca, cfMarca);
 }
 
-/** "CF = CrossFit · " solo con las categorías que aparecen (hechas o planeadas) en esa semana. */
+/** "CF = CrossFit · " solo con las categorías que aparecen (hechas) en esa semana. */
 function leyendaCategorias(s) {
-  const ids = new Set((s.dias || []).flatMap((x) => [...(x.otras || []).map((o) => o.cat), x.planeado && x.planeado !== "larga" ? x.planeado : null]));
+  const ids = new Set((s.dias || []).flatMap((x) => (x.otras || []).map((o) => o.cat)));
   return ui().categorias.filter((c) => ids.has(c.id)).map((c) => `${c.letra} = ${c.nombre} · `).join("");
 }
 

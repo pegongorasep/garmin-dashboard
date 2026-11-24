@@ -261,7 +261,7 @@ def otras_del_dia(d: date, data: dict, config: dict) -> list:
 
 
 def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, config: dict) -> dict:
-    """Un día del calendario: corrida más larga (con su sesión), otras actividades y lo planeado si es futuro."""
+    """Un día del calendario: corrida más larga (con su sesión) y otras actividades registradas (futuro: vacío)."""
     del_dia = [a for a in runs if m.day_of(a) == d]
     corrida = None
     if del_dia:
@@ -270,16 +270,9 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
         corrida = {"minutos": r1(a["duration"] / 60), "sesion_nombre": e["name"] if e else "Extra",
                    "estado": e["estado"] if e else "extra", "carrera": m.es_carrera(a, config)}
     otras = otras_del_dia(d, data, config)
-    planeado = None
-    if d > hoy and not corrida and not otras:
-        larga_pendiente = any(e["tipo"] == "larga" and e["estado"] == "pendiente" for e in sesiones)
-        if d.weekday() in config["semana_tipica"]:
-            planeado = config["semana_tipica"][d.weekday()]
-        elif d.weekday() >= 5 and larga_pendiente:
-            planeado = "larga"
     return {"fecha": d.isoformat(), "dia_semana": DIAS[d.weekday()],
             "luz": light_on(d, data, config)["color"] if d <= hoy else None,
-            "corrida": corrida, "corridas_n": len(del_dia), "otras": otras, "planeado": planeado}
+            "corrida": corrida, "corridas_n": len(del_dia), "otras": otras}
 
 
 def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> dict:
@@ -513,10 +506,6 @@ def build_ui(config: dict, plan: dict) -> dict:
     if sesiones:
         partes.append("Cada semana: " + (", ".join(sesiones[:-1]) + " y la " + sesiones[-1] if len(sesiones) > 1 else sesiones[0])
                       + " (sábado o domingo)")
-    for c in cats:
-        dias = [DIAS_LARGO[d] for d, cid in sorted(config["semana_tipica"].items()) if cid == c["id"]]
-        if dias:
-            partes.append(f"{c['nombre']} {lista_es(dias)}")
     if config["dias_pierna"]:
         partes.append("Día de pierna: " + lista_es([DIAS_LARGO[d] for d in config["dias_pierna"]]))
     repo = os.environ.get("GITHUB_REPOSITORY")

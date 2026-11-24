@@ -30,7 +30,6 @@ actividades:
   categorias:
     - {id: fuerza, nombre: Fuerza, letra: F, tipos: [strength_training]}
     - {id: hiit, nombre: HIIT, letra: H, tipos: [hiit], intensa: true}
-  semana: {lun: fuerza, mié: hiit}  # qué haces cada día (días: lun mar mié jue vie sáb dom)
   dias_pierna: [lun]               # días en que entrenas pierna: el día siguiente evita la larga
 
 inbody: false                      # true si tienes plan/inbody.json con mediciones

@@ -185,7 +185,7 @@ Corrige lo que encuentres y actualiza la tabla.
 
 | Fase | Estado |
 |---|---|
-| F1 Sin CrossFit asumido | ⬜ |
+| F1 Sin CrossFit asumido | ✅ |
 | F2 Tipos y variada (Python) | ⬜ |
 | F3 Navegación Hoy · Plan · Progreso | ⬜ |
 | F4 Siluetas | ⬜ |

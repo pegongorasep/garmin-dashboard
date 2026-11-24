@@ -223,7 +223,7 @@ def test_hoy_motivo_y_semana_nueva(salida):
     data, plan = fixture(), build.load(ROOT / "plan" / "plan.example.json")
     data["sleep"] = [{**r, "sleepTimeSeconds": 18000} if r["calendarDate"] == "2026-11-04" else r
                      for r in data["sleep"]]
-    out = build.build(data, plan, {**CONFIG_FIXTURE, "semana_tipica": {}}, AHORA)
+    out = build.build(data, plan, CONFIG_FIXTURE, AHORA)
     t = out["hoy"]["tarjeta"]
     assert t["version"] == "suave" and t["motivo"] == "Dormiste poco"
     s = salida["semana"]
@@ -310,18 +310,18 @@ def test_semana_pasada_sesion_sin_hacer_es_no_hecha():
     assert s["plan"] == {"total": 3, "hechas": 1, "incompletas": 0, "plan_min": 100}
 
 
-def test_semana_futura_todo_pendiente_y_planeado():
+def test_semana_futura_todo_pendiente_y_sin_planeados():
     data = {**fixture(), "activities": []}
     s = _semana(data, date(2026, 10, 28), date(2026, 11, 2))
     assert s["estado"] == "futura" and s["stats"]["corridas"] == 0
     assert {e["estado"] for e in s["sesiones"]} == {"pendiente"}
-    assert [d["planeado"] for d in s["dias"]] == ["crossfit", "crossfit", None, "crossfit", None, "larga", "larga"]
+    assert all("planeado" not in d and not d["otras"] and d["corrida"] is None for d in s["dias"])
     assert all(d["luz"] is None for d in s["dias"])
 
 
-def test_dia_futuro_martes_planeado_cf():
+def test_dia_futuro_vacio_sin_categoria_planeada():
     s = _semana({**fixture(), "activities": []}, date(2026, 11, 2), date(2026, 11, 2))
-    assert s["dias"][1]["planeado"] == "crossfit" and s["dias"][2]["planeado"] is None
+    assert s["dias"][1]["otras"] == [] and s["dias"][1]["corrida"] is None
 
 
 def test_otras_del_dia_toma_te_maximo_y_suma_minutos():
@@ -372,7 +372,8 @@ def test_build_con_tres_categorias(monkeypatch):
     assert [c["id"] for c in ui["categorias"]] == ["fuerza", "hiit", "cardio"]
     assert [c["clase"] for c in ui["categorias"]] == ["azul", "aqua", "violeta"]
     assert ui["nombre_intensa"] == "HIIT" and ui["titulo"] == "Mi base" and ui["acciones_url"] is None
-    assert ui["textos"]["semana"].endswith("Fuerza lunes. HIIT miércoles. Cardio viernes. Día de pierna: lunes.")
+    assert ui["textos"]["semana"].endswith("(sábado o domingo). Día de pierna: lunes.")
+    assert "Fuerza lunes" not in ui["textos"]["semana"]
     assert ui["textos"]["incluye"] == "Incluye Fuerza, HIIT, Cardio y corridas."
     lun = next(d for s in out["semanas_hoy"] for d in s["dias"] if d["fecha"] == "2026-11-02")
     assert sorted(o["cat"] for o in lun["otras"]) == ["fuerza", "hiit"]
@@ -418,7 +419,7 @@ def test_primer_dia_con_plan_ya_empezado():
 
 
 def test_plan_futuro_con_datos_dice_cuando_empieza():
-    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07", "semana_tipica": {}}
+    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07"}
     out = build.build(fixture(), gen_plan.generar(cfg), cfg, AHORA)
     assert out["hoy"]["tarjeta"]["tipo"] == "sin_plan" and out["hoy"]["tarjeta"]["texto"] == "Tu plan empieza el lun 7 dic"
 
