@@ -561,6 +561,11 @@ def test_data_json_trae_forma_silueta_y_tipos():
     assert sum(m for m, *_ in ses[1]["easy"]["silueta"]) == ses[1]["easy"]["minutes"]
     assert ses[0]["titulo"] == "Continuo en Z2" and ses[1]["titulo"].endswith("en Z1–Z3")   # variada con pico corto de Z3
     assert ses[1]["easy"]["titulo"].startswith(("Continuo en", "Trote y caminata en"))
+    # rachas: lo que va escrito encima de la silueta; suman lo mismo y llevan la zona del plan con sus lpm
+    for x in (ses[0], ses[1], ses[1]["easy"]):
+        assert sum(r["min"] for r in x["rachas"]) == x["minutes"]
+    zs = {z["zona"]: z for z in out["zonas"]}
+    assert ses[0]["rachas"][0]["zona"] == "Z1–Z2" and ses[0]["rachas"][0]["lpm"] == [zs["Z1"]["piso"], zs["Z2"]["techo"]]
     assert out["tipos"]["en_plan"][:1] == ["continuo"] and ses[1]["forma"] in out["tipos"]["en_plan"]
     assert len(out["tipos"]["catalogo"]) == 14 and [g["id"] for g in out["tipos"]["grupos"]] == ["continuos", "variados", "calidad"]
     assert "tipos" in validar.CLAVES

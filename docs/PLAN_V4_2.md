@@ -228,3 +228,12 @@ Corrige lo que encuentres y actualiza la tabla.
   "6' Z2" (hasta 3 renglones si se juntan). Sin leyenda ni resumen; se quitaron del cuerpo de la sesión.
 - Se quitó la gráfica "Otros entrenos por semana" (los íconos con 2x de Corridas ya lo dicen). `mejora.otras` sigue en
   el JSON por compatibilidad.
+
+## Ajuste v4.2.6 (2026-11-24, aprobado por Pedro): Tus corridas sin repetir
+
+- Cada sesión trae `rachas` (Python): minutos, zona como la dice el plan ("Z1–Z2", "caminata") y lpm de cada racha
+  de la silueta. Encima de la silueta: "5 min / calentar", "20 min Z1–Z2 / 125–150 lpm", "5 min / enfriar"; con más
+  de 3 rachas, un renglón sin lpm. Se acomodan midiendo su ancho (2 renglones; la que no cabe se esconde).
+- Al abrir una sesión: sencilla (≤ 3 rachas, sin repeticiones) = solo las notas de sus pasos; si no, "Ver pasos"
+  cerrado. Versión suave también en la fila de HOY.
+- Plan: Intensidad junto a FC máxima, Cómo funciona abajo a todo lo ancho; la carrera de Hoy mide lo que su contenido.

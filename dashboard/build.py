@@ -80,6 +80,36 @@ def convert_steps(steps: list, zonas: list) -> list:
     return out
 
 
+def rachas_de(steps: list, zonas: list) -> list:
+    """Rachas de la silueta (tramos seguidos del mismo color) con lo que va escrito encima: minutos, la zona como la
+    dice el plan ("Z1–Z2"; si la racha mezcla zonas, la de la silueta; "caminata" si toda es caminata) y sus lpm.
+    Suman lo mismo que `silueta`."""
+    planos = []
+    def aplanar(pasos):
+        for p in pasos:
+            if p["kind"] == "repeat":
+                for _ in range(p["times"]):
+                    aplanar(p["steps"])
+            else:
+                planos.append(p)
+    aplanar(steps)
+    out = []
+    for p, (m, zs, *_) in zip(planos, tipos.silueta_de(planos)):
+        if out and out[-1]["_zs"] == zs:
+            out[-1]["min"] += m
+            out[-1]["_zonas"].add(p["zone"])
+            out[-1]["opcional"] = out[-1]["opcional"] and bool(p.get("optional"))
+            out[-1]["_caminata"] = out[-1]["_caminata"] and p["kind"] == "walk"
+        else:
+            out.append({"min": m, "_zs": zs, "_zonas": {p["zone"]}, "opcional": bool(p.get("optional")),
+                        "_caminata": p["kind"] == "walk"})
+    for r in out:
+        zona = r["_zonas"].pop() if len(r["_zonas"]) == 1 else r["_zs"]
+        r.update({"zona": "caminata" if r["_caminata"] else zona.replace("-", "–"), "lpm": lpm_range(zona, zonas)})
+        del r["_zs"], r["_zonas"], r["_caminata"]
+    return out
+
+
 ETIQUETA_CALIDAD = {"tempo_z3": "tempo Z3", "threshold": "threshold", "intervalos": "intervalos",
                     "progresivo": "progresivo", "fartlek": "fartlek"}
 
@@ -111,10 +141,11 @@ def convert_session(s: dict, zonas: list) -> dict:
         extra["estructura"] = estructura_calidad(s)
     forma, sil, sil_easy = tipos.forma_de(s), tipos.silueta_de(s["steps"]), tipos.silueta_de(easy["steps"])
     return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"], **extra,
-            "forma": forma, "silueta": sil, "titulo": tipos.titulo_de(forma, sil),
+            "forma": forma, "silueta": sil, "titulo": tipos.titulo_de(forma, sil), "rachas": rachas_de(s["steps"], zonas),
             "steps": convert_steps(s["steps"], zonas),
             "easy": {"name": easy["name"], "minutes": easy["minutes"],
                      "silueta": sil_easy, "titulo": tipos.titulo_de(tipos.forma_de({"steps": easy["steps"]}), sil_easy),
+                     "rachas": rachas_de(easy["steps"], zonas),
                      "steps": convert_steps(easy["steps"], zonas)}}
 
 

@@ -137,21 +137,38 @@ function bloqueCalidad(s) {
 }
 
 /** Título y silueta a color de la sesión; los minutos y la zona de cada tramo van escritos arriba (sin leyenda). */
-function bloqueSilueta(sil, titulo = null) {
+function bloqueSilueta(sil, titulo = null, rachas = null) {
   if (!sil || !sil.length) return null;
-  return h("div", { class: "bloque-sil" }, titulo ? h("p", { class: "titulo-sil" }, titulo) : null, siluetaSesion(sil));
+  return h("div", { class: "bloque-sil" }, titulo ? h("p", { class: "titulo-sil" }, titulo) : null, siluetaSesion(sil, 40, true, rachas));
+}
+
+/** Lo que la silueta no dice. Sesión sencilla (hasta 3 rachas, sin repeticiones): solo las notas de sus pasos
+ *  ("Trote: arranca suave…"). Si no, la lista de pasos dentro de un "Ver pasos" cerrado. */
+function detallePasos(ses) {
+  const pasos = ses.steps || [];
+  if ((ses.rachas || []).length <= 3 && !pasos.some((p) => p.kind === "repeat")) {
+    const notas = pasos.filter((p) => p.note && p.note !== "opcional" && p.note !== ETIQUETA_PASO[p.kind]).map((p) => {
+      const tipo = ETIQUETA_PASO[p.kind] || p.kind;
+      return h("p", { class: "nota nota-paso" }, `${tipo[0].toUpperCase()}${tipo.slice(1)}${p.optional ? " (opcional)" : ""}: ${p.note}`);
+    });
+    return notas.length ? h("div", {}, ...notas) : null;
+  }
+  return h("details", {}, h("summary", {}, "Ver pasos"), h("ul", { class: "pasos" }, pasos.map(pasoLi)));
 }
 
 /** Cuerpo desplegable de una sesión del plan (la silueta ya se ve en la fila): pasos y versión suave. */
 function cuerpoPlan(s) {
-  return [bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
-    s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`), bloqueSilueta(s.easy.silueta, s.easy.titulo),
-      h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null];
+  return [bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, detallePasos(s), versionSuave(s)];
+}
+
+function versionSuave(s) {
+  return s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`),
+    bloqueSilueta(s.easy.silueta, s.easy.titulo, s.easy.rachas), detallePasos(s.easy)) : null;
 }
 
 /** Silueta a color dentro de la fila cerrada (sin globito: tocarla abre la fila). */
 const silFila = (s) => (s && s.silueta && s.silueta.length
-  ? h("div", { class: "sil-fila" }, s.titulo ? h("p", { class: "titulo-sil" }, s.titulo) : null, siluetaSesion(s.silueta, 36, false)) : null);
+  ? h("div", { class: "sil-fila" }, s.titulo ? h("p", { class: "titulo-sil" }, s.titulo) : null, siluetaSesion(s.silueta, 36, false, s.rachas)) : null);
 
 /** Fila compacta de una sesión: nombre, minutos, estado y su silueta; al abrirla, pasos y versión suave. */
 function filaSesion(s, est) {
@@ -369,7 +386,7 @@ function filaHoy(e, s, t) {
   if (t.version === "descanso") {
     c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
   } else if (ses) {
-    c.append(...[bloqueSilueta(ses.silueta, ses.titulo), bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi))].filter(Boolean));
+    c.append(...[bloqueSilueta(ses.silueta, ses.titulo, ses.rachas), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
   }
   if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
   return c;

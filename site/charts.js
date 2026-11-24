@@ -357,7 +357,7 @@ function silueta(tramos, opts = {}) {
       if (sig) pts.push([x1, (yy + y(sig.t.n)) / 2]);
       svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `sil-ln ${t.clase}${t.opcional ? " opc" : ""}` }));
     });
-    if (opts.etiquetas) etiquetasSilueta(cont, caja, R, xr, W);
+    if (opts.rachas) etiquetasSilueta(cont, opts.rachas, R, total);
     const tip = tooltipEn(cont);
     for (const { t, x0, x1 } of caja) {
       if (!t.texto) continue;
@@ -375,29 +375,47 @@ function silueta(tramos, opts = {}) {
   return cont;
 }
 
-/** Arriba de la silueta, "6' Z2" por cada racha de la misma zona (y "5' Z0" en las rampas). Si dos quedan muy juntas,
- *  la segunda sube a otro renglón (hasta 3). La altura extra se agrega como padding del contenedor. */
-function etiquetasSilueta(cont, caja, R, xr, W) {
-  const rachas = [];
-  for (const { t, x0, x1 } of caja) {
-    const u = rachas[rachas.length - 1];
-    if (u && u.clase === t.clase) { u.x1 = x1; u.m += t.d; } else rachas.push({ clase: t.clase, x0, x1, m: t.d, z: `Z${t.clase.slice(1)}` });
+/**
+ * Arriba de la silueta: "5 min / calentar", "20 min Z1–Z2 / 125–150 lpm" por racha y "5 min / enfriar". Con más de 3
+ * rachas cada una va en un renglón ("2 min Z3"; los lpm quedan en Ver pasos). Al cambiar de tamaño se acomodan
+ * midiendo su ancho real: una etiqueta que se encimaría sube al segundo renglón, y si tampoco cabe ahí, se esconde.
+ */
+function etiquetasSilueta(cont, rachas, R, total) {
+  const detalle = rachas.length <= 3;
+  let t = R;
+  const items = [{ c: R / 2 / total, top: `${fmt(R, 0)} min`, sub: "calentar", cls: "rampa" }];
+  for (const r of rachas) {
+    items.push({ c: (t + r.min / 2) / total, top: `${fmt(r.min, 0)} min ${r.zona}`,
+      sub: detalle ? [r.lpm ? `${r.lpm[0]}–${r.lpm[1]} lpm` : null, r.opcional ? "opcional" : null].filter(Boolean).join(" · ") : null });
+    t += r.min;
   }
-  const todas = [{ x0: 0, x1: xr, m: R, z: "Z0" }, ...rachas, { x0: W - xr, x1: W, m: R, z: "Z0" }];
-  const ANCHO = 0.12;                     // ~36 px de etiqueta en una silueta de ~300 px, como fracción del ancho
-  const ultimoEn = [-1, -1, -1];          // hasta 3 renglones; si ninguno tiene espacio, el que quedó más libre
-  let filas = 1;
-  todas.forEach((e, i) => {
-    const c = (e.x0 + e.x1) / 2 / W;
-    let fila = ultimoEn.findIndex((u) => c - u >= ANCHO);
-    if (fila < 0) fila = ultimoEn.indexOf(Math.min(...ultimoEn));
-    ultimoEn[fila] = c;
-    filas = Math.max(filas, fila + 1);
-    const lado = i === 0 ? "izq" : i === todas.length - 1 ? "der" : "";
-    cont.append(h("span", { class: `sil-etq f${fila} ${lado}`, "aria-hidden": "true",
-      style: lado === "izq" ? "left:0" : lado === "der" ? "right:0" : `left:${(c * 100).toFixed(2)}%` }, `${fmt(e.m, 0)}' ${e.z}`));
-  });
-  cont.style.marginTop = `${filas * 13 + 4}px`;
+  items.push({ c: (total - R / 2) / total, top: `${fmt(R, 0)} min`, sub: "enfriar", cls: "rampa" });
+  const els = items.map((e) => h("span", { class: `sil-etq ${e.cls || ""}`, "aria-hidden": "true" },
+    h("b", {}, e.top), e.sub ? h("small", {}, e.sub) : null));
+  cont.append(...els);
+  if (!detalle) cont.classList.add("apretada");
+  // orden de acomodo: rampas y luego las rachas más largas; hasta 2 renglones; la que no cabe se esconde (está en Ver pasos)
+  const orden = items.map((e, i) => i).sort((i, j) => (items[j].cls ? 1e9 : rachas[j - 1].min) - (items[i].cls ? 1e9 : rachas[i - 1].min));
+  const colocar = () => {
+    const W = cont.clientWidth;
+    if (!W) return;
+    const filas = [[], []], alto = [0, 0];
+    for (const i of orden) {
+      const el = els[i];
+      el.hidden = false;
+      const w = el.offsetWidth;
+      const izq = Math.min(Math.max(items[i].c * W - w / 2, 0), W - w);
+      const f = filas.findIndex((fila) => fila.every(([a, b]) => izq + w + 8 <= a || izq >= b + 8));
+      if (f < 0) { el.hidden = true; continue; }
+      filas[f].push([izq, izq + w]);
+      alto[f] = Math.max(alto[f], el.offsetHeight);
+      el.style.left = `${izq}px`;
+      el.dataset.fila = f;
+    }
+    els.forEach((el) => { if (!el.hidden) el.style.bottom = `calc(100% + ${el.dataset.fila === "1" ? alto[0] + 2 : 0}px)`; });
+    cont.style.marginTop = `${alto[0] + (alto[1] ? alto[1] + 2 : 0) + 4}px`;
+  };
+  new ResizeObserver(colocar).observe(cont);
 }
 
 /** Catálogo: forma del tipo [[d, n] | [d, n1, n2]] -> silueta sin color. */
@@ -405,7 +423,8 @@ const siluetaForma = (forma, alto = 48, etiqueta) =>
   silueta(forma.map(([d, n, n2]) => ({ d, n, n2: n2 === undefined ? undefined : n2 })), { alto, etiqueta });
 
 /** Sesión: [[minutos, zona, opcional?]] -> silueta con el color Garmin de cada zona. */
-const siluetaSesion = (sil, alto = 40, conTip = true) =>
+const siluetaSesion = (sil, alto = 40, conTip = true, rachas = null) =>
   silueta(sil.map(([m, z, opc]) => ({ d: m, n: NIVEL_ZONA[z] ?? 0.45, clase: `g${(z || "Z2").slice(1)}`, opcional: !!opc,
     texto: conTip ? `${m}' · ${z}${opc ? " (opcional)" : ""}` : undefined })),
-  { alto, etiquetas: true, etiqueta: `Silueta de la sesión: 5' de calentamiento, ${sil.map(([m, z]) => `${m}' ${z}`).join(", ")} y 5' de enfriamiento` });
+  { alto, rachas, etiqueta: `Silueta de la sesión: 5 min de calentamiento, ${(rachas || sil.map(([m, z]) => ({ min: m, zona: z })))
+    .map((r) => `${r.min} min ${r.zona}`).join(", ")} y 5 min de enfriamiento` });
