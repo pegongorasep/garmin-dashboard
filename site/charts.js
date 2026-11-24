@@ -187,9 +187,16 @@ function lineChart(cfg) {
  * Segmentos separados por 2 px de superficie; barra de 24 px como máximo; extremo superior redondeado.
  */
 function barChart(cfg) {
-  const { ancho: W, alto: H = 170, semanas } = cfg;
+  const { ancho: W, semanas } = cfg;
   const cont = h("div", { class: "chart" });
-  const ml = 38, mr = 10, mt = 14, mb = 22;
+  const ml = 38, mr = 10, mb = 22;
+  // `iconos`: (semana) => [nombre]; una franja arriba con un ícono por entreno, en columnas sobre cada barra
+  const slot = (W - ml - mr) / semanas.length;
+  const ICO = 12, PASO = ICO + 1;
+  const porFila = Math.max(1, Math.min(3, Math.floor(slot / PASO)));
+  const filasIco = cfg.iconos ? Math.max(0, ...semanas.map((s) => Math.ceil(cfg.iconos(s).length / porFila))) : 0;
+  const franja = filasIco ? filasIco * PASO + 6 : 0;
+  const mt = 14 + franja, H = (cfg.alto || 170) + franja;
   const total = (s) => s.valores.reduce((a, v) => a + v, 0);
   const clases = cfg.clases || ["s1", "s2"];
   const max = cfg.tope || Math.max(...semanas.map((s) => Math.max(total(s), s.meta || 0)), 0);
@@ -208,7 +215,6 @@ function barChart(cfg) {
   if (cfg.ref) {   // línea de referencia a todo el ancho (p. ej. meta 80 %)
     svg.append(sv("line", { class: "meta-ref", x1: ml, x2: W - mr, y1: y(cfg.ref.y), y2: y(cfg.ref.y) }, sv("title", {}, cfg.ref.etiqueta)));
   }
-  const slot = (W - ml - mr) / semanas.length;
   const ancho = Math.min(24, slot * 0.64);
   const cada = Math.max(1, Math.ceil(42 / slot));
   const tip = tooltipEn(cont);
@@ -228,6 +234,18 @@ function barChart(cfg) {
       svg.append(sv("path", { class: `serie ${clases[k] || "s" + (k + 1)}`, d }));
       base = top - 2;
     });
+    if (filasIco) {   // pegados encima de la barra (o de la raya del plan), de abajo hacia arriba; la franja deja el espacio
+      const lista = cfg.iconos(s), piso = y(Math.max(total(s), s.meta || 0)) - 4;
+      lista.forEach((nombre, k) => {
+        const fila = Math.floor(k / porFila), col = k % porFila;
+        const enFila = Math.min(porFila, lista.length - fila * porFila);
+        const ic = icono(nombre, ICO);
+        ic.setAttribute("x", cx - (enFila * PASO) / 2 + col * PASO + 1);
+        ic.setAttribute("y", piso - (fila + 1) * PASO);
+        ic.classList.add("ico-sem");
+        svg.append(ic);
+      });
+    }
     if (s.meta) svg.append(sv("line", { class: "meta", x1: cx - ancho / 2 - 3, x2: cx + ancho / 2 + 3, y1: y(s.meta), y2: y(s.meta) }));
     if (cfg.etiquetaFinal && i === semanas.length - 1) {
       svg.append(sv("text", { class: "eje valor-fin", x: Math.min(cx + 6, W - 2), y: Math.max(y(Math.max(total(s), s.meta || 0)) - 5, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
@@ -347,6 +365,6 @@ const siluetaForma = (forma, alto = 48, etiqueta) =>
   silueta(forma.map(([d, n, n2]) => ({ d, n, n2: n2 === undefined ? undefined : n2 })), { alto, etiqueta });
 
 /** Sesión: [[minutos, zona, opcional?]] -> silueta con el color Garmin de cada zona. */
-const siluetaSesion = (sil, alto = 40) =>
+const siluetaSesion = (sil, alto = 40, conTip = true) =>
   silueta(sil.map(([m, z, opc]) => ({ d: m, n: NIVEL_ZONA[z] ?? 0.45, clase: `g${(z || "Z2").slice(1)}`, opcional: !!opc,
-    texto: `${m}' · ${z}${opc ? " (opcional)" : ""}` })), { alto, etiqueta: "Silueta de la sesión: minutos y zona de cada tramo" });
+    texto: conTip ? `${m}' · ${z}${opc ? " (opcional)" : ""}` : undefined })), { alto, etiqueta: "Silueta de la sesión: minutos y zona de cada tramo" });

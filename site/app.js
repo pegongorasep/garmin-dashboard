@@ -128,9 +128,6 @@ function estadoSesion(est) {
   return h("span", { class: "estado" }, badge("ok", "✓", "hecha"), "Hecha");
 }
 
-const GARMIN_COMO = "Entrenamientos → Crear entrenamiento → Correr. Agrega un paso por línea (los grupos “N× ( … )” van como repetición). En cada paso elige duración en minutos y, como objetivo, “Alerta de FC” con el rango de lpm de arriba.";
-
-/** Pasos, versión suave y cómo crearla en Garmin Connect (cuerpo desplegable de una sesión del plan). */
 /** Sesión de calidad: estructura legible y zona objetivo con sus lpm. */
 function bloqueCalidad(s) {
   if (!s || !s.objetivo) return null;
@@ -149,31 +146,32 @@ function resumenSilueta(sil) {
   return out.length <= 8 ? out.map(([m, z]) => `${m}' ${z}`).join(" · ") : null;
 }
 
-/** Silueta de la sesión con el color de cada zona, mini leyenda (solo las zonas que aparecen) y resumen. */
-function bloqueSilueta(sil) {
+/** Silueta de la sesión con el color de cada zona, mini leyenda (solo las zonas que aparecen) y resumen.
+ *  `conGrafica` false: solo leyenda y resumen (la silueta ya se ve en la fila cerrada). */
+function bloqueSilueta(sil, conGrafica = true) {
   if (!sil || !sil.length) return null;
   const zonas = [...new Set(sil.map(([, z]) => z))].sort();
   const resumen = resumenSilueta(sil);
-  return h("div", { class: "bloque-sil" }, siluetaSesion(sil),
+  return h("div", { class: "bloque-sil" }, conGrafica ? siluetaSesion(sil) : null,
     h("div", { class: "leyenda", "aria-label": "Zonas de la silueta" },
       zonas.map((z) => h("span", {}, h("i", { class: `g${z.slice(1)}`, "aria-hidden": "true" }), z))),
     resumen ? h("p", { class: "nota resumen-sil" }, resumen) : null);
 }
 
+/** Cuerpo desplegable de una sesión del plan: leyenda y resumen de la silueta (que ya se ve arriba), pasos y versión suave. */
 function cuerpoPlan(s) {
-  return [bloqueSilueta(s.silueta), bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
+  return [bloqueSilueta(s.silueta, false), bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
     s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`), bloqueSilueta(s.easy.silueta),
-      h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null,
-    comoGarmin()];
+      h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null];
 }
 
-const comoGarmin = () =>
-  h("details", {}, h("summary", {}, "Cómo crearla en Garmin Connect"), h("p", { class: "nota", style: "margin-top:6px" }, GARMIN_COMO));
+/** Silueta a color dentro de la fila cerrada (sin globito: tocarla abre la fila). */
+const silFila = (sil) => (sil && sil.length ? h("div", { class: "sil-fila" }, siluetaSesion(sil, 30, false)) : null);
 
-/** Fila compacta de una sesión: nombre, minutos y estado; al abrirla, pasos, versión suave y cómo crearla en Garmin. */
+/** Fila compacta de una sesión: nombre, minutos, estado y su silueta; al abrirla, pasos y versión suave. */
 function filaSesion(s, est) {
   return h("details", { class: "ses" },
-    h("summary", {}, h("span", { class: "n" }, s.name), h("span", { class: "m" }, `${s.minutes} min`), estadoSesion(est)),
+    h("summary", {}, h("span", { class: "n" }, s.name), h("span", { class: "m" }, `${s.minutes} min`), estadoSesion(est), silFila(s.silueta)),
     ...cuerpoPlan(s));
 }
 
@@ -389,7 +387,6 @@ function filaHoy(e, s, t) {
     c.append(...[bloqueSilueta(ses.silueta), bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi))].filter(Boolean));
   }
   if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
-  if (t.version !== "descanso" && ses) c.append(comoGarmin());
   return c;
 }
 
@@ -397,7 +394,7 @@ function filaPendiente(e, s) {
   const larga = e.tipo === "larga";
   return h("details", { class: "ses corrida" },
     h("summary", {}, h("span", { class: "n" }, e.name),
-      h("span", { class: "m" }, `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}`)),
+      h("span", { class: "m" }, `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}`), silFila(s && s.silueta)),
     ...(s ? cuerpoPlan(s) : []));
 }
 
@@ -429,6 +426,16 @@ function deltaInbody(delta, buenoSiBaja) {
   return h("span", { class: `delta${bueno ? " bien" : ""}` }, `${delta > 0 ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}`);
 }
 
+/** Leyenda de la gráfica de minutos: la raya del plan y los íconos de entreno que aparecen arriba de las barras. */
+function leyendaMinutos(mj) {
+  const hay = new Set((mj.semanas || []).flatMap((s) => s.iconos || []));
+  const ley = leyenda([["raya", "Plan"]]);
+  const items = [["correr", "Corrida"], ["medalla", "Carrera"], ...ui().categorias.map((c) => [c.icono, c.nombre])]
+    .filter(([ic], i, a) => hay.has(ic) && a.findIndex(([x]) => x === ic) === i);
+  ley.append(...items.map(([ic, nombre]) => h("span", {}, icono(ic, 14), nombre)));
+  return ley;
+}
+
 function tarjetaMejora(d) {
   const mj = (d.progreso || {}).mejora;
   if (!mj) return null;
@@ -442,7 +449,7 @@ function tarjetaMejora(d) {
   const hayOtras = cats.length > 0;
   const graficas = hayMin || hayPct
     ? h("div", { class: "mini2" },
-      h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
+      h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyendaMinutos(mj)),
       h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct),
       hayOtras ? h("div", {}, h("h3", {}, "Otros entrenos por semana"), MEJ.otras,
         h("div", { class: "leyenda" }, cats.map((c) => h("span", {}, h("i", { class: `sw ${c.clase}`, "aria-hidden": "true" }), icono(c.icono, 14), c.nombre)))) : null)
@@ -450,6 +457,18 @@ function tarjetaMejora(d) {
   PINTAR.progreso.push(dibujarMejora);
   return h("div", { class: "card ancha" }, h("h2", {}, "Cómo vas mejorando"),
     h("p", { class: "frase-mej" }, mj.frase), graficas);
+}
+
+/** " · 2 corridas · 1 CrossFit" a partir de los íconos de la semana (para el globito y lectores de pantalla). */
+function textoEntrenos(iconos) {
+  if (!iconos || !iconos.length) return "";
+  const corr = iconos.filter((i) => i === "correr").length, carr = iconos.filter((i) => i === "medalla").length;
+  const partes = [corr ? `${corr} ${corr === 1 ? "corrida" : "corridas"}` : null, carr ? `${carr} ${carr === 1 ? "carrera" : "carreras"}` : null];
+  for (const c of ui().categorias) {
+    const n = iconos.filter((i) => i === c.icono).length;
+    if (n) partes.push(`${n} ${c.nombre}`);
+  }
+  return partes.filter(Boolean).map((p) => ` · ${p}`).join("");
 }
 
 function dibujarMejora() {
@@ -463,7 +482,8 @@ function dibujarMejora() {
     ancho, alto: 100, clases: ["s1"], etiqueta: "Minutos por semana, últimas 8 semanas, con raya del plan",
     semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.minutos || 0], meta: s.plan_min || 0, s })),
     etiquetaFinal: ult ? `${fmt(ult.minutos, 0)}'` : null,
-    texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}`,
+    iconos: semanas.some((s) => (s.iconos || []).length) ? (b) => b.s.iconos || [] : null,
+    texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}${textoEntrenos(b.s.iconos)}`,
   }));
   const cats = ui().categorias.filter((c) => (mj.otras || []).some((o) => (o.conteos || {})[c.id] > 0));
   if (cats.length && MEJ.otras) {

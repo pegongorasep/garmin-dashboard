@@ -40,6 +40,8 @@ def problemas(datos: dict) -> list:
                     out.append(f"clave prohibida: {ruta}/{k}")
                 if k == "icono" and v is not None and v not in ICONOS:
                     out.append(f"ícono desconocido: {ruta}/{k} = {v!r}")
+                if k == "iconos" and isinstance(v, list) and set(v) - ICONOS:
+                    out.append(f"ícono desconocido en {ruta}/{k}: {sorted(set(v) - ICONOS)}")
                 recorrer(v, f"{ruta}/{k}")
         elif isinstance(o, list):
             for i, v in enumerate(o):

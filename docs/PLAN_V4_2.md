@@ -193,3 +193,10 @@ Corrige lo que encuentres y actualiza la tabla.
 | F6 Fuerza/HIIT y 80/20 | ✅ |
 | F7 Capturas | ✅ |
 | Revisión Opus + publicar | ✅ publicado y `stable` 2026-11-24 |
+
+## Ajuste v4.2.1 (2026-11-24, pedido de Pedro)
+
+- Hoy › Tus corridas y Plan › 12 semanas: cada sesión muestra su silueta a color en la fila cerrada; al abrirla, leyenda,
+  resumen y pasos (sin repetir la silueta). Se quitó "Cómo crearla en Garmin Connect".
+- Progreso › Cómo vas mejorando: arriba de cada barra de "Minutos por semana", un ícono por entreno de la semana
+  (corrida/medalla primero, luego cada categoría). Python manda `progreso.mejora.semanas[].iconos`; `validar.py` revisa los nombres.

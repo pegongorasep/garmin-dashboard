@@ -419,6 +419,21 @@ def con_ritmo_z2(filas: list, zonas: list) -> list:
     return out
 
 
+def iconos_semana(ini: date, data, config) -> list:
+    """Un ícono por entreno registrado en la semana: primero las corridas (medalla si fue carrera), luego las demás
+    actividades con el ícono de su categoría; cada grupo en orden de fecha."""
+    if data is None or config is None:
+        return []
+    iconos = {c["id"]: c["icono"] for c in config["categorias"]}
+    out = []
+    for a in sorted(data["activities"], key=lambda a: a["startTimeLocal"]):
+        c = m.classify(a, config)
+        if not c or not ini <= m.day_of(a) < ini + timedelta(days=7):
+            continue
+        out.append((c != "run", ("medalla" if m.es_carrera(a, config) else "correr") if c == "run" else iconos.get(c, "punto")))
+    return [ic for _, ic in sorted(out, key=lambda x: x[0])]
+
+
 def build_mejora(hoy: date, filas: list, semanas: list, zonas: list, data=None, config=None) -> dict:
     """Cómo vas mejorando: frase, minutos de las últimas 8 semanas (con plan) y, según haya caminatas o no,
     % trote (modo "trote") o ritmo en Z2 (modo "ritmo") de las últimas 12 corridas."""
@@ -437,7 +452,8 @@ def build_mejora(hoy: date, filas: list, semanas: list, zonas: list, data=None, 
         frase_otras = [{"nombre": c["nombre"], "ahora": ahora.get(c["id"], 0) / 4, "antes": antes.get(c["id"], 0) / 4}
                        for c in config["categorias"]]
     out = {"frase": m.mejora_frase(filas, hoy, modo, frase_otras), "modo": modo, "otras": otras,
-           "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"]} for s in semanas[-8:]],
+           "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"],
+                        "iconos": iconos_semana(date.fromisoformat(s["inicio"]), data, config)} for s in semanas[-8:]],
            "corridas": [{"fecha": f["fecha"], "pct_trote": r1(f["pct_trote"])} for f in filas[-12:]]}
     if modo == "ritmo":
         out["ritmo"] = [{"fecha": f["fecha"], "ritmo_s": round(f["ritmo_z2_s"])} for f in filas if f["ritmo_z2_s"]][-12:]

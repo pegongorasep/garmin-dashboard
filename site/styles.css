@@ -263,6 +263,7 @@ details.ses > details > summary { margin-top: 8px; }
 .chip-hoy { font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--page); }
 details.ses.corrida { padding-block: 0; }
 details.ses.corrida > summary { padding-block: 12px; }
+details.ses > summary .sil-fila { flex-basis: 100%; padding-left: 20px; pointer-events: none; }
 details.recup { margin-block: 12px; }
 details.recup > summary { display: flex; align-items: center; gap: 8px; margin-top: 0; padding-block: 8px; color: var(--ink); font-size: 14px; }
 details.recup .badge { width: 18px; height: 18px; font-size: 11px; }
@@ -464,3 +465,4 @@ details.ses.carrera-det > summary .ico-svg { color: var(--ink); }
 .meta-ref { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .leyenda .ico-svg { margin-right: 4px; margin-left: -2px; }
 .leyenda i.raya-disc { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed var(--ink); vertical-align: 3px; }
+.chart .ico-sem { color: var(--ink-2); pointer-events: none; }

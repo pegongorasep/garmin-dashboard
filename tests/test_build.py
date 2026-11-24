@@ -592,7 +592,12 @@ def test_mejora_otras_e_intensidad_por_semana():
     assert len(mj["otras"]) == 8 and mj["otras"][-1]["semana"] == "2026-11-02"
     assert mj["otras"][-1]["conteos"] == {"crossfit": 5}            # 2 del fixture + 3 nuevas; las corridas no cuentan
     assert mj["frase"].endswith(" · CrossFit 0.5 por semana (antes 0.0).")
-    sin = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    # un ícono por entreno de la semana, en orden: corridas y rayo (CrossFit)
+    ult = mj["semanas"][-1]["iconos"]
+    assert ult.count("rayo") == 5 and len(ult) == 5 + sum(1 for a in data["activities"]
+                                                          if build.m.classify(a, CONFIG_FIXTURE) == "run" and a["startTimeLocal"] >= "2026-11-02")
+    assert set(ult) <= {"correr", "medalla", "rayo"}
+    sin =build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
     assert "CrossFit" not in sin["progreso"]["mejora"]["frase"]   # sin sesiones en las 8 semanas anteriores, la frase no la menciona
     # 80/20: misma cuenta que la barra de Detalles; porcentajes Z1–Z2 / Z3 / Z4–Z5, Z0 fuera
     semana = out["semanas_hoy"][out["semana_hoy_idx"]]["intensidad"]
