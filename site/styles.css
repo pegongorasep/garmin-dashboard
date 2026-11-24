@@ -59,8 +59,9 @@ body {
 /* Vistas: una columna en teléfono; con ≥ 900 px, dos columnas y las tarjetas `.ancha` ocupan las dos */
 .vista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; align-content: start; }
 .vista[hidden] { display: none; }
-#app .vista > *, #app .vista #hoy-semana > * { margin: 0; min-width: 0; }
-#hoy-semana { display: contents; }
+#app .vista > *, #app .vista #hoy-semana > *, #app .vista .sub > * { margin: 0; min-width: 0; }
+#hoy-semana, .sub { display: contents; }
+.sub[hidden] { display: none; }
 .card.ancha, .ancha { grid-column: 1 / -1; }
 @media (min-width: 900px) {
   .top, #app { max-width: 1080px; }
@@ -237,8 +238,6 @@ details.ses > summary .m { color: var(--ink-2); }
 details.ses > summary .estado { margin-left: auto; font-size: 13px; }
 details.ses > details > summary { margin-top: 8px; }
 
-.enlace-detalles { display: block; text-align: center; padding: 14px 8px; margin-block: 8px; font-weight: 600; }
-.volver { display: inline-block; margin-top: 12px; padding: 6px 2px; font-weight: 600; text-decoration: none; }
 .tabla-scroll.ancha { max-height: 360px; overflow-x: auto; }
 .tabla-scroll.ancha th, .tabla-scroll.ancha td { padding-inline: 4px; white-space: nowrap; }
 

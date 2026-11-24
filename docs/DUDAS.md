@@ -163,3 +163,5 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **F2 Z3 de la variada.** `tope = min(6', 20 % de la sesión)`; sale de la fórmula `int(min * 0.2)`. Z4/Z5 nunca. La tolerancia de "minutos sobre el techo" de esa corrida sube lo que el plan pide en Z3 (`run_check`).
 - **F2 calidad.** `progresivo` = 10' Z2 · 6' Z2 · (8/10/12)' Z3 · 5' suave; `fartlek` = 5 o 6 tramos Z3 irregulares con pausas de 2' (objetivo = minutos en Z3). Con `variada: true` y calidad sin `calidad_tipos`, rotan los 5 (se llena en `ajustes.cargar_config`).
 - **F2 `tipos` en data.json.** `{catalogo, grupos, en_plan}`; `en_plan` sale de las formas derivadas de todas las sesiones del plan (también las de semanas pasadas).
+- **F3 "Intensidad de la semana" (barra 80/20 completa de Detalles).** Quedó en Plan, debajo de las reglas (es la regla 80/20 con la semana actual); en Progreso › Corridas irá la gráfica por semana (F6) y en Hoy la barra compacta.
+- **F3 Carga semanal** pasó a Progreso › Corridas (al final) y "FC máxima y zonas" a Plan. Alias vivos: `#cuerpo`, `#detalles`, `#cuerpo?hoja`, `#progreso?carrera`.

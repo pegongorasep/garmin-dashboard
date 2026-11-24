@@ -1,10 +1,10 @@
 // Dashboard: solo pinta lo que recibe de data.json (la lógica vive en dashboard/build.py).
-const VISTAS = ["hoy", "progreso", "cuerpo", "detalles"];
+const VISTAS = ["hoy", "plan", "progreso"];   // Progreso tiene dos subvistas: Corridas (#progreso) y Cuerpo (#progreso/cuerpo)
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const DIAS_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 let datos = null;
 // Lo que cada vista vuelve a dibujar cuando ya tiene ancho (gráficas) o cambia el tamaño; lo llena su render.
-const PINTAR = { hoy: [], progreso: [], cuerpo: [], detalles: [] };
+const PINTAR = { hoy: [], plan: [], progreso: [], cuerpo: [] };   // `cuerpo` = subvista Cuerpo de Progreso
 
 // --- utilidades ---
 
@@ -154,10 +154,6 @@ function filaSesion(s, est) {
     h("summary", {}, h("span", { class: "n" }, s.name), h("span", { class: "m" }, `${s.minutes} min`), estadoSesion(est)),
     ...cuerpoPlan(s));
 }
-
-const enlaceDetalles = () => h("a", { class: "enlace-detalles ancha", href: "#detalles" }, "Detalles: zonas, reglas, intensidad y carga →");
-
-// --- vista Hoy ---
 
 const nombreSesion = (estado, id) => ((estado || []).find((e) => e.id === id) || {}).name;
 
@@ -474,7 +470,7 @@ function pintarSemana(d) {
 // --- carrera destacada (últimos 7 días) ---
 
 const carreraReciente = (d) => ((d.carreras || [])[0] || {}).reciente ? d.carreras[0] : null;
-let abrirCarrera = false;   // «Ver en Progreso → Carreras» pide abrir y mostrar la carrera más nueva
+let abrirCarrera = false;   // «Ver en Progreso › Carreras» pide abrir y mostrar la carrera más nueva
 
 /** hh:mm:ss si pasa de una hora, si no mm:ss. */
 const tiempoLargo = (seg) => {
@@ -488,7 +484,7 @@ function tarjetaCarreraHoy(c) {
     h("div", { class: "nums4" },
       num(`${fmt(c.distancia_km, 2)} km`, "Distancia"), num(tiempoLargo(c.tiempo_s), "Tiempo"),
       num(c.ritmo_s ? `${mmss(c.ritmo_s)} /km` : "—", "Ritmo"), num(c.fc_prom != null ? `${fmt(c.fc_prom, 0)} lpm` : "—", "FC promedio")),
-    h("a", { class: "ver-progreso", href: "#progreso", onclick: () => { abrirCarrera = true; } }, "Ver todo en Progreso → Carreras"));
+    h("a", { class: "ver-progreso", href: "#progreso", onclick: () => { abrirCarrera = true; } }, "Ver todo en Progreso › Carreras"));
 }
 
 function renderHoy(d) {

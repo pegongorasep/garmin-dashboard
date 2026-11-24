@@ -1,4 +1,4 @@
-// Vistas Progreso y Detalles, más el arranque.
+// Vistas Plan y Progreso (Corridas · Cuerpo), más el arranque.
 const $ = (id) => document.getElementById(id);
 const REPO_DOCS = "https://github.com/pegongorasep/garmin-dashboard/blob/main/docs/";
 
@@ -78,21 +78,55 @@ function filaNumeros(d) {
   }));
 }
 
+let subProgreso = "corridas";   // "corridas" | "cuerpo", lo decide la ruta (#progreso o #progreso/cuerpo)
+
+/** Control segmentado Corridas | Cuerpo (mismo estilo que los botones de vista). Cambia la ruta; mostrarVista hace el resto. */
+function selectorProgreso() {
+  const boton = (id, etiqueta) => h("button", { type: "button", role: "tab", "aria-selected": id === subProgreso ? "true" : "false",
+    onclick: () => { location.hash = id === "cuerpo" ? "#progreso/cuerpo" : "#progreso"; } }, etiqueta);
+  return h("div", { class: "toggle segs ancha", id: "prog-subtabs", role: "tablist", "aria-label": "Progreso" },
+    boton("corridas", "Corridas"), boton("cuerpo", "Cuerpo"));
+}
+
 function renderProgreso(d) {
   PINTAR.progreso = [];
+  PINTAR.cuerpo = [];
   const raiz = $("vista-progreso");
   const prog = d.progreso || {};
   const boton = (n) => h("button", { type: "button", "aria-pressed": n === periodo ? "true" : "false",
-    onclick: () => { periodo = n; renderProgreso(d); REDIBUJAR.progreso(); } }, `${n} semanas`);
-  raiz.replaceChildren(...[
-    h("div", { class: "toggle ancha", role: "group", "aria-label": "Periodo" }, [4, 8, 12].map(boton)),
-    filaNumeros(d),
-    tarjetaMejora(d),
-    tarjetaCorridasProgreso(d),
-    tarjetaMejoresMarcas(d),
-    tarjetaCarreras(d),
+    onclick: () => { periodo = n; renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }, `${n} semanas`);
+  raiz.replaceChildren(selectorProgreso(),
+    h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...[
+      h("div", { class: "toggle ancha", role: "group", "aria-label": "Periodo" }, [4, 8, 12].map(boton)),
+      filaNumeros(d),
+      tarjetaMejora(d),
+      tarjetaCorridasProgreso(d),
+      tarjetaMejoresMarcas(d),
+      tarjetaCarreras(d),
+      d.detalles && d.detalles.carga ? tarjetaCarga(d.detalles) : null].filter(Boolean)),
+    h("div", { class: "sub", id: "prog-cuerpo", hidden: subProgreso !== "cuerpo" },
+      ...[tarjetaRecuperacion(d), tarjetaComposicion(d.composicion)].filter(Boolean)));
+}
+
+/** Muestra Corridas o Cuerpo según `subProgreso` y marca el botón elegido. */
+function mostrarSubvista() {
+  const corr = $("prog-corridas"), cue = $("prog-cuerpo");
+  if (!corr || !cue) return;
+  corr.hidden = subProgreso !== "corridas";
+  cue.hidden = subProgreso !== "cuerpo";
+  document.querySelectorAll("#prog-subtabs button").forEach((b, i) => b.setAttribute("aria-selected", (i === 0) === (subProgreso === "corridas") ? "true" : "false"));
+}
+
+// --- Plan ---
+
+function renderPlan(d) {
+  PINTAR.plan = [];
+  const det = d.detalles || {};
+  $("vista-plan").replaceChildren(...[
     tarjetaDoceSemanas(d),
-    enlaceDetalles()].filter(Boolean));
+    tarjetaFcMax(d),
+    tarjetaComoFunciona(d),
+    det.distribucion ? zonaBar(det.distribucion) : null].filter(Boolean));
 }
 
 function tarjetaDoceSemanas(d) {
@@ -425,12 +459,7 @@ function tarjetaRecuperacion(d) {
     { etiqueta: "Sueño", pintar: (a) => graficaRecuperacion(d, a, "sueno") }]);
 }
 
-function renderCuerpo(d) {
-  PINTAR.cuerpo = [];
-  $("vista-cuerpo").replaceChildren(...[tarjetaRecuperacion(d), tarjetaComposicion(d.composicion), tarjetaFcMax(d), enlaceDetalles()].filter(Boolean));
-}
-
-// --- Detalles ---
+// --- Plan: zonas y reglas · Progreso: carga ---
 
 const DET = {};
 
@@ -483,20 +512,11 @@ function tarjetaComoFunciona(d) {
 }
 
 function tarjetaCarga(det) {
+  PINTAR.progreso.push(dibujarDetalles);
   const c = bloqueCarga(det);
   DET.carga = { sub: h("p", { class: "nota" }), chart: h("div", { class: "chart-wrap" }), extra: h("div", {}) };
   c.append(h("h3", { style: "margin-top:14px" }, "Últimas 12 semanas"), DET.carga.sub, DET.carga.chart, DET.carga.extra);
   return c;
-}
-
-function renderDetalles(d) {
-  const det = d.detalles || {};
-  PINTAR.detalles = [dibujarDetalles];
-  $("vista-detalles").replaceChildren(
-    h("a", { class: "volver ancha", href: "#hoy", onclick: (ev) => { ev.preventDefault(); location.hash = `#${vistaAnterior}`; } }, "← Volver"),
-    tarjetaComoFunciona(d),
-    det.distribucion ? zonaBar(det.distribucion) : null,
-    det.carga ? tarjetaCarga(det) : null);
 }
 
 function dibujarDetalles() {
@@ -540,9 +560,16 @@ function cambiarTema() {
 
 // --- arranque ---
 
-const REDIBUJAR = Object.fromEntries(VISTAS.map((v) => [v, () => PINTAR[v].forEach((f) => f())]));
+// Plan y Hoy redibujan lo suyo; Progreso, solo la subvista visible (las gráficas necesitan ancho).
+const REDIBUJAR = {
+  hoy: () => PINTAR.hoy.forEach((f) => f()),
+  plan: () => PINTAR.plan.forEach((f) => f()),
+  progreso: () => PINTAR[subProgreso === "cuerpo" ? "cuerpo" : "progreso"].forEach((f) => f()),
+};
 let vistaActual = null;
-let vistaAnterior = "hoy";
+
+// Rutas viejas que siguen sirviendo.
+const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
 /** Título y enlace de GitHub Actions vienen de data.json (ui), no del HTML. */
 function pintarEncabezado() {
@@ -559,22 +586,24 @@ function actualizarEncabezado() {
 }
 
 function mostrarVista() {
-  const nombre = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
+  const ruta = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
+  const [nombre, sub] = (ALIAS_RUTA[ruta] || ruta).split("/");
   const v = VISTAS.includes(nombre) ? nombre : "hoy";
-  if (vistaActual && vistaActual !== v && v === "detalles") vistaAnterior = vistaActual;
+  subProgreso = v === "progreso" && sub === "cuerpo" ? "cuerpo" : "corridas";
   vistaActual = v;
   for (const id of VISTAS) $(`vista-${id}`).hidden = id !== v;
   for (const a of document.querySelectorAll(".tabs a")) {
     if (a.dataset.tab === v) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   }
-  if (REDIBUJAR[v]) REDIBUJAR[v]();
+  mostrarSubvista();
+  REDIBUJAR[v]();
   window.scrollTo(0, 0);
-  if (v === "cuerpo" && /[?&]hoja\b/.test(location.hash)) {   // para capturas: #cuerpo?hoja abre «Ver hoja completa»
+  if (v === "progreso" && subProgreso === "cuerpo" && /[?&]hoja\b/.test(location.hash)) {   // para capturas: #cuerpo?hoja abre «Ver hoja completa»
     const hoja = document.querySelector(".ib-hoja");
     if (hoja) hoja.open = true;
   }
-  if (datos && abrirCarrera && v === "progreso") {   // venimos de la tarjeta de carrera de Hoy
+  if (datos && abrirCarrera && v === "progreso" && subProgreso === "corridas") {   // venimos de la tarjeta de carrera de Hoy
     abrirCarrera = false;
     const det = document.querySelector("#prog-carreras .carrera-det");
     if (det) { det.open = true; det.scrollIntoView({ block: "start" }); }
@@ -605,7 +634,7 @@ async function iniciar() {
   pintarEncabezado();
   actualizarEncabezado();
   setInterval(actualizarEncabezado, 60000);
-  const vistas = { hoy: renderHoy, progreso: renderProgreso, cuerpo: renderCuerpo, detalles: renderDetalles };
+  const vistas = { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso };
   for (const [id, fn] of Object.entries(vistas)) {
     try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, "No se pudo mostrar esta sección con los datos actuales."); }
   }
