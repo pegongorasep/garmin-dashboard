@@ -493,3 +493,4 @@ details.card.plegable:not([open]) { align-self: start; }
 .sil-etq.f1 { bottom: calc(100% + 13px); }
 .sil-etq.izq, .sil-etq.der { transform: none; }
 .sil-etq.f2 { bottom: calc(100% + 26px); }
+.card.carrera-hoy { align-self: start; }   /* alto según su contenido, no el de Tus corridas */

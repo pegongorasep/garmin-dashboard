@@ -154,8 +154,8 @@ function renderPlan(d) {
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
-    tarjetaComoFunciona(d),
-    det.distribucion ? zonaBar(det.distribucion) : null].filter(Boolean));
+    det.distribucion ? zonaBar(det.distribucion) : null,
+    tarjetaComoFunciona(d)].filter(Boolean));
 }
 
 function tarjetaDoceSemanas(d) {
@@ -549,7 +549,7 @@ function tarjetaFcMax(d) {
 function tarjetaComoFunciona(d) {
   const u = (d.detalles || {}).umbrales || {};
   const li = (...t) => h("li", {}, ...t);
-  return h("details", { class: "card plegable" }, h("summary", {}, h("h2", {}, "Cómo funciona")),
+  return h("details", { class: "card ancha plegable" }, h("summary", {}, h("h2", {}, "Cómo funciona")),
     h("p", {}, "Cada mañana se revisan 4 señales; el semáforo decide la sesión de hoy."),
     h("ul", { class: "reglas" },
       li(h("strong", {}, "HRV: "), "fuera si anoche quedó por debajo de tu rango base. Si el reloj la marca “baja”, el semáforo va directo a rojo."),
