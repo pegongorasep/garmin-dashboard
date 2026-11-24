@@ -193,6 +193,7 @@ let semInicial = 0;          // desplazamiento pedido por #hoy?sem=+1 (solo se l
 function leerSemanaInicial() {
   const m = location.hash.match(/[?&]sem=([+-]?\d+)/);
   semInicial = m ? parseInt(m[1], 10) : 0;
+  if (/[?&]carrera\b/.test(location.hash)) abrirCarrera = true;   // para capturas: #progreso?carrera abre la carrera más nueva
 }
 
 const semanasHoy = (d) => d.semanas_hoy || [];

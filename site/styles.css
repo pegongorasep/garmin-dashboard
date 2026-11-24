@@ -410,3 +410,6 @@ details.recup .senales { margin-top: 6px; }
 .ib-hoja { margin-top: 16px; }
 .ib-hoja h3 { margin-top: 14px; }
 .ib-hoja .tabla-scroll { max-height: none; }
+.ib-hoja .tabla-scroll th, .ib-hoja .tabla-scroll td { white-space: normal; padding-inline: 3px; font-size: 12px; vertical-align: top; }
+.ib-hoja .tabla-scroll.ancha table { table-layout: auto; }
+@media (max-width: 480px) { .ib-hoja .tabla-scroll th, .ib-hoja .tabla-scroll td { font-size: 11px; padding-inline: 2px; } }

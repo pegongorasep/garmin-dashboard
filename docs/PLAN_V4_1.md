@@ -230,5 +230,5 @@ Corrige lo que encuentres y actualiza la tabla de Seguimiento.
 | F3 Composición (Python) | ✅ |
 | F4 Navegación 3 pestañas | ✅ |
 | F5 Composición InBody (UI) | ✅ |
-| F6 Capturas | ⬜ |
+| F6 Capturas | ✅ |
 | Revisión Opus + publicar | ⬜ |

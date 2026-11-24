@@ -570,7 +570,11 @@ function mostrarVista() {
   }
   if (REDIBUJAR[v]) REDIBUJAR[v]();
   window.scrollTo(0, 0);
-  if (abrirCarrera && v === "progreso") {   // venimos de la tarjeta de carrera de Hoy
+  if (v === "cuerpo" && /[?&]hoja\b/.test(location.hash)) {   // para capturas: #cuerpo?hoja abre «Ver hoja completa»
+    const hoja = document.querySelector(".ib-hoja");
+    if (hoja) hoja.open = true;
+  }
+  if (datos && abrirCarrera && v === "progreso") {   // venimos de la tarjeta de carrera de Hoy
     abrirCarrera = false;
     const det = document.querySelector("#prog-carreras .carrera-det");
     if (det) { det.open = true; det.scrollIntoView({ block: "start" }); }
