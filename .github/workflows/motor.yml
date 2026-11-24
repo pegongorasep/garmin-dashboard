@@ -1,0 +1,96 @@
+name: Motor
+
+# Workflow reutilizable: baja los datos de Garmin de quien lo llama, construye el sitio con el código
+# del motor (etiqueta `stable` salvo que se pida otra) y lo publica en GitHub Pages del que llama.
+on:
+  workflow_call:
+    inputs:
+      motor_ref:
+        description: Etiqueta, rama o commit del motor (pegongorasep/garmin-dashboard)
+        type: string
+        default: stable
+    secrets:
+      PERSONAL_API_KEY:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # para dejar al día CLAUDE.md y .claude/skills en repos de amigos
+      pages: write      # actions/configure-pages
+      id-token: write
+    steps:
+      # 1. El repo de quien llama, en la raíz: es el directorio de usuario (config.yaml, plan/, data/).
+      - uses: actions/checkout@v4
+
+      # 2. El código del motor.
+      - uses: actions/checkout@v4
+        with:
+          repository: pegongorasep/garmin-dashboard
+          ref: ${{ inputs.motor_ref }}
+          path: motor
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: motor/requirements.txt
+
+      - run: pip install -r motor/requirements.txt
+
+      # Caché del RPE por actividad: cada corrida guarda una versión nueva.
+      - uses: actions/cache@v4
+        with:
+          path: data/activity_details.json
+          key: activity-details-${{ github.run_id }}
+          restore-keys: activity-details-
+
+      - name: Bajar datos de Garmin
+        run: python motor/garmin_connect.py
+        env:
+          PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
+          GARMIN_USER_DIR: ${{ github.workspace }}
+
+      - name: Construir el sitio
+        run: python motor/dashboard/build.py
+        env:
+          GARMIN_USER_DIR: ${{ github.workspace }}
+
+      - name: Validar data.json (lista blanca de privacidad)
+        run: python motor/dashboard/validar.py
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: motor/site
+
+      # Solo en repos de amigos: CLAUDE.md y las skills se copian del motor. No toca .github/workflows/.
+      - name: Dejar al día las instrucciones de Claude
+        if: github.repository != 'pegongorasep/garmin-dashboard'
+        run: |
+          cp motor/template/CLAUDE.md CLAUDE.md
+          rm -rf .claude/skills
+          mkdir -p .claude
+          cp -r motor/template/.claude/skills .claude/skills
+          if [ -n "$(git status --porcelain -- CLAUDE.md .claude/skills)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add CLAUDE.md .claude/skills
+            git commit -m "chore: instrucciones al día (motor $(git -C motor rev-parse --short HEAD))"
+            git push
+          fi
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

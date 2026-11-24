@@ -378,6 +378,6 @@ Escribe para alguien que no sabe programar y para su Claude Code. Todo en españ
 | F1 Actividades genéricas | ✅ |
 | F2 Generador por nivel | ✅ |
 | F3 UI nuevo | ✅ |
-| F4 Workflow compartido | ⬜ |
+| F4 Workflow compartido | ✅ |
 | F5 Template e instrucciones | ⬜ |
 | F6 Revisión Opus + publicar + piloto | ⬜ |

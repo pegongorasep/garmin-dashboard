@@ -1,0 +1,22 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 13 * * *"  # 3 veces al día (hora UTC); Claude puede ajustarlas a tu zona
+    - cron: "0 19 * * *"
+    - cron: "0 1 * * *"
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    uses: pegongorasep/garmin-dashboard/.github/workflows/motor.yml@stable
+    secrets:
+      PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
