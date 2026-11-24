@@ -691,3 +691,12 @@ def test_la_serie_de_fc_no_sale_en_el_json_pero_si_su_deriva():
     r = next(c for c in out["progreso"]["corridas"] if c["fecha"] == "2026-11-03")
     assert r["deriva_pct"] == u["deriva_pct"]
     assert validar.problemas(json.loads(json.dumps(out))) == []
+
+
+def test_plan_vs_real_en_el_json(salida):
+    u = salida["ultima_corrida"]
+    # fixture: 30' con Z1 5' · Z2 15' · Z3 5' ; la Z2 #1 de la semana 2 tiene 25' (20' Z2 + 2 picos opcionales de Z3)
+    assert u["sesion"]["id"] == "z2a"
+    z2 = next(x for x in u["plan_vs_real"] if x["zona"] == "Z2")
+    assert z2["hecho_min"] == 20.0 and z2["plan_min"] >= 20 and "calidad" not in u
+    assert next(c for c in salida["plan"]["estado_sesiones"] if c["corrida"])["corrida"]["plan_vs_real"]

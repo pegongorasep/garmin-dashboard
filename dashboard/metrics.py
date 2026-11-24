@@ -8,6 +8,8 @@ import re
 import unicodedata
 from datetime import date, datetime, timedelta
 
+import tipos
+
 ZONAS = ["Z1", "Z2", "Z3", "Z4", "Z5"]
 
 
@@ -507,8 +509,40 @@ def _min_z3_planeados(pasos: list) -> int:
                else p["minutes"] if p["zone"] in ("Z3", "Z4", "Z5") else 0 for p in pasos)
 
 
-def run_check(activity: dict, session, config=None) -> dict:
-    """¿Lo hice bien?: minutos sobre el techo de Z2 (Z3+Z4+Z5) vs la tolerancia."""
+def minutos_planeados(pasos: list) -> dict:
+    """Minutos por zona de los pasos de una sesión (con `repeat`; una sola zona por paso: zona_unica). Los pasos
+    opcionales no cuentan: si los haces, suman a lo hecho pero no los exige el plan."""
+    out = {}
+    for p in pasos:
+        if p["kind"] == "repeat":
+            for z, mi in minutos_planeados(p["steps"]).items():
+                out[z] = out.get(z, 0) + p["times"] * mi
+        elif not p.get("optional"):
+            z = tipos.zona_unica(p)
+            out[z] = out.get(z, 0) + p["minutes"]
+    return out
+
+
+def plan_vs_real(pasos: list, minutos_z: dict, done_ratio: float = 0.7) -> list:
+    """Plan vs real por zona. Para cada zona planeada Z ≥ Z2, lo planeado en Z o más contra lo hecho en Z o más (lo que
+    haces en una zona más alta cuenta para la de abajo). `ok` = hecho ≥ done_ratio × plan (la FC tarda en subir).
+    [{zona, plan_min, hecho_min, pct, ok}] de la zona más alta a la más baja."""
+    plan = minutos_planeados(pasos)
+    out = []
+    for z in reversed(ZONAS[1:]):
+        if not plan.get(z):
+            continue
+        arriba = ZONAS[ZONAS.index(z):]
+        plan_acum = sum(plan.get(k, 0) for k in arriba)
+        hecho = sum(minutos_z.get(k, 0.0) for k in arriba)
+        out.append({"zona": z, "plan_min": round(plan_acum, 1), "hecho_min": round(hecho, 1),
+                    "pct": round(hecho / plan_acum * 100), "ok": hecho + 0.05 >= done_ratio * plan_acum})
+    return out
+
+
+def run_check(activity: dict, session, config=None, minutos_z=None, suave: bool = False) -> dict:
+    """¿Lo hice bien?: minutos sobre el techo de Z2 (Z3+Z4+Z5) vs la tolerancia, y el plan vs real por zona
+    (si la corrida tiene sesión y minutos por zona; con `suave`, contra la versión suave)."""
     zm = zone_minutes(activity)
     sobre = round(zm["Z3"] + zm["Z4"] + zm["Z5"], 1)
     tolerancia = (config or {}).get("ceiling_tolerance_min", 2)
@@ -517,20 +551,10 @@ def run_check(activity: dict, session, config=None) -> dict:
     if (session or {}).get("tipo") == "variada":   # su Z3 corto es parte del plan
         tolerancia += _min_z3_planeados(session.get("steps", []))
     out = {"min_sobre_techo": sobre, "tolerancia_min": tolerancia, "techo_ok": sobre <= tolerancia}
-    objetivo = (session or {}).get("objetivo")
-    if (session or {}).get("tipo") == "calidad" and objetivo:
-        out["calidad"] = calidad_check(zm, objetivo, (config or {}).get("done_ratio", 0.7))
+    if session and minutos_z is not None:
+        pasos = session["easy"]["steps"] if suave else session["steps"]
+        out["plan_vs_real"] = plan_vs_real(pasos, minutos_z, (config or {}).get("done_ratio", 0.7))
     return out
-
-
-def calidad_check(zm: dict, objetivo: dict, done_ratio: float) -> dict:
-    """Sesión de calidad: minutos en la zona objetivo vs objetivo; avisa si pasó mucho por encima de esa zona."""
-    zona, meta = objetivo["zona"], objetivo["minutos"]
-    en_zona = zm[zona]
-    arriba = sum(zm[z] for z in ZONAS[ZONAS.index(zona) + 1:])
-    return {"zona": zona, "min_zona": round(en_zona, 1), "objetivo_min": meta,
-            "ok": en_zona + 0.05 >= done_ratio * meta, "min_arriba": round(arriba, 1),
-            "mucho_arriba": arriba > max(2.0, 0.25 * meta)}
 
 
 def rolling_mean(valores: list, ventana: int = 7, minimo: int = 3) -> list:

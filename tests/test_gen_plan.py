@@ -160,21 +160,59 @@ def activ(z):
             **{f"hrTimeInZone_{i + 1}": v * 60 for i, v in enumerate(z)}}
 
 
-@pytest.mark.parametrize("tipo,z,ok,arriba", [
-    ("tempo_z3", (10, 15, 16, 0, 0), True, False),      # 16 de 20 >= 70 %
-    ("tempo_z3", (10, 15, 12, 0, 0), False, False),
-    ("tempo_z3", (10, 5, 14, 8, 0), True, True),        # 8' en Z4: pasó de la zona
-    ("threshold", (10, 15, 4, 17, 0), True, False),     # 17 de 20
-    ("threshold", (10, 15, 4, 12, 3), False, False),
-    ("intervalos", (10, 15, 2, 9, 4), True, True),      # 9 de 12 y 4' en Z5 (> 25 % de 12)
+def mz(z):
+    """Minutos por zona Z0..Z5 a partir de (Z1..Z5) en minutos."""
+    return {"Z0": 0.0, **{f"Z{i + 1}": float(v) for i, v in enumerate(z)}}
+
+
+@pytest.mark.parametrize("tipo,z,ok_z3,ok_z2", [
+    ("tempo_z3", (10, 15, 16, 0, 0), True, True),     # Z3 o más: 16 de 20 (80 %) ; Z2 o más: 31 de 36
+    ("tempo_z3", (10, 15, 12, 0, 0), False, True),    # 12 de 20 = 60 %
+    ("tempo_z3", (10, 5, 14, 8, 0), True, False),     # lo de Z4 cuenta para Z3 (22 de 20), pero Z2 o más: 27 de 36 = 75 % -> ok
 ])
-def test_run_check_calidad(tipo, z, ok, arriba):
+def test_run_check_plan_vs_real_calidad(tipo, z, ok_z3, ok_z2):
     _, w = planes(intensidad="calidad", calidad_tipos=[tipo])
     ses = w[1]["sessions"][1]
-    r = m.run_check(activ(z), ses, BASE)["calidad"]
-    assert r["ok"] is ok and r["mucho_arriba"] is arriba
-    assert r["zona"] == ses["objetivo"]["zona"] and r["objetivo_min"] == ses["objetivo"]["minutos"]
-    assert "calidad" not in m.run_check(activ(z), w[1]["sessions"][0], BASE)
+    r = m.run_check(activ(z), ses, BASE, mz(z))["plan_vs_real"]
+    assert [x["zona"] for x in r] == ["Z3", "Z2"]                       # de la más alta a la más baja
+    assert (r[0]["plan_min"], r[1]["plan_min"]) == (20, 36)
+    assert r[0]["ok"] is ok_z3
+    assert r[1]["ok"] is (ok_z2 or sum(z[1:]) >= 0.7 * 36)
+
+
+def test_plan_vs_real_los_minutos_altos_cuentan_para_la_zona_de_abajo():
+    pasos = [{"kind": "run", "minutes": 10, "zone": "Z2", "note": ""},
+             {"kind": "repeat", "times": 2, "steps": [{"kind": "run", "minutes": 2, "zone": "Z4", "note": ""},
+                                                       {"kind": "run", "minutes": 2, "zone": "Z1", "note": ""}]}]
+    r = m.plan_vs_real(pasos, {"Z0": 0, "Z1": 4, "Z2": 4, "Z3": 0, "Z4": 2, "Z5": 0})
+    assert r == [{"zona": "Z4", "plan_min": 4, "hecho_min": 2.0, "pct": 50, "ok": False},
+                 {"zona": "Z2", "plan_min": 14, "hecho_min": 6.0, "pct": 43, "ok": False}]
+    todo_mas_arriba = m.plan_vs_real(pasos, {"Z0": 0, "Z1": 0, "Z2": 0, "Z3": 0, "Z4": 14, "Z5": 0})
+    assert [x["ok"] for x in todo_mas_arriba] == [True, True] and todo_mas_arriba[1]["pct"] == 100
+
+
+def test_plan_vs_real_umbral_del_70_y_una_sola_zona():
+    pasos = [{"kind": "run", "minutes": 20, "zone": "Z2", "note": ""}]
+    assert m.plan_vs_real(pasos, mz((0, 14, 0, 0, 0)))[0]["ok"] is True       # 14 de 20 = 70 %
+    r = m.plan_vs_real(pasos, mz((0, 13.9, 0, 0, 0)))
+    assert len(r) == 1 and r[0]["ok"] is False and r[0]["pct"] == 70
+    assert m.plan_vs_real([{"kind": "run", "minutes": 5, "zone": "Z1", "note": ""}], mz((5, 0, 0, 0, 0))) == []   # Z1 y Z0 no se evalúan
+
+
+def test_plan_vs_real_ignora_pasos_opcionales_y_zona_unica():
+    pasos = [{"kind": "run", "minutes": 10, "zone": "Z1-Z2", "note": ""},          # planes viejos: Z1-Z2 = Z2
+             {"kind": "run", "minutes": 1, "zone": "Z3", "note": "opcional", "optional": True}]
+    r = m.plan_vs_real(pasos, mz((0, 10, 1, 0, 0)))
+    assert [(x["zona"], x["plan_min"]) for x in r] == [("Z2", 10)] and r[0]["hecho_min"] == 11.0
+
+
+def test_run_check_con_suave_compara_contra_la_version_suave():
+    _, w = planes(intensidad="calidad", calidad_tipos=["tempo_z3"])
+    ses = w[1]["sessions"][1]
+    r = m.run_check(activ((0, 20, 0, 0, 0)), ses, BASE, mz((0, 20, 0, 0, 0)), suave=True)["plan_vs_real"]
+    assert [x["zona"] for x in r] == ["Z2"] and r[0]["ok"] is True
+    assert "plan_vs_real" not in m.run_check(activ((0, 20, 0, 0, 0)), ses, BASE)       # sin minutos por zona
+    assert "plan_vs_real" not in m.run_check(activ((0, 20, 0, 0, 0)), None, BASE, mz((0, 20, 0, 0, 0)))   # sin sesión
 
 
 # --- v4.2 F2: corrida variada, tipos y siluetas ---

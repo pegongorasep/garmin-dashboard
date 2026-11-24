@@ -293,7 +293,8 @@ def corrida_json(a: dict, plan_ses, data: dict, config: dict) -> dict:
     """Lo común de una corrida: minutos, km, caminadora, '¿lo hice bien?' y trote/caminata."""
     return {"minutos": r1(a["duration"] / 60), "km": r2((a.get("distance") or 0) / 1000),
             "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": m.es_carrera(a, config),
-            **m.run_check(a, plan_ses, config), "trote": rw_json(m.run_walk(a, data["details"])),
+            **m.run_check(a, plan_ses, config, m.zona_minutos(a, data["details"], m.zonas_de(config)),
+                          light_on(m.day_of(a), data, config)["color"] in ("amarillo", "rojo")), "trote": rw_json(m.run_walk(a, data["details"])),
             **registro_esfuerzo(a, data["details"], config), **datos_serie(a, data, config)}
 
 

@@ -349,13 +349,16 @@ function calendarioSemana(d, s) {
     h("p", { class: "nota leyenda-cal" }, "número = esfuerzo calculado con tu FC (1–10)"));
 }
 
-/** "Minutos en Z4: 17 de 20 ✓" y aviso si pasó mucho tiempo por encima de la zona. */
-function lineaCalidad(q) {
-  const txt = `Minutos en ${q.zona}: ${fmt(q.min_zona, 0)} de ${fmt(q.objetivo_min, 0)}`;
-  return h("div", {},
-    q.ok ? h("p", { class: "estado" }, badge("ok", "✓", "objetivo cumplido"), `${txt} ✓`)
-      : h("p", { class: "estado" }, badge("warn", "!", "por debajo del objetivo"), txt),
-    q.mucho_arriba ? h("p", { class: "nota" }, `Pasaste ${fmt(q.min_arriba, 0)}' por encima de ${q.zona}: la próxima baja un poco el ritmo.`) : null);
+/** Plan vs real por zona: "Z3 o más · 2 de 4 min · 50 %" con ✓/⚠; con una sola zona planeada, "Z2 · 19 de 20 min ✓". */
+function lineasPlanVsReal(filas) {
+  if (!filas || !filas.length) return null;
+  const solo = filas.length === 1;
+  return h("div", { class: "pvr" }, filas.map((f) => {
+    const nombre = solo ? f.zona : f.zona === "Z5" ? "Z5" : `${f.zona} o más`;
+    const txt = solo ? `${nombre} · ${fmt(f.hecho_min, 0)} de ${fmt(f.plan_min, 0)} min` : `${nombre} · ${fmt(f.hecho_min, 0)} de ${fmt(f.plan_min, 0)} min · ${f.pct} %`;
+    return f.ok ? h("p", { class: "estado" }, badge("ok", "✓", "cumplido"), `${txt} ✓`)
+      : h("p", { class: "estado" }, badge("warn", "!", "por debajo del plan"), `${txt} ⚠`);
+  }));
 }
 
 function lineaTecho(c) {
@@ -381,7 +384,8 @@ function filaCorrida(cabeza, titulo, c) {
   return h("div", { class: "corrida" },
     h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo), c.carrera ? h("span", { class: "etiqueta-carrera" }, "Carrera") : null),
     datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
-    c.calidad ? lineaCalidad(c.calidad) : c.techo_ok !== undefined ? lineaTecho(c) : null,
+    c.plan_vs_real ? lineasPlanVsReal(c.plan_vs_real) : null,
+    c.techo_ok !== undefined ? lineaTecho(c) : null,
     c.deriva_pct != null ? lineaDeriva(c) : null,
     h("details", {}, h("summary", {}, "Ver detalle"),
       ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora }),

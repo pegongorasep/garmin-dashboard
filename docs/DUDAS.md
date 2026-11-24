@@ -195,3 +195,8 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **F3 pct_trote en la frase del periodo.** Se promedia sobre las mismas corridas que los recuadros (todas las del periodo con tramos RWD; la caminadora casi nunca trae tramos). Antes la frase excluía la caminadora y los recuadros no.
 - **F3 `progress_summary` no se pinta** (desde v4.1); se actualizó igual y sigue en `progreso.resumen`.
 - **F3 promedio móvil de 4.** Se calcula en Python solo entre las corridas con ritmo a FC ref (mínimo 2 puntos) y va en `progreso.corridas[].ritmo_ref_prom_s`.
+- **F4 plan vs real (datos reales de Pedro).** Z2 #1 del 12 nov: Z2 o más 21 de 20 min (107 %) ✓ · Larga del 15 nov: 31 de 40 (76 %) ✓ y 7.7' sobre el techo ⚠ · Z2 #1 del 20 nov: 13 de 20 (66 %) ⚠ (el trote corrió casi todo en Z1) · Larga (suave) del 21 nov: 35 de 30 (117 %) ✓. Pedro no tiene sesiones de Z3+ en su plan, así que todas son de una sola zona ("Z2 · 21 de 20 min ✓").
+- **F4 pasos opcionales.** Los picos de Z3 opcionales no se exigen (no suman al plan); si se hacen, cuentan como lo hecho.
+- **F4 versión suave.** Si el día de la corrida fue amarillo/rojo se compara contra la versión suave de la sesión (si no, una sesión de calidad suave saldría siempre ⚠).
+- **F4 `calidad_check`** y la clave `calidad` de `run_check` se quitaron; la señal "mucho_arriba" (pasarse de la zona objetivo) ya no se avisa porque lo cubre la regla del techo solo en Z2. Para sesiones de calidad pasarse de la zona simplemente cuenta como cumplido.
+- **F4 Z5 y "o más".** La fila de Z5 dice "Z5" a secas (no hay más arriba); las demás "Z3 o más" salvo que sea la única zona planeada ("Z2 · 19 de 20 min ✓").
