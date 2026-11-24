@@ -488,3 +488,8 @@ details.card.plegable[open] > summary::before { transform: rotate(90deg); }
 details.card.plegable > summary h2 { margin: 0; }
 details.card.plegable[open] > summary { margin-bottom: 8px; }
 details.card.plegable:not([open]) { align-self: start; }
+.sil-etq { position: absolute; bottom: 100%; transform: translateX(-50%); font-size: 10px; line-height: 13px; white-space: nowrap;
+  color: var(--ink-2); pointer-events: none; }
+.sil-etq.f1 { bottom: calc(100% + 13px); }
+.sil-etq.izq, .sil-etq.der { transform: none; }
+.sil-etq.f2 { bottom: calc(100% + 26px); }

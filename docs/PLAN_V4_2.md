@@ -221,3 +221,10 @@ Corrige lo que encuentres y actualiza la tabla.
   cada tramo; cada tramo esconde lo que no le cabe (container queries) y en pantalla chica va solo el % más una leyenda.
 - Plan › Cómo funciona: plegable, cerrada al abrir.
 - Cuerpo › Puntuación InBody: se quitó el "null" suelto; la medición del 25 oct 2025 sale como hueco (puntos null, "—").
+
+## Ajuste v4.2.5 (2026-11-24, pedido de Pedro)
+
+- Siluetas a color: 5' de calentamiento y 5' de enfriamiento (Z0) a escala; arriba de cada racha de la misma zona,
+  "6' Z2" (hasta 3 renglones si se juntan). Sin leyenda ni resumen; se quitaron del cuerpo de la sesión.
+- Se quitó la gráfica "Otros entrenos por semana" (los íconos con 2x de Corridas ya lo dicen). `mejora.otras` sigue en
+  el JSON por compatibilidad.

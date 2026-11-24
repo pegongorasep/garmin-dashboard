@@ -329,37 +329,35 @@ function trazoRedondo(pts, r) {
  */
 function silueta(tramos, opts = {}) {
   const H = opts.alto || 40, pad = 4, W = SIL_W;
-  const total = tramos.reduce((a, t) => a + t.d, 0) || 1;
+  const color = !!tramos.some((t) => t.clase);
+  // sesión a color: calentamiento y enfriamiento de `rampa` minutos (subida desde zona 0 y bajada al final)
+  const R = color ? opts.rampa ?? 5 : 0;
+  const total = tramos.reduce((a, t) => a + t.d, 0) + 2 * R || 1;
   const y = (n) => H - pad - n * (H - 2 * pad);
   const cont = h("div", { class: "silueta", style: `height:${H}px` });
   const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, preserveAspectRatio: "none", role: "img",
     "aria-label": opts.etiqueta || "Forma de la sesión" });
-  let x = 0;
+  const xr = (R / total) * W;
+  let x = xr;
   const caja = tramos.map((t) => { const x0 = x; x += (t.d / total) * W; return { t, x0, x1: x }; });
-  const color = !!tramos.some((t) => t.clase);
   if (!color) {
     const pts = [];
     for (const { t, x0, x1 } of caja) { pts.push([x0, y(t.n)], [x1, y(t.n2 ?? t.n)]); }
     svg.append(sv("path", { d: trazoRedondo(pts, 5), class: "sil-ln" }));
   } else {
-    // cada tramo es horizontal; el color cambia a media altura de cada salto vertical. Como en el catálogo, la sesión
-    // arranca abajo (zona 0), sube en rampa a su primer tramo y al final baja otra vez; las rampas van en color de Z0.
-    const piso = y(0.1), rampa = (t0, t1) => Math.min((t1 - t0) / 2, W * 0.05);
+    // cada tramo es horizontal; el color cambia a media altura de cada salto vertical. Las rampas van en color de Z0.
+    const piso = y(0.1), pri = caja[0], ult = caja[caja.length - 1];
+    svg.append(sv("path", { d: `M0,${piso} L${xr},${y(pri.t.n)}`, class: "sil-ln g0" }),
+      sv("path", { d: `M${ult.x1},${y(ult.t.n)} L${W},${piso}`, class: "sil-ln g0" }));
     caja.forEach(({ t, x0, x1 }, i) => {
       const yy = y(t.n), ant = caja[i - 1], sig = caja[i + 1];
       const pts = [];
-      if (ant) pts.push([x0, (y(ant.t.n) + yy) / 2], [x0, yy]);
-      else {
-        svg.append(sv("path", { d: `M${x0},${piso} L${x0 + rampa(x0, x1)},${yy}`, class: "sil-ln g0" }));
-        pts.push([x0 + rampa(x0, x1), yy]);
-      }
-      if (sig) pts.push([x1, yy], [x1, (yy + y(sig.t.n)) / 2]);
-      else {
-        svg.append(sv("path", { d: `M${x1 - rampa(x0, x1)},${yy} L${x1},${piso}`, class: "sil-ln g0" }));
-        pts.push([x1 - rampa(x0, x1), yy]);
-      }
+      if (ant) pts.push([x0, (y(ant.t.n) + yy) / 2]);
+      pts.push([x0, yy], [x1, yy]);
+      if (sig) pts.push([x1, (yy + y(sig.t.n)) / 2]);
       svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `sil-ln ${t.clase}${t.opcional ? " opc" : ""}` }));
     });
+    if (opts.etiquetas) etiquetasSilueta(cont, caja, R, xr, W);
     const tip = tooltipEn(cont);
     for (const { t, x0, x1 } of caja) {
       if (!t.texto) continue;
@@ -377,6 +375,31 @@ function silueta(tramos, opts = {}) {
   return cont;
 }
 
+/** Arriba de la silueta, "6' Z2" por cada racha de la misma zona (y "5' Z0" en las rampas). Si dos quedan muy juntas,
+ *  la segunda sube a otro renglón (hasta 3). La altura extra se agrega como padding del contenedor. */
+function etiquetasSilueta(cont, caja, R, xr, W) {
+  const rachas = [];
+  for (const { t, x0, x1 } of caja) {
+    const u = rachas[rachas.length - 1];
+    if (u && u.clase === t.clase) { u.x1 = x1; u.m += t.d; } else rachas.push({ clase: t.clase, x0, x1, m: t.d, z: `Z${t.clase.slice(1)}` });
+  }
+  const todas = [{ x0: 0, x1: xr, m: R, z: "Z0" }, ...rachas, { x0: W - xr, x1: W, m: R, z: "Z0" }];
+  const ANCHO = 0.12;                     // ~36 px de etiqueta en una silueta de ~300 px, como fracción del ancho
+  const ultimoEn = [-1, -1, -1];          // hasta 3 renglones; si ninguno tiene espacio, el que quedó más libre
+  let filas = 1;
+  todas.forEach((e, i) => {
+    const c = (e.x0 + e.x1) / 2 / W;
+    let fila = ultimoEn.findIndex((u) => c - u >= ANCHO);
+    if (fila < 0) fila = ultimoEn.indexOf(Math.min(...ultimoEn));
+    ultimoEn[fila] = c;
+    filas = Math.max(filas, fila + 1);
+    const lado = i === 0 ? "izq" : i === todas.length - 1 ? "der" : "";
+    cont.append(h("span", { class: `sil-etq f${fila} ${lado}`, "aria-hidden": "true",
+      style: lado === "izq" ? "left:0" : lado === "der" ? "right:0" : `left:${(c * 100).toFixed(2)}%` }, `${fmt(e.m, 0)}' ${e.z}`));
+  });
+  cont.style.marginTop = `${filas * 13 + 4}px`;
+}
+
 /** Catálogo: forma del tipo [[d, n] | [d, n1, n2]] -> silueta sin color. */
 const siluetaForma = (forma, alto = 48, etiqueta) =>
   silueta(forma.map(([d, n, n2]) => ({ d, n, n2: n2 === undefined ? undefined : n2 })), { alto, etiqueta });
@@ -384,4 +407,5 @@ const siluetaForma = (forma, alto = 48, etiqueta) =>
 /** Sesión: [[minutos, zona, opcional?]] -> silueta con el color Garmin de cada zona. */
 const siluetaSesion = (sil, alto = 40, conTip = true) =>
   silueta(sil.map(([m, z, opc]) => ({ d: m, n: NIVEL_ZONA[z] ?? 0.45, clase: `g${(z || "Z2").slice(1)}`, opcional: !!opc,
-    texto: conTip ? `${m}' · ${z}${opc ? " (opcional)" : ""}` : undefined })), { alto, etiqueta: "Silueta de la sesión: minutos y zona de cada tramo" });
+    texto: conTip ? `${m}' · ${z}${opc ? " (opcional)" : ""}` : undefined })),
+  { alto, etiquetas: true, etiqueta: `Silueta de la sesión: 5' de calentamiento, ${sil.map(([m, z]) => `${m}' ${z}`).join(", ")} y 5' de enfriamiento` });

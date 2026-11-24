@@ -136,32 +136,16 @@ function bloqueCalidad(s) {
     h("p", { class: "nota" }, `Zona objetivo: ${o.zona}${o.lpm ? ` (${o.lpm[0]}–${o.lpm[1]} lpm)` : ""} · ${o.minutos} min de trabajo`));
 }
 
-/** "9' Z1 · 6' Z2 · 5' Z1": tramos seguidos de la misma zona juntos; si quedan más de 8, no se escribe (están los pasos). */
-function resumenSilueta(sil) {
-  const out = [];
-  for (const [m, z] of sil) {
-    if (out.length && out[out.length - 1][1] === z) out[out.length - 1][0] += m;
-    else out.push([m, z]);
-  }
-  return out.length <= 8 ? out.map(([m, z]) => `${m}' ${z}`).join(" · ") : null;
-}
-
-/** Silueta de la sesión con el color de cada zona, mini leyenda (solo las zonas que aparecen) y resumen.
- *  `conGrafica` false: solo leyenda y resumen (la silueta ya se ve en la fila cerrada). */
-function bloqueSilueta(sil, conGrafica = true, titulo = null) {
+/** Título y silueta a color de la sesión; los minutos y la zona de cada tramo van escritos arriba (sin leyenda). */
+function bloqueSilueta(sil, titulo = null) {
   if (!sil || !sil.length) return null;
-  const zonas = ["Z0", ...[...new Set(sil.map(([, z]) => z))].sort()];   // Z0: la subida del inicio y la bajada del final
-  const resumen = resumenSilueta(sil);
-  return h("div", { class: "bloque-sil" }, conGrafica && titulo ? h("p", { class: "titulo-sil" }, titulo) : null, conGrafica ? siluetaSesion(sil) : null,
-    h("div", { class: "leyenda", "aria-label": "Zonas de la silueta" },
-      zonas.map((z) => h("span", {}, h("i", { class: `g${z.slice(1)}`, "aria-hidden": "true" }), z))),
-    resumen ? h("p", { class: "nota resumen-sil" }, resumen) : null);
+  return h("div", { class: "bloque-sil" }, titulo ? h("p", { class: "titulo-sil" }, titulo) : null, siluetaSesion(sil));
 }
 
-/** Cuerpo desplegable de una sesión del plan: leyenda y resumen de la silueta (que ya se ve arriba), pasos y versión suave. */
+/** Cuerpo desplegable de una sesión del plan (la silueta ya se ve en la fila): pasos y versión suave. */
 function cuerpoPlan(s) {
-  return [bloqueSilueta(s.silueta, false), bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
-    s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`), bloqueSilueta(s.easy.silueta, true, s.easy.titulo),
+  return [bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
+    s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`), bloqueSilueta(s.easy.silueta, s.easy.titulo),
       h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null];
 }
 
@@ -385,7 +369,7 @@ function filaHoy(e, s, t) {
   if (t.version === "descanso") {
     c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
   } else if (ses) {
-    c.append(...[bloqueSilueta(ses.silueta, true, ses.titulo), bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi))].filter(Boolean));
+    c.append(...[bloqueSilueta(ses.silueta, ses.titulo), bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi))].filter(Boolean));
   }
   if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
   return c;
@@ -444,15 +428,10 @@ function tarjetaMejora(d) {
   const hayPct = ritmo ? (mj.ritmo || []).length > 0 : (mj.corridas || []).some((c) => c.pct_trote != null);
   MEJ.min = h("div", { class: "chart-wrap" });
   MEJ.pct = h("div", { class: "chart-wrap" });
-  MEJ.otras = h("div", { class: "chart-wrap" });
-  const cats = ui().categorias.filter((c) => (mj.otras || []).some((o) => (o.conteos || {})[c.id] > 0));
-  const hayOtras = cats.length > 0;
   const graficas = hayMin || hayPct
     ? h("div", { class: "mini2" },
       h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
-      h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct),
-      hayOtras ? h("div", {}, h("h3", {}, "Otros entrenos por semana"), MEJ.otras,
-        h("div", { class: "leyenda" }, cats.map((c) => h("span", {}, h("i", { class: `sw ${c.clase}`, "aria-hidden": "true" }), icono(c.icono, 14), c.nombre)))) : null)
+      h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct))
     : null;
   PINTAR.progreso.push(dibujarMejora);
   return h("div", { class: "card ancha" }, h("h2", {}, "Cómo vas mejorando"),
@@ -475,14 +454,6 @@ function dibujarMejora() {
     etiquetaFinal: ult ? `${fmt(ult.minutos, 0)}'` : null,
     texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}`,
   }));
-  const cats = ui().categorias.filter((c) => (mj.otras || []).some((o) => (o.conteos || {})[c.id] > 0));
-  if (cats.length && MEJ.otras) {
-    dibujar(MEJ.otras, (ancho) => barChart({
-      ancho, alto: 100, entero: true, clases: cats.map((c) => c.clase), etiqueta: "Sesiones de otros entrenos por semana, apiladas por categoría",
-      semanas: mj.otras.map((o) => ({ inicio: o.semana, valores: cats.map((c) => (o.conteos || {})[c.id] || 0), o })),
-      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${cats.map((c, i) => `${c.nombre} ${b.valores[i]}`).join(" · ")}`,
-    }));
-  }
   if (mj.modo === "ritmo") {
     const rp = (mj.ritmo || []).map((c) => ({ fecha: c.fecha, y: c.ritmo_s }));
     dibujar(MEJ.pct, (ancho) => rp.length
