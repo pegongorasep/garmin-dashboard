@@ -109,11 +109,12 @@ def convert_session(s: dict, zonas: list) -> dict:
     if "objetivo" in s:
         extra["objetivo"] = {**s["objetivo"], "lpm": lpm_range(s["objetivo"]["zona"], zonas)}
         extra["estructura"] = estructura_calidad(s)
+    forma, sil, sil_easy = tipos.forma_de(s), tipos.silueta_de(s["steps"]), tipos.silueta_de(easy["steps"])
     return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"], **extra,
-            "forma": tipos.forma_de(s), "silueta": tipos.silueta_de(s["steps"]),
+            "forma": forma, "silueta": sil, "titulo": tipos.titulo_de(forma, sil),
             "steps": convert_steps(s["steps"], zonas),
             "easy": {"name": easy["name"], "minutes": easy["minutes"],
-                     "silueta": tipos.silueta_de(easy["steps"]),
+                     "silueta": sil_easy, "titulo": tipos.titulo_de(tipos.forma_de({"steps": easy["steps"]}), sil_easy),
                      "steps": convert_steps(easy["steps"], zonas)}}
 
 
@@ -390,7 +391,7 @@ def build_carreras(hoy: date, data: dict, config: dict) -> list:
 
 
 def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
-    """12 semanas: minutos, km y trote/caminata de las corridas, los minutos del plan y un ícono por entreno."""
+    """12 semanas: minutos, km y trote/caminata de las corridas, los minutos del plan y los entrenos de la semana."""
     filas = m.run_rows(data["activities"], data["details"], config)
     inicio_plan = date.fromisoformat(config["plan_start"])
     out = []
@@ -404,7 +405,7 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
                     "min_trote": r1(sum(f["trote_min"] or 0 for f in fs)),
                     "min_camina": r1(sum(f["camina_min"] or 0 for f in fs)),
                     "plan_min": sum(s["minutes"] for s in semana["sessions"]) if semana else None,
-                    "iconos": iconos_semana(ini, data, config)})
+                    "entrenos": entrenos_semana(ini, data, config)})
     return out
 
 
@@ -420,20 +421,21 @@ def con_ritmo_z2(filas: list, zonas: list) -> list:
     return out
 
 
-def iconos_semana(ini: date, data, config) -> list:
-    """Un ícono por entreno registrado en la semana: primero las corridas (medalla si fue carrera), luego las demás
-    actividades con el ícono de su categoría; cada grupo en orden de fecha. Dos de la misma categoría a menos de 3 h
-    son un solo ícono (m.sin_repetidas)."""
+def entrenos_semana(ini: date, data, config) -> list:
+    """Entrenos registrados en la semana, uno por tipo con su cuenta: [{"icono", "nombre", "n"}]. Primero corridas y
+    carreras, luego cada categoría en el orden de la config. Dos de la misma categoría a menos de 3 h cuentan como uno
+    (m.sin_repetidas)."""
     if data is None or config is None:
         return []
-    iconos = {c["id"]: c["icono"] for c in config["categorias"]}
-    out = []
+    cuenta = {}
     for a in m.sin_repetidas(data["activities"], config):
         c = m.classify(a, config)
-        if not c or not ini <= m.day_of(a) < ini + timedelta(days=7):
-            continue
-        out.append((c != "run", ("medalla" if m.es_carrera(a, config) else "correr") if c == "run" else iconos.get(c, "punto")))
-    return [ic for _, ic in sorted(out, key=lambda x: x[0])]
+        if c and ini <= m.day_of(a) < ini + timedelta(days=7):
+            k = ("carrera" if m.es_carrera(a, config) else "run") if c == "run" else c
+            cuenta[k] = cuenta.get(k, 0) + 1
+    tipos = [("run", "correr", "Corrida"), ("carrera", "medalla", "Carrera")] + \
+        [(c["id"], c["icono"], c["nombre"]) for c in config["categorias"]]
+    return [{"icono": ic, "nombre": nombre, "n": cuenta[k]} for k, ic, nombre in tipos if cuenta.get(k)]
 
 
 def build_mejora(hoy: date, filas: list, semanas: list, zonas: list, data=None, config=None) -> dict:

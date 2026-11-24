@@ -22,7 +22,7 @@
   --cat-azul: #2a78d6; --cat-aqua: #1baf7a; --cat-violeta: #6250d6; --cat-amarillo: #eda100;
   --walk: #8f8d86; --nd-bg: #ececea;
   /* siluetas de sesión: zonas de Garmin (gris, azul, verde, naranja, rojo). Solo la silueta las usa; validadas con dataviz */
-  --g1: #7d7b75; --g2: #2a78d6; --g3: #139c82; --g4: #d9780f; --g5: #c42f34;
+  --g0: #b5b3ad; --g1: #7d7b75; --g2: #2a78d6; --g3: #139c82; --g4: #d9780f; --g5: #c42f34;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -35,7 +35,7 @@
     --s1: #3987e5; --s2: #d95926;
     --cat-azul: #3987e5; --cat-aqua: #199e70; --cat-violeta: #9085e9; --cat-amarillo: #c98500;
     --walk: #8a8882; --nd-bg: #262624;
-    --g1: #96948e; --g2: #4590e8; --g3: #2bb89b; --g4: #ee9a2c; --g5: #ee5a54;
+    --g0: #67655f; --g1: #96948e; --g2: #4590e8; --g3: #2bb89b; --g4: #ee9a2c; --g5: #ee5a54;
   }
 }
 :root[data-theme="dark"] {
@@ -48,7 +48,7 @@
   --s1: #3987e5; --s2: #d95926;
   --cat-azul: #3987e5; --cat-aqua: #199e70; --cat-violeta: #9085e9; --cat-amarillo: #c98500;
   --walk: #8a8882; --nd-bg: #262624;
-  --g1: #96948e; --g2: #4590e8; --g3: #2bb89b; --g4: #ee9a2c; --g5: #ee5a54;
+  --g0: #67655f; --g1: #96948e; --g2: #4590e8; --g3: #2bb89b; --g4: #ee9a2c; --g5: #ee5a54;
 }
 
 * { box-sizing: border-box; }
@@ -422,7 +422,7 @@ details.recup .senales { margin-top: 6px; }
 .silueta { position: relative; width: 100%; margin: 6px 0 2px; }
 .silueta svg { display: block; overflow: visible; touch-action: pan-y; }
 .sil-ln { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.sil-ln.g1 { stroke: var(--g1); } .sil-ln.g2 { stroke: var(--g2); } .sil-ln.g3 { stroke: var(--g3); }
+.sil-ln.g0 { stroke: var(--g0); } .sil-ln.g1 { stroke: var(--g1); } .sil-ln.g2 { stroke: var(--g2); } .sil-ln.g3 { stroke: var(--g3); }
 .sil-ln.g4 { stroke: var(--g4); } .sil-ln.g5 { stroke: var(--g5); }
 .sil-ln.opc { stroke-dasharray: 4 3; }
 .sil-capa { fill: transparent; cursor: default; }
@@ -431,7 +431,7 @@ details.recup .senales { margin-top: 6px; }
 .bloque-sil { margin: 8px 0 4px; }
 .bloque-sil .leyenda { margin-top: 2px; gap: 4px 12px; font-size: 12px; }
 .bloque-sil .leyenda i { width: 10px; height: 10px; border-radius: 50%; }
-.bloque-sil .leyenda i.g1 { background: var(--g1); } .bloque-sil .leyenda i.g2 { background: var(--g2); } .bloque-sil .leyenda i.g3 { background: var(--g3); }
+.bloque-sil .leyenda i.g0 { background: var(--g0); } .bloque-sil .leyenda i.g1 { background: var(--g1); } .bloque-sil .leyenda i.g2 { background: var(--g2); } .bloque-sil .leyenda i.g3 { background: var(--g3); }
 .bloque-sil .leyenda i.g4 { background: var(--g4); } .bloque-sil .leyenda i.g5 { background: var(--g5); }
 .resumen-sil { margin: 4px 0 0; font-variant-numeric: tabular-nums; }
 
@@ -466,3 +466,5 @@ details.ses.carrera-det > summary .ico-svg { color: var(--ink); }
 .leyenda .ico-svg { margin-right: 4px; margin-left: -2px; }
 .leyenda i.raya-disc { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed var(--ink); vertical-align: 3px; }
 .chart .ico-sem { color: var(--ink-2); pointer-events: none; }
+.chart .ico-n { font-size: 10px; font-weight: 600; fill: var(--ink-2); }
+.titulo-sil { margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }

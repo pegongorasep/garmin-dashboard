@@ -207,3 +207,10 @@ Corrige lo que encuentres y actualiza la tabla.
 - Los íconos de entrenos pasan de "Cómo vas mejorando" a Progreso › Corridas › Volumen (`progreso.semanas[].iconos`).
 - Dos actividades de la misma categoría (no corrida) a menos de 3 h cuentan como una (`metrics.sin_repetidas`): íconos,
   "Otros entrenos por semana" y la frase de mejora.
+
+## Ajuste v4.2.3 (2026-11-24, pedido de Pedro)
+
+- Íconos sin repetir: `progreso.semanas[].entrenos` = [{icono, nombre, n}], uno por tipo; el sitio pinta el ícono y "2x".
+- Silueta de sesión con título (`titulo`, p. ej. "Continuo en Z2", de `tipos.titulo_de`); las rampas de subida y bajada
+  van en color de Z0 (`--g0`) y la leyenda incluye Z0.
+- InBody: hojas completas del 25 may 2024 y del 8 oct 2026 en `plan/inbody.json`.

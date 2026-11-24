@@ -190,11 +190,10 @@ function barChart(cfg) {
   const { ancho: W, semanas } = cfg;
   const cont = h("div", { class: "chart" });
   const ml = 38, mr = 10, mb = 22;
-  // `iconos`: (semana) => [nombre]; una franja arriba con un ícono por entreno, en columnas sobre cada barra
+  // `entrenos`: (semana) => [{icono, n}]; arriba de cada barra, un renglón por tipo: ícono y "2x" si hubo más de uno
   const slot = (W - ml - mr) / semanas.length;
-  const ICO = slot >= 60 ? 16 : 12, PASO = ICO + 1;
-  const porFila = Math.max(1, Math.min(3, Math.floor(slot / PASO)));
-  const filasIco = cfg.iconos ? Math.max(0, ...semanas.map((s) => Math.ceil(cfg.iconos(s).length / porFila))) : 0;
+  const ICO = slot >= 60 ? 16 : 13, PASO = ICO + 2;
+  const filasIco = cfg.entrenos ? Math.max(0, ...semanas.map((s) => cfg.entrenos(s).length)) : 0;
   const franja = filasIco ? filasIco * PASO + 6 : 0;
   const mt = 14 + franja, H = (cfg.alto || 170) + franja;
   const total = (s) => s.valores.reduce((a, v) => a + v, 0);
@@ -235,15 +234,16 @@ function barChart(cfg) {
       base = top - 2;
     });
     if (filasIco) {   // pegados encima de la barra (o de la raya del plan), de abajo hacia arriba; la franja deja el espacio
-      const lista = cfg.iconos(s), piso = y(Math.max(total(s), s.meta || 0)) - 4;
-      lista.forEach((nombre, k) => {
-        const fila = Math.floor(k / porFila), col = k % porFila;
-        const enFila = Math.min(porFila, lista.length - fila * porFila);
-        const ic = icono(nombre, ICO);
-        ic.setAttribute("x", cx - (enFila * PASO) / 2 + col * PASO + 1);
-        ic.setAttribute("y", piso - (fila + 1) * PASO);
+      const piso = y(Math.max(total(s), s.meta || 0)) - 4;
+      cfg.entrenos(s).forEach((e, k) => {
+        const yy = piso - (k + 1) * PASO, txt = e.n > 1 ? `${e.n}x` : "";
+        const x0 = cx - (ICO + (txt ? 3 + txt.length * 6 : 0)) / 2;
+        const ic = icono(e.icono, ICO);
+        ic.setAttribute("x", x0);
+        ic.setAttribute("y", yy);
         ic.classList.add("ico-sem");
         svg.append(ic);
+        if (txt) svg.append(sv("text", { class: "eje ico-n", x: x0 + ICO + 2, y: yy + ICO - 2 }, txt));
       });
     }
     if (s.meta) svg.append(sv("line", { class: "meta", x1: cx - ancho / 2 - 3, x2: cx + ancho / 2 + 3, y1: y(s.meta), y2: y(s.meta) }));
@@ -335,15 +335,21 @@ function silueta(tramos, opts = {}) {
     svg.append(sv("path", { d: trazoRedondo(pts, 5), class: "sil-ln" }));
   } else {
     // cada tramo es horizontal; el color cambia a media altura de cada salto vertical. Como en el catálogo, la sesión
-    // arranca abajo (zona 0), sube en rampa a su primer tramo y al final baja otra vez.
+    // arranca abajo (zona 0), sube en rampa a su primer tramo y al final baja otra vez; las rampas van en color de Z0.
     const piso = y(0.1), rampa = (t0, t1) => Math.min((t1 - t0) / 2, W * 0.05);
     caja.forEach(({ t, x0, x1 }, i) => {
       const yy = y(t.n), ant = caja[i - 1], sig = caja[i + 1];
       const pts = [];
       if (ant) pts.push([x0, (y(ant.t.n) + yy) / 2], [x0, yy]);
-      else pts.push([x0, piso], [x0 + rampa(x0, x1), yy]);
+      else {
+        svg.append(sv("path", { d: `M${x0},${piso} L${x0 + rampa(x0, x1)},${yy}`, class: "sil-ln g0" }));
+        pts.push([x0 + rampa(x0, x1), yy]);
+      }
       if (sig) pts.push([x1, yy], [x1, (yy + y(sig.t.n)) / 2]);
-      else pts.push([x1 - rampa(x0, x1), yy], [x1, piso]);
+      else {
+        svg.append(sv("path", { d: `M${x1 - rampa(x0, x1)},${yy} L${x1},${piso}`, class: "sil-ln g0" }));
+        pts.push([x1 - rampa(x0, x1), yy]);
+      }
       svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `sil-ln ${t.clase}${t.opcional ? " opc" : ""}` }));
     });
     const tip = tooltipEn(cont);

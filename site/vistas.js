@@ -218,10 +218,10 @@ function graficaVolumen(d, ancho) {
   const hay = semanas.some((s) => (s.minutos || 0) > 0 || s.plan_min);
   if (!hay) return h("p", { class: "vacio" }, "Sin corridas en este periodo.");
   const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [s.min_trote || 0, s.min_camina || 0], meta: s.plan_min || 0, s }));
-  return h("div", {}, h("p", { class: "nota" }, "Minutos de reloj por semana (lun–dom); la raya marca el plan y arriba va un ícono por cada entreno."),
+  return h("div", {}, h("p", { class: "nota" }, "Minutos de reloj por semana (lun–dom); la raya marca el plan y arriba van tus entrenos de la semana."),
     barChart({ ancho, semanas: barras, clases: ["s1", "walk"], etiqueta: "Volumen semanal: trote y caminata con raya del plan y un ícono por entreno",
-      iconos: semanas.some((s) => (s.iconos || []).length) ? (b) => b.s.iconos || [] : null,
-      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""} · ${fmt(b.s.km)} km · trote ${fmt(b.s.min_trote, 0)}'${textoEntrenos(b.s.iconos)}` }),
+      entrenos: semanas.some((s) => (s.entrenos || []).length) ? (b) => b.s.entrenos || [] : null,
+      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""} · ${fmt(b.s.km)} km · trote ${fmt(b.s.min_trote, 0)}'${textoEntrenos(b.s.entrenos)}` }),
     leyendaIconos(semanas, [["sw s1", "Trote"], ["sw walk", "Caminata"], ["raya", "Plan"]]),
     tablaDatos(["Semana", "Min", "Plan", "Km", "Trote", "Caminata"], semanas.slice().reverse().map((s) =>
       [fechaLarga(s.inicio), fmt(s.minutos, 0), s.plan_min ?? "—", fmt(s.km), fmt(s.min_trote, 0), fmt(s.min_camina, 0)]), "Ver semanas como tabla"));

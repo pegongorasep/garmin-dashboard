@@ -559,6 +559,8 @@ def test_data_json_trae_forma_silueta_y_tipos():
     assert ses[1]["forma"] == ses[1]["variada_tipo"] and ses[0]["forma"] == "continuo"
     assert sum(m for m, *_ in ses[1]["silueta"]) == ses[1]["minutes"]
     assert sum(m for m, *_ in ses[1]["easy"]["silueta"]) == ses[1]["easy"]["minutes"]
+    assert ses[0]["titulo"] == "Continuo en Z2" and ses[1]["titulo"].endswith("en Z1–Z3")   # variada con pico corto de Z3
+    assert ses[1]["easy"]["titulo"].startswith(("Continuo en", "Trote y caminata en"))
     assert out["tipos"]["en_plan"][:1] == ["continuo"] and ses[1]["forma"] in out["tipos"]["en_plan"]
     assert len(out["tipos"]["catalogo"]) == 14 and [g["id"] for g in out["tipos"]["grupos"]] == ["continuos", "variados", "calidad"]
     assert "tipos" in validar.CLAVES
@@ -594,12 +596,12 @@ def test_mejora_otras_e_intensidad_por_semana():
     assert len(mj["otras"]) == 8 and mj["otras"][-1]["semana"] == "2026-11-02"
     assert mj["otras"][-1]["conteos"] == {"crossfit": 4}   # 2 del fixture + 3 nuevas - 1 a menos de 3 h; las corridas no cuentan
     assert mj["frase"].endswith(" · CrossFit 0.5 por semana (antes 0.0).")
-    # un ícono por entreno de la semana (en Progreso › Corridas): primero corridas, luego rayo (CrossFit)
-    ult = out["progreso"]["semanas"][-1]["iconos"]
-    assert ult.count("rayo") == 4 and ult[-4:] == ["rayo"] * 4 and len(ult) == 4 + sum(1 for a in data["activities"]
-                                                          if build.m.classify(a, CONFIG_FIXTURE) == "run" and a["startTimeLocal"] >= "2026-11-02")
-    assert set(ult) <= {"correr", "medalla", "rayo"}
-    sin =build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    # entrenos de la semana (Progreso › Corridas): uno por tipo con su cuenta, primero corridas, luego CrossFit
+    ent = out["progreso"]["semanas"][-1]["entrenos"]
+    corridas = sum(1 for a in data["activities"] if build.m.classify(a, CONFIG_FIXTURE) == "run" and a["startTimeLocal"] >= "2026-11-02")
+    assert ent[-1] == {"icono": "rayo", "nombre": "CrossFit", "n": 4}
+    assert sum(e["n"] for e in ent[:-1]) == corridas and all(e["icono"] in ("correr", "medalla") for e in ent[:-1])
+    sin = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
     assert "CrossFit" not in sin["progreso"]["mejora"]["frase"]   # sin sesiones en las 8 semanas anteriores, la frase no la menciona
     # 80/20: misma cuenta que la barra de Detalles; porcentajes Z1–Z2 / Z3 / Z4–Z5, Z0 fuera
     semana = out["semanas_hoy"][out["semana_hoy_idx"]]["intensidad"]

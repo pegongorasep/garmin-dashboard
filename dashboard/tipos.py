@@ -90,6 +90,15 @@ def silueta_de(pasos: list) -> list:
     return out
 
 
+def titulo_de(forma: str, silueta: list) -> str:
+    """Título corto de la silueta de una sesión: nombre del tipo y sus zonas ("Continuo en Z2", "Espiga en Z1–Z3")."""
+    zonas = sorted({z for _, z, *_ in silueta})
+    nombre = POR_ID[forma]["nombre"] if forma in POR_ID else "Sesión"
+    if not zonas:
+        return nombre
+    return f"{nombre} en {zonas[0] if len(zonas) == 1 else f'{zonas[0]}–{zonas[-1]}'}"
+
+
 def catalogo_json(ids_en_plan: set) -> dict:
     """Catálogo para data.json: tipos en orden, con los ids que aparecen en el plan de la persona."""
     return {"catalogo": [dict(t) for t in CATALOGO],

@@ -667,7 +667,9 @@ def test_composicion_historial_puntuacion_visceral():
     c = m.composicion(_inbody_pedro())
     assert [h["fecha"] for h in c["historial"]][0] == "2024-05-25" and len(c["historial"]) == 4
     assert [h["es_prime"] for h in c["historial"]] == [True, False, False, False]
-    assert c["puntuacion"] == [{"fecha": "2026-11-13", "puntos": 75, "delta": None}]
+    # puntuación: solo las mediciones con hoja completa (25 may 2024, 8 oct 2026, 13 nov 2026)
+    assert [(x["fecha"], x["puntos"]) for x in c["puntuacion"]] == [("2024-05-25", 80), ("2026-10-08", 69), ("2026-11-13", 75)]
+    assert c["puntuacion"][-1]["delta"] == 6
     assert c["visceral"]["valor"] == 10 and c["visceral"]["rango"] == [1, 9] and c["visceral"]["zona"] == "alto"
 
 
