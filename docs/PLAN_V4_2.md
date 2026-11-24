@@ -192,4 +192,4 @@ Corrige lo que encuentres y actualiza la tabla.
 | F5 Íconos | ✅ |
 | F6 Fuerza/HIIT y 80/20 | ✅ |
 | F7 Capturas | ✅ |
-| Revisión Opus + publicar | ⬜ |
+| Revisión Opus + publicar | ✅ publicado y `stable` 2026-11-24 |
