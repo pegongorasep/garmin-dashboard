@@ -280,12 +280,21 @@ def registro_esfuerzo(a: dict, details: dict, config: dict) -> dict:
     return {"esfuerzo": m.esfuerzo_de(a, details, config), "rpe": (details.get(str(a["activityId"])) or {}).get("rpe")}
 
 
+def datos_serie(a: dict, data: dict, config: dict) -> dict:
+    """Lo que sale de la serie de FC de una corrida: ritmo a la FC de referencia y deriva cardiaca."""
+    fila = next(iter(m.run_rows([a], data["details"], config)), None)
+    if fila is None:
+        return {"ritmo_ref_s": None, "deriva_pct": None, "deriva_ok": None}
+    return {"ritmo_ref_s": None if fila["ritmo_ref_s"] is None else round(fila["ritmo_ref_s"]),
+            "deriva_pct": fila["deriva_pct"], "deriva_ok": fila["deriva_ok"]}
+
+
 def corrida_json(a: dict, plan_ses, data: dict, config: dict) -> dict:
     """Lo común de una corrida: minutos, km, caminadora, '¿lo hice bien?' y trote/caminata."""
     return {"minutos": r1(a["duration"] / 60), "km": r2((a.get("distance") or 0) / 1000),
             "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": m.es_carrera(a, config),
             **m.run_check(a, plan_ses, config), "trote": rw_json(m.run_walk(a, data["details"])),
-            **registro_esfuerzo(a, data["details"], config)}
+            **registro_esfuerzo(a, data["details"], config), **datos_serie(a, data, config)}
 
 
 def corrida_plana(a: dict, plan_ses, data: dict, config: dict) -> dict:
@@ -410,12 +419,19 @@ def build_runs(data: dict, config: dict, plan: dict) -> list:
     acts = sorted((a for a in data["activities"] if m.classify(a, config) == "run"),
                   key=lambda a: a["startTimeLocal"])
     nombres = session_names(acts, data, config, plan)
-    return [{"fecha": f["fecha"], "sesion": nombres.get((f["fecha"], f["minutos"])), "carrera": m.es_carrera(a, config),
-             "icono": "medalla" if m.es_carrera(a, config) else "correr",
+    filas = m.run_rows(acts, data["details"], config)
+    # promedio móvil de 4 del ritmo a FC ref, solo entre las corridas que lo tienen
+    con = [i for i, f in enumerate(filas) if f["ritmo_ref_s"]]
+    prom = dict(zip(con, m.rolling_mean([filas[i]["ritmo_ref_s"] for i in con], 4, 2)))
+    return [{"fecha": f["fecha"], "sesion": nombres.get((f["fecha"], f["minutos"])), "carrera": f["carrera"],
+             "icono": "medalla" if f["carrera"] else "correr",
              "minutos": r1(f["minutos"]), "km": r2(f["km"]), "fc_prom": r1(f["fc_prom"]),
              "pct_z1z2": r1(f["pct_z1z2"]), "caminadora": f["caminadora"],
+             "ritmo_ref_s": None if f["ritmo_ref_s"] is None else round(f["ritmo_ref_s"]),
+             "ritmo_ref_prom_s": None if prom.get(i) is None else round(prom[i]),
+             "deriva_pct": f["deriva_pct"], "deriva_ok": f["deriva_ok"],
              **registro_esfuerzo(a, data["details"], config), **(rw_json(f) or dict.fromkeys(m.RW_CLAVES))}
-            for a, f in zip(acts, m.run_rows(acts, data["details"], config))]
+            for i, (a, f) in enumerate(zip(acts, filas))]
 
 
 def historial_corridas(data: dict, config: dict) -> list:
@@ -458,18 +474,6 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
     return out
 
 
-def con_ritmo_z2(filas: list, zonas: list) -> list:
-    """Agrega `ritmo_z2_s` a cada fila: ritmo (s/km) de las corridas al aire libre cuya FC promedio cayó en Z2.
-    Misma fuente que la gráfica de ritmo de Progreso (ritmo trotando); si Garmin no dio tramos, el ritmo total."""
-    _, lo, hi = zonas[1]
-    out = []
-    for f in filas:
-        ritmo = f["ritmo_trote_s"] or (f["minutos"] * 60 / f["km"] if f["km"] else None)
-        en_z2 = not f["caminadora"] and f["fc_prom"] is not None and lo <= f["fc_prom"] <= hi
-        out.append({**f, "ritmo_z2_s": ritmo if en_z2 else None})
-    return out
-
-
 def entrenos_semana(ini: date, data, config) -> list:
     """Entrenos registrados en la semana, uno por tipo con su cuenta: [{"icono", "nombre", "n"}]. Primero corridas y
     carreras, luego cada categoría en el orden de la config. Dos de la misma categoría a menos de 3 h cuentan como uno
@@ -489,11 +493,10 @@ def entrenos_semana(ini: date, data, config) -> list:
 
 def build_mejora(hoy: date, filas: list, semanas: list, zonas: list, data=None, config=None) -> dict:
     """Cómo vas mejorando: frase, minutos de las últimas 8 semanas (con plan) y, según haya caminatas o no,
-    % trote (modo "trote") o ritmo en Z2 (modo "ritmo") de las últimas 12 corridas."""
+    % trote (modo "trote") o ritmo a la FC de referencia (modo "ritmo") de las últimas 12 corridas."""
     desde = monday(hoy) - timedelta(weeks=4)
     recientes = [f for f in filas if date.fromisoformat(f["fecha"]) >= desde]
     modo = "ritmo" if recientes and not any((f["caminatas"] or 0) > 0 for f in recientes) else "trote"
-    filas = con_ritmo_z2(filas, zonas)
     otras, frase_otras = [], []
     if data is not None and config is not None:
         acts, lunes = data["activities"], monday(hoy)
@@ -504,42 +507,42 @@ def build_mejora(hoy: date, filas: list, semanas: list, zonas: list, data=None, 
         antes = m.conteos_otras(acts, config, lunes - timedelta(weeks=8), lunes - timedelta(weeks=4))
         frase_otras = [{"nombre": c["nombre"], "ahora": ahora.get(c["id"], 0) / 4, "antes": antes.get(c["id"], 0) / 4}
                        for c in config["categorias"]]
-    out = {"frase": m.mejora_frase(filas, hoy, modo, frase_otras), "modo": modo, "otras": otras,
+    out = {"frase": m.mejora_frase(filas, hoy, modo, frase_otras, m.fc_referencia(zonas)), "modo": modo, "otras": otras,
            "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"]} for s in semanas[-8:]],
            "corridas": [{"fecha": f["fecha"], "pct_trote": r1(f["pct_trote"])} for f in filas[-12:]]}
     if modo == "ritmo":
-        out["ritmo"] = [{"fecha": f["fecha"], "ritmo_s": round(f["ritmo_z2_s"])} for f in filas if f["ritmo_z2_s"]][-12:]
+        out["ritmo"] = [{"fecha": f["fecha"], "ritmo_s": round(f["ritmo_ref_s"])} for f in filas if f["ritmo_ref_s"]][-12:]
     return out
 
 
 def build_numeros(hoy: date, filas: list, modo: str) -> dict:
-    """Fila de números de Progreso por periodo (4, 8 o 12 semanas): corridas, minutos y km por semana y ritmo en Z2
-    (modo "ritmo") o % trote (modo "trote"), con el valor del periodo anterior y el cambio. `filas` ya trae `ritmo_z2_s`."""
-    def periodo(k, fin):
-        g = [f for f in filas if fin - timedelta(weeks=k) < date.fromisoformat(f["fecha"]) <= fin]
+    """Fila de números de Progreso por periodo (4, 8 o 12 semanas): corridas, minutos y km por semana y ritmo a la FC de
+    referencia (modo "ritmo") o % trote (modo "trote"), con el valor del periodo anterior y el cambio. `filas` es run_rows;
+    usa el mismo conjunto de corridas por periodo que la frase del periodo (m.periodo_filas)."""
+    def periodo(k, atras):
+        g = m.periodo_filas(filas, hoy, k, atras)
         if not g:
             return None
-        clave = "ritmo_z2_s" if modo == "ritmo" else "pct_trote"
+        clave = "ritmo_ref_s" if modo == "ritmo" else "pct_trote"
         return {"corridas": len(g) / k, "minutos": sum(f["minutos"] for f in g) / k, "km": sum(f["km"] for f in g) / k,
-                "extra": m.promedio([f[clave] for f in g])}
-    campos = [("corridas", "corridas"), ("minutos", "minutos"), ("km", "km"), ("extra", "ritmo_z2" if modo == "ritmo" else "pct_trote")]
+                "extra": m.promedio([f.get(clave) for f in g])}
+    campos = [("corridas", "corridas"), ("minutos", "minutos"), ("km", "km"), ("extra", "ritmo_ref" if modo == "ritmo" else "pct_trote")]
     out = {}
     for k in (4, 8, 12):
-        ahora, antes = periodo(k, hoy), periodo(k, hoy - timedelta(weeks=k))
+        ahora, antes = periodo(k, 0), periodo(k, 1)
         items = []
         for campo, id_ in campos:
             v = None if ahora is None else ahora[campo]
             a = None if antes is None else antes[campo]
             delta = None if v is None or a is None else v - a
-            if id_ == "ritmo_z2":
+            if id_ == "ritmo_ref":
                 v, a, delta = (None if x is None else round(x) for x in (v, a, delta))
             else:
                 v, a, delta = (None if x is None else round(x, 1) for x in (v, a, delta))
-            mejor = None if not delta else (delta < 0 if id_ == "ritmo_z2" else delta > 0)
+            mejor = None if not delta else (delta < 0 if id_ == "ritmo_ref" else delta > 0)
             items.append({"id": id_, "valor": v, "anterior": a, "delta": delta, "bueno": mejor})
         out[str(k)] = items
-    caminatas = {str(k): any((f["caminatas"] or 0) > 0 and hoy - timedelta(weeks=k) < date.fromisoformat(f["fecha"]) <= hoy
-                             for f in filas) for k in (4, 8, 12)}
+    caminatas = {str(k): any((f["caminatas"] or 0) > 0 for f in m.periodo_filas(filas, hoy, k)) for k in (4, 8, 12)}
     return {"modo": modo, "periodos": out, "caminatas": caminatas}
 
 
@@ -686,14 +689,15 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
         "carreras": build_carreras(hoy, data, config),
         "mejores_marcas": m.mejores_marcas(historial_corridas(data, config), hoy, config),
-        "progreso": {"resumen": {str(k): m.progress_summary(filas, hoy, k) for k in (4, 8, 12)},
+        "progreso": {"fc_ref": m.fc_referencia(zonas),
+                     "resumen": {str(k): m.progress_summary(filas, hoy, k, m.fc_referencia(zonas)) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,
                      "mejora": mejora,
                      "intensidad_semanas": [{"inicio": (monday(hoy) - timedelta(weeks=i)).isoformat(),
                                              **intensidad_semana(data["activities"], monday(hoy) - timedelta(weeks=i))}
                                             for i in range(11, -1, -1)],
-                     "numeros": build_numeros(hoy, con_ritmo_z2(filas, zonas), mejora["modo"]),
+                     "numeros": build_numeros(hoy, filas, mejora["modo"]),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": build_ui(config, plan),

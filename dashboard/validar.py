@@ -18,7 +18,7 @@ OBLIGATORIAS = {"generado", "zonas", "hoy", "plan", "progreso", "detalles", "ui"
 PROHIBIDAS = {"activityId", "activityName", "ownerDisplayName", "ownerFullName", "userProfilePk", "userProfilePK",
               "userProfileId", "uuid", "activityUUID", "displayName", "locationName", "profileImageUrl",
               "ownerProfileImageUrlSmall", "fullName", "emailAddress", "birthDate", "dateOfBirth",
-              "startLatitude", "startLongitude", "endLatitude", "endLongitude", "splitSummaries", "splits"}
+              "startLatitude", "startLongitude", "endLatitude", "endLongitude", "splitSummaries", "splits", "serie"}   # `serie` = FC por segundo: nunca se publica
 
 
 def problemas(datos: dict) -> list:

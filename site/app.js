@@ -365,6 +365,13 @@ function lineaTecho(c) {
     : h("p", { class: "estado" }, badge("warn", "!", "sobre el techo"), txt);
 }
 
+function lineaDeriva(c) {
+  const txt = `Deriva ${fmt(c.deriva_pct, 1)} %`;
+  return c.deriva_ok
+    ? h("p", { class: "estado" }, badge("ok", "✓", "deriva baja"), `${txt} ✓`)
+    : h("p", { class: "estado" }, badge("warn", "!", "deriva alta"), `${txt} (menos de 5 % es buena base)`);
+}
+
 /** Fila de una corrida hecha: cabecera (estado + título), datos, techo y detalle de trote/caminata. */
 function filaCorrida(cabeza, titulo, c) {
   c = c || {};
@@ -375,8 +382,10 @@ function filaCorrida(cabeza, titulo, c) {
     h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo), c.carrera ? h("span", { class: "etiqueta-carrera" }, "Carrera") : null),
     datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
     c.calidad ? lineaCalidad(c.calidad) : c.techo_ok !== undefined ? lineaTecho(c) : null,
+    c.deriva_pct != null ? lineaDeriva(c) : null,
     h("details", {}, h("summary", {}, "Ver detalle"),
-      ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora })));
+      ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora }),
+      c.ritmo_ref_s ? h("p", {}, `Ritmo a ${(datos.progreso || {}).fc_ref} lpm: ${mmss(c.ritmo_ref_s)} /km`) : null));
 }
 
 const filaHecha = (e) => filaCorrida(estadoSesion(e), `${e.name} · ${e.fecha ? fechaCorta(e.fecha) : ""}`, e.corrida);

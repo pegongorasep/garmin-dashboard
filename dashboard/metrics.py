@@ -542,19 +542,112 @@ def rolling_mean(valores: list, ventana: int = 7, minimo: int = 3) -> list:
     return out
 
 
+def ritmo_fc_ref(fila: dict, zonas: list):
+    """Ritmo (s/km) llevado a la FC de referencia (mitad de Z2): ritmo × FC ÷ FC ref, o sea la eficiencia aeróbica.
+    Solo corridas al aire libre, no carreras, cuyo trote cayó en Z2; si no, None. Sin tramos de trote/caminata
+    (todo trote) usa el ritmo y la FC promedio de la actividad. `fila` es una fila de run_rows."""
+    if fila.get("caminadora") or fila.get("carrera"):
+        return None
+    ritmo, fc = fila.get("ritmo_trote_s"), fila.get("fc_trote")
+    if ritmo is None:
+        ritmo = fila["minutos"] * 60 / fila["km"] if fila.get("km") else None
+        fc = fila.get("fc_prom")
+    _, piso, techo = zonas[1]
+    if not ritmo or fc is None or not piso <= fc <= techo:
+        return None
+    return ritmo * fc / fc_referencia(zonas)
+
+
+DERIVA_MIN = 40          # minutos mínimos de la corrida
+DERIVA_TROTE_PCT = 90    # % mínimo de trote (casi sin caminar)
+DERIVA_CALENTAR_S = 600  # los primeros 10 min no cuentan
+DERIVA_PAREJO = 0.15     # cada km a ±15 % del ritmo mediano
+DERIVA_BUENA = 5.0       # < 5 % = buena base
+
+
+def _mediana(valores: list):
+    v = sorted(valores)
+    n = len(v)
+    return None if not n else v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2
+
+
+def _km_con_inicio(serie: list) -> list:
+    """[(segundo en que empieza, segundos que tardó)] de cada km completo de una serie [seg, metros, fc]."""
+    pts = [(d, t) for t, d, _ in serie]
+    out, k = [], 1
+
+    def tiempo_en(metros):
+        for (d0, t0), (d1, t1) in zip(pts, pts[1:]):
+            if d0 <= metros <= d1:
+                return t0 if d1 == d0 else t0 + (t1 - t0) * (metros - d0) / (d1 - d0)
+        return None
+    while pts and k * 1000 <= pts[-1][0]:
+        a, b = tiempo_en((k - 1) * 1000), tiempo_en(k * 1000)
+        if a is None or b is None:
+            break
+        out.append((a, b - a))
+        k += 1
+    return out
+
+
+def deriva(serie: list, fila: dict) -> dict:
+    """Deriva cardiaca: cuánto cae la eficiencia (velocidad ÷ FC) de la primera mitad a la segunda.
+    Solo corridas de ≥ 40 min casi sin caminar (≥ 90 % trote o sin tramos) y a ritmo parejo (después de los primeros
+    10 min, cada km dentro de ±15 % del ritmo mediano). Sin los primeros 10 min ni los tramos de caminata (velocidad
+    < 70 % de la mediana). Devuelve {"pct", "ok"} (ok = pct < 5) o {"pct": None, "motivo"} con motivo "corta",
+    "con caminatas", "sin serie" o "no pareja"."""
+    no = lambda motivo: {"pct": None, "ok": None, "motivo": motivo}  # noqa: E731
+    if fila.get("minutos", 0) < DERIVA_MIN:
+        return no("corta")
+    if fila.get("pct_trote") is not None and fila["pct_trote"] < DERIVA_TROTE_PCT:
+        return no("con caminatas")
+    if len(serie or []) < 3:
+        return no("sin serie")
+    kms = [p for t, p in _km_con_inicio(serie) if t >= DERIVA_CALENTAR_S]
+    mediano = _mediana(kms)
+    if len(kms) < 2 or any(abs(p - mediano) > DERIVA_PAREJO * mediano for p in kms):
+        return no("no pareja")
+    # tramos entre muestras: (inicio, segundos, metros, fc) después de los 10 min, sin pausas ni huecos
+    tramos = [(a[0], b[0] - a[0], b[1] - a[1], a[2]) for a, b in zip(serie, serie[1:])
+              if a[0] >= DERIVA_CALENTAR_S and 0 < b[0] - a[0] <= 15 and a[2] is not None]
+    vel = _mediana([m_ / dt for _, dt, m_, _ in tramos])
+    tramos = [t for t in tramos if vel and t[2] / t[1] >= 0.7 * vel]
+    if len(tramos) < 4:
+        return no("sin serie")
+    corte = (DERIVA_CALENTAR_S + serie[-1][0]) / 2
+    ef = []
+    for mitad in ([t for t in tramos if t[0] < corte], [t for t in tramos if t[0] >= corte]):
+        dt = sum(t[1] for t in mitad)
+        if not dt or not sum(t[3] * t[1] for t in mitad):
+            return no("sin serie")
+        ef.append((sum(t[2] for t in mitad) / dt) / (sum(t[3] * t[1] for t in mitad) / dt))
+    pct = round((ef[0] - ef[1]) / ef[0] * 100, 1)
+    return {"pct": pct, "ok": pct < DERIVA_BUENA, "motivo": None}
+
+
+def deriva_de(activity: dict, details: dict) -> dict:
+    """deriva() de una actividad, con su serie guardada y el % de trote de sus tramos."""
+    rw = run_walk(activity, details) or {}
+    return deriva((details.get(str(activity.get("activityId"))) or {}).get("serie") or [],
+                  {"minutos": (activity.get("duration") or 0) / 60, "pct_trote": rw.get("pct_trote")})
+
+
 def run_rows(activities: list, details: dict, config: dict) -> list:
-    """Una fila por corrida: fecha, minutos, km, FC promedio, % en Z1–Z2, caminadora y trote/caminata."""
-    filas = []
+    """Una fila por corrida: fecha, minutos, km, FC promedio, % en Z1–Z2, caminadora, carrera, trote/caminata,
+    ritmo a FC ref y deriva."""
+    filas, zonas = [], zonas_de(config)
     for a in sorted(activities, key=lambda a: a["startTimeLocal"]):
         if classify(a, config) != "run":
             continue
         zm = zone_minutes(a)
         total = sum(zm.values())
         rw = run_walk(a, details) or dict.fromkeys(RW_CLAVES)
-        filas.append({"fecha": day_of(a).isoformat(), "minutos": a["duration"] / 60,
-                      "km": (a.get("distance") or 0) / 1000, "fc_prom": a.get("averageHR"),
-                      "pct_z1z2": (zm["Z1"] + zm["Z2"]) / total * 100 if total else None,
-                      "caminadora": a["activityType"]["typeKey"] == "treadmill_running", **rw})
+        fila = {"fecha": day_of(a).isoformat(), "minutos": a["duration"] / 60,
+                "km": (a.get("distance") or 0) / 1000, "fc_prom": a.get("averageHR"),
+                "pct_z1z2": (zm["Z1"] + zm["Z2"]) / total * 100 if total else None,
+                "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": es_carrera(a, config), **rw}
+        d = deriva_de(a, details)
+        filas.append({**fila, "ritmo_ref_s": ritmo_fc_ref(fila, zonas), "deriva_pct": d["pct"], "deriva_ok": d["ok"]})
     return filas
 
 
@@ -568,21 +661,39 @@ def _mmss(seg: float) -> str:
     return f"{seg // 60}:{seg % 60:02d}"
 
 
-def progress_summary(rows: list, hoy: date, semanas: int) -> str:
-    """Compara las corridas al aire libre de las últimas `semanas` contra las `semanas` anteriores."""
-    corte = hoy - timedelta(weeks=semanas)
-    antes_corte = corte - timedelta(weeks=semanas)
-    aire = [r for r in rows if not r["caminadora"] and r.get("pct_trote") is not None]
-    ahora = [r for r in aire if corte < date.fromisoformat(r["fecha"]) <= hoy]
-    antes = [r for r in aire if antes_corte < date.fromisoformat(r["fecha"]) <= corte]
-    if not ahora or not antes:
+def periodo_filas(filas: list, hoy: date, semanas: int, atras: int = 0) -> list:
+    """Filas de las `semanas` semanas que terminan en `hoy` (o `atras` periodos antes): (fin − semanas, fin]. Los
+    recuadros de números y la frase del periodo usan este mismo conjunto."""
+    fin = hoy - timedelta(weeks=semanas * atras)
+    return [f for f in filas if fin - timedelta(weeks=semanas) < date.fromisoformat(f["fecha"]) <= fin]
+
+
+def frase_ritmo(ahora, antes, fc_ref, cuando_ahora: str, cuando_antes: str):
+    """"a 144 lpm: 7:48 → 7:35 /km" (promedio de cada periodo, antes → ahora). Si a un periodo le faltan corridas en Z2,
+    dice cuál falta. None si no hubo en ninguno."""
+    if ahora and antes:
+        return f"a {fc_ref} lpm: {_mmss(antes)} → {_mmss(ahora)} /km"
+    if not ahora and not antes:
+        return None
+    return f"sin corridas en Z2 {cuando_ahora if not ahora else cuando_antes} para comparar el ritmo"
+
+
+def progress_summary(rows: list, hoy: date, semanas: int, fc_ref: int = None) -> str:
+    """Compara las últimas `semanas` semanas contra las `semanas` anteriores: % trote y ritmo a la FC de referencia."""
+    ahora, antes = periodo_filas(rows, hoy, semanas), periodo_filas(rows, hoy, semanas, 1)
+    if not ahora and not antes:
         return "Aún no hay corridas suficientes para comparar"
+    partes = []
     pct_a, pct_b = (promedio([r["pct_trote"] for r in g]) for g in (ahora, antes))
-    texto = f"Trotas {pct_a:.0f} % del tiempo (antes {pct_b:.0f} %)"
-    rit_a, rit_b = (promedio([r["ritmo_trote_s"] for r in g]) for g in (ahora, antes))
-    if rit_a and rit_b:
-        texto += f" · ritmo trotando {_mmss(rit_b)} → {_mmss(rit_a)} /km"
-    return texto
+    if pct_a is not None and pct_b is not None:
+        partes.append(f"Trotas {pct_a:.0f} % del tiempo (antes {pct_b:.0f} %)")
+    rit = frase_ritmo(*(promedio([r.get("ritmo_ref_s") for r in g]) for g in (ahora, antes)), fc_ref or "FC ref",
+                      f"en las últimas {semanas} semanas", f"en las {semanas} semanas anteriores")
+    if rit:
+        partes.append(rit)
+    if not partes:
+        return "Aún no hay corridas suficientes para comparar"
+    return (" · ".join(partes))[0].upper() + (" · ".join(partes))[1:]
 
 
 def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
@@ -592,7 +703,7 @@ def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
         return None
     return {"corridas": len(g) / semanas, "minutos": sum(f["minutos"] for f in g) / semanas,
             "pct_trote": promedio([f.get("pct_trote") for f in g]),
-            "ritmo_z2": promedio([f.get("ritmo_z2_s") for f in g])}
+            "ritmo_ref": promedio([f.get("ritmo_ref_s") for f in g])}
 
 
 def sin_repetidas(activities: list, config: dict, horas: float = 3) -> list:
@@ -629,11 +740,10 @@ def frase_otras(otras: list) -> str:
     return "".join(f" · {o['nombre']} {o['ahora']:.1f} por semana (antes {o['antes']:.1f})" for o in con)
 
 
-def mejora_frase(filas: list, hoy: date, modo: str = "trote", otras=None) -> str:
+def mejora_frase(filas: list, hoy: date, modo: str = "trote", otras=None, fc_ref=None) -> str:
     """Compara las últimas 4 semanas calendario completas contra las 4 anteriores (filas = run_rows).
 
-    modo "trote": agrega el % trote. modo "ritmo" (sin caminatas): agrega el cambio de ritmo en Z2
-    (usa `ritmo_z2_s` de cada fila: ritmo de las corridas cuya FC promedio cayó en Z2)."""
+    Agrega el ritmo a la FC de referencia ("a 144 lpm: 7:48 → 7:35 /km") y, en modo "trote" (con caminatas), el % trote."""
     lunes = hoy - timedelta(days=hoy.weekday())
     ahora = _grupo_mejora(filas, lunes - timedelta(weeks=4), lunes, 4)
     antes = _grupo_mejora(filas, lunes - timedelta(weeks=8), lunes - timedelta(weeks=4), 4)
@@ -644,15 +754,14 @@ def mejora_frase(filas: list, hoy: date, modo: str = "trote", otras=None) -> str
     texto = f"Últimas 4 semanas: {ahora['corridas']:.1f} corridas y {ahora['minutos']:.0f} min por semana"
     if antes:
         texto += f" (antes {antes['corridas']:.1f} y {antes['minutos']:.0f})"
-    if modo == "ritmo":
-        if ahora["ritmo_z2"] and antes and antes["ritmo_z2"]:
-            dif = antes["ritmo_z2"] - ahora["ritmo_z2"]       # positivo = más rápido ahora
-            texto += ("; a la misma FC vas al mismo ritmo que hace 4 semanas" if abs(dif) < 3 else
-                      f"; a la misma FC vas {_mmss(abs(dif))}/km {'más rápido' if dif > 0 else 'más lento'} que hace 4 semanas")
-    elif ahora["pct_trote"] is not None:
+    if modo == "trote" and ahora["pct_trote"] is not None:
         texto += f"; trote {ahora['pct_trote']:.0f} %"
         if antes and antes["pct_trote"] is not None:
             texto += f" (antes {antes['pct_trote']:.0f} %)"
+    rit = frase_ritmo(ahora["ritmo_ref"], antes["ritmo_ref"] if antes else None, fc_ref or "FC ref",
+                      "en las últimas 4 semanas", "en las 4 semanas anteriores")
+    if rit and (ahora["ritmo_ref"] or antes):
+        texto += f"; {rit}"
     return texto + (frase_otras(otras) if otras else "") + "."
 
 

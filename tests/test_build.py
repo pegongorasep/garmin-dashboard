@@ -22,7 +22,7 @@ PROHIBIDAS = ["activityId", "activityName", "ownerDisplayName", "ownerFullName",
               "userProfilePK", "userProfileId", "uuid", "activityUUID", "displayName", "locationName",
               "profileImageUrl", "ownerProfileImageUrlSmall", "fullName", "emailAddress",
               "startLatitude", "startLongitude", "endLatitude", "endLongitude",
-              "splitSummaries", "splits"]
+              "splitSummaries", "splits", "serie"]
 SECRETOS = ["Persona Inventada", "persona@ejemplo.com", "Calle Secreta", "Corrida de Calle Secreta"]
 
 
@@ -455,8 +455,8 @@ def test_mejora_por_ritmo_sin_caminatas():
     out = build.build(data, plan, {**CONFIG_CORREDOR, "plan_start": "2026-11-09"}, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
     mj = out["progreso"]["mejora"]
     assert mj["modo"] == "ritmo"
-    assert mj["frase"].endswith("a la misma FC vas 0:25/km más rápido que hace 4 semanas.")
-    assert [r["ritmo_s"] for r in mj["ritmo"]] == [400, 400, 375, 375]
+    assert "; a " in mj["frase"] and mj["frase"].endswith("a 142 lpm: 6:48 → 6:23 /km.")
+    assert [r["ritmo_s"] for r in mj["ritmo"]] == [408, 408, 383, 383]    # 400 y 375 s/km a 145 lpm, llevados a 142
 
 
 def test_mejora_con_caminatas_sigue_en_trote(salida):
@@ -505,16 +505,16 @@ def test_historial_viejo_aporta_carrera_y_marcas():
 
 
 def test_numeros_de_progreso():
-    filas = [{"fecha": f, "minutos": mi, "km": km, "pct_trote": pt, "caminatas": 0, "ritmo_z2_s": rz}
+    filas = [{"fecha": f, "minutos": mi, "km": km, "pct_trote": pt, "caminatas": 0, "ritmo_ref_s": rz}
              for f, mi, km, pt, rz in [("2026-11-01", 40.0, 5.0, 100.0, 500), ("2026-11-03", 30.0, 3.0, 100.0, None),
                                        ("2026-09-20", 20.0, 2.0, 100.0, 540)]]
     out = build.build_numeros(date(2026, 11, 4), filas, "ritmo")
     it = {i["id"]: i for i in out["periodos"]["4"]}
     assert it["corridas"]["valor"] == 0.5 and it["minutos"]["valor"] == 17.5 and it["km"]["valor"] == 2.0
-    assert it["ritmo_z2"]["valor"] == 500 and it["ritmo_z2"]["anterior"] == 540 and it["ritmo_z2"]["delta"] == -40
+    assert it["ritmo_ref"]["valor"] == 500 and it["ritmo_ref"]["anterior"] == 540 and it["ritmo_ref"]["delta"] == -40
     assert out["caminatas"] == {"4": False, "8": False, "12": False}
-    ritmo = {i["id"]: i for i in build.build_numeros(date(2026, 11, 4), filas[:1] + [{**filas[2], "fecha": "2026-10-05", "ritmo_z2_s": 530}], "ritmo")["periodos"]["4"]}
-    assert ritmo["ritmo_z2"]["delta"] == -30 and ritmo["ritmo_z2"]["bueno"] is True
+    ritmo = {i["id"]: i for i in build.build_numeros(date(2026, 11, 4), filas[:1] + [{**filas[2], "fecha": "2026-10-05", "ritmo_ref_s": 530}], "ritmo")["periodos"]["4"]}
+    assert ritmo["ritmo_ref"]["delta"] == -30 and ritmo["ritmo_ref"]["bueno"] is True
     assert build.build_numeros(date(2026, 11, 4), [], "trote")["periodos"]["4"][3] == {"id": "pct_trote", "valor": None, "anterior": None, "delta": None, "bueno": None}
 
 
@@ -673,3 +673,21 @@ def test_ayer_del_dia_y_motivo_con_dia_duro():
     assert out["hoy"]["ayer"]["rpe"] == 6.0
     t = out["hoy"]["tarjeta"]
     assert t["motivo"] is None or t["motivo"].endswith("después de un día duro")
+
+
+def test_la_serie_de_fc_no_sale_en_el_json_pero_si_su_deriva():
+    data = fixture()
+    serie = [[t, round(t / 360 * 1000), 140 if t < 1800 else 150] for t in range(0, 3001, 5)]
+    data["activities"][1]["duration"] = 3000.0
+    data["activities"][1].pop("splitSummaries")       # sin tramos: todo trote
+    data["details"]["2"] = {**data["details"]["2"], "serie": serie, "splits": []}
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    out = build.build(data, plan, CONFIG_FIXTURE, AHORA)
+    assert '"serie"' not in json.dumps(out)
+    revisar_privacidad(out)
+    u = out["ultima_corrida"]
+    assert u["deriva_pct"] is not None and u["deriva_ok"] is False and u["ritmo_ref_s"] is not None
+    assert out["progreso"]["fc_ref"] == 144 or out["progreso"]["fc_ref"] > 100
+    r = next(c for c in out["progreso"]["corridas"] if c["fecha"] == "2026-11-03")
+    assert r["deriva_pct"] == u["deriva_pct"]
+    assert validar.problemas(json.loads(json.dumps(out))) == []

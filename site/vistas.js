@@ -60,18 +60,20 @@ let planSel = null;
 
 const NUMEROS = {
   corridas: ["Corridas por semana", (v) => fmt(v, 1), ""], minutos: ["Minutos por semana", (v) => fmt(v, 0), "min"],
-  km: ["Km por semana", (v) => fmt(v, 1), "km"], ritmo_z2: ["Ritmo en Z2", (v) => mmss(v), "/km"], pct_trote: ["% trote", (v) => fmt(v, 0), "%"],
+  km: ["Km por semana", (v) => fmt(v, 1), "km"], ritmo_ref: ["Ritmo a FC ref", (v) => mmss(v), "/km"], pct_trote: ["% trote", (v) => fmt(v, 0), "%"],
 };
 
 /** Fila de números del periodo (ya calculados en Python) con el cambio contra el periodo anterior. */
 function filaNumeros(d) {
-  const items = (((d.progreso || {}).numeros || {}).periodos || {})[String(periodo)] || [];
+  const prog = d.progreso || {};
+  const items = ((prog.numeros || {}).periodos || {})[String(periodo)] || [];
   return h("div", { class: "numeros ancha", role: "group", "aria-label": `Números de las últimas ${periodo} semanas` }, items.map((x) => {
-    const [nombre, fv, unidad] = NUMEROS[x.id] || [x.id, (v) => fmt(v, 1), ""];
+    let [nombre, fv, unidad] = NUMEROS[x.id] || [x.id, (v) => fmt(v, 1), ""];
+    if (x.id === "ritmo_ref" && prog.fc_ref) nombre = `Ritmo a ${prog.fc_ref} lpm`;
     const cambio = x.valor == null ? "Sin corridas"
       : x.anterior == null ? "Sin periodo anterior"
         : x.delta === 0 || x.delta == null ? "= igual que el periodo anterior"
-          : `${x.delta > 0 ? "▲" : "▼"} ${fv(Math.abs(x.delta))}${x.id === "ritmo_z2" ? "/km" : unidad && unidad !== "/km" ? " " + unidad : ""} vs periodo anterior`;
+          : `${x.delta > 0 ? "▲" : "▼"} ${fv(Math.abs(x.delta))}${x.id === "ritmo_ref" ? "/km" : unidad && unidad !== "/km" ? " " + unidad : ""} vs periodo anterior`;
     return h("div", { class: "num" }, h("div", { class: "nota" }, nombre),
       h("div", { class: "num-v" }, x.valor == null ? "—" : fv(x.valor), x.valor != null && unidad ? h("span", { class: "num-u" }, ` ${unidad}`) : null),
       h("div", { class: `num-d${x.bueno ? " bien" : ""}` }, cambio));
@@ -198,18 +200,30 @@ function contextoPeriodo(d) {
 }
 
 function graficaCorridas(d, ancho, id) {
-  const { aire, dominio } = contextoPeriodo(d);
-  const cfg = id === "ritmo"
-    ? { filtro: (r) => r.ritmo_trote_s != null, y: (r) => r.ritmo_trote_s, nota: "Arriba = más rápido. Solo corridas al aire libre.",
-      extra: { fmtY: mmss, invertir: true, etiqueta: "Ritmo trotando por corrida" },
-      texto: (r) => `${fechaLarga(r.fecha)} · ${mmss(r.ritmo_trote_s)} /km${r.fc_trote ? ` · FC trotando ${fmt(r.fc_trote, 0)}` : ""}` }
-    : { filtro: (r) => r.pct_trote != null, y: (r) => r.pct_trote, nota: "Porcentaje del tiempo de la corrida que fue trote. Solo al aire libre.",
+  const { aire, dominio, prog } = contextoPeriodo(d);
+  const ref = prog.fc_ref;
+  const cfg = {
+    ritmo: { filtro: (r) => r.ritmo_ref_s != null, y: (r) => r.ritmo_ref_s, prom: (r) => r.ritmo_ref_prom_s,
+      nota: `Cada corrida llevada a ${ref} lpm (la mitad de tu Z2): arriba = más rápido. La línea es el promedio de 4 corridas. El calor sube la FC: mira la tendencia, no una corrida suelta. Solo al aire libre, sin carreras.`,
+      extra: { fmtY: mmss, invertir: true, etiqueta: `Ritmo a ${ref} lpm por corrida` },
+      vacio: "Aún no hay corridas al aire libre con el trote en Z2 en este periodo.",
+      texto: (r) => `${fechaLarga(r.fecha)} · ${mmss(r.ritmo_ref_s)} /km a ${ref} lpm${r.fc_trote ? ` (trotaste a ${fmt(r.fc_trote, 0)} lpm)` : ""}` },
+    deriva: { filtro: (r) => r.deriva_pct != null, y: (r) => r.deriva_pct, all: true,
+      nota: "Cuánto cae tu eficiencia (velocidad ÷ FC) de la primera mitad a la segunda, sin los primeros 10 min. Menos de 5 % (la raya) es buena base. Solo corridas de 40 min o más, casi sin caminar y a ritmo parejo.",
+      extra: { fmtY: (v) => fmt(v, 0), ref: { y: 5, etiqueta: "5 %" }, etiqueta: "Deriva cardiaca por corrida, con raya en 5 %" },
+      vacio: "Aún no hay corridas que cumplan (40 min o más, casi sin caminar y a ritmo parejo) en este periodo.",
+      texto: (r) => `${fechaLarga(r.fecha)} · deriva ${fmt(r.deriva_pct, 1)} % ${r.deriva_ok ? "✓" : "⚠"}` },
+    pct: { filtro: (r) => r.pct_trote != null, y: (r) => r.pct_trote, nota: "Porcentaje del tiempo de la corrida que fue trote. Solo al aire libre.",
       extra: { fmtY: (v) => fmt(v, 0), etiqueta: "Porcentaje del tiempo trotando por corrida" },
-      texto: (r) => `${fechaLarga(r.fecha)} · ${fmt(r.pct_trote, 0)} % trotando · trote ${fmt(r.trote_min, 0)}' / caminata ${fmt(r.camina_min, 0)}'` };
-  const pts = aire.filter(cfg.filtro).map((r) => ({ fecha: r.fecha, y: cfg.y(r), r }));
+      vacio: "Aún no hay corridas al aire libre en este periodo.",
+      texto: (r) => `${fechaLarga(r.fecha)} · ${fmt(r.pct_trote, 0)} % trotando · trote ${fmt(r.trote_min, 0)}' / caminata ${fmt(r.camina_min, 0)}'` },
+  }[id];
+  const base = cfg.all ? (prog.corridas || []).filter((r) => parseFecha(r.fecha).getTime() > dominio[0] - 86400000) : aire;
+  const pts = base.filter(cfg.filtro).map((r) => ({ fecha: r.fecha, y: cfg.y(r), r }));
+  const extra = { ...cfg.extra, ...(cfg.prom ? { promedio: pts.map((p) => cfg.prom(p.r) ?? null) } : {}) };
   return h("div", {}, h("p", { class: "nota" }, cfg.nota),
-    pts.length ? lineChart({ ancho, serie: pts, dominio, marcadores: true, ...cfg.extra, texto: (p) => cfg.texto(p.r) })
-      : h("p", { class: "vacio" }, "Aún no hay corridas al aire libre en este periodo."));
+    pts.length ? lineChart({ ancho, serie: pts, dominio, marcadores: !cfg.prom, puntos: !!cfg.prom, ...extra, texto: (p) => cfg.texto(p.r) })
+      : h("p", { class: "vacio" }, cfg.vacio));
 }
 
 function graficaVolumen(d, ancho) {
@@ -230,8 +244,10 @@ function graficaVolumen(d, ancho) {
 function tarjetaCorridasProgreso(d) {
   const prog = d.progreso || {};
   const hayCaminatas = ((prog.numeros || {}).caminatas || {})[String(periodo)];
+  const hayDeriva = (prog.corridas || []).some((r) => r.deriva_pct != null);
   const vistas = [{ etiqueta: "Volumen", pintar: (a) => graficaVolumen(d, a) },
     { etiqueta: "Ritmo", pintar: (a) => graficaCorridas(d, a, "ritmo") },
+    ...(hayDeriva ? [{ etiqueta: "Deriva", pintar: (a) => graficaCorridas(d, a, "deriva") }] : []),
     ...(hayCaminatas ? [{ etiqueta: "% trote", pintar: (a) => graficaCorridas(d, a, "pct") }] : [])];
   return tarjetaConVistas("progreso", "Corridas", `Últimas ${periodo} semanas`, vistas, { clase: "ancha", pie: tablaCorridas(prog.corridas || []) });
 }
@@ -241,10 +257,11 @@ function tablaCorridas(corridas) {
   const celdas = (r) => [fechaLarga(r.fecha), h("span", { class: "con-ico" }, icono(r.icono || (r.carrera ? "medalla" : "correr"), 14), `${r.sesion || "—"}${r.carrera ? " · carrera" : ""}`), fmt(r.minutos, 0), fmt(r.km),
     r.pct_trote == null ? "—" : `${fmt(r.pct_trote, 0)} %`,
     r.caminadora ? "cam." : r.ritmo_trote_s == null ? "—" : mmss(r.ritmo_trote_s),
-    r.fc_prom == null ? "—" : fmt(r.fc_prom, 0)];
+    r.ritmo_ref_s == null ? "—" : mmss(r.ritmo_ref_s), r.deriva_pct == null ? "—" : `${fmt(r.deriva_pct, 1)} %`,
+    r.fc_prom == null ? "—" : fmt(r.fc_prom, 0), textoEsfuerzo(r) || "—"];
   return [h("details", {}, h("summary", {}, "Ver cada corrida como tabla"),
     orden.length ? h("div", { class: "tabla-scroll ancha" }, h("table", {},
-      h("thead", {}, h("tr", {}, ["Fecha", "Sesión", "Min", "Km", "% trote", "Ritmo", "FC"].map((c) => h("th", {}, c)))),
+      h("thead", {}, h("tr", {}, ["Fecha", "Sesión", "Min", "Km", "% trote", "Ritmo trote", "Ritmo a FC ref", "Deriva", "FC", "Esfuerzo"].map((c) => h("th", {}, c)))),
       h("tbody", {}, orden.map((r) => h("tr", {}, celdas(r).map((c) => h("td", {}, c))))))) : h("p", { class: "vacio" }, "Aún no hay corridas registradas."),
     orden.some((r) => r.caminadora) ? h("p", { class: "nota", style: "margin-top:8px" }, "cam. = caminadora (su ritmo no se compara).") : null)];
 }
@@ -570,6 +587,11 @@ function tarjetaComoFunciona(d) {
       li(h("strong", {}, "¿Lo hice bien?: "), `los minutos sobre el techo de Z2 (zonas 3 a 5) deben ser ${fmt(u.ceiling_tolerance_min ?? 2, 0)}' o menos; en la Z2 #1 con picos opcionales de Z3 se permiten 2' más.`),
       li(h("strong", {}, "Tiempo: "), "es tiempo de reloj, caminatas incluidas. Trote y caminata vienen de los tramos que detecta Garmin; el ritmo trotando no cuenta la caminata.")),
     h("p", { class: "nota" }, "Las zonas usan Karvonen (% de la reserva de FC)."),
+    h("h3", { style: "margin-top:12px" }, "Cómo medimos tu mejora"),
+    h("ul", { class: "reglas" },
+      li(h("strong", {}, "Ritmo a FC de referencia: "), `llevamos el ritmo de cada corrida al aire libre a ${(d.progreso || {}).fc_ref ?? "la mitad de Z2"} lpm (la mitad de tu Z2): ritmo × FC que llevaste ÷ FC de referencia. Es tu eficiencia aeróbica: si mejoras, a la misma FC vas más rápido. Solo cuentan corridas cuyo trote cayó en Z2; no carreras ni caminadora. El calor y el cansancio suben la FC, así que mira la tendencia (la línea de 4 corridas), no una corrida suelta.`),
+      li(h("strong", {}, "Deriva cardiaca: "), "en corridas de 40 min o más, casi sin caminar y a ritmo parejo (cada km a ±15 % del ritmo mediano, después de los primeros 10 min), comparamos velocidad ÷ FC de la primera mitad contra la segunda, sin los primeros 10 min. Menos de 5 % de caída es buena base aeróbica; más, aún te falta base."),
+      li(h("strong", {}, "Esfuerzo: "), "calculado con tu FC, de 1 a 10 (Z2 = 3, Z3 = 5.5, Z4 = 7.5, Z5 = 9.5): el promedio de la mitad más dura de la sesión, así que los descansos no lo bajan. Carga = esfuerzo × minutos; la fuerza con la FC baja da poca carga. El RPE que pones en el reloj se guarda aparte, junto al esfuerzo.")),
     h("p", {}, h("a", { href: `${REPO_DOCS}REQUISITOS.md`, target: "_blank", rel: "noopener" }, "Requisitos"), " · ",
       h("a", { href: `${REPO_DOCS}PLAN_ENTRENAMIENTO.md`, target: "_blank", rel: "noopener" }, "Plan de entrenamiento")));
 }

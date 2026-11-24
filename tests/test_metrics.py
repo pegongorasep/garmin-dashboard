@@ -391,21 +391,56 @@ def test_run_rows():
     assert filas[1]["pct_trote"] is None and filas[1]["ritmo_trote_s"] is None
 
 
-def fila(fecha, pct, ritmo, caminadora=False):
-    return {"fecha": fecha, "pct_trote": pct, "ritmo_trote_s": ritmo, "caminadora": caminadora}
+def fila(fecha, pct, ritmo_ref):
+    return {"fecha": fecha, "pct_trote": pct, "ritmo_ref_s": ritmo_ref}
 
 
 def test_progress_summary():
     hoy = date(2026, 12, 14)
     filas = [fila("2026-11-02", 58, 460), fila("2026-11-10", 58, 460),   # antes: 19 oct – 16 nov; ahora: 16 nov – 14 dic
              fila("2026-10-25", 58, 460), fila("2026-10-30", 58, 460),
-             fila("2026-12-01", 70, 445), fila("2026-12-10", 66, 445),
-             fila("2026-12-05", 10, 300, caminadora=True)]               # caminadora: no cuenta
-    assert m.progress_summary(filas, hoy, 4) == "Trotas 68 % del tiempo (antes 58 %) · ritmo trotando 7:40 → 7:25 /km"
-    assert m.progress_summary(filas[:4], hoy, 4) == "Aún no hay corridas suficientes para comparar"
+             fila("2026-12-01", 70, 445), fila("2026-12-10", 66, 445)]
+    assert m.progress_summary(filas, hoy, 4, 144) == "Trotas 68 % del tiempo (antes 58 %) · a 144 lpm: 7:40 → 7:25 /km"
     assert m.progress_summary([], hoy, 4) == "Aún no hay corridas suficientes para comparar"
     sin_ritmo = [fila("2026-12-01", 70, None), fila("2026-10-25", 58, 460)]
-    assert m.progress_summary(sin_ritmo, hoy, 4) == "Trotas 70 % del tiempo (antes 58 %)"
+    assert m.progress_summary(sin_ritmo, hoy, 4, 144) == (
+        "Trotas 70 % del tiempo (antes 58 %) · sin corridas en Z2 en las últimas 4 semanas para comparar el ritmo")
+
+
+def test_progress_summary_dice_cual_periodo_falta():
+    hoy = date(2026, 12, 14)
+    solo_ahora = [fila("2026-12-01", 70, 445), fila("2026-12-05", None, 450)]
+    assert m.progress_summary(solo_ahora, hoy, 8, 144) == "Sin corridas en Z2 en las 8 semanas anteriores para comparar el ritmo"
+
+
+def test_periodo_filas_es_un_solo_conjunto():
+    hoy = date(2026, 12, 14)
+    filas = [fila("2026-11-16", 1, 1), fila("2026-11-17", 2, 2), fila("2026-12-14", 3, 3), fila("2026-11-10", 4, 4)]
+    assert [f["pct_trote"] for f in m.periodo_filas(filas, hoy, 4)] == [2, 3]          # (16 nov, 14 dic]
+    assert [f["pct_trote"] for f in m.periodo_filas(filas, hoy, 4, 1)] == [1, 4]
+
+
+FILA_RITMO = {"caminadora": False, "carrera": False, "ritmo_trote_s": 480.0, "fc_trote": 148.0,
+              "minutos": 40, "km": 5.0, "fc_prom": 140}
+
+
+def test_ritmo_fc_ref_lleva_el_ritmo_a_la_mitad_de_z2():
+    zonas = m.zones(190, 60, [50, 60, 70, 80, 90])        # Z2 138–151, ref 144 (o 145 al redondear)
+    ref = m.fc_referencia(zonas)
+    assert round(m.ritmo_fc_ref(FILA_RITMO, zonas), 1) == round(480 * 148 / ref, 1)
+    assert m.ritmo_fc_ref({**FILA_RITMO, "fc_trote": ref}, zonas) == 480.0          # a la FC ref, el mismo ritmo
+    assert m.ritmo_fc_ref({**FILA_RITMO, "fc_trote": 137}, zonas) is None            # trote fuera de Z2 (debajo)
+    assert m.ritmo_fc_ref({**FILA_RITMO, "fc_trote": 152}, zonas) is None            # fuera de Z2 (arriba)
+    assert m.ritmo_fc_ref({**FILA_RITMO, "caminadora": True}, zonas) is None
+    assert m.ritmo_fc_ref({**FILA_RITMO, "carrera": True}, zonas) is None
+
+
+def test_ritmo_fc_ref_sin_tramos_usa_ritmo_y_fc_promedio():
+    zonas = m.zones(190, 60, [50, 60, 70, 80, 90])
+    f = {**FILA_RITMO, "ritmo_trote_s": None, "fc_trote": None, "fc_prom": 144}
+    assert m.ritmo_fc_ref(f, zonas) == 480.0 * 144 / m.fc_referencia(zonas)          # 40 min / 5 km = 480 s/km
+    assert m.ritmo_fc_ref({**f, "fc_prom": 160}, zonas) is None
+    assert m.ritmo_fc_ref({**f, "fc_prom": None}, zonas) is None
 
 
 def test_max_hr_progress():
@@ -810,3 +845,58 @@ def test_detalle_vigente():
     assert m.detalle_vigente({"rpe": None}, False)                               # no-corrida vieja sin RPE: no se repide
     assert not m.detalle_vigente({"rpe": None}, False, reciente=True)            # reciente sin RPE: Pedro puede ponerlo
     assert m.detalle_vigente({**completa, "rpe": None}, True, reciente=False)
+
+
+def test_mejora_frase_con_ritmo_a_fc_ref():
+    def c(f, r):
+        return {"fecha": f, "minutos": 40, "pct_trote": None, "ritmo_ref_s": r}
+    filas = [c("2026-09-20", 468), c("2026-10-14", 455), c("2026-10-21", 455)]
+    assert m.mejora_frase(filas, HOY, "ritmo", fc_ref=144).endswith("; a 144 lpm: 7:48 → 7:35 /km.")
+    solo_ahora = [c("2026-09-20", None), c("2026-10-14", 455)]
+    assert "sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo" in m.mejora_frase(solo_ahora, HOY, "ritmo", fc_ref=144)
+
+
+# --- v4.3 F3: deriva cardiaca ---
+
+def serie_parejo(min_total=50, ritmo=360, fc=lambda t: 140, paso=5):
+    """Serie [seg, metros, fc] a ritmo constante `ritmo` s/km."""
+    return [[t, round(t / ritmo * 1000), fc(t)] for t in range(0, min_total * 60 + 1, paso)]
+
+
+def test_deriva_cero_si_la_fc_no_sube():
+    d = m.deriva(serie_parejo(), {"minutos": 50, "pct_trote": 100})
+    assert d["pct"] == 0.0 and d["ok"] is True
+
+
+def test_deriva_mide_la_caida_de_eficiencia():
+    # a ritmo constante la FC sube de 140 a 150 en la segunda mitad: EF cae ~ 6.7 %
+    serie = serie_parejo(fc=lambda t: 140 if t < 1800 else 150)
+    d = m.deriva(serie, {"minutos": 50, "pct_trote": None})
+    assert 6 < d["pct"] < 7 and d["ok"] is False
+    suave = m.deriva(serie_parejo(fc=lambda t: 140 if t < 1800 else 144), {"minutos": 50, "pct_trote": 95})
+    assert 0 < suave["pct"] < 5 and suave["ok"] is True
+
+
+def test_deriva_exige_40_min_y_casi_sin_caminar():
+    assert m.deriva(serie_parejo(30), {"minutos": 30, "pct_trote": 100})["motivo"] == "corta"
+    assert m.deriva(serie_parejo(), {"minutos": 50, "pct_trote": 80})["motivo"] == "con caminatas"
+    assert m.deriva([], {"minutos": 50, "pct_trote": 100})["motivo"] == "sin serie"
+
+
+def test_deriva_no_pareja_si_un_km_se_sale_de_15_pct():
+    serie, extra, t = [], 0, 0
+    for seg in range(0, 3001, 5):
+        ritmo = 360 if not (1500 <= seg < 1900) else 270     # un tramo rápido (-25 %) después de los 10 min
+        serie.append([seg, round(extra), 140])
+        extra += 5 / ritmo * 1000
+    d = m.deriva(serie, {"minutos": 50, "pct_trote": 100})
+    assert d["pct"] is None and d["motivo"] == "no pareja"
+
+
+def test_deriva_ignora_los_primeros_10_min_y_las_pausas():
+    # los primeros 10 min con FC alta (calentamiento) no cuentan
+    serie = serie_parejo(fc=lambda t: 170 if t < 600 else 140)
+    assert m.deriva(serie, {"minutos": 50, "pct_trote": 100})["pct"] == 0.0
+    # una pausa de 60 s (semáforo) a mitad: sin muestras en el hueco, no cambia nada
+    con_pausa = [x for x in serie_parejo() if not 1500 < x[0] < 1560]
+    assert abs(m.deriva(con_pausa, {"minutos": 50, "pct_trote": 100})["pct"]) < 0.5
