@@ -616,6 +616,7 @@ DERIVA_TROTE_PCT = 90    # % mínimo de trote (casi sin caminar)
 DERIVA_CALENTAR_S = 600  # los primeros 10 min no cuentan
 DERIVA_PAREJO = 0.15     # cada km a ±15 % del ritmo mediano
 DERIVA_BUENA = 5.0       # < 5 % = buena base
+DERIVA_Z2_PCT = 80       # % mínimo del trote (después de los 10 min) con la FC en Z2
 
 
 def _mediana(valores: list):
@@ -643,12 +644,13 @@ def _km_con_inicio(serie: list) -> list:
     return out
 
 
-def deriva(serie: list, fila: dict) -> dict:
+def deriva(serie: list, fila: dict, zonas=None) -> dict:
     """Deriva cardiaca: cuánto cae la eficiencia (velocidad ÷ FC) de la primera mitad a la segunda.
     Solo corridas de ≥ 40 min casi sin caminar (≥ 90 % trote o sin tramos) y a ritmo parejo (después de los primeros
-    10 min, cada km dentro de ±15 % del ritmo mediano). Sin los primeros 10 min ni los tramos de caminata (velocidad
+    10 min, cada km dentro de ±15 % del ritmo mediano) y, con `zonas`, casi todo en Z2 (≥ 80 % del trote después de
+    los 10 min; una carrera a tope no cuenta). Sin los primeros 10 min ni los tramos de caminata (velocidad
     < 70 % de la mediana). Devuelve {"pct", "ok"} (ok = pct < 5) o {"pct": None, "motivo"} con motivo "corta",
-    "con caminatas", "sin serie" o "no pareja"."""
+    "con caminatas", "sin serie", "no pareja" o "fuera de Z2"."""
     no = lambda motivo: {"pct": None, "ok": None, "motivo": motivo}  # noqa: E731
     if fila.get("minutos", 0) < DERIVA_MIN:
         return no("corta")
@@ -667,6 +669,11 @@ def deriva(serie: list, fila: dict) -> dict:
     tramos = [t for t in tramos if vel and t[2] / t[1] >= 0.7 * vel]
     if len(tramos) < 4:
         return no("sin serie")
+    if zonas:
+        _, piso, techo = zonas[1]
+        en_z2 = sum(t[1] for t in tramos if piso <= t[3] <= techo)
+        if en_z2 < DERIVA_Z2_PCT / 100 * sum(t[1] for t in tramos):
+            return no("fuera de Z2")
     corte = (DERIVA_CALENTAR_S + serie[-1][0]) / 2
     ef = []
     for mitad in ([t for t in tramos if t[0] < corte], [t for t in tramos if t[0] >= corte]):
@@ -678,11 +685,11 @@ def deriva(serie: list, fila: dict) -> dict:
     return {"pct": pct, "ok": pct < DERIVA_BUENA, "motivo": None}
 
 
-def deriva_de(activity: dict, details: dict) -> dict:
+def deriva_de(activity: dict, details: dict, zonas=None) -> dict:
     """deriva() de una actividad, con su serie guardada y el % de trote de sus tramos."""
     rw = run_walk(activity, details) or {}
     return deriva((details.get(str(activity.get("activityId"))) or {}).get("serie") or [],
-                  {"minutos": (activity.get("duration") or 0) / 60, "pct_trote": rw.get("pct_trote")})
+                  {"minutos": (activity.get("duration") or 0) / 60, "pct_trote": rw.get("pct_trote")}, zonas)
 
 
 def run_rows(activities: list, details: dict, config: dict) -> list:
@@ -699,7 +706,7 @@ def run_rows(activities: list, details: dict, config: dict) -> list:
                 "km": (a.get("distance") or 0) / 1000, "fc_prom": a.get("averageHR"),
                 "pct_z1z2": (zm["Z1"] + zm["Z2"]) / total * 100 if total else None,
                 "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": es_carrera(a, config), **rw}
-        d = deriva_de(a, details)
+        d = deriva_de(a, details, zonas)
         filas.append({**fila, "ritmo_ref_s": ritmo_fc_ref(fila, zonas), "deriva_pct": d["pct"], "deriva_ok": d["ok"]})
     return filas
 
@@ -841,6 +848,7 @@ def tiempo_en_distancia(serie: list, metros: float):
 
 
 PRUEBA_FC_FIJA_S = 1800
+PRUEBA_SEGUIDO_PCT = 95   # % de trote desde el cual cuenta como 30' seguidos
 
 
 def valor_prueba(tipo: str, serie: list, pct_trote=None):
@@ -849,8 +857,12 @@ def valor_prueba(tipo: str, serie: list, pct_trote=None):
     if tipo == "fc_fija":
         metros = distancia_en_tiempo(serie, PRUEBA_FC_FIJA_S)
         return {"valor": round(PRUEBA_FC_FIJA_S / (metros / 1000)), "km": round(metros / 1000, 2)} if metros else None
-    if tipo == "trote_continuo":
-        return None if pct_trote is None else {"valor": round(pct_trote, 1), "km": None}
+    if tipo == "trote_continuo":   # si ya trota los 30' seguidos, también los km (para pasar a la prueba a FC fija)
+        if pct_trote is None:
+            return None
+        metros = distancia_en_tiempo(serie, PRUEBA_FC_FIJA_S) if pct_trote >= PRUEBA_SEGUIDO_PCT else None
+        return {"valor": round(pct_trote, 1), "km": round(metros / 1000, 2) if metros else None,
+                "seguido": pct_trote >= PRUEBA_SEGUIDO_PCT}
     t = tiempo_en_distancia(serie, 5000)
     return None if t is None else {"valor": round(t), "km": 5.0}
 

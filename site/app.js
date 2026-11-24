@@ -224,7 +224,7 @@ const PRUEBA_NOMBRE = { fc_fija: "30 min a FC fija", trote_continuo: "trote cont
 
 /** "7:42 /km", "93 % de trote" o "25:00" según la prueba. */
 function valorPrueba(tipo, v) {
-  return tipo === "trote_continuo" ? `${fmt(v, 0)} % de trote` : tipo === "5k" ? tiempoLargo(v) : `${mmss(v)} /km`;
+  return tipo === "trote_continuo" ? (v >= 95 ? `30 min seguidos (${fmt(v, 0)} % de trote)` : `${fmt(v, 0)} % de trote`) : tipo === "5k" ? tiempoLargo(v) : `${mmss(v)} /km`;
 }
 
 /** Tarjeta "Plan terminado": resultado de la prueba contra el inicio (o contra la prueba anterior) y el siguiente paso. */

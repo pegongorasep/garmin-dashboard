@@ -271,7 +271,8 @@ sigue: es la suma de zonas bajas, no un tramo.
   "a 144 lpm: 7:48 → 7:35 /km". "Cómo funciona" aclara que el calor lo afecta (ver tendencia, no una corrida suelta).
 
 ### 11.2 Deriva cardiaca
-- Corridas de **≥ 40 min casi sin caminar** (≥ 90 % trote) y **a ritmo parejo**, carreras incluidas. Parejo: después
+- Corridas de **≥ 40 min casi sin caminar** (≥ 90 % trote), **casi todas en Z2** (≥ 80 % del trote después de los
+  10 min; una carrera a tope no cuenta) y **a ritmo parejo**. Si la corrida no cumple, no se muestra deriva. Parejo: después
   de los primeros 10 min, cada km a no más de ±15 % del ritmo mediano de esa corrida (cabe la baja normal por
   cansancio; no caben picos de Z3, sprints ni cambios bruscos, porque la FC tarda en alcanzar a la velocidad).
 - Velocidad ÷ FC en la primera mitad vs la segunda, **sin los primeros 10 min** y sin tramos de caminata. Mide las
@@ -302,7 +303,8 @@ sigue: es la suma de zonas bajas, no un tramo.
 
 ### 11.6 Prueba al terminar el plan
 - La semana 12 (descarga) cambia la Larga por una prueba, según el plan: base → **30 min a FC fija** (mitad de Z2,
-  ruta plana, alerta en el reloj; se miden los km); novato con caminatas → minutos de trote continuo en Z2; corredor →
+  ruta plana, alerta en el reloj; se miden los km); novato con caminatas → 30' en Z2 sin caminar si puede; se mide el % de trote (Garmin no dice en qué orden
+  trotaste y caminaste), y si trotó los 30' seguidos (≥ 95 %) también los km, para pasar a la prueba a FC fija; corredor →
   5 km a tope. Aplica también al plan de Pedro.
 - La primera vez se compara contra el ritmo a FC ref de las semanas 1–2; luego prueba contra prueba.
 - Al acabar el plan, Hoy muestra "Plan terminado" con el resultado vs el inicio y "Corre `/ajustar` para el siguiente

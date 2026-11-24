@@ -19,6 +19,8 @@ Habla en español, claro y corto. No pidas la key ni leas `.env`.
      agrega su resultado a `corrida.pruebas` como `{fecha, tipo, valor}` (usa tal cual `valor`; si la prueba es `null`,
      no se hizo: pregunta si quiere repetirla). Úsalo para proponer el siguiente plan: si `mejor` es verdadero y la
      mejora es clara, sube nivel o `base_min`; si no mejoró, repite el nivel y revisa sueño y carga. Nuevo `inicio` (lunes).
+     Si la prueba fue `trote_continuo` y `seguido` es verdadero (trotó los 30' sin caminar), propón quitar las
+     caminatas (`caminatas: false`): la siguiente prueba será a FC fija y sus `km` sirven de referencia.
 3. Si cambió algo **del plan** (nivel, intensidad, calidad_tipos, caminatas, variada, inicio, semanas, base_min), hay que
    regenerarlo; si solo cambió actividades, días o título, **no** se regenera.
    - Asegura el motor: si no existe `.motor/`, clónalo (`git clone --depth 1 --branch stable

@@ -926,7 +926,8 @@ def test_valor_prueba_por_tipo():
     assert m.valor_prueba("fc_fija", serie[:100]) is None                          # menos de 30': no hay prueba
     assert m.valor_prueba("5k", serie) == {"valor": 2000, "km": 5.0}
     assert m.valor_prueba("5k", serie[:300]) is None                               # no llegó a 5 km
-    assert m.valor_prueba("trote_continuo", [], 93.44) == {"valor": 93.4, "km": None}
+    assert m.valor_prueba("trote_continuo", [], 93.44) == {"valor": 93.4, "km": None, "seguido": False}
+    assert m.valor_prueba("trote_continuo", serie, 98) == {"valor": 98, "km": 4.5, "seguido": True}   # 30' seguidos
     assert m.valor_prueba("trote_continuo", [], None) is None
 
 
@@ -971,3 +972,10 @@ def test_run_check_calidad_tolera_su_z3_y_usa_las_zonas_del_dashboard():
     a = act(1, "2026-11-12", "running", z=(0, 0, 0, 0, 1800))     # el reloj dice todo en Z5
     r = m.run_check(a, ses, None, {"Z0": 0, "Z1": 0, "Z2": 10, "Z3": 20, "Z4": 0, "Z5": 0})
     assert r["min_sobre_techo"] == 20 and r["tolerancia_min"] == 22 and r["techo_ok"] is True
+
+
+def test_deriva_solo_si_casi_todo_el_trote_va_en_z2():
+    zonas = [("Z1", 125, 138), ("Z2", 138, 151), ("Z3", 151, 164)]
+    assert m.deriva(serie_parejo(), {"minutos": 50, "pct_trote": 100}, zonas)["pct"] is not None
+    carrera = serie_parejo(fc=lambda t: 160)
+    assert m.deriva(carrera, {"minutos": 50, "pct_trote": 100}, zonas)["motivo"] == "fuera de Z2"

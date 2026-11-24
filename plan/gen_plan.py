@@ -289,7 +289,7 @@ def sesion_variada(tipo: str, minutos: int, caminatas: bool, z3: bool, bloque: i
 PRUEBA_MIN = 30        # minutos de la prueba a FC fija y de trote continuo
 PRUEBA_5K_MIN = 35     # estimado de unos 5 km a tope (los minutos reales dependen de la persona)
 NOTA_FC_FIJA = "FC fija a la mitad de Z2 en ruta plana; alerta en el reloj"
-NOTA_TROTE_CONTINUO = "trote continuo en Z2; camina solo si pasas el techo"
+NOTA_TROTE_CONTINUO = "trota en Z2 sin caminar si puedes los 30'; camina solo si pasas el techo"
 NOTA_5K = "5 km a tope; lo que cuenta es tu tiempo"
 
 

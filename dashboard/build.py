@@ -441,7 +441,7 @@ def prueba_resultado(data: dict, config: dict, plan: dict):
     out = {"tipo": ses["prueba"], "fecha": e["fecha"], "estado": e["estado"], "valor": None, "km": None,
            "base": base, "dif": None, "mejor": None}
     if medido:
-        out.update(valor=medido["valor"], km=medido["km"], **(m.comparar_prueba(ses["prueba"], medido["valor"], base) or {}))
+        out.update(valor=medido["valor"], km=medido["km"], seguido=medido.get("seguido"), **(m.comparar_prueba(ses["prueba"], medido["valor"], base) or {}))
     return out
 
 
