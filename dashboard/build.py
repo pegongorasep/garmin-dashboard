@@ -79,7 +79,8 @@ def convert_steps(steps: list, zonas: list) -> list:
 
 def convert_session(s: dict, zonas: list) -> dict:
     easy = s["easy"]
-    return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"],
+    extra = {k: s[k] for k in ("nota", "objetivo", "calidad_tipo") if k in s}
+    return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"], **extra,
             "steps": convert_steps(s["steps"], zonas),
             "easy": {"name": easy["name"], "minutes": easy["minutes"],
                      "steps": convert_steps(easy["steps"], zonas)}}
@@ -113,13 +114,13 @@ def week_runs(week_start: date, hasta: date, data: dict, config: dict) -> list:
     """Corridas de la semana (lun–dom) hasta `hasta`, en orden, con minutos y la luz de su día."""
     runs = sorted((a for a in data["activities"] if m.classify(a, config) == "run"
                    and week_start <= m.day_of(a) <= hasta), key=lambda a: a["startTimeLocal"])
-    return [{"fecha": m.day_of(a).isoformat(), "minutos": a["duration"] / 60,
+    return [{"fecha": m.day_of(a).isoformat(), "minutos": a["duration"] / 60, "zonas": m.zone_minutes(a),
              "luz": light_on(m.day_of(a), data, config)["color"]} for a in runs]
 
 
 def week_assignment(day: date, data: dict, config: dict, plan: dict, hasta=None):
     """(semana del plan, asignación de sus sesiones) para la semana que contiene `day`; (None, []) si no hay."""
-    n = m.week_index(day, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []))
+    n = m.week_index(day, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []), config.get("plan_semanas", 12))
     semana = next((w for w in plan["weeks"] if w["n"] == n), None)
     if semana is None:
         return None, []
@@ -149,7 +150,7 @@ def build_week(hoy: date, data: dict, config: dict, estado: list, plan: dict) ->
                      "tipo": day_type(d, hoy, acts, config), "luz": luz})
     filas = _semana_corridas(ini, hoy, acts, data["details"], config)
     previas = _semana_corridas(ini - timedelta(days=7), ini - timedelta(days=1), acts, data["details"], config)
-    n = m.week_index(hoy, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []))
+    n = m.week_index(hoy, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []), config.get("plan_semanas", 12))
     semana = next((w for w in plan["weeks"] if w["n"] == n), None)
     r = resumen_corridas(filas)
     return {"dias": dias, "sesiones_total": len(estado),
@@ -267,7 +268,7 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
     fin = ini + timedelta(days=6)
     hasta = min(fin, hoy)
     repetidas = config.get("semanas_repetidas", [])
-    n = m.week_index(ini, date.fromisoformat(config["plan_start"]), repetidas)
+    n = m.week_index(ini, date.fromisoformat(config["plan_start"]), repetidas, config.get("plan_semanas", 12))
     semana, estado = week_assignment(ini, data, config, plan, hasta=hasta)
     pasada = fin < hoy
     sesiones = [{**e, "estado": "no_hecha" if pasada and e["estado"] == "pendiente" else e["estado"],
@@ -339,7 +340,7 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
     for i in range(11, -1, -1):
         ini = monday(hoy) - timedelta(weeks=i)
         fs = [f for f in filas if ini <= date.fromisoformat(f["fecha"]) < ini + timedelta(days=7)]
-        n = m.week_index(ini, inicio_plan, config.get("semanas_repetidas", []))
+        n = m.week_index(ini, inicio_plan, config.get("semanas_repetidas", []), config.get("plan_semanas", 12))
         semana = next((w for w in plan["weeks"] if w["n"] == n), None)
         out.append({"inicio": ini.isoformat(), "minutos": r1(sum(f["minutos"] for f in fs)),
                     "km": r1(sum(f["km"] for f in fs)),

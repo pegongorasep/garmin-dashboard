@@ -215,14 +215,14 @@ def motivo(sigs: dict, config=None):
     return " · ".join(textos) or None
 
 
-def week_index(day: date, plan_start: date, repetidas=()):
-    """Semana del plan (1–12) que toca en `day`, o None si está fuera.
+def week_index(day: date, plan_start: date, repetidas=(), total: int = 12):
+    """Semana del plan (1–`total`) que toca en `day`, o None si está fuera.
 
     `repetidas`: números de semana del plan que se repitieron (una semana puede
     aparecer más de una vez). Cada repetición empuja el resto una semana.
     """
     secuencia = []
-    for n in range(1, 13):
+    for n in range(1, total + 1):
         secuencia += [n] * (1 + list(repetidas).count(n))
     i = (day - plan_start).days // 7
     return secuencia[i] if 0 <= i < len(secuencia) else None
@@ -257,16 +257,27 @@ def assign_sessions(week: dict, runs: list, config: dict) -> list:
     """
     sesiones = week["sessions"]
     larga = next((s for s in sesiones if s.get("tipo") == "larga"), None)
+    calidad = next((s for s in sesiones if s.get("tipo") == "calidad"), None)
     elegida = None
     if larga:
         candidatas = [r for r in runs if es_fin_de_semana(r["fecha"])
                       and r["minutos"] + 0.5 >= config["done_ratio"] * larga["minutes"]]
         elegida = max(candidatas, key=lambda r: r["minutos"], default=None)
     resto = [r for r in runs if r is not elegida]
+    # La calidad es la primera corrida (no Larga) con >= 50 % de los minutos objetivo en Z3 o más.
+    de_calidad = None
+    if calidad:
+        meta = (calidad.get("objetivo") or {}).get("minutos", 0)
+        de_calidad = next((r for r in resto if sum((r.get("zonas") or {}).get(z, 0) for z in ("Z3", "Z4", "Z5")) >= 0.5 * meta
+                           and meta > 0), None)
+        if de_calidad:
+            resto = [r for r in resto if r is not de_calidad]
     asignadas = {}
     for s in sesiones:
         if s is larga:
             asignadas[s["id"]] = elegida
+        elif s is calidad:
+            asignadas[s["id"]] = de_calidad
         else:
             asignadas[s["id"]] = resto.pop(0) if resto else None
     return [_estado_sesion(s, asignadas[s["id"]], config) for s in sesiones]
@@ -390,7 +401,21 @@ def run_check(activity: dict, session, config=None) -> dict:
     tolerancia = (config or {}).get("ceiling_tolerance_min", 2)
     if session and _tiene_opcionales(session.get("steps", [])):
         tolerancia += 2
-    return {"min_sobre_techo": sobre, "tolerancia_min": tolerancia, "techo_ok": sobre <= tolerancia}
+    out = {"min_sobre_techo": sobre, "tolerancia_min": tolerancia, "techo_ok": sobre <= tolerancia}
+    objetivo = (session or {}).get("objetivo")
+    if (session or {}).get("tipo") == "calidad" and objetivo:
+        out["calidad"] = calidad_check(zm, objetivo, (config or {}).get("done_ratio", 0.7))
+    return out
+
+
+def calidad_check(zm: dict, objetivo: dict, done_ratio: float) -> dict:
+    """Sesión de calidad: minutos en la zona objetivo vs objetivo; avisa si pasó mucho por encima de esa zona."""
+    zona, meta = objetivo["zona"], objetivo["minutos"]
+    en_zona = zm[zona]
+    arriba = sum(zm[z] for z in ZONAS[ZONAS.index(zona) + 1:])
+    return {"zona": zona, "min_zona": round(en_zona, 1), "objetivo_min": meta,
+            "ok": en_zona + 0.05 >= done_ratio * meta, "min_arriba": round(arriba, 1),
+            "mucho_arriba": arriba > max(2.0, 0.25 * meta)}
 
 
 def rolling_mean(valores: list, ventana: int = 7, minimo: int = 3) -> list:
