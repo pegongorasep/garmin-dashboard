@@ -516,7 +516,7 @@ function tarjetaRecuperacion(d) {
   return tarjetaConVistas("cuerpo", "Recuperación", "Últimas 12 semanas", [
     { etiqueta: "HRV", pintar: (a) => graficaRecuperacion(d, a, "hrv") },
     { etiqueta: "FC reposo", pintar: (a) => graficaRecuperacion(d, a, "rhr") },
-    { etiqueta: "Sueño", pintar: (a) => graficaRecuperacion(d, a, "sueno") }]);
+    { etiqueta: "Sueño", pintar: (a) => graficaRecuperacion(d, a, "sueno") }], { clase: "ancha" });
 }
 
 // --- Plan: zonas y reglas · Progreso: carga ---

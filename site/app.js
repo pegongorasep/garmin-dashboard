@@ -281,7 +281,7 @@ function tarjetaEstaSemana(d, s) {
     ? [plural(st.corridas, "corrida", "corridas"), st.minutos != null ? `${fmt(st.minutos, 0)} min` : null,
       st.km != null ? `${fmt(st.km)} km` : null, st.pct_trote != null ? `${fmt(st.pct_trote, 0)} % trote` : null].filter(Boolean)
     : [s.estado === "futura" ? "Aún no empieza" : "Sin corridas"];
-  c.append(h("div", { class: "grande" }, partes.join(" · ")), intensidadCompacta(s));
+  c.append(h("div", { class: "grande" }, partes.join(" · ")), ...[intensidadCompacta(s)].filter(Boolean));
   const p = s.plan;
   if (p) {
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, `Plan: ${p.total} sesiones · ${fmt(p.plan_min, 0)} min`));
@@ -492,7 +492,7 @@ function pintarSemana(d) {
   const caja = $("hoy-semana");
   if (!s) { caja.replaceChildren(); return; }
   const reciente = carreraReciente(d);
-  caja.replaceChildren(selectorSemana(d), tarjetaEstaSemana(d, s), tarjetaTusCorridas(d, s, !reciente), reciente ? tarjetaCarreraHoy(reciente) : null);
+  caja.replaceChildren(...[selectorSemana(d), tarjetaEstaSemana(d, s), tarjetaTusCorridas(d, s, !reciente), reciente ? tarjetaCarreraHoy(reciente) : null].filter(Boolean));
 }
 
 // --- carrera destacada (últimos 7 días) ---
