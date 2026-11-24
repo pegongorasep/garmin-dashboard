@@ -557,6 +557,26 @@ def run_check(activity: dict, session, config=None, minutos_z=None, suave: bool 
     return out
 
 
+SUGERENCIAS = {"repetir": "Considera repetir la semana (con /ajustar)", "pesada": "Semana pesada: cuida la recuperación",
+               "sigue": "Sigue el plan"}
+
+
+def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, config: dict):
+    """Sugerencia por reglas conservadoras del resumen de la semana pasada: {"tipo", "texto"} o None. En orden:
+    pocas sesiones hechas (con plan) o muchos días rojos → repetir; carga muy por encima de la anterior → semana pesada;
+    todo hecho y sin rojos → seguir el plan. Solo sugiere: repetir la semana sigue siendo con /ajustar."""
+    pocas = total is not None and hechas < config.get("resumen_min_sesiones", 2)
+    if pocas or dias_rojos >= config.get("resumen_dias_rojos", 2):
+        tipo = "repetir"
+    elif carga_anterior and carga > config.get("resumen_carga_alta", 1.3) * carga_anterior:
+        tipo = "pesada"
+    elif total and hechas >= total and dias_rojos == 0:
+        tipo = "sigue"
+    else:
+        return None
+    return {"tipo": tipo, "texto": SUGERENCIAS[tipo]}
+
+
 def rolling_mean(valores: list, ventana: int = 7, minimo: int = 3) -> list:
     """Media móvil de los valores no nulos de los últimos `ventana` puntos; None si hay menos de `minimo`."""
     out = []

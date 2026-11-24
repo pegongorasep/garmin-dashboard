@@ -219,6 +219,29 @@ function bannerHoy(d) {
       d.hoy.ayer ? h("p", { class: "nota ayer" }, `Ayer: ${d.hoy.ayer.categoria}${d.hoy.ayer.esfuerzo != null ? `, esfuerzo ${fmt(d.hoy.ayer.esfuerzo, 1)}` : ""}`) : null));
 }
 
+/** Resumen de la semana pasada (calculado en Python): una línea y, al tocarla, el resto. */
+function resumenSemanaPasada(d) {
+  const r = d.hoy.semana_pasada;
+  if (!r) return null;
+  const sug = r.sugerencia;
+  const linea = ["Semana pasada:",
+    r.sesiones_total != null ? `${r.sesiones_hechas} de ${r.sesiones_total}` : null,
+    r.plan_min != null ? `${fmt(r.minutos, 0)} / ${fmt(r.plan_min, 0)} min` : `${fmt(r.minutos, 0)} min`,
+    `${r.dias_verdes} de 7 días verdes${r.dias_sin_datos ? ` (${r.dias_sin_datos} sin datos)` : ""}`].filter(Boolean);
+  const cuando = (a, b) => (a == null || b == null ? null : Math.abs(a - b) < 3 ? "igual que la anterior" : `${a < b ? "más rápido" : "más lento"} que la anterior (${mmss(b)})`);
+  const carga = r.carga_anterior ? `Carga ${fmt(r.carga, 0)} (${r.carga >= r.carga_anterior ? "▲" : "▼"} ${Math.abs(Math.round(((r.carga - r.carga_anterior) / r.carga_anterior) * 100))} % vs ${fmt(r.carga_anterior, 0)})` : `Carga ${fmt(r.carga, 0)}`;
+  const ritmo = r.ritmo_ref_s != null ? `Ritmo a ${(d.progreso || {}).fc_ref} lpm: ${mmss(r.ritmo_ref_s)} /km${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s) ? `, ${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s)}` : ""}` : null;
+  const dist = r.intensidad || {};
+  return h("details", { class: "banner ancha semana-pasada" },
+    h("summary", {}, h("span", { class: "sp-linea" }, linea.join(" · ")),
+      sug ? h("span", { class: "sp-sug" }, badge(sug.tipo === "sigue" ? "ok" : "warn", sug.tipo === "sigue" ? "✓" : "!", "sugerencia"), sug.texto) : null),
+    h("div", { class: "sp-cuerpo" },
+      h("p", {}, `${fmt(r.km)} km${r.pct_trote != null ? ` · ${fmt(r.pct_trote, 0)} % trote` : ""}`),
+      dist.bajo != null ? h("p", {}, `80/20: bajo ${fmt(dist.bajo, 0)} % · limbo ${fmt(dist.limbo, 0)} % · alto ${fmt(dist.alto, 0)} %`) : null,
+      h("p", {}, carga), ritmo ? h("p", {}, ritmo) : null,
+      ...(r.plan_vs_real || []).map((x) => h("div", {}, h("p", { class: "nota" }, x.sesion), lineasPlanVsReal(x.filas)))));
+}
+
 // --- semanas navegables: selector, esta semana, calendario ---
 
 let semIdx = null;           // índice en d.semanas_hoy de la semana elegida
@@ -551,7 +574,7 @@ function renderHoy(d) {
       ? h("div", { class: "aviso bad ancha" }, badge("bad", "✕", "aviso"),
         h("div", {}, h("strong", {}, "Repetir la semana. "), "Dos días seguidos en rojo: repite la semana anterior del plan."))
       : null,
-    bannerHoy(d), h("div", { id: "hoy-semana" }),
+    bannerHoy(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
     d.aviso_zonas ? h("div", { class: "aviso warn ancha" }, badge("warn", "!", "aviso"), h("div", {}, d.aviso_zonas)) : null].filter(Boolean));
   pintarSemana(d);
 }

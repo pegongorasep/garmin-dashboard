@@ -6,6 +6,9 @@ umbrales:
   rhr_tolerance_bpm: 4              # FC en reposo: cuántos lpm sobre su promedio de 7 días
   sleep_min_hours: 6.5
   esfuerzo_duro: 8                  # esfuerzo (1–10) desde el cual el día de ayer cuenta como duro
+  resumen_min_sesiones: 2           # resumen de la semana pasada: con menos sesiones hechas se sugiere repetirla
+  resumen_dias_rojos: 2             # ... o con tantos días rojos
+  resumen_carga_alta: 1.3           # ... y con más de este múltiplo de la carga anterior, "semana pesada"
   max_hr_review_above: 200          # avisar si la FC máx medida pasa de aquí
   run_types: [running, treadmill_running, trail_running, track_running]
 

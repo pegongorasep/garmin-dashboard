@@ -392,6 +392,36 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
             "intensidad": intensidad_semana(data["activities"], ini)}
 
 
+def resumen_semana_pasada(hoy: date, data: dict, config: dict, plan: dict):
+    """Resumen de la semana pasada (lun–dom antes de la de hoy) para Hoy, sin Claude: sesiones hechas, minutos, km,
+    % trote, días verdes, 80/20, carga contra la anterior, ritmo a FC ref contra la anterior, plan vs real y una
+    sugerencia por reglas. None si esa semana no tuvo corridas ni plan."""
+    ini = monday(hoy) - timedelta(days=7)
+    s = build_semana(ini, hoy, data, config, plan)
+    if not s["stats"]["corridas"] and not s["plan"]:
+        return None
+    luces = [light_on(ini + timedelta(days=i), data, config)["color"] for i in range(7)]
+    verdes, rojos, sin_datos = (luces.count(c) for c in ("verde", "rojo", "sin_datos"))
+    acts, det = data["activities"], data["details"]
+    carga, previa = (m.week_load(acts, det, i, config)["total"] for i in (ini, ini - timedelta(days=7)))
+    ritmo = lambda i: m.promedio([f["ritmo_ref_s"] for f in _semana_corridas(i, i + timedelta(days=6), acts, det, config)])  # noqa: E731
+    ahora_r, antes_r = ritmo(ini), ritmo(ini - timedelta(days=7))
+    plan_s = s["plan"]
+    return {"inicio": s["inicio"], "fin": s["fin"], "n": s["n"],
+            "sesiones_hechas": plan_s["hechas"] if plan_s else None, "sesiones_total": plan_s["total"] if plan_s else None,
+            "minutos": s["stats"]["minutos"], "plan_min": plan_s["plan_min"] if plan_s else None,
+            "km": s["stats"]["km"], "pct_trote": s["stats"]["pct_trote"],
+            "dias_verdes": verdes, "dias_rojos": rojos, "dias_sin_datos": sin_datos,
+            "intensidad": s["intensidad"],
+            "carga": r1(carga), "carga_anterior": r1(previa),
+            "ritmo_ref_s": None if ahora_r is None else round(ahora_r),
+            "ritmo_ref_anterior_s": None if antes_r is None else round(antes_r),
+            "plan_vs_real": [{"sesion": x["name"], "filas": x["corrida"]["plan_vs_real"]} for x in s["sesiones"]
+                             if x["corrida"] and x["corrida"].get("plan_vs_real")],
+            "sugerencia": m.sugerencia_semana(plan_s["hechas"] if plan_s else 0, plan_s["total"] if plan_s else None,
+                                              rojos, carga, previa, config)}
+
+
 def build_semanas(hoy: date, data: dict, config: dict, plan: dict):
     """(semanas_hoy, índice de la semana de hoy): las del plan (con repetidas) y, si hoy cae fuera, la de hoy."""
     inicio = monday(date.fromisoformat(config["plan_start"]))
@@ -680,7 +710,8 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "zonas": [{"zona": z, "piso": lo, "techo": hi} for z, lo, hi in zonas],
         "rhr_promedio_7d": r1(rhr),
         "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], config["max_hr"]),
-        "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta},
+        "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
+                "semana_pasada": resumen_semana_pasada(hoy, data, config, plan)},
         "ultima_corrida": last_run(data, config, plan),
         "semana": build_week(hoy, data, config, estado, plan),
         "semanas_hoy": semanas_hoy, "semana_hoy_idx": semana_hoy_idx,

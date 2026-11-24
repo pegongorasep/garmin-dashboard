@@ -10,6 +10,9 @@ Habla en español, claro y corto. No pidas la key ni leas `.env`. Solo lectura h
 1. Obtén la URL de su página: `gh repo view --json nameWithOwner` → `https://{owner}.github.io/{repo}/`.
    Baja los datos: `curl -s https://{owner}.github.io/{repo}/data.json` (guárdalo en un archivo temporal).
    Si está vacío o es el primer día, dile que Garmin tarda unas horas.
+   **El resumen de la semana pasada ya está en Hoy** (`hoy.semana_pasada`: sesiones hechas, minutos, días verdes, carga,
+   ritmo a FC ref, plan vs real y una sugerencia por reglas). No lo repitas número por número: léelo y enfócate en
+   platicar cómo se sintió la persona y en los ajustes grandes.
 2. Resume la semana (de lunes a hoy), con números del JSON:
    - **Corridas vs plan:** `plan.estado_sesiones` (hecha / incompleta / pendiente) y `semanas_hoy[]` (minutos y km
      vs `plan_min`). Si hay calidad, `corrida.calidad` dice "minutos en la zona objetivo: X de Y".

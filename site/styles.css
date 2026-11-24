@@ -505,3 +505,11 @@ details.card.plegable:not([open]) { align-self: start; }
 details.ses > summary .ley-sil { margin-left: 20px; }
 .ley-sil span { display: inline-flex; align-items: center; gap: 5px; } .ley-sil i { margin-right: 0; } .ley-sil b { font-weight: 600; } .ley-sil small { color: var(--muted); font-size: 11.5px; }
 .banner details.recup .ayer { margin: 6px 0 0 26px; }
+
+/* v4.3: resumen de la semana pasada y plan vs real */
+.semana-pasada > summary { cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; min-height: 32px; justify-content: center; }
+.semana-pasada .sp-sug { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--ink-2); }
+.semana-pasada .badge { width: 18px; height: 18px; font-size: 11px; }
+.sp-cuerpo { padding: 6px 0 4px; font-size: 13px; }
+.sp-cuerpo p { margin: 2px 0; }
+.pvr .estado { margin: 2px 0; }

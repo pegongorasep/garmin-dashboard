@@ -900,3 +900,19 @@ def test_deriva_ignora_los_primeros_10_min_y_las_pausas():
     # una pausa de 60 s (semáforo) a mitad: sin muestras en el hueco, no cambia nada
     con_pausa = [x for x in serie_parejo() if not 1500 < x[0] < 1560]
     assert abs(m.deriva(con_pausa, {"minutos": 50, "pct_trote": 100})["pct"]) < 0.5
+
+
+# --- v4.3 F5: sugerencia de la semana pasada ---
+
+def test_sugerencia_semana_reglas_en_orden():
+    cfg = {"resumen_min_sesiones": 2, "resumen_dias_rojos": 2, "resumen_carga_alta": 1.3}
+    sug = lambda *a: (m.sugerencia_semana(*a, cfg) or {}).get("tipo")  # noqa: E731
+    assert sug(1, 3, 0, 100, 100) == "repetir"           # menos de 2 sesiones hechas
+    assert sug(3, 3, 2, 100, 100) == "repetir"           # dos días rojos, aunque todo hecho
+    assert sug(3, 3, 0, 131, 100) == "pesada"            # carga > 1.3 ×
+    assert sug(3, 3, 0, 130, 100) == "sigue"             # justo en el umbral no es pesada
+    assert sug(2, 3, 1, 100, 100) is None                # 2 de 3 y un rojo: sin sugerencia
+    assert sug(3, 3, 0, 100, None) == "sigue"            # sin semana anterior no hay "pesada"
+    assert sug(0, None, 0, 100, 100) is None             # sin plan no se pide mínimo de sesiones
+    assert sug(0, None, 2, 100, 100) == "repetir"
+    assert m.sugerencia_semana(3, 3, 0, 100, 100, cfg)["texto"] == "Sigue el plan"
