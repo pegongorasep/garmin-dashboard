@@ -180,7 +180,7 @@ function tarjetaDoceSemanas(d) {
   }
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,
-    h("p", { class: "nota", style: "margin-top:10px" }, "Las semanas de descarga (línea punteada) son todo continuo en Z1–Z2. Toca una semana para ver sus sesiones."),
+    h("p", { class: "nota", style: "margin-top:10px" }, "Las semanas de descarga (línea punteada) son todo continuo en Z2. Toca una semana para ver sus sesiones."),
     h("h3", { style: "margin-top:12px" }, `Semana ${w.n} · bloque ${w.block} · ${w.kind}`),
     h("p", { class: "nota" }, w.focus || ""),
     ...(w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id))),

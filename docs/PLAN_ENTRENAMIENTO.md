@@ -39,7 +39,7 @@ Los días son flexibles (nunca el mismo día que CrossFit); la larga va el sába
 ## Lógica
 
 - **Lo único que progresa es el volumen (tiempo)**, sobre todo la larga: 40' → 70'. Sube ~5–10 % por semana.
-- Bloques de 3 semanas subiendo + 1 de descarga (~30 % menos, todo Z1–Z2).
+- Bloques de 3 semanas subiendo + 1 de descarga (~30 % menos, todo continuo en Z2).
 - **Z3 no es una variable del plan**: desde la semana 5, la Z2 #1 trae 2 picos de 1' en Z3 *opcionales*
   (siempre iguales, ~2 % de la semana). Si no los haces, esos 2' van en Z2. Nunca reemplazan volumen.
 
@@ -60,7 +60,7 @@ Los días son flexibles (nunca el mismo día que CrossFit); la larga va el sába
 | 11 | carga | 30' (+ 2×1' Z3 opc.) | 30' | 70' | 130' |
 | 12 | descarga | 25' | 25' | 45' | 95' |
 
-Todas en Z1–Z2. Los picos opcionales van a la mitad de la corrida, con 3' de Z2 entre uno y otro, y cuentan
+Todas en Z2 (una sola zona por tramo; si pasas de 150 lpm, caminas). Los picos opcionales van a la mitad de la corrida, con 3' de Z2 entre uno y otro, y cuentan
 dentro del tiempo (no lo alargan).
 
 Después de la semana 12: revisión con datos (km en el mismo tiempo, pulso, cuánto caminas) y siguiente ciclo.

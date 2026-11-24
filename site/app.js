@@ -78,8 +78,8 @@ function pasoLi(p) {
     return h("li", {}, h("span", { class: "min" }, `${p.times}× (`), h("ul", {}, p.steps.map(pasoLi)), h("span", { class: "min" }, ")"));
   }
   const z = p.zone;
-  // Mismos colores que la silueta de la sesión (zonas de Garmin); Z1-Z2 se pinta como Z2, igual que en la silueta.
-  const color = z.startsWith("Z") ? `var(--g${z === "Z1-Z2" ? 2 : z.slice(1, 2)})` : "var(--axis)";
+  // Mismos colores que la silueta de la sesión (zonas de Garmin); cada paso trae una sola zona.
+  const color = z.startsWith("Z") ? `var(--g${z.slice(1, 2)})` : "var(--axis)";
   const nota = p.note && !(p.optional && p.note === "opcional") && p.note !== ETIQUETA_PASO[p.kind] ? ` · ${p.note}` : "";
   return h("li", {},
     h("span", { class: "min" }, `${p.minutes} min`),
@@ -137,9 +137,20 @@ function bloqueCalidad(s) {
 }
 
 /** Título y silueta a color de la sesión; los minutos y la zona de cada tramo van escritos arriba (sin leyenda). */
-function bloqueSilueta(sil, titulo = null, rachas = null) {
-  if (!sil || !sil.length) return null;
-  return h("div", { class: "bloque-sil" }, titulo ? h("p", { class: "titulo-sil" }, titulo) : null, siluetaSesion(sil, 40, true, rachas));
+function bloqueSilueta(ses) {
+  if (!ses || !ses.silueta || !ses.silueta.length) return null;
+  return h("div", { class: "bloque-sil" }, ses.titulo ? h("p", { class: "titulo-sil" }, ses.titulo) : null,
+    siluetaSesion(ses.silueta, 40, true, ses.rachas, ses), leyendaRachas(ses.rachas));
+}
+
+/** Leyenda de una silueta compacta (más de una zona: arriba solo van los minutos): color, zona y sus lpm. */
+function leyendaRachas(rachas) {
+  if (!rachas || rachas.length <= 1) return null;
+  const lpm = {};
+  for (const r of rachas) lpm[r.zona] = lpm[r.zona] || r.lpm;
+  return h("div", { class: "leyenda ley-sil" }, Object.keys(lpm).sort().map((z) =>
+    h("span", {}, h("i", { class: `g${z.slice(1)}`, "aria-hidden": "true" }), h("b", {}, z),
+      lpm[z] ? h("small", {}, `${lpm[z][0]}–${lpm[z][1]}`) : null)));
 }
 
 /** Lo que la silueta no dice. Sesión sencilla (hasta 3 rachas, sin repeticiones): solo las notas de sus pasos
@@ -163,12 +174,12 @@ function cuerpoPlan(s) {
 
 function versionSuave(s) {
   return s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`),
-    bloqueSilueta(s.easy.silueta, s.easy.titulo, s.easy.rachas), detallePasos(s.easy)) : null;
+    bloqueSilueta(s.easy), detallePasos(s.easy)) : null;
 }
 
 /** Silueta a color dentro de la fila cerrada (sin globito: tocarla abre la fila). */
 const silFila = (s) => (s && s.silueta && s.silueta.length
-  ? h("div", { class: "sil-fila" }, s.titulo ? h("p", { class: "titulo-sil" }, s.titulo) : null, siluetaSesion(s.silueta, 36, false, s.rachas)) : null);
+  ? h("div", { class: "sil-fila" }, s.titulo ? h("p", { class: "titulo-sil" }, s.titulo) : null, siluetaSesion(s.silueta, 36, false, s.rachas, s), leyendaRachas(s.rachas)) : null);
 
 /** Fila compacta de una sesión: nombre, minutos, estado y su silueta; al abrirla, pasos y versión suave. */
 function filaSesion(s, est) {
@@ -386,7 +397,7 @@ function filaHoy(e, s, t) {
   if (t.version === "descanso") {
     c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
   } else if (ses) {
-    c.append(...[bloqueSilueta(ses.silueta, ses.titulo, ses.rachas), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
+    c.append(...[bloqueSilueta(ses), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
   }
   if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
   return c;

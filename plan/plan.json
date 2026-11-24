@@ -16,7 +16,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -27,7 +27,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -42,7 +42,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -53,7 +53,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -68,7 +68,7 @@
             {
               "kind": "run",
               "minutes": 40,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -79,7 +79,7 @@
               {
                 "kind": "run",
                 "minutes": 30,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -102,7 +102,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -113,7 +113,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -128,7 +128,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -139,7 +139,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -154,7 +154,7 @@
             {
               "kind": "run",
               "minutes": 45,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -165,7 +165,7 @@
               {
                 "kind": "run",
                 "minutes": 30,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -188,7 +188,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -199,7 +199,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -214,7 +214,7 @@
             {
               "kind": "run",
               "minutes": 25,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -225,7 +225,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -240,7 +240,7 @@
             {
               "kind": "run",
               "minutes": 50,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -251,7 +251,7 @@
               {
                 "kind": "run",
                 "minutes": 35,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -274,7 +274,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -285,7 +285,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -300,7 +300,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -311,7 +311,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -326,7 +326,7 @@
             {
               "kind": "run",
               "minutes": 30,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -337,7 +337,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -360,7 +360,7 @@
             {
               "kind": "run",
               "minutes": 10,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             },
             {
@@ -386,7 +386,7 @@
             {
               "kind": "run",
               "minutes": 10,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": ""
             }
           ],
@@ -397,7 +397,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -412,7 +412,7 @@
             {
               "kind": "run",
               "minutes": 25,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -423,7 +423,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -438,7 +438,7 @@
             {
               "kind": "run",
               "minutes": 50,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -449,7 +449,7 @@
               {
                 "kind": "run",
                 "minutes": 35,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -472,7 +472,7 @@
             {
               "kind": "run",
               "minutes": 10,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             },
             {
@@ -498,7 +498,7 @@
             {
               "kind": "run",
               "minutes": 10,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": ""
             }
           ],
@@ -509,7 +509,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -524,7 +524,7 @@
             {
               "kind": "run",
               "minutes": 25,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -535,7 +535,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -550,7 +550,7 @@
             {
               "kind": "run",
               "minutes": 55,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -561,7 +561,7 @@
               {
                 "kind": "run",
                 "minutes": 40,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -584,7 +584,7 @@
             {
               "kind": "run",
               "minutes": 10,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             },
             {
@@ -610,7 +610,7 @@
             {
               "kind": "run",
               "minutes": 10,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": ""
             }
           ],
@@ -621,7 +621,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -636,7 +636,7 @@
             {
               "kind": "run",
               "minutes": 30,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -647,7 +647,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -662,7 +662,7 @@
             {
               "kind": "run",
               "minutes": 60,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -673,7 +673,7 @@
               {
                 "kind": "run",
                 "minutes": 40,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -696,7 +696,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -707,7 +707,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -722,7 +722,7 @@
             {
               "kind": "run",
               "minutes": 20,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -733,7 +733,7 @@
               {
                 "kind": "run",
                 "minutes": 15,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -748,7 +748,7 @@
             {
               "kind": "run",
               "minutes": 40,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -759,7 +759,7 @@
               {
                 "kind": "run",
                 "minutes": 30,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -782,7 +782,7 @@
             {
               "kind": "run",
               "minutes": 12,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             },
             {
@@ -808,7 +808,7 @@
             {
               "kind": "run",
               "minutes": 13,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": ""
             }
           ],
@@ -819,7 +819,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -834,7 +834,7 @@
             {
               "kind": "run",
               "minutes": 30,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -845,7 +845,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -860,7 +860,7 @@
             {
               "kind": "run",
               "minutes": 60,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -871,7 +871,7 @@
               {
                 "kind": "run",
                 "minutes": 40,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -894,7 +894,7 @@
             {
               "kind": "run",
               "minutes": 12,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             },
             {
@@ -920,7 +920,7 @@
             {
               "kind": "run",
               "minutes": 13,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": ""
             }
           ],
@@ -931,7 +931,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -946,7 +946,7 @@
             {
               "kind": "run",
               "minutes": 30,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -957,7 +957,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -972,7 +972,7 @@
             {
               "kind": "run",
               "minutes": 65,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -983,7 +983,7 @@
               {
                 "kind": "run",
                 "minutes": 45,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -1006,7 +1006,7 @@
             {
               "kind": "run",
               "minutes": 12,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             },
             {
@@ -1032,7 +1032,7 @@
             {
               "kind": "run",
               "minutes": 13,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": ""
             }
           ],
@@ -1043,7 +1043,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -1058,7 +1058,7 @@
             {
               "kind": "run",
               "minutes": 30,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -1069,7 +1069,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -1084,7 +1084,7 @@
             {
               "kind": "run",
               "minutes": 70,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -1095,7 +1095,7 @@
               {
                 "kind": "run",
                 "minutes": 50,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -1118,7 +1118,7 @@
             {
               "kind": "run",
               "minutes": 25,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -1129,7 +1129,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -1144,7 +1144,7 @@
             {
               "kind": "run",
               "minutes": 25,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "arranca suave; camina si pasas el techo"
             }
           ],
@@ -1155,7 +1155,7 @@
               {
                 "kind": "run",
                 "minutes": 20,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]
@@ -1170,7 +1170,7 @@
             {
               "kind": "run",
               "minutes": 45,
-              "zone": "Z1-Z2",
+              "zone": "Z2",
               "note": "ritmo cómodo; si pasas el techo, camina hasta bajar"
             }
           ],
@@ -1181,7 +1181,7 @@
               {
                 "kind": "run",
                 "minutes": 30,
-                "zone": "Z1-Z2",
+                "zone": "Z2",
                 "note": ""
               }
             ]

@@ -76,22 +76,34 @@ def forma_de(sesion: dict) -> str:
     return "trote_caminata" if _tiene_caminata(sesion.get("steps", [])) else "continuo"
 
 
-def silueta_de(pasos: list) -> list:
-    """Pasos del plan -> [[minutos, zona]] plano (con `repeat` desplegado). Caminata = Z1; Z1-Z2 = Z2;
-    un paso opcional lleva un tercer elemento `true`."""
+def zona_unica(p: dict) -> str:
+    """Cada paso va en una sola zona. Los planes viejos decían "Z1-Z2": trote y calentamiento = Z2; caminata y
+    enfriamiento = Z1."""
+    if p["zone"] != "Z1-Z2":
+        return p["zone"]
+    return "Z1" if p["kind"] in ("walk", "cooldown") else "Z2"
+
+
+def silueta_de(pasos: list, con_caminata: bool = True) -> list:
+    """Pasos del plan -> [[minutos, zona]] plano (con `repeat` desplegado), cada paso en su zona (zona_unica; la
+    caminata es un tramo más de su zona, sin asumir que es caminata). Un paso opcional lleva un tercer elemento `true`.
+    `con_caminata` False: sin los pasos de caminata (para el título)."""
     out = []
     for p in pasos:
         if p["kind"] == "repeat":
             for _ in range(p["times"]):
-                out += silueta_de(p["steps"])
+                out += silueta_de(p["steps"], con_caminata)
             continue
-        zona = "Z1" if p["kind"] == "walk" else "Z2" if p["zone"] == "Z1-Z2" else p["zone"]
+        if p["kind"] == "walk" and not con_caminata:
+            continue
+        zona = zona_unica(p)
         out.append([p["minutes"], zona, True] if p.get("optional") else [p["minutes"], zona])
     return out
 
 
 def titulo_de(forma: str, silueta: list) -> str:
-    """Título corto de la silueta de una sesión: nombre del tipo y sus zonas ("Continuo en Z2", "Espiga en Z1–Z3")."""
+    """Título corto de la silueta de una sesión: nombre del tipo y sus zonas ("Continuo en Z2", "Espiga en Z1–Z3").
+    Se le pasa la silueta sin caminatas: "Trote y caminata en Z2"."""
     zonas = sorted({z for _, z, *_ in silueta})
     nombre = POR_ID[forma]["nombre"] if forma in POR_ID else "Sesión"
     if not zonas:

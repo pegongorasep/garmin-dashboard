@@ -331,13 +331,14 @@ function silueta(tramos, opts = {}) {
   const H = opts.alto || 40, pad = 4, W = SIL_W;
   const color = !!tramos.some((t) => t.clase);
   // sesión a color: calentamiento y enfriamiento de `rampa` minutos (subida desde zona 0 y bajada al final)
-  const R = color ? opts.rampa ?? 5 : 0;
-  const total = tramos.reduce((a, t) => a + t.d, 0) + 2 * R || 1;
+  // si la sesión ya trae su calentamiento/enfriamiento, la rampa es cortita (1') y sin etiqueta
+  const Ri = color ? (opts.conCal ? 1 : 5) : 0, Rf = color ? (opts.conEnf ? 1 : 5) : 0;
+  const total = tramos.reduce((a, t) => a + t.d, 0) + Ri + Rf || 1;
   const y = (n) => H - pad - n * (H - 2 * pad);
   const cont = h("div", { class: "silueta", style: `height:${H}px` });
   const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, preserveAspectRatio: "none", role: "img",
     "aria-label": opts.etiqueta || "Forma de la sesión" });
-  const xr = (R / total) * W;
+  const xr = (Ri / total) * W, xf = (Rf / total) * W;
   let x = xr;
   const caja = tramos.map((t) => { const x0 = x; x += (t.d / total) * W; return { t, x0, x1: x }; });
   if (!color) {
@@ -348,7 +349,7 @@ function silueta(tramos, opts = {}) {
     // cada tramo es horizontal; el color cambia a media altura de cada salto vertical. Las rampas van en color de Z0.
     const piso = y(0.1), pri = caja[0], ult = caja[caja.length - 1];
     svg.append(sv("path", { d: `M0,${piso} L${xr},${y(pri.t.n)}`, class: "sil-ln g0" }),
-      sv("path", { d: `M${ult.x1},${y(ult.t.n)} L${W},${piso}`, class: "sil-ln g0" }));
+      sv("path", { d: `M${ult.x1},${y(ult.t.n)} L${ult.x1 + xf},${piso}`, class: "sil-ln g0" }));
     caja.forEach(({ t, x0, x1 }, i) => {
       const yy = y(t.n), ant = caja[i - 1], sig = caja[i + 1];
       const pts = [];
@@ -357,7 +358,7 @@ function silueta(tramos, opts = {}) {
       if (sig) pts.push([x1, (yy + y(sig.t.n)) / 2]);
       svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `sil-ln ${t.clase}${t.opcional ? " opc" : ""}` }));
     });
-    if (opts.rachas) etiquetasSilueta(cont, opts.rachas, R, total);
+    if (opts.rachas) etiquetasSilueta(cont, opts.rachas, opts.conCal ? 0 : Ri, opts.conEnf ? 0 : Rf, Ri, total);
     const tip = tooltipEn(cont);
     for (const { t, x0, x1 } of caja) {
       if (!t.texto) continue;
@@ -376,44 +377,54 @@ function silueta(tramos, opts = {}) {
 }
 
 /**
- * Arriba de la silueta: "5 min / calentar", "20 min Z1–Z2 / 125–150 lpm" por racha y "5 min / enfriar". Con más de 3
- * rachas cada una va en un renglón ("2 min Z3"; los lpm quedan en Ver pasos). Al cambiar de tamaño se acomodan
- * midiendo su ancho real: una etiqueta que se encimaría sube al segundo renglón, y si tampoco cabe ahí, se esconde.
+ * Arriba de la silueta. Sesión de una sola zona: "5 min / calentar", "20 min Z2 / 138–150 lpm", "5 min / enfriar".
+ * Con más de una zona (compacta): solo los minutos ("3′") con una línea del color del tramo que llega hasta él; si dos
+ * se tocarían, la línea de una se alarga y su número sube. La zona la dice el color (leyenda abajo, en app.js).
+ * `Ri`/`Rf`: minutos de la rampa de inicio/fin que se escriben (0 = sin etiqueta); `x0` = minutos antes del 1er tramo.
  */
-function etiquetasSilueta(cont, rachas, R, total) {
-  const detalle = rachas.length <= 3;
-  let t = R;
-  const items = [{ c: R / 2 / total, top: `${fmt(R, 0)} min`, sub: "calentar", cls: "rampa" }];
+function etiquetasSilueta(cont, rachas, Ri, Rf, x0, total) {
+  const compacta = rachas.length > 1;
+  const H = parseFloat(cont.style.height) || 40, pad = 4;
+  let t = x0;
+  const items = Ri ? [{ c: Ri / 2 / total, top: `${fmt(Ri, 0)} min`, sub: "calentar", rampa: true }] : [];
   for (const r of rachas) {
-    items.push({ c: (t + r.min / 2) / total, top: `${fmt(r.min, 0)} min ${r.zona}`,
-      sub: detalle ? [r.lpm ? `${r.lpm[0]}–${r.lpm[1]} lpm` : null, r.opcional ? "opcional" : null].filter(Boolean).join(" · ") : null });
+    const z = r.zona;
+    items.push(compacta
+      ? { c: (t + r.min / 2) / total, top: `${fmt(r.min, 0)}′`, guia: `g${z.slice(1)}`,
+        y: H - pad - (NIVEL_ZONA[z] ?? 0.45) * (H - 2 * pad) }
+      : { c: (t + r.min / 2) / total, top: `${fmt(r.min, 0)} min ${z}`,
+        sub: [r.lpm ? `${r.lpm[0]}–${r.lpm[1]} lpm` : null, r.opcional ? "opcional" : null].filter(Boolean).join(" · ") });
     t += r.min;
   }
-  items.push({ c: (total - R / 2) / total, top: `${fmt(R, 0)} min`, sub: "enfriar", cls: "rampa" });
-  const els = items.map((e) => h("span", { class: `sil-etq ${e.cls || ""}`, "aria-hidden": "true" },
+  if (Rf) items.push({ c: (total - Rf / 2) / total, top: `${fmt(Rf, 0)} min`, sub: "enfriar", rampa: true });
+  const els = items.map((e) => h("span", { class: `sil-etq${e.rampa ? " rampa" : ""}${e.guia ? " min" : ""}`, "aria-hidden": "true" },
     h("b", {}, e.top), e.sub ? h("small", {}, e.sub) : null));
-  cont.append(...els);
-  if (!detalle) cont.classList.add("apretada");
-  // orden de acomodo: rampas y luego las rachas más largas; hasta 2 renglones; la que no cabe se esconde (está en Ver pasos)
-  const orden = items.map((e, i) => i).sort((i, j) => (items[j].cls ? 1e9 : rachas[j - 1].min) - (items[i].cls ? 1e9 : rachas[i - 1].min));
+  const guias = items.map((e) => (e.guia ? h("span", { class: `sil-guia ${e.guia}`, "aria-hidden": "true" }) : null));
+  cont.append(...els, ...guias.filter(Boolean));
   const colocar = () => {
     const W = cont.clientWidth;
     if (!W) return;
-    const filas = [[], []], alto = [0, 0];
-    for (const i of orden) {
-      const el = els[i];
-      el.hidden = false;
-      const w = el.offsetWidth;
-      const izq = Math.min(Math.max(items[i].c * W - w / 2, 0), W - w);
-      const f = filas.findIndex((fila) => fila.every(([a, b]) => izq + w + 8 <= a || izq >= b + 8));
-      if (f < 0) { el.hidden = true; continue; }
-      filas[f].push([izq, izq + w]);
-      alto[f] = Math.max(alto[f], el.offsetHeight);
+    const niveles = [];          // por nivel, los intervalos [izq, der] ya ocupados
+    let alto = 0;
+    els.forEach((el, i) => {
+      const w = el.offsetWidth, hh = el.offsetHeight, it = items[i];
+      const izq = Math.min(Math.max(it.c * W - w / 2, 0), W - w);
       el.style.left = `${izq}px`;
-      el.dataset.fila = f;
-    }
-    els.forEach((el) => { if (!el.hidden) el.style.bottom = `calc(100% + ${el.dataset.fila === "1" ? alto[0] + 2 : 0}px)`; });
-    cont.style.marginTop = `${alto[0] + (alto[1] ? alto[1] + 2 : 0) + 4}px`;
+      if (!it.guia) {            // rampas y etiquetas grandes: pegadas a la silueta; en las compactas apartan 2 niveles
+        for (const k of compacta && it.rampa ? [0, 1] : [0]) (niveles[k] = niveles[k] || []).push([izq, izq + w]);
+        el.style.bottom = "100%";
+        alto = Math.max(alto, hh);
+        return;
+      }
+      let k = 0;
+      while ((niveles[k] || []).some(([a, b]) => izq < b + 3 && izq + w + 3 > a)) k++;
+      (niveles[k] = niveles[k] || []).push([izq, izq + w]);
+      const L = 6 + k * 14;
+      el.style.bottom = `calc(100% + ${L}px)`;
+      Object.assign(guias[i].style, { left: `${it.c * W}px`, top: `${-L}px`, height: `${L + it.y}px` });
+      alto = Math.max(alto, L + hh);
+    });
+    cont.style.marginTop = `${alto + 4}px`;
   };
   new ResizeObserver(colocar).observe(cont);
 }
@@ -423,8 +434,8 @@ const siluetaForma = (forma, alto = 48, etiqueta) =>
   silueta(forma.map(([d, n, n2]) => ({ d, n, n2: n2 === undefined ? undefined : n2 })), { alto, etiqueta });
 
 /** Sesión: [[minutos, zona, opcional?]] -> silueta con el color Garmin de cada zona. */
-const siluetaSesion = (sil, alto = 40, conTip = true, rachas = null) =>
+const siluetaSesion = (sil, alto = 40, conTip = true, rachas = null, rampas = {}) =>
   silueta(sil.map(([m, z, opc]) => ({ d: m, n: NIVEL_ZONA[z] ?? 0.45, clase: `g${(z || "Z2").slice(1)}`, opcional: !!opc,
     texto: conTip ? `${m}' · ${z}${opc ? " (opcional)" : ""}` : undefined })),
-  { alto, rachas, etiqueta: `Silueta de la sesión: 5 min de calentamiento, ${(rachas || sil.map(([m, z]) => ({ min: m, zona: z })))
+  { alto, rachas, conCal: rampas.con_calentamiento, conEnf: rampas.con_enfriamiento, etiqueta: `Silueta de la sesión: 5 min de calentamiento, ${(rachas || sil.map(([m, z]) => ({ min: m, zona: z })))
     .map((r) => `${r.min} min ${r.zona}`).join(", ")} y 5 min de enfriamiento` });

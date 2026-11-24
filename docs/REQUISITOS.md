@@ -239,3 +239,24 @@ Plan de construcción: [`PLAN_V4_2.md`](PLAN_V4_2.md).
 
 Resuelto: polarizado 80 % Z1–Z2 / Z3 mínimo / 20 % Z4–Z5, Z0 excluido ✅ · horario 7:00 / 13:00 / 19:00 ✅ · privacidad (solo métricas necesarias) ✅ · cuenta GitHub sí,
 `gh` ya instalado (falta `gh auth login`) ✅
+
+### 10.1 Una sola zona por tramo (2026-11-24) — APROBADO por Pedro
+
+Como en los entrenos de Adrián, cada tramo va en **una sola zona**: trote = Z2, caminata = Z1, enfriamiento = Z1.
+Se acabó el "Z1–Z2" en los pasos (era un rango inventado para marcar solo el techo). La regla de techo no cambia
+(si pasas el techo de Z2, caminas; "¿lo hice bien?" cuenta los minutos sobre Z2). El generador escribe la zona
+única; los planes viejos con "Z1-Z2" se muestran igual en una sola zona (`tipos.zona_unica`). "Bajo Z1–Z2" del 80/20
+sigue: es la suma de zonas bajas, no un tramo.
+
+### 10.2 Calentar y enfriar van aparte; etiquetas de la silueta (2026-11-24) — APROBADO por Pedro
+
+- **Calentar 5' y enfriar 5' nunca cuentan** (son caminar, no se graban): los minutos de una sesión son solo lo que se
+  graba en Garmin. El sitio dibuja la rampa de calentar salvo que el plan empiece con un calentamiento en Z0/Z1, y la
+  de enfriar salvo que el plan traiga enfriamiento (planes viejos).
+- El generador ya no pone calentamiento ni enfriamiento dentro de las sesiones: en las de calidad los 10' Z2 del
+  inicio son un tramo normal; las variadas usan todos sus minutos en el cuerpo. El cuerpo puede empezar en Z1 a lo
+  más 2' (como escalón, no como calentamiento); la densidad sin Z3 reparte el sobrante entre sus picos de Z2.
+- La caminata no se asume: en la silueta es un tramo de Z1 como cualquier otro (alguien muy en forma trota suave en
+  Z1). El título no la cuenta: "Trote y caminata en Z2".
+- Silueta de una sola zona: "20 min Z2 / 138–150 lpm". Con más de una zona (compacta): arriba solo los minutos ("3′")
+  con una línea del color del tramo (si dos chocan, una se alarga) y abajo una leyenda con zona y lpm.

@@ -92,8 +92,9 @@ def test_corredor_con_calidad(tipos):
     assert usados == [tipos[i % len(tipos)] for i in range(len(cargas))]
     for wk in cargas:
         c = wk["sessions"][1]
-        assert c["steps"][0]["kind"] == "warmup" and c["steps"][0]["minutes"] == 10 and c["steps"][0]["zone"] == "Z2"
-        assert c["steps"][-1]["kind"] == "cooldown" and c["steps"][-1]["minutes"] == 5
+        # 10' Z2 como tramo normal; sin calentamiento ni enfriamiento (van aparte y no cuentan)
+        assert c["steps"][0]["kind"] == "run" and c["steps"][0]["minutes"] == 10 and c["steps"][0]["zone"] == "Z2"
+        assert not {p["kind"] for p in c["steps"]} & {"warmup", "cooldown"}
         trabajo = c["steps"][1]["steps"][0]
         assert trabajo["zone"] == c["objetivo"]["zona"] and c["objetivo"]["minutos"] == c["steps"][1]["times"] * trabajo["minutes"]
         assert not tiene(c["easy"]["steps"], c["objetivo"]["zona"])
@@ -233,7 +234,9 @@ def test_variada_solo_z2_sin_z3_y_z2_poca_z3_con_tope():
                 if s["tipo"] == "variada":
                     assert 0 < _z3(s["steps"]) <= min(6, s["minutes"] * 0.2), (wk["n"], s["name"], s["minutes"])
                     assert not g.minutos_en(s["steps"], {"Z4", "Z5"})
-                    assert s["steps"][0]["zone"] == "Z1" and s["steps"][-1]["zone"] == "Z1"
+                    # sin calentamiento ni enfriamiento propios: van aparte y no cuentan
+                    assert not {x.get("note") for x in s["steps"]} & {"calentamiento", "enfriamiento"}
+                    assert not {x["kind"] for x in s["steps"]} & {"warmup", "cooldown"}
 
 
 def test_variada_con_caminatas_z1_son_caminata_y_el_resto_trote():
@@ -288,3 +291,13 @@ def test_descarga_sin_variada_ni_calidad_y_verificar_lo_vigila():
     solo["weeks"][0]["sessions"][0]["steps"][0]["zone"] = "Z3"
     with pytest.raises(AssertionError):
         g.verificar(solo, cfg(intensidad="solo_z2"))
+
+
+def test_variada_empieza_en_z1_a_lo_mas_2_minutos():
+    """El calentamiento va aparte: el cuerpo puede empezar en Z1 como escalón (1–2'), no como calentamiento."""
+    for tipo, M in product(["ascendente", "descendente", "espiga", "piramide", "densidad", "rotativo"], range(10, 61)):
+        for z3 in (False, True):
+            if z3 is False and tipo in ("espiga", "piramide"):
+                continue
+            m, z = g.tramos_variada(tipo, M, z3, g.tope_z3(M))[0]
+            assert z != "Z1" or m <= g.Z1_INICIO_MAX, (tipo, M, z3)

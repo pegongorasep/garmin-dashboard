@@ -237,3 +237,10 @@ Corrige lo que encuentres y actualiza la tabla.
 - Al abrir una sesión: sencilla (≤ 3 rachas, sin repeticiones) = solo las notas de sus pasos; si no, "Ver pasos"
   cerrado. Versión suave también en la fila de HOY.
 - Plan: Intensidad junto a FC máxima, Cómo funciona abajo a todo lo ancho; la carrera de Hoy mide lo que su contenido.
+
+## Ajuste v4.2.7 (2026-11-24, aprobado por Pedro): una zona por tramo, calentar/enfriar aparte
+
+- Una sola zona por tramo en plan y sitio (`tipos.zona_unica` para planes viejos). Ver REQUISITOS §10.1–10.2.
+- Siluetas compactas (más de una zona): minutos con línea del color del tramo + leyenda con lpm (`leyendaRachas`).
+- Calentar/enfriar nunca cuentan: `rampas_de` decide si el sitio dibuja las rampas; el generador ya no las mete en
+  calidad ni variadas; Z1 inicial de una variada ≤ 2' (`Z1_INICIO_MAX`).

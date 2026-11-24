@@ -58,7 +58,7 @@ def suave(minutos: int) -> int:
     return SUAVE.get(minutos) or max(10, redondea5(minutos * 0.72))
 
 
-def paso(minutos, zona="Z1-Z2", nota="", kind="run", **extra):
+def paso(minutos, zona="Z2", nota="", kind="run", **extra):
     return {"kind": kind, "minutes": minutos, "zone": zona, "note": nota, **extra}
 
 
@@ -81,9 +81,9 @@ def pasos_caminatas(minutos: int, bloque: int) -> list:
     """Repeticiones de trote/caminata (1' de caminata); la última se ajusta para sumar `minutos`."""
     t = TROTE_POR_BLOQUE[min(max(bloque, 1), 3) - 1]
     n, resto = divmod(minutos, t + 1)
-    pasos = [{"kind": "repeat", "times": n, "steps": [paso(t), paso(1, kind="walk")]}] if n else []
+    pasos = [{"kind": "repeat", "times": n, "steps": [paso(t), paso(1, "Z1", kind="walk")]}] if n else []
     if resto >= 2:
-        pasos += [paso(resto - 1), paso(1, kind="walk")]
+        pasos += [paso(resto - 1), paso(1, "Z1", kind="walk")]
     elif resto == 1:
         pasos.append(paso(1))
     return pasos
@@ -109,18 +109,19 @@ def con_suave_caminatas(s: dict, caminatas: bool, bloque: int) -> dict:
 
 
 def pasos_calidad_libre(tipo: str, bloque: int):
-    """(pasos, minutos de trabajo en Z3) de progresivo y fartlek."""
+    """(pasos, minutos de trabajo en Z3) de progresivo y fartlek. Sin calentamiento ni enfriamiento: esos 5' van
+    aparte (el sitio los dibuja y no cuentan); los 10' Z2 del inicio son parte de la sesión."""
     b = min(bloque, 3) - 1
-    calen, enfria = paso(10, "Z2", "calentamiento", kind="warmup"), paso(5, "Z1-Z2", "enfriamiento", kind="cooldown")
+    calen = paso(10, "Z2", "suave")
     if tipo == "progresivo":
         tranq, z3 = PROGRESIVO[b]
-        return [calen, paso(tranq, "Z2", "ritmo cómodo"), paso(z3, "Z3", "sube hasta aquí poco a poco"), enfria], z3
+        return [calen, paso(tranq, "Z2", "ritmo cómodo"), paso(z3, "Z3", "sube hasta aquí poco a poco")], z3
     pares, pasos = FARTLEK[b], [calen]
     for i, (trabajo, rec) in enumerate(pares):
         pasos.append(paso(trabajo, "Z3"))
         if i < len(pares) - 1:
             pasos.append(paso(rec, kind="run", nota="suave"))
-    return pasos + [enfria], sum(t for t, _ in pares)
+    return pasos, sum(t for t, _ in pares)
 
 
 def sesion_calidad(tipo: str, bloque: int) -> dict:
@@ -131,9 +132,8 @@ def sesion_calidad(tipo: str, bloque: int) -> dict:
         zona, bloques, etiqueta = CALIDAD[tipo]
         veces, trabajo, rec = bloques[min(bloque, 3) - 1]
         minutos_obj = veces * trabajo
-        pasos = [paso(10, "Z2", "calentamiento", kind="warmup"),
-                 {"kind": "repeat", "times": veces, "steps": [paso(trabajo, zona), paso(rec, kind="run", nota="suave")]},
-                 paso(5, "Z1-Z2", "enfriamiento", kind="cooldown")]
+        pasos = [paso(10, "Z2", "suave"),
+                 {"kind": "repeat", "times": veces, "steps": [paso(trabajo, zona), paso(rec, kind="run", nota="suave")]}]
     s = sesion("calidad", "calidad", f"Calidad · {etiqueta}", suma(pasos), pasos,
                calidad_tipo=tipo, objetivo={"zona": zona, "minutos": minutos_obj})
     s["easy"]["steps"] = [paso(s["easy"]["minutes"])]
@@ -185,7 +185,8 @@ def _piramide(B, cap3):
 
 
 def _densidad(B, z3, cap3):
-    """Picos iguales; descansos de 1× y luego 2× el pico. El sobrante va al inicio (Z2 con Z3, Z1 sin Z3)."""
+    """Picos iguales; descansos de 1× y luego 2× el pico. El sobrante va al inicio en Z2 (con Z3) o se reparte entre
+    los picos de Z2 (sin Z3), de uno en uno desde el primero."""
     for n in range(5, 1, -1):
         descansos = [1, 1, 2, 2][:n - 1]
         unidades = n + sum(descansos)
@@ -193,9 +194,10 @@ def _densidad(B, z3, cap3):
             break
     u = 1 if z3 else B // unidades
     sobra = B - u * unidades
-    tramos = [(sobra, "Z2" if z3 else "Z1")] if sobra else []
+    tramos = [(sobra, "Z2")] if sobra and z3 else []
+    extra = [0] * n if z3 else [sobra // n + (i < sobra % n) for i in range(n)]
     for i in range(n):
-        tramos.append((u, "Z3" if z3 else "Z2"))
+        tramos.append((u + extra[i], "Z3" if z3 else "Z2"))
         if i < n - 1:
             tramos.append((u * descansos[i], "Z1"))
     return tramos
@@ -216,8 +218,20 @@ def _rotativo(B, z3, cap3):
     return ([(sobra, "Z1")] if sobra else []) + ciclo * k
 
 
+Z1_INICIO_MAX = 2   # el cuerpo puede empezar en Z1 como escalón, no como calentamiento (ese va aparte)
+
+
 def tramos_variada(tipo: str, B: int, z3: bool, cap3: int) -> list:
-    """[(minutos, zona)] del cuerpo de la variada (sin calentar ni enfriar); suma exactamente B."""
+    """[(minutos, zona)] del cuerpo de la variada (sin calentar ni enfriar); suma exactamente B. Si empieza en Z1, a lo
+    más Z1_INICIO_MAX minutos: lo demás pasa al tramo siguiente."""
+    tramos = _tramos_variada(tipo, B, z3, cap3)
+    if len(tramos) > 1 and tramos[0][1] == "Z1" and tramos[0][0] > Z1_INICIO_MAX:
+        sobra = tramos[0][0] - Z1_INICIO_MAX
+        tramos = [(Z1_INICIO_MAX, "Z1"), (tramos[1][0] + sobra, tramos[1][1]), *tramos[2:]]
+    return tramos
+
+
+def _tramos_variada(tipo: str, B: int, z3: bool, cap3: int) -> list:
     if tipo == "ascendente":
         return _escalera(B, z3, cap3, True)
     if tipo == "descendente":
@@ -252,17 +266,15 @@ def comprimir(tramos: list) -> list:
 
 
 def pasos_variada(tipo: str, minutos: int, caminatas: bool, z3: bool) -> list:
-    """Calentar 5' Z1 · cuerpo del tipo · enfriar 5' Z1 (con sesiones muy cortas, 2–3'). Z1 = caminata si `caminatas`."""
-    wc = 5 if minutos >= 20 else 3 if minutos >= 14 else 2
-    B = minutos - 2 * wc
+    """El cuerpo del tipo en los `minutos` de la sesión. Sin calentamiento ni enfriamiento: esos 5' van aparte (el sitio
+    los dibuja y no cuentan). Z1 = caminata si `caminatas`."""
     mk = lambda m, z, **kw: paso(m, z, kind="walk", **kw) if caminatas and z == "Z1" else paso(m, z, **kw)  # noqa: E731
-    pasos = [mk(wc, "Z1", nota="calentamiento", **({} if caminatas else {"kind": "warmup"}))]
-    for t in comprimir(tramos_variada(tipo, B, z3, tope_z3(minutos))):
+    pasos = []
+    for t in comprimir(tramos_variada(tipo, minutos, z3, tope_z3(minutos))):
         if isinstance(t, dict):
             pasos.append({"kind": "repeat", "times": t["veces"], "steps": [mk(m, z) for m, z in t["tramos"]]})
         else:
             pasos.append(mk(*t))
-    pasos.append(mk(wc, "Z1", nota="enfriamiento", **({} if caminatas else {"kind": "cooldown"})))
     return pasos
 
 
@@ -302,9 +314,8 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
         focus += f" · calidad: {ETIQUETA_CALIDAD.get(tipo) or CALIDAD[tipo][2]}"
     elif variada and intensidad != "calidad" and not descarga:
         tipos = VARIADA_TIPOS[intensidad]
-        wc = 5 if z2b >= 20 else 3 if z2b >= 14 else 2
         tipo = tipos[n_carga % len(tipos)]
-        if tipo == "piramide" and z2b - 2 * wc < PIRAMIDE_MIN:   # sesión muy corta: el siguiente tipo que no repita al vecino
+        if tipo == "piramide" and z2b < PIRAMIDE_MIN:   # sesión muy corta: el siguiente tipo que no repita al vecino
             vecinos = {tipos[(n_carga - 1) % len(tipos)], tipos[(n_carga + 1) % len(tipos)]}
             tipo = next(t for t in (tipos[(n_carga + j) % len(tipos)] for j in range(1, len(tipos)))
                         if t not in vecinos and t != "piramide")

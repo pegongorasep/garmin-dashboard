@@ -162,7 +162,7 @@ def test_hoy_sin_datos_de_anoche():
 def test_plan_convertido_a_lpm(salida):
     ses = salida["plan"]["semanas"][0]["sessions"][0]
     assert ses["tipo"] == "z2"
-    assert ses["steps"][0]["lpm"] == [125, 151]   # Z1-Z2 con reposo 60 y máx 190
+    assert ses["steps"][0]["lpm"] == [138, 151]   # Z2 con reposo 60 y máx 190 (una sola zona por paso)
     assert ses["steps"][0]["optional"] is False
 
 
@@ -465,7 +465,7 @@ def test_sesion_de_calidad_en_el_json():
     plan = gen_plan.generar({**CONFIG_CORREDOR, "calidad_tipos": ["threshold"]})
     out = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)
     s = next(x for x in out["plan"]["semanas"][0]["sessions"] if x["tipo"] == "calidad")
-    assert s["estructura"] == "10' Z2 · 4×5' threshold (2' suave) · 5' suave"
+    assert s["estructura"] == "10' Z2 · 4×5' threshold (2' suave)"
     assert s["objetivo"]["zona"] == "Z4" and s["objetivo"]["minutos"] == 20 and len(s["objetivo"]["lpm"]) == 2
     assert s["calidad_tipo"] == "threshold"
 
@@ -542,13 +542,24 @@ def test_forma_derivada_y_silueta_sin_tocar_el_plan():
     assert tipos.forma_de(cal) == "umbral"
 
 
-def test_silueta_despliega_repeat_caminata_z1_y_opcionales():
+def test_silueta_despliega_repeat_caminata_en_su_zona_y_opcionales():
     import tipos
     pasos = [{"kind": "warmup", "minutes": 5, "zone": "Z1-Z2"},
              {"kind": "repeat", "times": 2, "steps": [{"kind": "run", "minutes": 3, "zone": "Z3"},
                                                       {"kind": "walk", "minutes": 1, "zone": "Z1-Z2"}]},
              {"kind": "run", "minutes": 1, "zone": "Z3", "optional": True}]
     assert tipos.silueta_de(pasos) == [[5, "Z2"], [3, "Z3"], [1, "Z1"], [3, "Z3"], [1, "Z1"], [1, "Z3", True]]
+    assert tipos.titulo_de("trote_caminata", tipos.silueta_de(pasos, False)) == "Trote y caminata en Z2–Z3"   # sin la caminata
+
+
+def test_planes_viejos_con_z1_z2_salen_en_una_sola_zona():
+    # los planes generados antes decían "Z1-Z2"; el sitio los muestra en una sola zona
+    pasos = [{"kind": "warmup", "minutes": 5, "zone": "Z1-Z2"}, {"kind": "run", "minutes": 10, "zone": "Z1-Z2"},
+             {"kind": "walk", "minutes": 1, "zone": "Z1-Z2"}, {"kind": "cooldown", "minutes": 5, "zone": "Z1-Z2"}]
+    zonas = [("Z1", 125, 138), ("Z2", 138, 151), ("Z3", 151, 164), ("Z4", 164, 177), ("Z5", 177, 190)]
+    assert [p["zone"] for p in build.convert_steps(pasos, zonas)] == ["Z2", "Z2", "Z1", "Z1"]
+    # caminata y enfriamiento: una racha de Z1 (la caminata es solo un tramo de Z1)
+    assert [(r["min"], r["zona"], r["lpm"]) for r in build.rachas_de(pasos, zonas)] == [(15, "Z2", [138, 151]), (6, "Z1", [125, 138])]
 
 
 def test_data_json_trae_forma_silueta_y_tipos():
@@ -565,7 +576,7 @@ def test_data_json_trae_forma_silueta_y_tipos():
     for x in (ses[0], ses[1], ses[1]["easy"]):
         assert sum(r["min"] for r in x["rachas"]) == x["minutes"]
     zs = {z["zona"]: z for z in out["zonas"]}
-    assert ses[0]["rachas"][0]["zona"] == "Z1–Z2" and ses[0]["rachas"][0]["lpm"] == [zs["Z1"]["piso"], zs["Z2"]["techo"]]
+    assert ses[0]["rachas"][0]["zona"] == "Z2" and ses[0]["rachas"][0]["lpm"] == [zs["Z2"]["piso"], zs["Z2"]["techo"]]
     assert out["tipos"]["en_plan"][:1] == ["continuo"] and ses[1]["forma"] in out["tipos"]["en_plan"]
     assert len(out["tipos"]["catalogo"]) == 14 and [g["id"] for g in out["tipos"]["grupos"]] == ["continuos", "variados", "calidad"]
     assert "tipos" in validar.CLAVES
@@ -621,3 +632,17 @@ def test_mejora_otras_e_intensidad_por_semana():
     assert sum(sin["minutos"].values()) == 0 and sin["bajo"] == 0
     assert all("intensidad" in s for s in out["semanas_hoy"])
     revisar_privacidad(out)
+
+
+def test_calentar_y_enfriar_van_aparte_salvo_que_el_plan_los_traiga():
+    """Calentar se dibuja salvo que el plan empiece con un calentamiento suave (Z0/Z1); enfriar, salvo que lo traiga.
+    Los 10' Z2 de una calidad vieja no son calentamiento: van como tramo normal."""
+    z2 = {"kind": "run", "minutes": 20, "zone": "Z2"}
+    assert build.rampas_de([z2]) == {"con_calentamiento": False, "con_enfriamiento": False}
+    vieja = [{"kind": "warmup", "minutes": 10, "zone": "Z2"}, {"kind": "run", "minutes": 20, "zone": "Z3"},
+             {"kind": "cooldown", "minutes": 5, "zone": "Z1"}]
+    assert build.rampas_de(vieja) == {"con_calentamiento": False, "con_enfriamiento": True}
+    assert build.convert_steps(vieja, [])[0]["kind"] == "run"
+    caminata = [{"kind": "walk", "minutes": 5, "zone": "Z1", "note": "calentamiento"}, z2,
+                {"kind": "walk", "minutes": 5, "zone": "Z1", "note": "enfriamiento"}]
+    assert build.rampas_de(caminata) == {"con_calentamiento": True, "con_enfriamiento": True}

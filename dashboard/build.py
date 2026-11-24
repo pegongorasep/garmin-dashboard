@@ -74,15 +74,28 @@ def convert_steps(steps: list, zonas: list) -> list:
         if s["kind"] == "repeat":
             out.append({"kind": "repeat", "times": s["times"], "steps": convert_steps(s["steps"], zonas)})
         else:
-            out.append({"kind": s["kind"], "minutes": s["minutes"], "zone": s["zone"],
-                        "lpm": lpm_range(s["zone"], zonas), "note": s.get("note", ""),
+            zona = tipos.zona_unica(s)
+            # planes viejos: los 10' Z2 del inicio de una calidad venían como "calentamiento"; son un tramo normal
+            kind = "run" if s["kind"] == "warmup" and zona not in ("Z0", "Z1") else s["kind"]
+            out.append({"kind": kind, "minutes": s["minutes"], "zone": zona,
+                        "lpm": lpm_range(zona, zonas), "note": s.get("note", ""),
                         "optional": s.get("optional", False)})
     return out
 
 
+def rampas_de(steps: list) -> dict:
+    """El sitio dibuja 5' de calentar y 5' de enfriar (no cuentan en los minutos), salvo que el plan ya los traiga:
+    calentamiento = primer paso suave (Z0/Z1) marcado como tal; enfriamiento = último paso marcado como tal."""
+    def marcado(p, kind, nota):
+        return p["kind"] == kind or (p["kind"] != "repeat" and p.get("note") == nota)
+    return {"con_calentamiento": bool(steps) and marcado(steps[0], "warmup", "calentamiento")
+            and tipos.zona_unica(steps[0]) in ("Z0", "Z1"),
+            "con_enfriamiento": bool(steps) and marcado(steps[-1], "cooldown", "enfriamiento")}
+
+
 def rachas_de(steps: list, zonas: list) -> list:
     """Rachas de la silueta (tramos seguidos del mismo color) con lo que va escrito encima: minutos, la zona como la
-    dice el plan ("Z1–Z2"; si la racha mezcla zonas, la de la silueta; "caminata" si toda es caminata) y sus lpm.
+    dice el plan (una sola: "Z2"; si la racha mezcla zonas, la de la silueta) y sus lpm.
     Suman lo mismo que `silueta`."""
     planos = []
     def aplanar(pasos):
@@ -97,16 +110,14 @@ def rachas_de(steps: list, zonas: list) -> list:
     for p, (m, zs, *_) in zip(planos, tipos.silueta_de(planos)):
         if out and out[-1]["_zs"] == zs:
             out[-1]["min"] += m
-            out[-1]["_zonas"].add(p["zone"])
+            out[-1]["_zonas"].add(tipos.zona_unica(p))
             out[-1]["opcional"] = out[-1]["opcional"] and bool(p.get("optional"))
-            out[-1]["_caminata"] = out[-1]["_caminata"] and p["kind"] == "walk"
         else:
-            out.append({"min": m, "_zs": zs, "_zonas": {p["zone"]}, "opcional": bool(p.get("optional")),
-                        "_caminata": p["kind"] == "walk"})
+            out.append({"min": m, "_zs": zs, "_zonas": {tipos.zona_unica(p)}, "opcional": bool(p.get("optional"))})
     for r in out:
         zona = r["_zonas"].pop() if len(r["_zonas"]) == 1 else r["_zs"]
-        r.update({"zona": "caminata" if r["_caminata"] else zona.replace("-", "–"), "lpm": lpm_range(zona, zonas)})
-        del r["_zs"], r["_zonas"], r["_caminata"]
+        r.update({"zona": zona, "lpm": lpm_range(zona, zonas)})
+        del r["_zs"], r["_zonas"]
     return out
 
 
@@ -115,22 +126,23 @@ ETIQUETA_CALIDAD = {"tempo_z3": "tempo Z3", "threshold": "threshold", "intervalo
 
 
 def estructura_calidad(s: dict) -> str:
-    """"10' Z2 · 4×5' threshold (2' suave) · 5' suave" a partir de los pasos de una sesión de calidad."""
+    """"10' Z2 · 4×5' threshold (2' suave)" a partir de los pasos de una sesión de calidad. Los planes viejos traen
+    además un enfriamiento al final (" · 5' suave")."""
     extras = s["steps"]
-    calen = next(p for p in extras if p["kind"] == "warmup")
-    enfria = next(p for p in extras if p["kind"] == "cooldown")
+    calen = extras[0]
+    enfria = next((p for p in extras if p["kind"] == "cooldown"), None)
+    fin = f" · {enfria['minutes']}' suave" if enfria else ""
     if s.get("calidad_tipo") == "progresivo":
-        medio = [p for p in extras if p["kind"] not in ("warmup", "cooldown")]
-        return (f"{calen['minutes']}' {calen['zone']} · " + " · ".join(f"{p['minutes']}' {p['zone']}" for p in medio)
-                + f" progresivo · {enfria['minutes']}' suave")
+        medio = [p for p in extras[1:] if p["kind"] != "cooldown"]
+        return (f"{calen['minutes']}' {calen['zone']} · " + " · ".join(f"{p['minutes']}' {tipos.zona_unica(p)}" for p in medio)
+                + f" progresivo{fin}")
     if s.get("calidad_tipo") == "fartlek":
         trabajo = [p["minutes"] for p in extras if p["kind"] == "run" and p["zone"] == "Z3"]
-        return (f"{calen['minutes']}' {calen['zone']} · fartlek {'-'.join(str(t) for t in trabajo)}' en Z3 "
-                f"(con pausas de 2' suave) · {enfria['minutes']}' suave")
+        return f"{calen['minutes']}' {calen['zone']} · fartlek {'-'.join(str(t) for t in trabajo)}' en Z3 (con pausas de 2' suave){fin}"
     rep = next(p for p in extras if p["kind"] == "repeat")
     trabajo, rec = rep["steps"][0], rep["steps"][1]
     return (f"{calen['minutes']}' {calen['zone']} · {rep['times']}×{trabajo['minutes']}' "
-            f"{ETIQUETA_CALIDAD.get(s.get('calidad_tipo'), 'calidad')} ({rec['minutes']}' suave) · {enfria['minutes']}' suave")
+            f"{ETIQUETA_CALIDAD.get(s.get('calidad_tipo'), 'calidad')} ({rec['minutes']}' suave){fin}")
 
 
 def convert_session(s: dict, zonas: list) -> dict:
@@ -141,11 +153,11 @@ def convert_session(s: dict, zonas: list) -> dict:
         extra["estructura"] = estructura_calidad(s)
     forma, sil, sil_easy = tipos.forma_de(s), tipos.silueta_de(s["steps"]), tipos.silueta_de(easy["steps"])
     return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"], **extra,
-            "forma": forma, "silueta": sil, "titulo": tipos.titulo_de(forma, sil), "rachas": rachas_de(s["steps"], zonas),
+            "forma": forma, "silueta": sil, "titulo": tipos.titulo_de(forma, tipos.silueta_de(s["steps"], False)), "rachas": rachas_de(s["steps"], zonas), **rampas_de(s["steps"]),
             "steps": convert_steps(s["steps"], zonas),
             "easy": {"name": easy["name"], "minutes": easy["minutes"],
-                     "silueta": sil_easy, "titulo": tipos.titulo_de(tipos.forma_de({"steps": easy["steps"]}), sil_easy),
-                     "rachas": rachas_de(easy["steps"], zonas),
+                     "silueta": sil_easy, "titulo": tipos.titulo_de(tipos.forma_de({"steps": easy["steps"]}), tipos.silueta_de(easy["steps"], False)),
+                     "rachas": rachas_de(easy["steps"], zonas), **rampas_de(easy["steps"]),
                      "steps": convert_steps(easy["steps"], zonas)}}
 
 
