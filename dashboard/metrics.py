@@ -663,6 +663,21 @@ def hoja_inbody(med: dict) -> dict:
     if ob:
         out["obesidad"] = [_barra_inbody(i, n, u, ob[i], ob[i]["valor"], ob[i]["valor"])
                            for i, n, u in (("imc", "IMC", "kg/m²"), ("pgc", "PGC", "%")) if i in ob]
+    rangos = []
+    for grupo, clave, filas in (("Parámetros de investigación", "investigacion",
+                                 (("tmb_kcal", "TMB", "kcal"), ("cintura_cadera", "Relación cintura-cadera", ""),
+                                  ("grado_obesidad_pct", "Grado de obesidad", "%"))),
+                                ("Composición corporal", "composicion",
+                                 (("agua_l", "Agua corporal", "L"), ("proteinas_kg", "Proteínas", "kg"),
+                                  ("minerales_kg", "Minerales", "kg"), ("masa_grasa_kg", "Masa grasa", "kg"),
+                                  ("peso_kg", "Peso", "kg")))):
+        for k, nombre, unidad in filas:
+            v = (med.get(clave) or {}).get(k)
+            if v:
+                rangos.append({"grupo": grupo, "nombre": nombre, "unidad": unidad, "valor": v[0], "min": v[1], "max": v[2],
+                               "zona": zona_rango(v[0], [v[1], v[2]])})
+    if rangos:
+        out["rangos"] = rangos
     for k in ("control_peso", "investigacion", "composicion", "segmental_magra", "segmental_grasa"):
         if med.get(k):
             out["composicion_corporal" if k == "composicion" else k] = med[k]

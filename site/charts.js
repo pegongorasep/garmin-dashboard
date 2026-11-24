@@ -242,3 +242,29 @@ function barChart(cfg) {
   cont.prepend(svg);
   return cont;
 }
+
+/**
+ * Mini gráfica de línea con los puntos igual de separados (como el historial de la hoja InBody): el valor va sobre
+ * cada punto y la medición `prime` lleva un anillo y la palabra «prime».
+ * cfg: { ancho, valores:[n], fechas:[texto] (se escriben abajo si vienen), prime:índice|null, clase:"s1"|"s2"|"neutro",
+ *        fmt:(v)=>string, etiqueta:string, textos:[string] (hover de cada punto) }
+ */
+function miniLinea(cfg) {
+  const { ancho: W, valores, fechas, prime, clase = "s1" } = cfg;
+  const fmtV = cfg.fmt || ((v) => fmt(v, 1));
+  const pad = 30, mt = 22, mb = fechas ? 46 : 32, H = mt + 28 + mb;
+  const n = valores.length, lo = Math.min(...valores), hi = Math.max(...valores);
+  const x = (i) => (n === 1 ? W / 2 : pad + (i * (W - 2 * pad)) / (n - 1));
+  const y = (v) => mt + (hi === lo ? 14 : ((hi - v) / (hi - lo)) * 28);
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Historial" });
+  svg.append(sv("line", { class: "base", x1: 4, x2: W - 4, y1: H - mb + 6, y2: H - mb + 6 }));
+  if (n > 1) svg.append(sv("polyline", { class: `ln ${clase}`, points: valores.map((v, i) => `${x(i)},${y(v)}`).join(" ") }));
+  valores.forEach((v, i) => {
+    if (i === prime) svg.append(sv("circle", { class: "anillo-prime", cx: x(i), cy: y(v), r: 8.5 }));
+    svg.append(sv("circle", { class: `pt ${clase}`, cx: x(i), cy: y(v), r: 4 }, sv("title", {}, (cfg.textos || [])[i] || fmtV(v))));
+    svg.append(sv("text", { class: "eje valor-fin", x: x(i), y: y(v) - (i === prime ? 13 : 9), "text-anchor": "middle" }, fmtV(v)));
+    if (i === prime) svg.append(sv("text", { class: "eje prime-t", x: x(i), y: y(v) + 22, "text-anchor": "middle" }, "prime"));
+    if (fechas) svg.append(sv("text", { class: "eje", x: x(i), y: H - 6, "text-anchor": "middle" }, fechas[i]));
+  });
+  return svg;
+}

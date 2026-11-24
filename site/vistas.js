@@ -268,67 +268,128 @@ function tarjetaCarreras(d) {
   return c;
 }
 
-// --- Composición corporal (InBody) ---
+// --- Composición corporal estilo InBody ---
 
-const COMP = {};
-const fechaMes = (ms) => { const f = new Date(ms); return `${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}`; };
+const ZONA_TXT = { bajo: ["▼", "bajo"], normal: ["✓", "normal"], alto: ["▲", "alto"] };
+const fechaMes = (iso) => { const f = parseFecha(iso); return `${f.getDate()} ${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}`; };
+const kg1 = (v) => fmt(v, 1);
 
-function seccionComposicion(c) {
-  if (!c || !(c.mediciones || []).length) return [];
-  const u = c.ultima, p = c.prime, meta = c.meta || {};
-  const grasaTxt = meta.faltan_pgc > 0 ? `${fmt(u.pgc, 1)} % (faltan ${fmt(meta.faltan_pgc, 1)})` : `${fmt(u.pgc, 1)} % ✓`;
-  const mmeTxt = meta.mme_ok ? h("span", { class: "estado" }, `${fmt(u.mme_kg, 1)} kg`, badge("ok", "✓", "ya superas tu prime"))
-    : `${fmt(u.mme_kg, 1)} kg (faltan ${fmt(meta.faltan_mme, 1)})`;
-  COMP.rec = h("div", { class: "chart-wrap" });
-  COMP.pct = h("div", { class: "chart-wrap" });
-  PINTAR.cuerpo.push(dibujarComposicion);
-  const meds = c.mediciones;
-  const tabla = h("div", { class: "tabla-scroll ancha comp" }, h("table", {},
-    h("thead", {}, h("tr", {}, ["Fecha", "Peso", "% grasa", "Grasa kg", "MME", "Punt.", "Visc."].map((x) => h("th", {}, x)))),
-    h("tbody", {}, meds.slice().reverse().map((x) => {
-      const esPrime = x.fecha === p.fecha, f = parseFecha(x.fecha);
-      return h("tr", {}, h("td", { class: "celda-prime" }, `${f.getDate()} ${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}`, esPrime ? h("small", {}, "★ prime") : null),
-        ...[x.peso_kg, x.pgc, x.masa_grasa_kg, x.mme_kg].map((v) => h("td", {}, v == null ? "—" : v.toFixed(1))),
-        h("td", {}, x.puntuacion == null ? "—" : fmt(x.puntuacion, 0)), h("td", {}, x.grasa_visceral == null ? "—" : fmt(x.grasa_visceral, 0)));
-    }))));
-  return [
-    h("div", { class: "card" }, h("h2", {}, "Composición corporal"),
-      h("p", { class: "meta-prime" }, `Superar tu prime: ${fmt(p.pgc, 1)} % grasa · MME ≥ ${fmt(p.mme_kg, 1)} kg`),
-      h("div", { class: "kv" }, h("span", {}, "Grasa hoy"), h("span", {}, grasaTxt)),
-      h("div", { class: "kv" }, h("span", {}, "Músculo hoy"), h("span", {}, mmeTxt)),
-      h("p", { class: "nota", style: "margin-top:6px" }, `Medición del ${fechaLarga(u.fecha)}. Tu prime es del ${fechaLarga(p.fecha)} ${parseFecha(p.fecha).getFullYear()}.`)),
-    h("div", { class: "card" }, h("h2", {}, "Recomposición"),
-      h("p", { class: "nota" }, "Masa grasa y músculo esquelético en kg, en un solo eje. El eje x es la fecha real: los huecos son meses sin medir."),
-      COMP.rec, leyenda([["sw s2", "Masa grasa (kg)"], ["sw s1", "Músculo esquelético (kg)"]]),
-      tablaDatos(["Fecha", "Masa grasa", "MME"], meds.slice().reverse().map((x) => [fechaLarga(x.fecha), fmt(x.masa_grasa_kg, 1), fmt(x.mme_kg, 1)]))),
-    h("div", { class: "card" }, h("h2", {}, "% de grasa en el tiempo"), COMP.pct,
-      tablaDatos(["Fecha", "% grasa"], meds.slice().reverse().map((x) => [fechaLarga(x.fecha), `${fmt(x.pgc, 1)} %`]))),
-    h("div", { class: "card" }, h("h2", {}, "Mediciones"), tabla,
-      h("p", { class: "nota", style: "margin-top:8px" }, "MME = masa muscular esquelética. Visc. = grasa visceral (sano: 1–9). — = sin dato."))];
+/** Una barra de la hoja: la franja Bajo·Normal·Alto va arriba del grupo; la barra llega a `pos` y su valor va al final. */
+function barraInbody(f) {
+  const txt = f.estimado ? `≈${fmt(f.valor, 1)}` : fmt(f.valor, 1);
+  const [icono, zona] = ZONA_TXT[f.zona];
+  const dentro = f.pos > 0.8;
+  const etiqueta = `${f.nombre}: ${fmt(f.valor, 1)} ${f.unidad}${f.pct != null ? `, ${f.pct} % del valor estándar` : ""}${f.estimado ? " (estimado)" : ""}, zona ${zona}`;
+  return h("div", { class: "ib-fila", role: "img", "aria-label": etiqueta },
+    h("div", { class: "ib-nombre" }, h("strong", {}, f.nombre), h("span", { class: "nota" }, ` ${f.unidad}`),
+      h("span", { class: `ib-zona ${f.zona}`, "aria-hidden": "true" }, `${icono} ${zona}`)),
+    h("div", { class: "ib-pista" },
+      h("i", { class: "ib-normal", style: `left:${f.normal_pos[0] * 100}%;width:${(f.normal_pos[1] - f.normal_pos[0]) * 100}%` }),
+      h("i", { class: "ib-barra", style: `width:${f.pos * 100}%` }),
+      h("span", { class: `ib-valor${dentro ? " dentro" : ""}`, style: `left:${f.pos * 100}%` }, txt)),
+    h("div", { class: "ib-ticks", "aria-hidden": "true" }, f.escala.map((v, i) => h("span", { style: `left:${(i / (f.escala.length - 1)) * 100}%` }, fmt(v, v % 1 ? 1 : 0)))));
 }
 
-function dibujarComposicion() {
-  const c = datos && datos.composicion;
-  if (!c || !COMP.rec) return;
-  const ancho = COMP.rec.clientWidth;
-  if (!ancho) return;
-  const meds = c.mediciones, fechas = meds.map((x) => parseFecha(x.fecha).getTime());
-  const dominio = [Math.min(...fechas), Math.max(...fechas)];
-  const prime = { fecha: c.prime.fecha, etiqueta: "prime" };
-  const texto = (x) => `${fechaLarga(x.fecha)} ${parseFecha(x.fecha).getFullYear()}`;
-  COMP.rec.replaceChildren(lineChart({
-    ancho, alto: 190, dominio, fmtX: fechaMes, marcadores: true, clase: "s1", nombre: "Músculo",
-    serie: meds.map((x) => ({ fecha: x.fecha, y: x.mme_kg, r: x })),
-    extra: [{ y: meds.map((x) => x.masa_grasa_kg), clase: "s2", nombre: "Grasa" }],
-    verticales: [prime], fmtY: (v) => fmt(v, 0), etiqueta: "Recomposición: masa grasa y músculo esquelético en kg",
-    texto: (p) => `${texto(p.r)} · grasa ${fmt(p.r.masa_grasa_kg, 1)} kg · músculo ${fmt(p.r.mme_kg, 1)} kg`,
-  }));
-  COMP.pct.replaceChildren(lineChart({
-    ancho, alto: 170, dominio, fmtX: fechaMes, marcadores: true, clase: "s2", etiquetaFinal: `${fmt(c.ultima.pgc, 1)} %`,
-    serie: meds.map((x) => ({ fecha: x.fecha, y: x.pgc, r: x })), ref: { y: c.prime.pgc, etiqueta: `prime ${fmt(c.prime.pgc, 1)} %` },
-    fmtY: (v) => fmt(v, 0), etiqueta: "Porcentaje de grasa corporal por medición",
-    texto: (p) => `${texto(p.r)} · ${fmt(p.r.pgc, 1)} % de grasa${p.r.fecha === c.prime.fecha ? " · prime" : ""}`,
-  }));
+function grupoInbody(titulo, filas) {
+  if (!filas || !filas.length) return null;
+  const n = filas[0].normal_pos;
+  return h("div", { class: "ib-grupo" }, h("h3", {}, titulo),
+    h("div", { class: "ib-franja", "aria-hidden": "true" },
+      h("span", { style: `width:${n[0] * 100}%` }, "Bajo"), h("span", { class: "normal", style: `width:${(n[1] - n[0]) * 100}%` }, "Normal"),
+      h("span", { style: `width:${(1 - n[1]) * 100}%` }, "Alto")),
+    filas.map(barraInbody));
+}
+
+function historialInbody(c) {
+  const hist = c.historial || [];
+  if (!hist.length) return null;
+  const caja = h("div", { class: "ib-hist" });
+  const primeIdx = hist.findIndex((x) => x.es_prime);
+  const defs = [["Peso (kg)", "peso_kg", "neutro"], ["MME (kg)", "mme_kg", "s1"], ["PGC (%)", "pgc", "s2"]];
+  const pintar = () => {
+    const ancho = caja.clientWidth;
+    if (!ancho) return;
+    caja.replaceChildren(...defs.map(([nombre, campo, clase], k) => h("div", { class: "ib-mini" }, h("h3", {}, nombre),
+      miniLinea({ ancho, valores: hist.map((x) => x[campo]), clase, prime: primeIdx >= 0 ? primeIdx : null, fmt: kg1,
+        fechas: k === defs.length - 1 ? hist.map((x) => fechaMes(x.fecha)) : null, etiqueta: `Historial de ${nombre}`,
+        textos: hist.map((x) => `${fechaMes(x.fecha)} · ${kg1(x[campo])}${x.es_prime ? " · prime" : ""}`) }))));
+  };
+  PINTAR.cuerpo.push(pintar);
+  const meta = c.meta || {};
+  return h("div", { class: "ib-grupo" }, h("h3", {}, "Historial de composición corporal"), caja,
+    h("p", { class: "meta-prime" }, meta.faltan_pgc > 0 ? `Te faltan ${fmt(meta.faltan_pgc, 1)} % de grasa para tu prime` : "Ya superaste tu prime en grasa ✓"),
+    meta.mme_ok ? h("p", { class: "nota" }, "Tu músculo ya está arriba del de tu prime ✓") : h("p", { class: "nota" }, `Te faltan ${fmt(meta.faltan_mme, 1)} kg de músculo para tu prime`));
+}
+
+function puntuacionInbody(c) {
+  const pts = c.puntuacion || [], v = c.visceral;
+  if (!pts.length && !v) return null;
+  const ult = pts[pts.length - 1];
+  const bloqueP = ult ? h("div", { class: "ib-punt" }, h("h3", {}, "Puntuación InBody"),
+    h("div", { class: "ib-punt-n" }, h("span", { class: "grande" }, fmt(ult.puntos, 0)), h("span", { class: "nota" }, "/100"),
+      ult.delta != null ? h("span", { class: `delta${ult.delta > 0 ? " bien" : ""}` }, ` ${ult.delta > 0 ? "▲" : ult.delta < 0 ? "▼" : "="}${Math.abs(ult.delta)}`) : null),
+    h("div", { class: "ib-punt-h" }, miniPuntuacion(pts))) : null;
+  const rango = v ? v.rango : null;
+  const [icono, clase] = v ? (v.zona === "normal" ? ["✓", "ok"] : v.zona === "alto" ? ["!", "warn"] : ["!", "warn"]) : [];
+  const bloqueV = v ? h("div", { class: "ib-visc" }, h("h3", {}, "Grasa visceral"),
+    h("div", { class: "ib-punt-n" }, h("span", { class: "grande" }, fmt(v.valor, 0)), h("span", { class: "nota" }, ` · rango ${rango[0]}–${rango[1]}`)),
+    h("p", { class: "estado" }, badge(clase, icono, `grasa visceral ${v.zona}`),
+      v.zona === "normal" ? "Dentro del rango" : v.zona === "alto" ? "Por encima del rango" : "Por debajo del rango")) : null;
+  return h("div", { class: "ib-grupo ib-fila2" }, bloqueP, bloqueV);
+}
+
+/** Historial de la puntuación: con un solo punto, solo el punto y una nota. */
+function miniPuntuacion(pts) {
+  const caja = h("div", { class: "ib-punt-g" });
+  PINTAR.cuerpo.push(() => {
+    const ancho = caja.clientWidth;
+    if (!ancho) return;
+    caja.replaceChildren(miniLinea({ ancho, valores: pts.map((p) => p.puntos), clase: "s1", prime: null, fmt: (v) => fmt(v, 0),
+      fechas: pts.map((p) => fechaMes(p.fecha)), etiqueta: "Historial de la puntuación InBody" }),
+    pts.length === 1 ? h("p", { class: "nota" }, "Se llena con tus próximas mediciones.") : null);
+  });
+  return caja;
+}
+
+const SEGMENTOS = [["brazo_izq", "Brazo izq."], ["brazo_der", "Brazo der."], ["tronco", "Tronco"], ["pierna_izq", "Pierna izq."], ["pierna_der", "Pierna der."]];
+
+function hojaCompleta(c) {
+  const hoja = c.hoja;
+  if (!hoja) return null;
+  const tabla = (cabeza, filas) => h("div", { class: "tabla-scroll ancha" }, h("table", {},
+    h("thead", {}, h("tr", {}, cabeza.map((x) => h("th", {}, x)))), h("tbody", {}, filas.map((f) => h("tr", {}, f.map((x) => h("td", {}, x)))))));
+  const zonaTxt = (z) => `${ZONA_TXT[z][0]} ${ZONA_TXT[z][1]}`;
+  const bloques = [];
+  const barras = [...(hoja.musculo_grasa || []), ...(hoja.obesidad || [])];
+  if (barras.length) bloques.push(h("h3", {}, "Análisis músculo-grasa y de obesidad"),
+    tabla(["", "Valor", "% estándar", "Normal", "Zona"], barras.map((f) => [f.nombre, `${f.estimado ? "≈" : ""}${fmt(f.valor, 1)} ${f.unidad}`,
+      f.pct != null ? `${f.pct} %` : "—", `${fmt(f.normal[0], 1)}–${fmt(f.normal[1], 1)}${f.pct != null ? " %" : ""}`, zonaTxt(f.zona)])));
+  const cp = hoja.control_peso;
+  if (cp) bloques.push(h("h3", {}, "Control de peso"), tabla(["", "kg"], [["Peso ideal", fmt(cp.peso_ideal_kg, 1)], ["Control de peso", fmt(cp.control_peso_kg, 1)],
+    ["Control de grasa", fmt(cp.control_grasa_kg, 1)], ["Control de músculo", fmt(cp.control_musculo_kg, 1)]]));
+  const grupos = [...new Set((hoja.rangos || []).map((r) => r.grupo))];
+  for (const g of grupos) bloques.push(h("h3", {}, g), tabla(["", "Valor", "Rango", "Zona"], hoja.rangos.filter((r) => r.grupo === g).map((r) =>
+    [r.nombre, `${fmt(r.valor, 2)}${r.unidad ? " " + r.unidad : ""}`, `${fmt(r.min, 2)}–${fmt(r.max, 2)}`, zonaTxt(r.zona)])));
+  if (hoja.segmental_magra || hoja.segmental_grasa) {
+    const f = (o, k) => (o && o[k] ? [`${fmt(o[k][0], 2)} kg`, `${fmt(o[k][1], 0)} %`] : ["—", "—"]);
+    bloques.push(h("h3", {}, "Análisis segmental"), tabla(["", "Magra", "% ideal", "Grasa", "% ideal"],
+      SEGMENTOS.map(([k, n]) => [n, ...f(hoja.segmental_magra, k), ...f(hoja.segmental_grasa, k)])));
+  }
+  const meds = c.mediciones || [];
+  bloques.push(h("h3", {}, "Mediciones"), tabla(["Fecha", "Peso", "% grasa", "Grasa kg", "MME", "Punt.", "Visc."], meds.slice().reverse().map((x) =>
+    [fechaMes(x.fecha) + (x.fecha === c.prime.fecha ? " ★ prime" : ""), ...[x.peso_kg, x.pgc, x.masa_grasa_kg, x.mme_kg].map((v) => (v == null ? "—" : v.toFixed(1))),
+      x.puntuacion == null ? "—" : fmt(x.puntuacion, 0), x.grasa_visceral == null ? "—" : fmt(x.grasa_visceral, 0)])),
+  h("p", { class: "nota" }, "MME = masa muscular esquelética. Visc. = grasa visceral. — = sin dato. ≈ = estimado de la barra."));
+  return h("details", { class: "ib-hoja" }, h("summary", {}, "Ver hoja completa"), ...bloques);
+}
+
+/** Tarjeta única «Composición corporal · fecha» en el orden de la hoja InBody. Sin InBody no hay tarjeta. */
+function tarjetaComposicion(c) {
+  if (!c || !(c.mediciones || []).length) return null;
+  const hoja = c.hoja || {};
+  return h("div", { class: "card ancha ib" }, h("h2", {}, `Composición corporal · ${fechaMes(hoja.fecha || c.ultima.fecha)}`),
+    grupoInbody("Análisis músculo-grasa", hoja.musculo_grasa), grupoInbody("Análisis de obesidad", hoja.obesidad),
+    historialInbody(c), puntuacionInbody(c), hojaCompleta(c));
 }
 
 // --- Cuerpo: recuperación ---
@@ -366,7 +427,7 @@ function tarjetaRecuperacion(d) {
 
 function renderCuerpo(d) {
   PINTAR.cuerpo = [];
-  $("vista-cuerpo").replaceChildren(...[tarjetaRecuperacion(d), ...seccionComposicion(d.composicion), tarjetaFcMax(d), enlaceDetalles()].filter(Boolean));
+  $("vista-cuerpo").replaceChildren(...[tarjetaRecuperacion(d), tarjetaComposicion(d.composicion), tarjetaFcMax(d), enlaceDetalles()].filter(Boolean));
 }
 
 // --- Detalles ---

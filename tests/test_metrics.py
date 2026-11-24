@@ -672,3 +672,10 @@ def test_composicion_puntuacion_con_dos_mediciones_y_sin_hoja():
     c = m.composicion(inb)
     assert [p["delta"] for p in c["puntuacion"]] == [None, 4]
     assert "hoja" not in c and "visceral" not in c and len(c["historial"]) == 2
+
+
+def test_hoja_rangos_con_zona():
+    r = {x["nombre"]: x for x in m.composicion(_inbody_pedro())["hoja"]["rangos"]}
+    assert r["TMB"]["zona"] == "bajo" and r["TMB"]["min"] == 1919 and r["TMB"]["valor"] == 1846
+    assert r["Agua corporal"]["zona"] == "alto" and r["Relación cintura-cadera"]["zona"] == "alto"
+    assert r["Grado de obesidad"]["grupo"] == "Parámetros de investigación" and r["Peso"]["grupo"] == "Composición corporal"

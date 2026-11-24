@@ -144,4 +144,8 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **F4 tarjeta de carrera en Hoy** va después de "Tus corridas" (orden del plan); si existe, "Tus corridas" y ella se reparten las 2 columnas en ≥ 900 px. El enlace abre y lleva a la carrera más nueva en Progreso.
 - **F4 "Ver como tabla".** Corridas tiene la tabla de todas las corridas debajo y, solo en Volumen, otra "Ver semanas como tabla" (el volumen es por semana y no sale de la tabla de corridas).
 - **F4 grilla.** Con `grid-auto-flow: row dense` en ≥ 900 px el orden visual puede diferir un poco del del DOM para rellenar huecos.
+- **F5 `hoja.rangos`.** Para "Ver hoja completa" Python entrega los parámetros de investigación y la composición (agua, proteínas, minerales, masa grasa, peso) ya con `min`, `max` y `zona`, para que el JS no compare rangos.
+- **F5 barras.** Franja Bajo·Normal·Alto y zona Normal sombreada con la misma geometría que la barra (`normal_pos`); los números de la escala van en su posición real (ticks igual de separados). Valor al final de la barra; si `pos` > 0.8 va dentro de la barra en tinta de página. La zona sale también como texto con ícono (▼ ✓ ▲) y en el `aria-label`.
+- **F5 historial.** Puntos igual de separados (como la hoja) en 3 mini gráficas alineadas; Peso en gris neutro, MME en azul (`--s1`) y PGC en naranja (`--s2`), los mismos colores de las gráficas anteriores. Fechas solo bajo la última. La "puntuación" con un solo punto muestra el punto y la nota.
+- **F5 tablas alternativas** dentro de "Ver hoja completa": barras (valor, % estándar, normal, zona), control de peso, rangos, segmental y mediciones.
 
