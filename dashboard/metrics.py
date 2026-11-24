@@ -68,6 +68,88 @@ def zone_minutes(activity: dict) -> dict:
     return {z: (activity.get(f"hrTimeInZone_{i + 1}") or 0) / 60 for i, z in enumerate(ZONAS)}
 
 
+def _indices_detalle(d: dict) -> dict:
+    return {x["key"]: x["metricsIndex"] for x in d.get("metricDescriptors") or []}
+
+
+def ritmos_km_de_detalle(d: dict) -> list:
+    """Segundos de cada kilómetro completo del `/details` de una actividad (no se guarda GPS)."""
+    idx = _indices_detalle(d)
+    if "sumDistance" not in idx or "sumDuration" not in idx:
+        return []
+    return ritmos_por_km([(r["metrics"][idx["sumDistance"]], r["metrics"][idx["sumDuration"]])
+                          for r in d.get("activityDetailMetrics") or []])
+
+
+def serie_de_detalle(d: dict, paso: int = 5) -> list:
+    """Serie [seg, metros, fc] (enteros) de un `/details`, una muestra cada `paso` segundos. Sin lat/lon ni nada más.
+    Si falta tiempo, distancia o FC en los descriptores, devuelve []."""
+    idx = _indices_detalle(d)
+    if not {"sumDuration", "sumDistance", "directHeartRate"} <= set(idx):
+        return []
+    out, siguiente = [], 0
+    for r in d.get("activityDetailMetrics") or []:
+        mt = r["metrics"]
+        seg, metros, fc = (mt[idx[k]] for k in ("sumDuration", "sumDistance", "directHeartRate"))
+        if seg is None or seg < siguiente:
+            continue
+        out.append([round(seg), round(metros or 0), None if fc is None else round(fc)])
+        siguiente = (int(seg) // paso + 1) * paso
+    return out
+
+
+def detalle_vigente(entrada, es_corrida: bool, es_carrera: bool = False, reciente: bool = False) -> bool:
+    """¿Se reusa lo ya guardado de una actividad? Sí si ya existe y, en corridas, trae tramos y serie (y en carreras
+    el ritmo por km). Sin RPE solo se vuelve a pedir en los últimos 7 días (`reciente`): Pedro puede ponerlo después."""
+    if not entrada:
+        return False
+    if entrada.get("rpe") is None and reciente:
+        return False
+    return (not es_corrida or ("splits" in entrada and "serie" in entrada)) and (not es_carrera or "ritmos_km" in entrada)
+
+
+def zona_de_fc(fc: float, zonas: list) -> str:
+    """Zona de una FC con las zonas del dashboard (piso incluido): debajo del piso de Z1 es Z0; del piso de Z5 para arriba, Z5."""
+    zona = "Z0"
+    for z, piso, _ in zonas:
+        if fc >= piso:
+            zona = z
+    return zona
+
+
+def minutos_zona_serie(serie: list, zonas: list, max_hueco: int = 10) -> dict:
+    """Minutos en Z0..Z5 de una serie [seg, metros, fc] con las zonas del dashboard. Cada muestra pesa lo que falta
+    para la siguiente (máx. `max_hueco` s: una pausa no cuenta) y la última pesa lo mismo que la anterior. Sin FC no cuenta."""
+    minutos = dict.fromkeys(["Z0", *ZONAS], 0.0)
+    for i, (seg, _, fc) in enumerate(serie):
+        if fc is None:
+            continue
+        if i + 1 < len(serie):
+            peso = min(serie[i + 1][0] - seg, max_hueco)
+        else:
+            peso = min(seg - serie[i - 1][0], max_hueco) if i else 0
+        minutos[zona_de_fc(fc, zonas)] += max(peso, 0) / 60
+    return minutos
+
+
+def zona_minutos(activity: dict, details: dict, zonas: list):
+    """Minutos en Z0..Z5 de una actividad: de la serie de FC si existe; si no, de las zonas del reloj
+    (`hrTimeInZone_*`, con Z0 = duración − suma). None si no hay ni uno ni otro. Fuente del esfuerzo, la carga y el plan vs real."""
+    serie = (details.get(str(activity.get("activityId"))) or {}).get("serie")
+    if serie:
+        return minutos_zona_serie(serie, zonas)
+    if activity.get("hrTimeInZone_1") is None:
+        return None
+    zm = zone_minutes(activity)
+    return {"Z0": max(0.0, (activity.get("duration") or 0) / 60 - sum(zm.values())), **zm}
+
+
+def fc_referencia(zonas: list) -> int:
+    """FC de referencia para comparar ritmos: la mitad de Z2."""
+    _, piso, techo = zonas[1]
+    return round((piso + techo) / 2)
+
+
 def week_distribution(activities: list, week_start: date) -> dict:
     """Minutos por zona de la semana (lun–dom) y % bajo/limbo/alto sobre Z1–Z5."""
     fin = week_start + timedelta(days=7)

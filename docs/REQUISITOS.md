@@ -260,3 +260,53 @@ sigue: es la suma de zonas bajas, no un tramo.
   Z1). El título no la cuenta: "Trote y caminata en Z2".
 - Silueta de una sola zona: "20 min Z2 / 138–150 lpm". Con más de una zona (compacta): arriba solo los minutos ("3′")
   con una línea del color del tramo (si dos chocan, una se alarga) y abajo una leyenda con zona y lpm.
+
+## 11. v4.3: medir la mejora, esfuerzo sin RPE, resumen semanal, prueba final (2026-11-24) — PROPUESTO
+
+### 11.1 Ritmo a FC de referencia (reemplaza "ritmo trotando")
+- Por corrida: ritmo de los tramos de trote llevado a la **FC de referencia = mitad de Z2** (≈144 lpm):
+  ritmo × (FC trote ÷ FC ref). Es la eficiencia aeróbica (velocidad ÷ FC).
+- Solo corridas al aire libre cuyo trote cayó en Z2; fuera carreras y caminadora.
+- Progreso › Corridas: un punto por corrida + línea de promedio, en lugar de "ritmo trotando". La frase dice
+  "a 144 lpm: 7:48 → 7:35 /km". "Cómo funciona" aclara que el calor lo afecta (ver tendencia, no una corrida suelta).
+
+### 11.2 Deriva cardiaca
+- Corridas de **≥ 40 min casi sin caminar** (≥ 90 % trote) y **a ritmo parejo**, carreras incluidas. Parejo: después
+  de los primeros 10 min, cada km a no más de ±15 % del ritmo mediano de esa corrida (cabe la baja normal por
+  cansancio; no caben picos de Z3, sprints ni cambios bruscos, porque la FC tarda en alcanzar a la velocidad).
+- Velocidad ÷ FC en la primera mitad vs la segunda, **sin los primeros 10 min** y sin tramos de caminata. Mide las
+  dos formas de deriva: a ritmo constante sube la FC; a FC constante baja el ritmo. **< 5 % = buena base.**
+- En "¿lo hice bien?" ("Deriva 4 % ✓") y tendencia en Progreso.
+- Requiere bajar la serie de tiempo, distancia y FC de cada corrida (una petición por corrida, en caché, sin GPS).
+
+### 11.3 Plan vs real por zona
+- Con la misma serie de FC y las zonas del dashboard: por zona, **planeado vs hecho** ("Z3: 2 de 4 min, 50 %").
+- Los minutos en una zona más alta cuentan para la de abajo. Una zona alta se cumple con el **70 %** (la FC tarda en subir).
+- Pasarse del techo sigue como hoy.
+
+### 11.4 Esfuerzo calculado (en vez de RPE)
+- Valor por zona: Z0 1 · Z1 2 · **Z2 3** · Z3 5.5 · Z4 7.5 · Z5 9.5. **Esfuerzo (1–10)** = promedio en la mitad más
+  dura de la sesión (los descansos no lo bajan). **Carga** = esfuerzo × minutos, para todas las actividades.
+- Se registra en cada actividad junto al **RPE manual si existe** (los dos).
+- Mismo día con varias sesiones de una categoría: "ayer" toma el esfuerzo más alto; las cargas se suman.
+- **Sale del semáforo**: quedan HRV, FC reposo y sueño. El esfuerzo de ayer se muestra como dato ("Ayer: HIIT,
+  esfuerzo 8.7"); si hubo una señal fuera después de un día duro, el motivo lo dice ("HRV baja después de un día duro").
+- Las gráficas de carga usan esta carga. "Cómo funciona": la fuerza con FC baja da poca carga.
+
+### 11.5 Resumen de la semana pasada (en Hoy, sin Claude)
+- Arriba, debajo de "Próxima corrida", toda la semana: "Semana pasada: 3 de 3 · 85 / 85 min · 6 de 7 días verdes ·
+  ✓ Sigue el plan". Al tocarlo: km, % trote, 80/20, carga vs anterior, ritmo a FC ref vs anterior, plan vs real.
+- Sugerencia por reglas conservadoras (solo sugiere; repetir semana sigue siendo con `/ajustar`):
+  todo hecho y recuperación bien → "Sigue el plan"; < 2 sesiones o ≥ 2 días rojos → "Considera repetir la semana";
+  carga > 30 % sobre la anterior → "Semana pesada, cuida la recuperación".
+
+### 11.6 Prueba al terminar el plan
+- La semana 12 (descarga) cambia la Larga por una prueba, según el plan: base → **30 min a FC fija** (mitad de Z2,
+  ruta plana, alerta en el reloj; se miden los km); novato con caminatas → minutos de trote continuo en Z2; corredor →
+  5 km a tope. Aplica también al plan de Pedro.
+- La primera vez se compara contra el ritmo a FC ref de las semanas 1–2; luego prueba contra prueba.
+- Al acabar el plan, Hoy muestra "Plan terminado" con el resultado vs el inicio y "Corre `/ajustar` para el siguiente
+  bloque"; `/ajustar` lo usa para proponer el siguiente plan.
+
+### 11.7 No cambia
+- La barra 80/20 de Hoy se queda como está.

@@ -109,14 +109,12 @@ def pull_historial(c: Client) -> list:
         start += page
 
 
-def ritmos_km(c: Client, key: str) -> list:
-    """Segundos de cada kilómetro de una actividad, de la serie de distancia y tiempo (no se guarda GPS)."""
-    d = c.get(f"/activity-service/activity/{key}/details") or {}
-    idx = {x["key"]: x["metricsIndex"] for x in d.get("metricDescriptors") or []}
-    if "sumDistance" not in idx or "sumDuration" not in idx:
-        return []
-    return metrics.ritmos_por_km([(r["metrics"][idx["sumDistance"]], r["metrics"][idx["sumDuration"]])
-                                  for r in d.get("activityDetailMetrics") or []])
+def detalle_serie(c: Client, key: str) -> dict:
+    """Serie de la actividad (`/details`, una sola llamada): ritmo de cada km (para carreras) y [seg, metros, fc]
+    cada 5 s. No se guarda GPS: solo tiempo, distancia y FC."""
+    # maxChartSize alto: sin él Garmin entrega ~250 puntos sin importar la duración; así llega 1 muestra por segundo
+    d = c.get(f"/activity-service/activity/{key}/details", {"maxChartSize": 5000, "maxPolylineSize": 0}) or {}
+    return {"ritmos_km": metrics.ritmos_km_de_detalle(d), "serie": metrics.serie_de_detalle(d)}
 
 
 def load_json(path: Path) -> dict:
@@ -130,25 +128,22 @@ def tramos(summary: dict) -> list:
             for t in summary.get("splitSummaries") or []]
 
 
-def detalle_vigente(entrada: dict, es_corrida: bool, es_carrera: bool = False) -> bool:
-    """Reusa la entrada guardada si tiene RPE y, en corridas, también sus tramos (y en carreras, el ritmo por km)."""
-    return (entrada.get("rpe") is not None and (not es_corrida or "splits" in entrada)
-            and (not es_carrera or "ritmos_km" in entrada))
-
-
 def pull_activity_details(c: Client, activities: list) -> dict:
-    """Pide RPE y sensación (y tramos de trote/caminata en corridas); reusa lo ya completo."""
+    """Pide RPE y sensación (y tramos de trote/caminata y serie de FC en corridas); reusa lo ya completo.
+    Una actividad de los últimos 7 días sin RPE se vuelve a pedir (Pedro puede ponerlo después)."""
     tipos = RUN_TYPES + CROSSFIT_TYPES
     path = DATA_DIR / "activity_details.json"
     cache = load_json(path)
     out = {}
+    hoy = date.today()
     for a in activities:
         tipo = a["activityType"]["typeKey"]
         if tipo not in tipos:
             continue
         key, es_corrida = str(a["activityId"]), tipo in RUN_TYPES
         carrera = es_corrida and metrics.es_carrera(a, CONFIG)
-        if detalle_vigente(cache.get(key, {}), es_corrida, carrera):
+        reciente = (hoy - date.fromisoformat(a["startTimeLocal"][:10])).days <= 7
+        if metrics.detalle_vigente(cache.get(key), es_corrida, carrera, reciente):
             out[key] = cache[key]
             continue
         detalle = c.get(f"/activity-service/activity/{key}") or {}
@@ -158,9 +153,11 @@ def pull_activity_details(c: Client, activities: list) -> dict:
                     "feel": s.get("directWorkoutFeel")}
         if es_corrida:
             out[key]["splits"] = tramos(detalle)
-        if carrera:
-            out[key]["ritmos_km"] = ritmos_km(c, key)
-    path.write_text(json.dumps(out, indent=2))
+            extra = detalle_serie(c, key)
+            out[key]["serie"] = extra["serie"]
+            if carrera:
+                out[key]["ritmos_km"] = extra["ritmos_km"]
+    path.write_text(json.dumps(out, separators=(",", ":")))   # compacto: la serie de FC es larga
     return out
 
 

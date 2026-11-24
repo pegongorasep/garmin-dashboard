@@ -713,3 +713,87 @@ def test_conteos_otras_y_frase():
     assert m.mejora_frase(filas, HOY, "trote", [{"nombre": "CrossFit", "ahora": 3.2, "antes": 2.5}]).endswith(
         "(antes 66 %) · CrossFit 3.2 por semana (antes 2.5).")
     assert "CrossFit" not in m.mejora_frase(filas, HOY, "trote", [])
+
+
+# --- v4.3 F1: serie de FC y minutos por zona ---
+
+ZONAS_T = m.zones(190, 60, [50, 60, 70, 80, 90])   # Z1 125, Z2 138, Z3 151, Z4 164, Z5 177
+
+
+def detalle_t(filas):
+    claves = ["sumDuration", "sumDistance", "directHeartRate", "directLatitude"]
+    return {"metricDescriptors": [{"key": k, "metricsIndex": i} for i, k in enumerate(claves)],
+            "activityDetailMetrics": [{"metrics": [s, d, fc, 20.9]} for s, d, fc in filas]}
+
+
+def test_serie_de_detalle_cada_5s_sin_gps():
+    filas = [(t, t * 3.0, 140 + t % 3) for t in range(0, 31)]     # una muestra por segundo
+    serie = m.serie_de_detalle(detalle_t(filas))
+    assert [x[0] for x in serie] == [0, 5, 10, 15, 20, 25, 30]
+    assert all(len(x) == 3 for x in serie)                           # solo [seg, metros, fc]
+    assert serie[1] == [5, 15, 142]
+
+
+def test_serie_de_detalle_sin_descriptor_es_vacia():
+    d = detalle_t([(0, 0, 140), (5, 10, 141)])
+    d["metricDescriptors"] = [x for x in d["metricDescriptors"] if x["key"] != "directHeartRate"]
+    assert m.serie_de_detalle(d) == []
+    assert m.serie_de_detalle({}) == []
+
+
+def test_serie_de_detalle_muestras_gruesas_no_se_repiten():
+    serie = m.serie_de_detalle(detalle_t([(0, 0, 100), (12, 30, 120), (13, 33, 121), (30, 80, 130)]))
+    assert [x[0] for x in serie] == [0, 12, 30]
+
+
+def test_ritmos_km_de_detalle():
+    d = detalle_t([(0, 0, 140), (300, 1000, 140), (620, 2000, 140)])
+    assert m.ritmos_km_de_detalle(d) == [300, 320]
+    assert m.ritmos_km_de_detalle({}) == []
+
+
+def test_zona_de_fc_limites():
+    assert m.zona_de_fc(100, ZONAS_T) == "Z0"
+    assert m.zona_de_fc(125, ZONAS_T) == "Z1"
+    assert m.zona_de_fc(137, ZONAS_T) == "Z1"
+    assert m.zona_de_fc(138, ZONAS_T) == "Z2"
+    assert m.zona_de_fc(195, ZONAS_T) == "Z5"
+
+
+def test_minutos_zona_serie_pesa_por_tiempo_y_no_cuenta_pausas():
+    serie = [[0, 0, 100], [60, 0, 140], [120, 0, 155], [125, 0, 155], [400, 0, 140], [405, 0, 140]]
+    mz = m.minutos_zona_serie(serie, ZONAS_T)
+    assert mz["Z0"] == 10 / 60                       # 0→60 se topa en 10 s (hueco máx.)
+    assert round(mz["Z2"], 3) == round(20 / 60, 3)
+    assert round(mz["Z3"], 3) == round(15 / 60, 3)
+    assert mz["Z5"] == 0
+
+
+def test_minutos_zona_serie_ignora_muestras_sin_fc():
+    mz = m.minutos_zona_serie([[0, 0, None], [5, 0, 140], [10, 0, 140]], ZONAS_T)
+    assert round(sum(mz.values()) * 60) == 10
+
+
+def test_zona_minutos_usa_la_serie_y_si_no_el_reloj():
+    a = act(7, "2026-11-10", "running", dur=1800, z=(300, 900, 0, 0, 0))
+    serie = [[t, 0, 145] for t in range(0, 300, 5)]
+    de_serie = m.zona_minutos(a, {"7": {"serie": serie}}, ZONAS_T)
+    assert round(de_serie["Z2"], 1) == 5.0 and de_serie["Z1"] == 0
+    del_reloj = m.zona_minutos(a, {}, ZONAS_T)
+    assert del_reloj["Z1"] == 5 and del_reloj["Z2"] == 15 and del_reloj["Z0"] == 10   # 30 − 20
+    assert m.zona_minutos({"activityId": 8, "duration": 600}, {}, ZONAS_T) is None
+
+
+def test_fc_referencia_es_la_mitad_de_z2():
+    assert m.fc_referencia(ZONAS_T) == round((138 + 151) / 2)
+
+
+def test_detalle_vigente():
+    completa = {"rpe": 5, "splits": [], "serie": [[0, 0, 100]]}
+    assert m.detalle_vigente(completa, True)
+    assert not m.detalle_vigente({"rpe": 5, "splits": []}, True)                 # falta la serie
+    assert not m.detalle_vigente(None, False)
+    assert not m.detalle_vigente({"rpe": 5, "splits": [], "serie": [[0, 0, 1]]}, True, es_carrera=True)
+    assert m.detalle_vigente({"rpe": None}, False)                               # no-corrida vieja sin RPE: no se repide
+    assert not m.detalle_vigente({"rpe": None}, False, reciente=True)            # reciente sin RPE: Pedro puede ponerlo
+    assert m.detalle_vigente({**completa, "rpe": None}, True, reciente=False)
