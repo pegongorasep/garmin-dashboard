@@ -12,14 +12,18 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
+sys.path.insert(0, str(Path(__file__).parent / "dashboard"))
+from ajustes import USER_DIR, cargar_config  # noqa: E402
+
+load_dotenv(USER_DIR / ".env")
 load_dotenv(Path(__file__).parent / ".env")
 
 BASE_URL = "https://personal.connectapi.garmin.com"
 TOKEN_URL = f"{BASE_URL}/personalapitoken-service/personal-api/personal-api-key/token"
-DATA_DIR = Path(__file__).parent / "data"
-CONFIG = json.loads((Path(__file__).parent / "dashboard" / "config.json").read_text())
+DATA_DIR = USER_DIR / "data"
+CONFIG = cargar_config()
 RUN_TYPES = CONFIG["run_types"]
-CROSSFIT_TYPES = CONFIG["crossfit_types"]
+CROSSFIT_TYPES = [t for t in CONFIG["tipos_con_detalle"] if t not in RUN_TYPES]
 
 
 def get_access_token() -> str:

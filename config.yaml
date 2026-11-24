@@ -1,0 +1,23 @@
+# Configuración personal (Pedro). Todo lo que no aparece aquí sale de dashboard/defaults.yaml.
+perfil:
+  titulo: Base aeróbica            # encabezado del sitio
+  zona_horaria: America/Merida
+  edad: 29
+  fc_max: 189                      # opcional; si falta: 220 - edad
+  fc_max_piso: 183                 # opcional
+  fc_max_correa_desde: 2026-10-26  # opcional: desde cuándo usa correa en sus sesiones intensas
+corrida:
+  nivel: intermedio                # novato | intermedio | corredor
+  intensidad: z2_poca_z3           # solo_z2 | z2_poca_z3 | calidad
+  calidad_tipos: []                # de: tempo_z3, threshold, intervalos (solo si intensidad = calidad)
+  caminatas: false                 # true = sesiones de trote/caminata
+  inicio: 2026-11-09               # lunes
+  semanas: 12
+  base_min: {z2: 20, larga: 40}    # minutos con los que arranca
+  semanas_repetidas: []
+actividades:
+  categorias:
+    - {id: crossfit, nombre: CrossFit, letra: CF, tipos: [hiit, strength_training], intensa: true}
+  semana: {lun: crossfit, mar: crossfit, jue: crossfit}
+  dias_pierna: []                  # p. ej. [lun]
+inbody: true

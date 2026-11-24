@@ -91,3 +91,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **`lineChart`/`barChart` extendidos** sin romper usos previos: `clase`, `nombre`, `extra` (más series, mismo eje), `verticales`, `fmtX`, `etiquetaFinal` (la etiqueta va abajo del punto si la serie venía bajando). Paleta s1/s2 validada con `validate_palette.js`: claro `#2a78d6,#eb6834` sobre `#fcfcfb` y oscuro `#3987e5,#d95926` sobre `#1a1a19`, todo PASS (CVD ΔE ≥ 24.7). Masa grasa = s2 (naranja), músculo = s1 (azul), en las dos gráficas de composición.
 - **Capturas.** Claro/oscuro con `--blink-settings=preferredColorScheme=1|0` (el sistema está en oscuro y `--force-dark-mode` no basta). Un iframe de 5000 px sale en blanco; Progreso se captura a 4300 px. Con `--day` pasados, `progreso` usa también actividades posteriores del caché (solo afecta pruebas visuales).
 - **Semanas futuras** muestran "Plan: 3 sesiones · 85 min" (sin barra) en vez de "0 de 3".
+
+## v4
+
+- **Regla de oro / referencia.** `site/data.json` de v3.2 guardada en el scratchpad (`data_ref_v32.json`); se compara con un script que imprime claves nuevas (+), quitadas (−) y valores distintos (~). `generado` cambia con el reloj y se ignora. `build.py` no tiene reloj fijo; la comparación es inmediata (mismo día) y `datos_al` no cambia.
+- **F0.** `config.yaml` se parsea con fechas YAML (`2026-11-09` llega como `date`); `cargar_config` las normaliza a texto ISO. `plan_start` debe ser lunes (error claro si no). `fc_max_piso` por defecto = `fc_max`. `dashboard/config.json` borrado. Dependencia: `pyyaml>=6.0` (las demás tampoco están fijas exactas, se mantuvo el estilo `>=`).
+- **F0.** `garmin_connect.py` pide detalles (RPE) de corridas + todos los tipos de las categorías (`tipos_con_detalle`), no solo los de CrossFit.

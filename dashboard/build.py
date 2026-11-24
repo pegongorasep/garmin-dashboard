@@ -10,8 +10,9 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import metrics as m
+from ajustes import USER_DIR, cargar_config
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).parent.parent  # el motor (aquí vive site/)
 DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 
 
@@ -20,7 +21,7 @@ def load(path: Path, default=None):
 
 
 def load_data() -> dict:
-    d = ROOT / "data"
+    d = USER_DIR / "data"
     daily = load(d / "daily.json", {})
     return {
         "daily_summaries": daily.get("daily_summaries", []),
@@ -30,12 +31,12 @@ def load_data() -> dict:
         "details": load(d / "activity_details.json", {}),
         "hr_zones": load(d / "hr_zones.json", []),
         "meta": load(d / "meta.json", {}),
-        "inbody": load(ROOT / "plan" / "inbody.json"),
+        "inbody": load(USER_DIR / "plan" / "inbody.json"),
     }
 
 
 def load_plan() -> dict:
-    plan = ROOT / "plan" / "plan.json"
+    plan = USER_DIR / "plan" / "plan.json"
     return load(plan if plan.exists() else ROOT / "plan" / "plan.example.json")
 
 
@@ -454,7 +455,7 @@ def main() -> None:
     ap.add_argument("--day", help="fecha local YYYY-MM-DD (para pruebas)")
     ap.add_argument("--plan-start", help="inicio del plan YYYY-MM-DD (solo pruebas visuales)")
     args = ap.parse_args()
-    config = load(Path(__file__).parent / "config.json")
+    config = cargar_config()
     tz = ZoneInfo(config["timezone"])
     ahora = datetime.now(tz)
     if args.day:

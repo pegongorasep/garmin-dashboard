@@ -10,7 +10,9 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "dashboard"))
 import build  # noqa: E402
 
-CONFIG = json.loads((ROOT / "dashboard" / "config.json").read_text())
+from ajustes import cargar_config  # noqa: E402
+
+CONFIG = cargar_config(ROOT / "tests" / "fixtures")
 # El fixture es de la semana del 26 oct: usa una copia del config con ese inicio de plan.
 CONFIG_FIXTURE = {**CONFIG, "plan_start": "2026-10-26"}
 AHORA = datetime(2026, 11, 4, 12, 0, tzinfo=ZoneInfo("America/Merida"))  # miércoles, semana 2
