@@ -1,11 +1,246 @@
 {
-  "nota": "Mediciones InBody (Salud Digna, InBody120), capturadas a mano desde la hoja impresa. prime = mejor medición (menor % de grasa); la meta es superarla. Solo las del 13 nov 2026 traen la hoja completa; las anteriores salen del historial de esa hoja (peso, MME, PGC).",
+  "nota": "Mediciones InBody (Salud Digna, InBody120), capturadas a mano desde la hoja impresa. prime = mejor medición (menor % de grasa); la meta es superarla. Solo las del 13 nov 2026 traen la hoja completa; las anteriores salen del historial de esa hoja (peso, MME, PGC). Hoja del 13 nov 2026 capturada completa el 2026-11-24: listas [valor, min, max] = valor y rango normal; musculo_grasa.*.pct = % del valor estándar como en las barras (peso y grasa calculados del rango; MME estimado de la barra, la hoja no imprime su rango). segmental = [kg, % del ideal]. Historial y fechas coinciden con la hoja.",
   "prime": "2024-05-25",
   "mediciones": [
-    {"fecha": "2024-05-25", "hora": "08:34", "peso_kg": 86.2, "mme_kg": 38.4, "pgc": 22.3},
-    {"fecha": "2025-10-25", "hora": "14:06", "peso_kg": 87.2, "mme_kg": 36.9, "pgc": 26.0},
-    {"fecha": "2026-10-08", "hora": "08:03", "peso_kg": 94.8, "mme_kg": 38.0, "pgc": 30.1},
-    {"fecha": "2026-11-13", "hora": "08:29", "peso_kg": 93.8, "mme_kg": 39.1, "pgc": 27.1,
-     "masa_grasa_kg": 25.5, "puntuacion": 75, "grasa_visceral": 10, "grasa_visceral_rango": [1, 9]}
+    {
+      "fecha": "2024-05-25",
+      "hora": "08:34",
+      "peso_kg": 86.2,
+      "mme_kg": 38.4,
+      "pgc": 22.3
+    },
+    {
+      "fecha": "2025-10-25",
+      "hora": "14:06",
+      "peso_kg": 87.2,
+      "mme_kg": 36.9,
+      "pgc": 26.0
+    },
+    {
+      "fecha": "2026-10-08",
+      "hora": "08:03",
+      "peso_kg": 94.8,
+      "mme_kg": 38.0,
+      "pgc": 30.1
+    },
+    {
+      "fecha": "2026-11-13",
+      "hora": "08:29",
+      "peso_kg": 93.8,
+      "mme_kg": 39.1,
+      "pgc": 27.1,
+      "masa_grasa_kg": 25.5,
+      "puntuacion": 75,
+      "grasa_visceral": 10,
+      "grasa_visceral_rango": [
+        1,
+        9
+      ],
+      "altura_cm": 179,
+      "edad": 29,
+      "imc": 29.3,
+      "composicion": {
+        "agua_l": [
+          49.9,
+          39.6,
+          48.4
+        ],
+        "proteinas_kg": [
+          13.6,
+          10.6,
+          13.0
+        ],
+        "minerales_kg": [
+          4.83,
+          3.67,
+          4.48
+        ],
+        "masa_grasa_kg": [
+          25.5,
+          8.5,
+          16.9
+        ],
+        "peso_kg": [
+          93.8,
+          59.9,
+          81.1
+        ]
+      },
+      "musculo_grasa": {
+        "peso": {
+          "valor": 93.8,
+          "pct": 133,
+          "escala": [
+            55,
+            70,
+            85,
+            100,
+            115,
+            130,
+            145,
+            160,
+            175,
+            190,
+            205
+          ],
+          "normal": [
+            85,
+            115
+          ]
+        },
+        "mme": {
+          "valor": 39.1,
+          "pct": 117,
+          "pct_estimado": true,
+          "escala": [
+            70,
+            80,
+            90,
+            100,
+            110,
+            120,
+            130,
+            140,
+            150,
+            160,
+            170
+          ],
+          "normal": [
+            90,
+            110
+          ]
+        },
+        "masa_grasa": {
+          "valor": 25.5,
+          "pct": 240,
+          "escala": [
+            40,
+            60,
+            80,
+            100,
+            160,
+            220,
+            280,
+            340,
+            400,
+            460,
+            520
+          ],
+          "normal": [
+            80,
+            160
+          ]
+        }
+      },
+      "obesidad": {
+        "imc": {
+          "valor": 29.3,
+          "escala": [
+            10,
+            15,
+            18.5,
+            22,
+            25,
+            30,
+            35,
+            40,
+            45,
+            50,
+            55
+          ],
+          "normal": [
+            18.5,
+            25
+          ]
+        },
+        "pgc": {
+          "valor": 27.1,
+          "escala": [
+            0,
+            5,
+            10,
+            15,
+            20,
+            25,
+            30,
+            35,
+            40,
+            45,
+            50
+          ],
+          "normal": [
+            10,
+            20
+          ]
+        }
+      },
+      "control_peso": {
+        "peso_ideal_kg": 80.4,
+        "control_peso_kg": -13.4,
+        "control_grasa_kg": -13.4,
+        "control_musculo_kg": 0.0
+      },
+      "investigacion": {
+        "tmb_kcal": [
+          1846,
+          1919,
+          2264
+        ],
+        "cintura_cadera": [
+          0.94,
+          0.8,
+          0.9
+        ],
+        "grado_obesidad_pct": [
+          133,
+          90,
+          110
+        ]
+      },
+      "segmental_magra": {
+        "brazo_izq": [
+          3.82,
+          110.8
+        ],
+        "brazo_der": [
+          3.91,
+          113.3
+        ],
+        "tronco": [
+          29.9,
+          104.0
+        ],
+        "pierna_izq": [
+          10.17,
+          96.6
+        ],
+        "pierna_der": [
+          10.31,
+          97.9
+        ]
+      },
+      "segmental_grasa": {
+        "brazo_izq": [
+          1.7,
+          263.9
+        ],
+        "brazo_der": [
+          1.6,
+          258.0
+        ],
+        "tronco": [
+          14.0,
+          314.4
+        ],
+        "pierna_izq": [
+          3.4,
+          185.7
+        ],
+        "pierna_der": [
+          3.4,
+          187.7
+        ]
+      }
+    }
   ]
 }
