@@ -316,6 +316,24 @@ function dibujarDetalles() {
     barras.length ? tablaDatos(["Semana", ...nombres, "Sin RPE"], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), ...s.valores.map((v) => fmt(v, 0)), s.sin_rpe])) : "");
 }
 
+// --- tema ---
+
+const temaActual = () => (document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+
+function pintarBotonTema() {
+  const claro = temaActual() === "light", btn = $("tema-btn");
+  btn.firstChild.textContent = claro ? "☾" : "☀";
+  btn.setAttribute("aria-label", claro ? "Cambiar a tema oscuro" : "Cambiar a tema claro");
+}
+
+function cambiarTema() {
+  const nuevo = temaActual() === "light" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", nuevo);
+  document.querySelector('meta[name="color-scheme"]').setAttribute("content", nuevo);
+  try { localStorage.setItem("tema", nuevo); } catch (e) { /* sin almacenamiento: vale solo esta visita */ }
+  pintarBotonTema();
+}
+
 // --- arranque ---
 
 const REDIBUJAR = { hoy: dibujarMejora, progreso: dibujarProgreso, detalles: dibujarDetalles };
@@ -355,6 +373,8 @@ function aviso(id, msg) {
 }
 
 async function iniciar() {
+  pintarBotonTema();
+  $("tema-btn").addEventListener("click", cambiarTema);
   leerSemanaInicial();
   window.addEventListener("hashchange", mostrarVista);
   let resizeT;

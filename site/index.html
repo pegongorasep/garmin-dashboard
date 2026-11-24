@@ -3,13 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
-<title>Garmin · Base aeróbica</title>
+<meta name="color-scheme" content="dark light">
+<script>
+/* Tema antes de pintar: lo guardado, o oscuro por defecto. ?tema=claro|oscuro fuerza uno solo para capturas (no se guarda). */
+(function () {
+  var t = "dark";
+  try {
+    var q = /[?&]tema=(claro|oscuro)/.exec(location.search);
+    var g = localStorage.getItem("tema");
+    if (q) t = q[1] === "claro" ? "light" : "dark"; else if (g === "light" || g === "dark") t = g;
+  } catch (e) {}
+  document.documentElement.setAttribute("data-theme", t);
+  document.querySelector('meta[name="color-scheme"]').setAttribute("content", t);
+})();
+</script>
+<title>Garmin · Mi entreno</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="top">
-  <h1 id="titulo">Base aeróbica</h1>
+  <div class="top-fila">
+    <h1 id="titulo">Mi entreno</h1>
+    <button type="button" id="tema-btn" class="tema-btn" aria-label="Cambiar a tema claro"><span aria-hidden="true">☀</span></button>
+  </div>
   <p class="muted"><span id="actualizado" aria-live="polite">Cargando…</span><span id="acciones" hidden> ·
     <a id="acciones-link" href="#" target="_blank" rel="noopener"
        title="En GitHub toca «Run workflow»; en 1–2 min recarga esta página">Jalar datos de Garmin ↗</a></span></p>

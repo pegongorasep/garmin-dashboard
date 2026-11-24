@@ -2,7 +2,7 @@
 # Todo lo que no pongas aquí tiene un valor razonable por defecto.
 
 perfil:
-  titulo: Base aeróbica            # encabezado de tu página
+  titulo: Mi entreno               # encabezado de tu página
   zona_horaria: America/Mexico_City
   edad: 30
   fc_max: 190                      # opcional: si no la sabes, se usa 220 - edad (y el reloj la corrige solo)
@@ -21,6 +21,8 @@ corrida:
   semanas: 12
   base_min: {z2: 20, larga: 40}    # minutos con los que arrancas (lo que corres hoy cómodo, sin pasarte)
   semanas_repetidas: []            # semanas del plan que repetiste, p. ej. [3]
+  carreras: []                     # fechas de carreras pasadas (AAAA-MM-DD) que Garmin no marcó como Carrera
+  #   Las nuevas se detectan solas si en Garmin marcas la actividad como Carrera o su nombre dice carrera, 5k, 10k...
 
 actividades:
   # Máximo 4 categorías. `tipos` son los tipos de actividad de Garmin; `intensa: true` cuenta para la

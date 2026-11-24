@@ -1,6 +1,6 @@
 # Configuración personal (Pedro). Todo lo que no aparece aquí sale de dashboard/defaults.yaml.
 perfil:
-  titulo: Base aeróbica            # encabezado del sitio
+  titulo: Mi entreno            # encabezado del sitio
   zona_horaria: America/Merida
   edad: 29
   fc_max: 189                      # opcional; si falta: 220 - edad

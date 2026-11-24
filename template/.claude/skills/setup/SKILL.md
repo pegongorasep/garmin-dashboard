@@ -31,7 +31,7 @@ Con lo que corre hoy, sin pasarse: `z2` ≈ lo que corre cómodo; `larga` ≈ su
 Mejor quedarse corto: el plan sube solo.
 
 ## 4. Perfil
-Pregunta y anota: edad y FC máxima si la sabe (si no, déjalo: se usa 220 - edad y el reloj la corrige);
+Pregunta y anota: el título de su página (sugiere "Mi entreno"; va en `perfil.titulo`); edad y FC máxima si la sabe (si no, déjalo: se usa 220 - edad y el reloj la corrige);
 zona horaria; qué otras actividades hace y en qué días, **cómo las registra en Garmin** (para mapear los tipos:
 `strength_training`, `hiit`, `cycling`, `yoga`...; máximo 4 categorías, `intensa: true` a las intensas); días de
 pierna; fecha de inicio (el próximo lunes); y si tiene InBody (`inbody: true`; luego pasa la foto de la hoja y tú

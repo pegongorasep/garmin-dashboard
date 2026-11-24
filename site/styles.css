@@ -1,4 +1,5 @@
-/* Tokens: claro por defecto; oscuro por sistema. Colores de zona validados con validate_palette.js */
+/* Tokens: el tema vive en <html data-theme="dark|light"> (oscuro por defecto, lo pone un script en <head>);
+   sin el atributo (JS bloqueado) manda el sistema. Colores de zona validados con validate_palette.js */
 :root {
   color-scheme: light;
   --page: #f9f9f7;
@@ -56,6 +57,10 @@ body {
 }
 .top, #app { max-width: 720px; margin-inline: auto; }
 .top { padding-block: calc(14px + env(safe-area-inset-top, 0px)) 4px; }
+.top-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tema-btn { flex: none; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer; }
+.tema-btn:hover { background: var(--surface); color: var(--ink); }
+.tema-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 h1 { font-size: 20px; margin: 0; font-weight: 650; }
 h2 { font-size: 13px; margin: 0 0 8px; font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
 h3 { font-size: 16px; margin: 0 0 4px; font-weight: 600; }

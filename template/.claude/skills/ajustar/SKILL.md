@@ -1,6 +1,6 @@
 ---
 name: ajustar
-description: Cambia nivel, tipo de plan (solo Z2, poca Z3, calidad), tipos de calidad, caminatas, actividades, días de pierna o fecha de inicio, y vuelve a publicar.
+description: Cambia nivel, tipo de plan (solo Z2, poca Z3, calidad), tipos de calidad, caminatas, actividades, días de pierna, título, carreras pasadas o fecha de inicio, y vuelve a publicar.
 ---
 
 # /ajustar: cambiar la configuración
@@ -8,8 +8,12 @@ description: Cambia nivel, tipo de plan (solo Z2, poca Z3, calidad), tipos de ca
 Habla en español, claro y corto. No pidas la key ni leas `.env`.
 
 1. Pregunta qué quiere cambiar (nivel, intensidad, tipos de calidad, caminatas, actividades, días, pierna, inicio,
-   minutos base) y por qué, si no es obvio.
+   minutos base, título de la página) y por qué, si no es obvio.
 2. Edita **solo** `config.yaml`. Valores válidos: ver `config.example.yaml`.
+   - "La del 21 nov fue carrera" (o "marca esa corrida como carrera"): agrega la fecha `2026-11-21` a
+     `corrida.carreras` (lista de fechas AAAA-MM-DD). Es solo para carreras pasadas que Garmin no marcó; las nuevas se
+     detectan solas si en Garmin las marcas como Carrera o su nombre dice carrera, 5k, 10k, medio maratón, etc.
+     No se regenera el plan.
 3. Si cambió algo **del plan** (nivel, intensidad, calidad_tipos, caminatas, inicio, semanas, base_min), hay que
    regenerarlo; si solo cambió actividades, días o título, **no** se regenera.
    - Asegura el motor: si no existe `.motor/`, clónalo (`git clone --depth 1 --branch stable

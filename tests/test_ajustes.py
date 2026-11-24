@@ -63,3 +63,15 @@ def test_maximo_cuatro_categorias(tmp_path):
     cats = "".join(f"  - {{id: c{i}, nombre: C{i}, letra: X, tipos: [yoga]}}\n" for i in range(5))
     with pytest.raises(ajustes.ConfigError, match="Máximo 4"):
         cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n" + cats)
+
+
+def test_titulo_por_defecto_y_carreras(tmp_path):
+    c = cfg(tmp_path, MINIMA)
+    assert c["titulo"] == "Mi entreno" and c["carreras"] == []
+    c = cfg(tmp_path, MINIMA.replace("{inicio: 2026-11-09}", "{inicio: 2026-11-09, carreras: [2026-11-21, 2026-05-02, 2026-11-21]}"))
+    assert c["carreras"] == ["2026-05-02", "2026-11-21"]
+
+
+def test_carrera_con_fecha_mala(tmp_path):
+    with pytest.raises(ajustes.ConfigError):
+        cfg(tmp_path, MINIMA.replace("{inicio: 2026-11-09}", "{inicio: 2026-11-09, carreras: [mañana]}"))

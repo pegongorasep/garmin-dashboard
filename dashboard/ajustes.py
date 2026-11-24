@@ -123,10 +123,11 @@ def cargar_config(user_dir=None) -> dict:
     desde = perfil.get("fc_max_correa_desde")
     return {
         **umbrales,
-        "titulo": perfil.get("titulo") or "Base aeróbica",
+        "titulo": perfil.get("titulo") or "Mi entreno",
         "timezone": tz, "edad": edad,
         "max_hr": max_hr, "max_hr_floor": perfil.get("fc_max_piso", max_hr),
         "fc_max_correa_desde": _fecha(desde, "perfil.fc_max_correa_desde") if desde else None,
+        "carreras": sorted({_fecha(f, "corrida.carreras") for f in corrida.get("carreras") or []}),
         "plan_start": inicio, "semanas_repetidas": list(corrida.get("semanas_repetidas") or []),
         "nivel": nivel, "intensidad": intensidad, "calidad_tipos": tipos_cal,
         "caminatas": bool(corrida.get("caminatas", False)),
