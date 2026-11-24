@@ -28,7 +28,8 @@ corrida:
 
 actividades:
   # Máximo 4 categorías. `tipos` son los tipos de actividad de Garmin; `intensa: true` cuenta para la
-  # señal de recuperación (RPE de ayer). Si omites `categorias`, se usan: fuerza, hiit, cardio y movilidad.
+  # señal de recuperación (RPE de ayer). `icono` es opcional (correr, medalla, mancuerna, rayo, bici, nadar,
+  # caminar, yoga, punto); si falta se elige por el primer tipo. Si omites `categorias`, se usan: fuerza, hiit, cardio y movilidad.
   categorias:
     - {id: fuerza, nombre: Fuerza, letra: F, tipos: [strength_training]}
     - {id: hiit, nombre: HIIT, letra: H, tipos: [hiit], intensa: true}

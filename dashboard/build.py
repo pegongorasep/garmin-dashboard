@@ -267,7 +267,7 @@ def otras_del_dia(d: date, data: dict, config: dict) -> list:
             continue
         tes = [a["aerobicTrainingEffect"] for a in acts if a.get("aerobicTrainingEffect") is not None]
         rpes = [r for a in acts if (r := (data["details"].get(str(a["activityId"])) or {}).get("rpe")) is not None]
-        out.append({"cat": c["id"], "te": r1(max(tes)) if tes else None, "rpe": max(rpes) if rpes else None,
+        out.append({"cat": c["id"], "icono": c.get("icono", "punto"), "te": r1(max(tes)) if tes else None, "rpe": max(rpes) if rpes else None,
                     "minutos": r1(sum(a["duration"] for a in acts) / 60)})
     return out
 
@@ -281,6 +281,7 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
         e = next((e for e in sesiones if e["fecha"] == d.isoformat() and e["minutos"] == a["duration"] / 60), None)
         corrida = {"minutos": r1(a["duration"] / 60), "sesion_nombre": e["name"] if e else "Extra",
                    "estado": e["estado"] if e else "extra", "carrera": m.es_carrera(a, config)}
+        corrida["icono"] = "medalla" if corrida["carrera"] else "correr"
     otras = otras_del_dia(d, data, config)
     return {"fecha": d.isoformat(), "dia_semana": DIAS[d.weekday()],
             "luz": light_on(d, data, config)["color"] if d <= hoy else None,
@@ -352,6 +353,7 @@ def build_runs(data: dict, config: dict, plan: dict) -> list:
                   key=lambda a: a["startTimeLocal"])
     nombres = session_names(acts, data, config, plan)
     return [{"fecha": f["fecha"], "sesion": nombres.get((f["fecha"], f["minutos"])), "carrera": m.es_carrera(a, config),
+             "icono": "medalla" if m.es_carrera(a, config) else "correr",
              "minutos": r1(f["minutos"]), "km": r2(f["km"]), "fc_prom": r1(f["fc_prom"]),
              "pct_z1z2": r1(f["pct_z1z2"]), "caminadora": f["caminadora"],
              **(rw_json(f) or dict.fromkeys(m.RW_CLAVES))}
@@ -374,7 +376,8 @@ def build_carreras(hoy: date, data: dict, config: dict) -> list:
     out = []
     for i, s in enumerate(stats):
         dias = (hoy - date.fromisoformat(s["fecha"])).days
-        out.append({**s, "comparacion": m.comparar_carrera(s, stats[:i]), "hace_dias": dias, "reciente": 0 <= dias <= 7})
+        out.append({**s, "icono": "medalla", "comparacion": m.comparar_carrera(s, stats[:i]), "hace_dias": dias,
+                    "reciente": 0 <= dias <= 7})
     return out[::-1]
 
 
@@ -523,7 +526,7 @@ def build_ui(config: dict, plan: dict) -> dict:
     repo = os.environ.get("GITHUB_REPOSITORY")
     return {
         "titulo": config["titulo"],
-        "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase")} for c in cats],
+        "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase", "icono")} for c in cats],
         "nombre_intensa": nombre,
         "acciones_url": f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None,
         "textos": {
@@ -596,7 +599,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                  "estado_sesiones": [{**e, "minutos": r1(e["minutos"]),
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
         "carreras": build_carreras(hoy, data, config),
-        "mejores_marcas": m.mejores_marcas(historial_corridas(data, config), hoy),
+        "mejores_marcas": m.mejores_marcas(historial_corridas(data, config), hoy, config),
         "progreso": {"resumen": {str(k): m.progress_summary(filas, hoy, k) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,

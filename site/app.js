@@ -309,15 +309,15 @@ const diaTexto = (x) => {
 
 function diaCalendario(x, hoyIso) {
   const varias = ui().categorias.length > 1;   // con una sola categoría no hace falta distinguir por color
-  const marcaCat = (cat, cfTxt, tenue) => {
+  const marcaCat = (cat, cfTxt) => {
     const c = categoria(cat);
-    return h("span", { class: `cf${tenue ? " tenue" : ""}${varias ? ` cat ${c.clase}` : ""}` }, h("b", {}, c.letra), cfTxt ? h("span", {}, cfTxt) : null);
+    return h("span", { class: `cf${varias ? ` cat ${c.clase}` : ""}`, title: c.nombre }, h("b", {}, icono(c.icono, 18)), cfTxt ? h("span", {}, cfTxt) : null);
   };
   let marca = null;
   if (x.corrida) {
     const cls = x.corrida.estado === "hecha" ? "hecha" : x.corrida.estado === "incompleta" ? "incompleta" : "extra";
     marca = [h("span", { class: `circ ${cls}${x.corrida.carrera ? " carrera" : ""}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
-      h("span", { class: "sn" }, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : "")),
+      h("span", { class: "sn" }, icono(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr"), 14), h("span", {}, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, "carrera") : null];
   }
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.rpe != null ? `RPE ${fmt(cf.rpe, 0)}` : cf.te != null ? cf.te.toFixed(1) : null));
@@ -326,17 +326,11 @@ function diaCalendario(x, hoyIso) {
     marca, cfMarca);
 }
 
-/** "CF = CrossFit · " solo con las categorías que aparecen (hechas) en esa semana. */
-function leyendaCategorias(s) {
-  const ids = new Set((s.dias || []).flatMap((x) => (x.otras || []).map((o) => o.cat)));
-  return ui().categorias.filter((c) => ids.has(c.id)).map((c) => `${c.letra} = ${c.nombre} · `).join("");
-}
-
 function calendarioSemana(d, s) {
   const hoyIso = (d.generado || "").slice(0, 10);
   return h("div", { class: "cal" },
     h("div", { class: "dias7" }, (s.dias || []).map((x) => diaCalendario(x, hoyIso))),
-    h("p", { class: "nota leyenda-cal" }, `${leyendaCategorias(s)}número = Training Effect aeróbico de Garmin (0–5)`));
+    h("p", { class: "nota leyenda-cal" }, "número = Training Effect aeróbico de Garmin (0–5)"));
 }
 
 /** "Minutos en Z4: 17 de 20 ✓" y aviso si pasó mucho tiempo por encima de la zona. */
@@ -501,7 +495,7 @@ const tiempoLargo = (seg) => {
 
 function tarjetaCarreraHoy(c) {
   const num = (valor, etiqueta) => h("div", { class: "num4" }, h("div", { class: "num4-v" }, valor), h("div", { class: "nota" }, etiqueta));
-  return h("div", { class: "card carrera-hoy" }, h("h2", {}, `Tu carrera del ${fechaLarga(c.fecha)}`),
+  return h("div", { class: "card carrera-hoy" }, h("h2", { class: "con-ico" }, icono(c.icono || "medalla", 18), `Tu carrera del ${fechaLarga(c.fecha)}`),
     h("div", { class: "nums4" },
       num(`${fmt(c.distancia_km, 2)} km`, "Distancia"), num(tiempoLargo(c.tiempo_s), "Tiempo"),
       num(c.ritmo_s ? `${mmss(c.ritmo_s)} /km` : "—", "Ritmo"), num(c.fc_prom != null ? `${fmt(c.fc_prom, 0)} lpm` : "—", "FC promedio")),

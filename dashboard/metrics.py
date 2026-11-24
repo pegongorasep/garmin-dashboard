@@ -595,14 +595,15 @@ MARCAS = [("1k", "1 km", 1000), ("1mi", "1 milla", 1609), ("5k", "5K", 5000), ("
           ("21k", "Medio maratón", 21098), ("42k", "Maratón", 42195)]
 
 
-def mejores_marcas(historial: list, hoy=None) -> list:
+def mejores_marcas(historial: list, hoy=None, config=None) -> list:
     """Mejores marcas como las de Garmin, solo las que ya hizo: el menor `fastestSplit_<m>` de cada distancia
     y la corrida más larga. `nuevo` = el récord es de los últimos 30 días (si se da `hoy`)."""
     def marca(clave, nombre, a, tiempo, metros):
         fecha = a["startTimeLocal"][:10]
         return {"clave": clave, "nombre": nombre, "tiempo_s": round(tiempo), "ritmo_s": round(tiempo / (metros / 1000)),
                 "fecha": fecha, "distancia_km": round(metros / 1000, 2),
-                "nuevo": bool(hoy and 0 <= (hoy - date.fromisoformat(fecha)).days <= 30)}
+                "nuevo": bool(hoy and 0 <= (hoy - date.fromisoformat(fecha)).days <= 30),
+                "icono": "medalla" if config and es_carrera(a, config) else None}
     out = []
     for clave, nombre, metros in MARCAS:
         con = [a for a in historial if a.get(f"fastestSplit_{metros}")]

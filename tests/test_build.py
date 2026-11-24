@@ -297,7 +297,7 @@ def test_semana_con_cuatro_corridas_trae_un_extra():
     assert s["stats"]["corridas"] == 4 and s["estado"] == "actual"
     assert [e["estado"] for e in s["sesiones"]] == ["hecha", "hecha", "hecha"]
     assert len(s["extras"]) == 1 and s["extras"][0]["fecha"] == "2026-11-08" and s["extras"][0]["minutos"] == 30
-    assert s["dias"][6]["corrida"] == {"minutos": 30, "sesion_nombre": "Extra", "estado": "extra", "carrera": False}
+    assert s["dias"][6]["corrida"] == {"minutos": 30, "sesion_nombre": "Extra", "estado": "extra", "carrera": False, "icono": "correr"}
     assert s["dias"][5]["corrida"]["sesion_nombre"] == "Larga"
 
 
@@ -331,7 +331,7 @@ def test_otras_del_dia_toma_te_maximo_y_suma_minutos():
                           _act(21, "2026-11-02", "hiit", minutos=16, aerobicTrainingEffect=3.4)]
     data["details"] = {"20": {"rpe": 5.0}, "21": {"rpe": 7.0}}
     s = _semana(data, date(2026, 11, 4), date(2026, 11, 2))
-    assert s["dias"][0]["otras"] == [{"cat": "crossfit", "te": 3.4, "rpe": 7.0, "minutos": 30}]
+    assert s["dias"][0]["otras"] == [{"cat": "crossfit", "icono": "rayo", "te": 3.4, "rpe": 7.0, "minutos": 30}]
     assert s["dias"][1]["otras"] == []
 
 
@@ -570,3 +570,14 @@ def test_estructura_de_progresivo_y_fartlek():
         s = build.convert_session(plan["weeks"][0]["sessions"][1], [("Z1", 100, 110), ("Z2", 110, 120), ("Z3", 120, 130),
                                                                    ("Z4", 130, 140), ("Z5", 140, 150)])
         assert esperado in s["estructura"] and s["forma"] == tipo and s["objetivo"]["zona"] == "Z3"
+
+
+def test_iconos_en_data_json_y_validador():
+    out = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    assert out["ui"]["categorias"][0]["icono"] == "rayo"
+    assert all(c["icono"] == "medalla" for c in out["carreras"])
+    assert all(r["icono"] in ("correr", "medalla") for r in out["progreso"]["corridas"])
+    assert all(x["icono"] in (None, "medalla") for x in out["mejores_marcas"])
+    assert validar.problemas(out) == []
+    out["ui"]["categorias"][0]["icono"] = "dragon"
+    assert any("ícono desconocido" in p for p in validar.problemas(out))

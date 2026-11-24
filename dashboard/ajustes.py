@@ -17,6 +17,21 @@ NIVELES = ("novato", "intermedio", "corredor")
 INTENSIDADES = ("solo_z2", "z2_poca_z3", "calidad")
 CALIDAD_TIPOS = ("tempo_z3", "threshold", "intervalos", "progresivo", "fartlek")
 MAX_CATEGORIAS = 4
+# Íconos de site/iconos.js. Cada tipo de Garmin se mapea a uno; Python decide, el sitio solo pinta.
+ICONOS = ("correr", "medalla", "mancuerna", "rayo", "bici", "nadar", "caminar", "yoga", "punto")
+ICONO_TIPO = {
+    "running": "correr", "treadmill_running": "correr", "trail_running": "correr", "track_running": "correr",
+    "strength_training": "mancuerna", "hiit": "rayo", "cardio": "rayo",
+    "cycling": "bici", "indoor_cycling": "bici", "virtual_ride": "bici", "spinning": "bici",
+    "road_biking": "bici", "mountain_biking": "bici",
+    "lap_swimming": "nadar", "open_water_swimming": "nadar", "walking": "caminar", "hiking": "caminar",
+    "yoga": "yoga", "pilates": "yoga",
+}
+
+
+def icono_de_tipo(type_key) -> str:
+    """Ícono de un typeKey de Garmin; "punto" si no tiene uno propio."""
+    return ICONO_TIPO.get(type_key, "punto")
 # Color de cada categoría según cuántas hay (validado con el skill dataviz, claro y oscuro: el naranja
 # es de la corrida y nunca queda junto al amarillo ni al magenta en la pila de la carga semanal).
 CLASES = {1: ["azul"], 2: ["azul", "aqua"], 3: ["azul", "aqua", "violeta"],
@@ -70,8 +85,11 @@ def _categorias(brutas: list) -> list:
         if c["id"] in ids or c["id"] == "run":
             raise ConfigError(f"El id de categoría '{c['id']}' está repetido o reservado")
         ids.add(c["id"])
+        icono = c.get("icono") or icono_de_tipo(c["tipos"][0])
+        if icono not in ICONOS:
+            raise ConfigError(f"La categoría '{c['id']}' tiene icono '{icono}'; usa: {', '.join(ICONOS)}")
         out.append({"id": c["id"], "nombre": c["nombre"], "letra": c["letra"], "tipos": list(c["tipos"]),
-                    "intensa": bool(c.get("intensa", False)), "clase": CLASES[len(brutas)][i]})
+                    "intensa": bool(c.get("intensa", False)), "clase": CLASES[len(brutas)][i], "icono": icono})
     return out
 
 

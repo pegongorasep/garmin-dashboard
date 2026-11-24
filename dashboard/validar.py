@@ -12,6 +12,7 @@ ROOT = Path(__file__).parent.parent
 CLAVES = {"generado", "datos_al", "zonas", "rhr_promedio_7d", "aviso_zonas", "hoy", "ultima_corrida", "semana",
           "semanas_hoy", "semana_hoy_idx", "plan", "progreso", "composicion", "detalles", "ui",
           "carreras", "mejores_marcas", "tipos"}
+ICONOS = {"correr", "medalla", "mancuerna", "rayo", "bici", "nadar", "caminar", "yoga", "punto"}   # site/iconos.js
 OBLIGATORIAS = {"generado", "zonas", "hoy", "plan", "progreso", "detalles", "ui", "semanas_hoy"}
 # Nada de esto puede aparecer como clave en ningún nivel: IDs de Garmin, nombres, GPS, tramos crudos.
 PROHIBIDAS = {"activityId", "activityName", "ownerDisplayName", "ownerFullName", "userProfilePk", "userProfilePK",
@@ -37,6 +38,8 @@ def problemas(datos: dict) -> list:
             for k, v in o.items():
                 if k in PROHIBIDAS:
                     out.append(f"clave prohibida: {ruta}/{k}")
+                if k == "icono" and v is not None and v not in ICONOS:
+                    out.append(f"ícono desconocido: {ruta}/{k} = {v!r}")
                 recorrer(v, f"{ruta}/{k}")
         elif isinstance(o, list):
             for i, v in enumerate(o):

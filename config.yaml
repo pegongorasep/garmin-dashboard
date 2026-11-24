@@ -18,6 +18,6 @@ corrida:
   carreras: [2026-11-21]           # fechas de carreras pasadas que Garmin no marcó como Carrera
 actividades:
   categorias:
-    - {id: crossfit, nombre: CrossFit, letra: CF, tipos: [hiit, strength_training], intensa: true}
+    - {id: crossfit, nombre: CrossFit, letra: CF, tipos: [hiit, strength_training], intensa: true, icono: rayo}
   dias_pierna: []                  # p. ej. [lun]
 inbody: true

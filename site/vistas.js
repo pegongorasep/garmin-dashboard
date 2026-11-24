@@ -236,7 +236,7 @@ function tarjetaCorridasProgreso(d) {
 
 function tablaCorridas(corridas) {
   const orden = corridas.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
-  const celdas = (r) => [fechaLarga(r.fecha), `${r.sesion || "—"}${r.carrera ? " · carrera" : ""}`, fmt(r.minutos, 0), fmt(r.km),
+  const celdas = (r) => [fechaLarga(r.fecha), h("span", { class: "con-ico" }, icono(r.icono || (r.carrera ? "medalla" : "correr"), 14), `${r.sesion || "—"}${r.carrera ? " · carrera" : ""}`), fmt(r.minutos, 0), fmt(r.km),
     r.pct_trote == null ? "—" : `${fmt(r.pct_trote, 0)} %`,
     r.caminadora ? "cam." : r.ritmo_trote_s == null ? "—" : mmss(r.ritmo_trote_s),
     r.fc_prom == null ? "—" : fmt(r.fc_prom, 0)];
@@ -261,7 +261,7 @@ function tarjetaMejoresMarcas(d) {
   c.append(h("div", { class: "marcas" }, marcas.map((x) => {
     const larga = x.clave === "larga";
     return h("div", { class: "marca", role: "group", "aria-label": `${x.nombre}: ${larga ? `${fmt(x.distancia_km, 2)} km en ${tiempoLargo(x.tiempo_s)}` : tiempoLargo(x.tiempo_s)}, ${fechaConAnio(x.fecha, d.generado)}` },
-      h("div", { class: "marca-n" }, x.nombre, x.nuevo ? h("span", { class: "nuevo" }, "nuevo") : null),
+      h("div", { class: "marca-n" }, x.icono ? icono(x.icono, 14) : null, x.nombre, x.nuevo ? h("span", { class: "nuevo" }, "nuevo") : null),
       h("div", { class: "marca-v" }, larga ? `${fmt(x.distancia_km, 2)} km` : tiempoLargo(x.tiempo_s)),
       h("div", { class: "nota" }, larga ? `${tiempoLargo(x.tiempo_s)} · ` : "", fechaConAnio(x.fecha, d.generado)));
   })));
@@ -309,7 +309,7 @@ function comparacionCarrera(c) {
 
 function carreraDetalle(c, abierta, ref) {
   const det = h("details", { class: "ses carrera-det", open: abierta },
-    h("summary", {}, h("span", { class: "n" }, fechaLarga(c.fecha)),
+    h("summary", {}, icono(c.icono || "medalla", 16), h("span", { class: "n" }, fechaLarga(c.fecha)),
       h("span", { class: "m" }, `${fmt(c.distancia_km, 2)} km · ${tiempoLargo(c.tiempo_s)}`)),
     h("div", { class: "carrera-cuerpo" },
       filaStat("Distancia", `${fmt(c.distancia_km, 2)} km`), filaStat("Tiempo", tiempoLargo(c.tiempo_s)),

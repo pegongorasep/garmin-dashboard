@@ -88,3 +88,17 @@ def test_variada_default_false_y_calidad_con_variada_rota_los_5(tmp_path):
     with pytest.raises(ajustes.ConfigError):   # sin variada, calidad sigue pidiendo tipos
         cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {intensidad: calidad, "))
     assert cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {intensidad: calidad, calidad_tipos: [fartlek], "))["calidad_tipos"] == ["fartlek"]
+
+
+def test_iconos_por_tipo_de_garmin_y_de_config(tmp_path):
+    for k, i in {"running": "correr", "treadmill_running": "correr", "trail_running": "correr", "strength_training": "mancuerna",
+                 "hiit": "rayo", "cardio": "rayo", "cycling": "bici", "indoor_cycling": "bici", "virtual_ride": "bici",
+                 "spinning": "bici", "lap_swimming": "nadar", "open_water_swimming": "nadar", "walking": "caminar",
+                 "hiking": "caminar", "yoga": "yoga", "pilates": "yoga", "otra_cosa": "punto"}.items():
+        assert ajustes.icono_de_tipo(k) == i
+    c = cfg(tmp_path, MINIMA)
+    assert {x["id"]: x["icono"] for x in c["categorias"]} == {"fuerza": "mancuerna", "hiit": "rayo", "cardio": "bici", "movilidad": "yoga"}
+    c = cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: cf, nombre: CrossFit, letra: CF, tipos: [strength_training, hiit], icono: rayo}\n")
+    assert c["categorias"][0]["icono"] == "rayo"
+    with pytest.raises(ajustes.ConfigError):
+        cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: cf, nombre: CF, letra: CF, tipos: [hiit], icono: dragon}\n")

@@ -295,7 +295,7 @@ details.recup .senales { margin-top: 6px; }
 .circ.hecha { background: var(--s1); color: var(--page); }
 .circ.incompleta { background: var(--warn); color: var(--warn-ink); }
 .circ.extra { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink-2); }
-.sn { font-size: 11px; font-weight: 600; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
+.sn { font-size: 11px; font-weight: 600; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .cf { display: flex; flex-direction: column; align-items: center; font-size: 11px; line-height: 1.2; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cf b { font-weight: 600; }
 .cf.tenue { opacity: .6; }
@@ -443,3 +443,12 @@ details.recup .senales { margin-top: 6px; }
 .tipo .grupo-t { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .tipo .en-plan { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; background: var(--ink); color: var(--page); border-radius: 999px; padding: 1px 7px; display: inline-block; margin-top: 6px; white-space: nowrap; }
 .tipos-grupo { margin: 14px 0 0; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+
+/* v4.2 F5: íconos */
+.ico-svg { flex: none; vertical-align: -3px; }
+.con-ico { display: inline-flex; align-items: center; gap: 6px; }
+h2.con-ico { display: flex; }
+.cf b { display: inline-flex; }
+.marca-n .ico-svg { vertical-align: -2px; }
+details.ses.carrera-det > summary .ico-svg { color: var(--ink); }
+.circ.carrera { margin-bottom: 5px; }
