@@ -213,6 +213,27 @@ Plan de construcción: [`PLAN_V4.md`](PLAN_V4.md).
 - Dashboard con la misma estructura. Cambia: categorías, textos desde la config, tarjeta de calidad, mejora según
   haya caminatas o no, estado de primer día, InBody opcional, enlace "Jalar datos" al repo de cada quien.
 
+## 10. v4.2: Plan, tipos de entreno, íconos (2026-11-24) — APROBADO por Pedro
+
+Plan de construcción: [`PLAN_V4_2.md`](PLAN_V4_2.md).
+1. **Pestañas Hoy · Plan · Progreso** (Progreso con subpestañas **Corridas** y **Cuerpo**). Desaparece Detalles.
+   Plan = 12 semanas + tipos de entreno + zonas y reglas. Corridas = lo de Progreso de hoy menos las 12 semanas,
+   más intensidad y carga. Cuerpo = recuperación + composición InBody.
+2. **Catálogo "Tipos de entreno"** (solo para conocerlos): siluetas de la FC en el tiempo, **sin color ni números**.
+   Continuo, trote/caminata; los de Adrián ("Alex", el fisio): espiga, pirámide, ascendente, descendente,
+   intervalos con densidad, rotativo; avanzados: progresivo, tempo, umbral, intervalos VO2, fartlek, carrera.
+   La Larga es un continuo más largo (sin tarjeta propia).
+3. **Silueta de cada sesión del plan pintada con los colores de zona de Garmin** (Z1 gris, Z2 azul, Z3 verde,
+   Z4 naranja, Z5 rojo), solo en la silueta, no en el resto del sitio. Con receta corta (minutos y zonas).
+4. **Plan con corrida variada para usuarios nuevos** (`/setup` pone `variada: true`): 1 variada + 1 Z2 + Larga
+   Z2; solo Z2 → formatos de Adrián en Z1–Z2; poca Z3 → formatos de Adrián con un pico corto de Z3; corredor →
+   solo avanzados. Descargas todo continuo. **El plan de Pedro no cambia.**
+5. **No asumir CrossFit**: fuera la semana típica; solo se marca lo que Garmin registró. Fuera los "¿Larga?".
+6. **Fuerza/HIIT en "Cómo vas mejorando"**: en la frase y en una gráfica de sesiones por semana.
+7. **Íconos SVG por actividad** (corredor, medalla para carreras, mancuerna, rayo, bici, nadador, caminante,
+   yoga, punto).
+8. **Barra 80/20** de la semana en Hoy e **intensidad por semana** en Progreso › Corridas.
+
 ## 6. Preguntas abiertas
 1. ¿Algo del documento que quieras cambiar antes de aprobarlo?
 
