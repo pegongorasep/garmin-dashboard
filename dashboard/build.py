@@ -275,11 +275,17 @@ def last_run(data: dict, config: dict, plan: dict):
             **corrida_json(a, plan_ses, data, config)}
 
 
+def registro_esfuerzo(a: dict, details: dict, config: dict) -> dict:
+    """Esfuerzo calculado con la FC y el RPE manual (si lo hay) de una actividad: se publican los dos."""
+    return {"esfuerzo": m.esfuerzo_de(a, details, config), "rpe": (details.get(str(a["activityId"])) or {}).get("rpe")}
+
+
 def corrida_json(a: dict, plan_ses, data: dict, config: dict) -> dict:
     """Lo común de una corrida: minutos, km, caminadora, '¿lo hice bien?' y trote/caminata."""
     return {"minutos": r1(a["duration"] / 60), "km": r2((a.get("distance") or 0) / 1000),
             "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": m.es_carrera(a, config),
-            **m.run_check(a, plan_ses, config), "trote": rw_json(m.run_walk(a, data["details"]))}
+            **m.run_check(a, plan_ses, config), "trote": rw_json(m.run_walk(a, data["details"])),
+            **registro_esfuerzo(a, data["details"], config)}
 
 
 def corrida_plana(a: dict, plan_ses, data: dict, config: dict) -> dict:
@@ -303,16 +309,16 @@ def corrida_de_sesion(e: dict, semana: dict, data: dict, config: dict):
 
 
 def otras_del_dia(d: date, data: dict, config: dict) -> list:
-    """Actividades no-corrida del día, una entrada por categoría: TE aeróbico máx, RPE máx y minutos sumados."""
+    """Actividades no-corrida del día, una entrada por categoría: esfuerzo máx, RPE máx y minutos sumados."""
     out = []
     for c in config["categorias"]:
         acts = [a for a in data["activities"] if m.classify(a, config) == c["id"] and m.day_of(a) == d]
         if not acts:
             continue
-        tes = [a["aerobicTrainingEffect"] for a in acts if a.get("aerobicTrainingEffect") is not None]
+        esf = [e for a in acts if (e := m.esfuerzo_de(a, data["details"], config)) is not None]
         rpes = [r for a in acts if (r := (data["details"].get(str(a["activityId"])) or {}).get("rpe")) is not None]
-        out.append({"cat": c["id"], "icono": c.get("icono", "punto"), "te": r1(max(tes)) if tes else None, "rpe": max(rpes) if rpes else None,
-                    "minutos": r1(sum(a["duration"] for a in acts) / 60)})
+        out.append({"cat": c["id"], "icono": c.get("icono", "punto"), "esfuerzo": max(esf) if esf else None,
+                    "rpe": max(rpes) if rpes else None, "minutos": r1(sum(a["duration"] for a in acts) / 60)})
     return out
 
 
@@ -408,7 +414,7 @@ def build_runs(data: dict, config: dict, plan: dict) -> list:
              "icono": "medalla" if m.es_carrera(a, config) else "correr",
              "minutos": r1(f["minutos"]), "km": r2(f["km"]), "fc_prom": r1(f["fc_prom"]),
              "pct_z1z2": r1(f["pct_z1z2"]), "caminadora": f["caminadora"],
-             **(rw_json(f) or dict.fromkeys(m.RW_CLAVES))}
+             **registro_esfuerzo(a, data["details"], config), **(rw_json(f) or dict.fromkeys(m.RW_CLAVES))}
             for a, f in zip(acts, m.run_rows(acts, data["details"], config))]
 
 
@@ -559,8 +565,7 @@ def build_days(hoy: date, data: dict) -> list:
 
 def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj) -> dict:
     ini, acts = monday(hoy), data["activities"]
-    carga = lambda s: {k: r1(v) if k != "sin_rpe" else v  # noqa: E731
-                       for k, v in m.week_load(acts, data["details"], s, config).items()}
+    carga = lambda s: {k: r1(v) for k, v in m.week_load(acts, data["details"], s, config).items()}  # noqa: E731
     dist = m.week_distribution(acts, ini)
     semanas = []
     for i in range(11, -1, -1):
@@ -568,13 +573,13 @@ def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj) -> d
         c = m.week_load(acts, data["details"], s, config)
         semanas.append({"inicio": s.isoformat(),
                         "cargas": {k["id"]: r1(c[k["id"]]) for k in config["categorias"]},
-                        "carga_corrida": r1(c["run"]), "sin_rpe": c["sin_rpe"]})
+                        "carga_corrida": r1(c["run"])})
     return {
         "distribucion": {"minutos": {z: r1(v) for z, v in dist["minutos"].items()},
                          "bajo": r1(dist["bajo"]), "limbo": r1(dist["limbo"]), "alto": r1(dist["alto"])},
         "carga": carga(ini), "carga_anterior": carga(ini - timedelta(days=7)), "carga_semanas": semanas,
         "fc_max": {**fc_max, "config": config["max_hr"], "fuente": "reloj" if reloj else "respaldo"},
-        "umbrales": {k: config[k] for k in ("rhr_tolerance_bpm", "sleep_min_hours", "rpe_heavy",
+        "umbrales": {k: config[k] for k in ("rhr_tolerance_bpm", "sleep_min_hours", "esfuerzo_duro",
                                             "max_hr", "max_hr_floor", "max_hr_review_above", "zone_pcts",
                                             "ceiling_tolerance_min", "done_ratio")},
     }
@@ -611,7 +616,6 @@ def build_ui(config: dict, plan: dict) -> dict:
         "acciones_url": f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None,
         "textos": {
             "semana": ". ".join(partes) + ".",
-            "rpe_ayer": f"RPE del {nombre} de ayer" if nombre else "RPE de tu sesión intensa de ayer",
             "incluye": f"Incluye {lista_es([c['nombre'] for c in cats] + ['corridas'])}.",
             "fcmax_vacia": (f"Aún no hay clases de {nombre} medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva."
                             if nombre else "Aún no hay sesiones intensas medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva.")
@@ -632,6 +636,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     ayer = hoy - timedelta(days=1)
     rhr = m.rhr_7d(data["daily_summaries"], hoy) or 60
     zonas = m.zones(config["max_hr"], rhr, config["zone_pcts"])
+    config = {**config, "zonas": zonas}   # derivadas de este día: esfuerzo, ritmo a FC ref y plan vs real las leen de aquí
 
     sigs = m.signals(hoy, data, config)
     prev = light_on(ayer, data, config)["color"]
@@ -654,7 +659,8 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         tarjeta = {**tarjeta, "tipo": "primera_sync", "texto": texto, "version": None, "sesion_id": None}
     elif tarjeta["tipo"] == "sin_plan" and hoy < inicio_plan:
         tarjeta = {**tarjeta, "texto": texto_inicio_plan(inicio_plan)}
-    tarjeta["motivo"] = m.motivo(sigs, config) if tarjeta["version"] in ("suave", "descanso") else None
+    ayer_dato = m.ayer_duro(hoy, data["activities"], data["details"], config)
+    tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None
 
     pulled = data["meta"].get("pulled_at_utc")
     datos_al = None
@@ -670,7 +676,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "zonas": [{"zona": z, "piso": lo, "techo": hi} for z, lo, hi in zonas],
         "rhr_promedio_7d": r1(rhr),
         "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], config["max_hr"]),
-        "hoy": {"semaforo": luz, "señales": signals_list(sigs), "tarjeta": tarjeta},
+        "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta},
         "ultima_corrida": last_run(data, config, plan),
         "semana": build_week(hoy, data, config, estado, plan),
         "semanas_hoy": semanas_hoy, "semana_hoy_idx": semana_hoy_idx,

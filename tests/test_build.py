@@ -325,13 +325,15 @@ def test_dia_futuro_vacio_sin_categoria_planeada():
     assert s["dias"][1]["otras"] == [] and s["dias"][1]["corrida"] is None
 
 
-def test_otras_del_dia_toma_te_maximo_y_suma_minutos():
+def test_otras_del_dia_toma_esfuerzo_maximo_y_suma_minutos():
     data = fixture()
-    data["activities"] = [_act(20, "2026-11-02", "strength_training", minutos=14, aerobicTrainingEffect=2.2),
-                          _act(21, "2026-11-02", "hiit", minutos=16, aerobicTrainingEffect=3.4)]
+    data["activities"] = [_act(20, "2026-11-02", "strength_training", minutos=14, hrTimeInZone_1=0, hrTimeInZone_2=840,
+                               hrTimeInZone_3=0, hrTimeInZone_4=0, hrTimeInZone_5=0),
+                          _act(21, "2026-11-02", "hiit", minutos=16, hrTimeInZone_1=0, hrTimeInZone_2=0,
+                               hrTimeInZone_3=0, hrTimeInZone_4=960, hrTimeInZone_5=0)]
     data["details"] = {"20": {"rpe": 5.0}, "21": {"rpe": 7.0}}
     s = _semana(data, date(2026, 11, 4), date(2026, 11, 2))
-    assert s["dias"][0]["otras"] == [{"cat": "crossfit", "icono": "rayo", "te": 3.4, "rpe": 7.0, "minutos": 30}]
+    assert s["dias"][0]["otras"] == [{"cat": "crossfit", "icono": "rayo", "esfuerzo": 7.5, "rpe": 7.0, "minutos": 30}]
     assert s["dias"][1]["otras"] == []
 
 
@@ -646,3 +648,28 @@ def test_calentar_y_enfriar_van_aparte_salvo_que_el_plan_los_traiga():
     caminata = [{"kind": "walk", "minutes": 5, "zone": "Z1", "note": "calentamiento"}, z2,
                 {"kind": "walk", "minutes": 5, "zone": "Z1", "note": "enfriamiento"}]
     assert build.rampas_de(caminata) == {"con_calentamiento": True, "con_enfriamiento": True}
+
+
+# --- v4.3 F2: esfuerzo, ayer, sin RPE en el semáforo ---
+
+def test_esfuerzo_y_ayer_en_el_json(salida):
+    assert [s["id"] for s in salida["hoy"]["señales"]] == ["hrv", "rhr", "sueno"]
+    u = salida["ultima_corrida"]
+    assert u["esfuerzo"] is not None and u["rpe"] == 4.0
+    assert salida["hoy"]["ayer"] is None or set(salida["hoy"]["ayer"]) == {"categoria", "esfuerzo", "rpe"}
+    assert all("sin_rpe" not in s for s in salida["detalles"]["carga_semanas"])
+    assert "rpe_heavy" not in salida["detalles"]["umbrales"] and salida["detalles"]["umbrales"]["esfuerzo_duro"] == 8
+    assert all({"esfuerzo", "rpe"} <= set(c) for c in salida["progreso"]["corridas"])
+
+
+def test_ayer_del_dia_y_motivo_con_dia_duro():
+    data = fixture()
+    ahora = datetime(2026, 11, 3, 12, 0, tzinfo=ZoneInfo("America/Merida"))   # el hiit 1 fue el 2 (ayer)
+    data["activities"][0].update(hrTimeInZone_1=0, hrTimeInZone_2=0, hrTimeInZone_3=0, hrTimeInZone_4=1500, hrTimeInZone_5=300)
+    data["hrv"] = [{**r, "lastNightAvg": 29} if r["calendarDate"] == "2026-11-03" else r for r in data["hrv"]]
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    out = build.build(data, plan, CONFIG_FIXTURE, ahora)
+    assert out["hoy"]["ayer"]["categoria"] == "CrossFit" and out["hoy"]["ayer"]["esfuerzo"] >= 8
+    assert out["hoy"]["ayer"]["rpe"] == 6.0
+    t = out["hoy"]["tarjeta"]
+    assert t["motivo"] is None or t["motivo"].endswith("después de un día duro")

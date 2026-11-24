@@ -504,3 +504,4 @@ details.card.plegable:not([open]) { align-self: start; }
 .ley-sil i.g4 { background: var(--g4); } .ley-sil i.g5 { background: var(--g5); }
 details.ses > summary .ley-sil { margin-left: 20px; }
 .ley-sil span { display: inline-flex; align-items: center; gap: 5px; } .ley-sil i { margin-right: 0; } .ley-sil b { font-weight: 600; } .ley-sil small { color: var(--muted); font-size: 11.5px; }
+.banner details.recup .ayer { margin: 6px 0 0 26px; }

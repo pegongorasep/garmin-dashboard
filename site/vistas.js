@@ -550,12 +550,12 @@ function tarjetaComoFunciona(d) {
   const u = (d.detalles || {}).umbrales || {};
   const li = (...t) => h("li", {}, ...t);
   return h("details", { class: "card ancha plegable" }, h("summary", {}, h("h2", {}, "Cómo funciona")),
-    h("p", {}, "Cada mañana se revisan 4 señales; el semáforo decide la sesión de hoy."),
+    h("p", {}, "Cada mañana se revisan 3 señales; el semáforo decide la sesión de hoy."),
     h("ul", { class: "reglas" },
       li(h("strong", {}, "HRV: "), "fuera si anoche quedó por debajo de tu rango base. Si el reloj la marca “baja”, el semáforo va directo a rojo."),
       li(h("strong", {}, "FC en reposo: "), `fuera si supera el promedio de 7 días + ${fmt(u.rhr_tolerance_bpm, 0)} lpm.`),
       li(h("strong", {}, "Sueño: "), `fuera si dormiste menos de ${fmt(u.sleep_min_hours, 1)} h.`),
-      li(h("strong", {}, `${nombreSenal("rpe")}: `), `fuera si fue ${fmt(u.rpe_heavy, 0)} o más.`)),
+      li(h("strong", {}, "Esfuerzo de ayer: "), `no mueve el semáforo; se muestra como dato. Si hay una señal fuera después de un día con esfuerzo de ${fmt(u.esfuerzo_duro ?? 8, 0)} o más, el motivo lo dice.`)),
     h("ul", { class: "reglas" },
       li(badge("ok", "✓", "verde"), " Verde: ninguna señal fuera → sesión normal."),
       li(badge("warn", "!", "amarillo"), " Amarillo: una señal fuera → versión suave."),
@@ -590,17 +590,15 @@ function dibujarDetalles() {
   const semanas = ((datos.detalles || {}).carga_semanas || []);
   const cats = ui().categorias, clases = [...cats.map((c) => c.clase), "s2"];
   const nombres = [...cats.map((c) => c.nombre), "Corrida"];
-  const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [...cats.map((c) => (s.cargas || {})[c.id] || 0), s.carga_corrida || 0], sin_rpe: s.sin_rpe || 0 }));
+  const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [...cats.map((c) => (s.cargas || {})[c.id] || 0), s.carga_corrida || 0] }));
   const suma = (s) => s.valores.reduce((a, v) => a + v, 0);
-  const sinRpe = semanas.filter((s) => s.sin_rpe > 0);
-  t.sub.textContent = "RPE × minutos por semana (lun–dom). Solo referencia.";
+  t.sub.textContent = "Esfuerzo × minutos por semana (lun–dom). La fuerza con la FC baja da poca carga. Solo referencia.";
   t.chart.replaceChildren(barChart({
     ancho, semanas: barras, etiqueta: "Carga semanal apilada", clases,
-    texto: (s) => `Semana del ${fechaLarga(s.inicio)} · ${nombres.map((n, i) => `${n} ${fmt(s.valores[i], 0)}`).join(" · ")} · Total ${fmt(suma(s), 0)}${s.sin_rpe ? ` · ${s.sin_rpe} sin RPE` : ""}`,
+    texto: (s) => `Semana del ${fechaLarga(s.inicio)} · ${nombres.map((n, i) => `${n} ${fmt(s.valores[i], 0)}`).join(" · ")} · Total ${fmt(suma(s), 0)}`,
   }));
   t.extra.replaceChildren(leyenda(clases.map((c, i) => [`sw ${c}`, nombres[i]])),
-    sinRpe.length ? h("p", { class: "nota" }, `* ${sinRpe.length === 1 ? "Una semana tiene" : `${sinRpe.length} semanas tienen`} sesiones sin RPE: la carga real es mayor.`) : "",
-    barras.length ? tablaDatos(["Semana", ...nombres, "Sin RPE"], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), ...s.valores.map((v) => fmt(v, 0)), s.sin_rpe])) : "");
+    barras.length ? tablaDatos(["Semana", ...nombres], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), ...s.valores.map((v) => fmt(v, 0))])) : "");
 }
 
 // --- tema ---

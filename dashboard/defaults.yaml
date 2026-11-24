@@ -5,7 +5,7 @@ umbrales:
   ceiling_tolerance_min: 2          # minutos tolerados sobre el techo de Z2
   rhr_tolerance_bpm: 4              # FC en reposo: cuántos lpm sobre su promedio de 7 días
   sleep_min_hours: 6.5
-  rpe_heavy: 8                      # RPE desde el cual una sesión intensa cuenta como pesada
+  esfuerzo_duro: 8                  # esfuerzo (1–10) desde el cual el día de ayer cuenta como duro
   max_hr_review_above: 200          # avisar si la FC máx medida pasa de aquí
   run_types: [running, treadmill_running, trail_running, track_running]
 

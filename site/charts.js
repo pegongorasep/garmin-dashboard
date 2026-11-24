@@ -182,7 +182,7 @@ function lineChart(cfg) {
 }
 
 /**
- * Barras apiladas por semana. cfg: { ancho, alto, semanas:[{inicio, valores:[a,b], sin_rpe, meta}], texto:(semana)=>string,
+ * Barras apiladas por semana. cfg: { ancho, alto, semanas:[{inicio, valores:[a,b], meta}], texto:(semana)=>string,
  *   clases:["s1","s2"], etiquetaFinal:string (valor de la última barra, escrito sobre ella) }  `meta` = raya fina horizontal (p. ej. minutos del plan), en color de texto secundario.
  * Segmentos separados por 2 px de superficie; barra de 24 px como máximo; extremo superior redondeado.
  */
@@ -250,7 +250,6 @@ function barChart(cfg) {
     if (cfg.etiquetaFinal && i === semanas.length - 1) {
       svg.append(sv("text", { class: "eje valor-fin", x: Math.min(cx + 6, W - 2), y: Math.max(y(Math.max(total(s), s.meta || 0)) - 5, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
     }
-    if (s.sin_rpe > 0) svg.append(sv("text", { class: "eje ast", x: cx, y: Math.max(base - 2, 12), "text-anchor": "middle" }, "*"));
     if (i % cada === 0) svg.append(sv("text", { class: "eje", x: cx, y: H - 6, "text-anchor": "middle" }, fechaCorta2(parseFecha(s.inicio).getTime())));
     const hit = sv("rect", { class: "capa", x: cx - slot / 2, y: 0, width: slot, height: H - mb, tabindex: 0,
       "aria-label": cfg.texto(s) });

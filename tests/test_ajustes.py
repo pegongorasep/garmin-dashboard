@@ -22,7 +22,7 @@ def test_config_de_pedro_da_el_dict_plano():
     c = ajustes.cargar_config(ROOT / "tests" / "fixtures")
     assert c["timezone"] == "America/Merida" and c["max_hr"] == 189 and c["max_hr_floor"] == 183
     assert c["plan_start"] == "2026-11-09" and c["fc_max_correa_desde"] == "2026-10-26"
-    assert c["zone_pcts"] == [50, 60, 70, 80, 90] and c["done_ratio"] == 0.7 and c["rpe_heavy"] == 8
+    assert c["zone_pcts"] == [50, 60, 70, 80, 90] and c["done_ratio"] == 0.7 and c["esfuerzo_duro"] == 8
     assert "semana_tipica" not in c   # actividades.semana vieja se tolera y se ignora
     assert c["categorias"][0]["tipos"] == ["hiit", "strength_training"]
 
@@ -36,8 +36,13 @@ def test_minima_usa_defaults(tmp_path):
 
 
 def test_umbrales_se_sobreescriben(tmp_path):
+    c = cfg(tmp_path, MINIMA + "umbrales: {esfuerzo_duro: 7}\n")
+    assert c["esfuerzo_duro"] == 7 and c["done_ratio"] == 0.7
+
+
+def test_rpe_heavy_de_configs_viejas_se_tolera_y_se_ignora(tmp_path):
     c = cfg(tmp_path, MINIMA + "umbrales: {rpe_heavy: 7}\n")
-    assert c["rpe_heavy"] == 7 and c["done_ratio"] == 0.7
+    assert c["esfuerzo_duro"] == 8 and c["done_ratio"] == 0.7
 
 
 @pytest.mark.parametrize("texto,frag", [

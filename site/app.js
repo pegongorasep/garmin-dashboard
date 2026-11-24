@@ -70,7 +70,10 @@ function badgeSenal(estado) {
 const NOMBRE_SENAL = { hrv: "HRV de anoche", rhr: "FC en reposo", sueno: "Sueño" };
 const ui = () => (datos && datos.ui) || { categorias: [], textos: {} };
 const categoria = (id) => ui().categorias.find((c) => c.id === id) || { id, nombre: id, letra: id.slice(0, 2).toUpperCase(), clase: "azul" };
-const nombreSenal = (id) => (id === "rpe" ? ui().textos.rpe_ayer || "RPE de tu sesión intensa de ayer" : NOMBRE_SENAL[id] || id);
+const nombreSenal = (id) => NOMBRE_SENAL[id] || id;
+
+/** "Esfuerzo 8.7 · RPE 7" (el RPE solo si existe). */
+const textoEsfuerzo = (x) => [x.esfuerzo != null ? `Esfuerzo ${fmt(x.esfuerzo, 1)}` : null, x.rpe != null ? `RPE ${fmt(x.rpe, 0)}` : null].filter(Boolean).join(" · ");
 const ETIQUETA_PASO = { warmup: "calentamiento", run: "trote", walk: "caminata", cooldown: "enfriamiento" };
 
 function pasoLi(p) {
@@ -212,7 +215,8 @@ function bannerHoy(d) {
         `Recuperación: ${sem.color === "sin_datos" ? "sin datos" : est.titulo.toLowerCase()}`, h("span", { class: "nota" }, " · ver señales")),
       h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((x) =>
         h("li", {}, badgeSenal(x.estado),
-          h("div", {}, h("div", { class: "nombre" }, nombreSenal(x.id)), h("div", { class: "nota" }, x.texto)))))));
+          h("div", {}, h("div", { class: "nombre" }, nombreSenal(x.id)), h("div", { class: "nota" }, x.texto))))),
+      d.hoy.ayer ? h("p", { class: "nota ayer" }, `Ayer: ${d.hoy.ayer.categoria}${d.hoy.ayer.esfuerzo != null ? `, esfuerzo ${fmt(d.hoy.ayer.esfuerzo, 1)}` : ""}`) : null));
 }
 
 // --- semanas navegables: selector, esta semana, calendario ---
@@ -314,7 +318,7 @@ const diaTexto = (x) => {
   if (x.corrida) partes.push(`${x.corrida.carrera ? "carrera" : "corrida"} de ${fmt(x.corrida.minutos, 0)} min (${x.corrida.sesion_nombre}, ${{ hecha: "hecha", incompleta: "incompleta", extra: "sin sesión" }[x.corrida.estado] || x.corrida.estado})`);
   if (x.corridas_n > 1) partes.push(`${x.corridas_n} corridas ese día`);
   for (const cf of x.otras || []) {
-    partes.push(`${categoria(cf.cat).nombre}${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.te != null ? `, Training Effect aeróbico ${cf.te.toFixed(1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
+    partes.push(`${categoria(cf.cat).nombre}${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.esfuerzo != null ? `, esfuerzo ${fmt(cf.esfuerzo, 1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
   }
   return `${fechaCorta(x.fecha)}: ${partes.length ? partes.join("; ") : "sin actividad"}`;
 };
@@ -332,7 +336,7 @@ function diaCalendario(x, hoyIso) {
       h("span", { class: "sn" }, icono(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr"), 14), h("span", {}, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, "carrera") : null];
   }
-  const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.rpe != null ? `RPE ${fmt(cf.rpe, 0)}` : cf.te != null ? cf.te.toFixed(1) : null));
+  const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.esfuerzo != null ? fmt(cf.esfuerzo, 1) : null));
   return h("div", { class: `dia${x.fecha === hoyIso ? " es-hoy" : ""}`, role: "group", title: diaTexto(x), "aria-label": diaTexto(x) },
     h("span", { class: "dn" }, x.dia_semana), h("span", { class: "df" }, parseFecha(x.fecha).getDate()),
     marca, cfMarca);
@@ -342,7 +346,7 @@ function calendarioSemana(d, s) {
   const hoyIso = (d.generado || "").slice(0, 10);
   return h("div", { class: "cal" },
     h("div", { class: "dias7" }, (s.dias || []).map((x) => diaCalendario(x, hoyIso))),
-    h("p", { class: "nota leyenda-cal" }, "número = Training Effect aeróbico de Garmin (0–5)"));
+    h("p", { class: "nota leyenda-cal" }, "número = esfuerzo calculado con tu FC (1–10)"));
 }
 
 /** "Minutos en Z4: 17 de 20 ✓" y aviso si pasó mucho tiempo por encima de la zona. */
@@ -366,7 +370,7 @@ function filaCorrida(cabeza, titulo, c) {
   c = c || {};
   const datos = [c.minutos != null ? `${fmt(c.minutos, 0)}'` : null, c.km != null ? `${fmt(c.km)} km` : null,
     c.pct_trote != null ? `${fmt(c.pct_trote, 0)} % trote` : null,
-    c.ritmo_trote_s ? `${mmss(c.ritmo_trote_s)} /km${c.caminadora ? " (caminadora)" : ""}` : null].filter(Boolean);
+    c.ritmo_trote_s ? `${mmss(c.ritmo_trote_s)} /km${c.caminadora ? " (caminadora)" : ""}` : null, textoEsfuerzo(c) || null].filter(Boolean);
   return h("div", { class: "corrida" },
     h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo), c.carrera ? h("span", { class: "etiqueta-carrera" }, "Carrera") : null),
     datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
@@ -545,14 +549,11 @@ function bloqueCarga(s) {
     const pct = Math.round(((a - b) / b) * 100);
     delta = `${pct >= 0 ? "▲" : "▼"} ${Math.abs(pct)} % vs semana anterior (${fmt(b, 0)})`;
   }
-  return h("div", { class: "card" }, h("h2", {}, "Carga semanal (RPE × min)"),
+  return h("div", { class: "card" }, h("h2", {}, "Carga semanal (esfuerzo × min)"),
     h("div", { class: "grande" }, fmt(a, 0)),
     h("p", { class: "nota" }, delta),
     ...ui().categorias.map((c) => h("div", { class: "kv" }, h("span", {}, c.nombre), h("span", {}, fmt(s.carga[c.id], 0)))),
-    h("div", { class: "kv" }, h("span", {}, "Corridas"), h("span", {}, fmt(s.carga.run, 0))),
-    s.carga.sin_rpe > 0
-      ? h("p", { class: "nota" }, `${s.carga.sin_rpe} ${s.carga.sin_rpe === 1 ? "sesión sin RPE" : "sesiones sin RPE"} (no cuentan en la carga)`)
-      : null);
+    h("div", { class: "kv" }, h("span", {}, "Corridas"), h("span", {}, fmt(s.carga.run, 0))));
 }
 
 /** Barra de minutos por zona (Z1–Z5) con la marca de 80 %. Compacta: más delgada, sin brackets ni textos de la marca. */

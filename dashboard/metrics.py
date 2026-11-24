@@ -165,28 +165,55 @@ def week_distribution(activities: list, week_start: date) -> dict:
     return {"minutos": minutos, **pct}
 
 
-def session_load(activity: dict, details: dict):
-    """RPE × minutos; None si no hay RPE."""
-    rpe = (details.get(str(activity["activityId"])) or {}).get("rpe")
-    if rpe is None:
+# Valor de cada zona para el esfuerzo (1–10): lo que cuesta un minuto en esa zona.
+ESFUERZO = {"Z0": 1, "Z1": 2, "Z2": 3, "Z3": 5.5, "Z4": 7.5, "Z5": 9.5}
+ORDEN_ZONAS = ["Z0", *ZONAS]
+
+
+def zonas_de(config: dict) -> list:
+    """Zonas del dashboard (las que build deja en config["zonas"]); si no, Karvonen con FC reposo 60 (solo pruebas)."""
+    return config.get("zonas") or zones(config["max_hr"], 60, config.get("zone_pcts", [50, 60, 70, 80, 90]))
+
+
+def esfuerzo(minutos: dict):
+    """Esfuerzo 1–10 de una sesión: promedio ponderado de ESFUERZO en la mitad más dura (de Z5 hacia Z0), para que
+    los descansos no lo bajen. 1 decimal; None sin minutos."""
+    total = sum(minutos.values())
+    if total <= 0:
         return None
-    return rpe * activity["duration"] / 60
+    mitad = resto = total / 2
+    suma = 0.0
+    for z in reversed(ORDEN_ZONAS):
+        tomo = min(minutos.get(z, 0.0), resto)
+        suma += tomo * ESFUERZO[z]
+        resto -= tomo
+        if resto <= 1e-9:
+            break
+    return round(suma / mitad, 1)
+
+
+def esfuerzo_de(activity: dict, details: dict, config: dict):
+    """Esfuerzo de una actividad, de su serie de FC o de las zonas del reloj; None si no hay."""
+    zm = zona_minutos(activity, details, zonas_de(config))
+    return None if zm is None else esfuerzo(zm)
+
+
+def session_load(activity: dict, details: dict, config: dict):
+    """Carga = esfuerzo × minutos de la actividad; None si no hay esfuerzo."""
+    e = esfuerzo_de(activity, details, config)
+    return None if e is None else e * activity["duration"] / 60
 
 
 def week_load(activities: list, details: dict, week_start: date, config: dict) -> dict:
-    """Carga de la semana: {<id de cada categoría>, run, total, sin_rpe}."""
+    """Carga de la semana: {<id de cada categoría>, run, total}."""
     fin = week_start + timedelta(days=7)
     ids = [c["id"] for c in config.get("categorias", [])]
-    out = {**dict.fromkeys(ids, 0.0), "run": 0.0, "sin_rpe": 0}
+    out = {**dict.fromkeys(ids, 0.0), "run": 0.0}
     for a in activities:
         tipo = classify(a, config)
         if tipo is None or not (week_start <= day_of(a) < fin):
             continue
-        carga = session_load(a, details)
-        if carga is None:
-            out["sin_rpe"] += 1
-        else:
-            out[tipo] += carga
+        out[tipo] += session_load(a, details, config) or 0.0
     out["total"] = sum(out[k] for k in (*ids, "run"))
     return out
 
@@ -242,29 +269,12 @@ def signal_sleep(day: date, sleep: list, config: dict) -> dict:
     return _senal("fuera" if horas < minimo else "ok", round(horas, 2), minimo, texto)
 
 
-def signal_rpe(day: date, activities: list, details: dict, config: dict) -> dict:
-    ayer = day - timedelta(days=1)
-    intensas = {c["id"] for c in categorias_intensas(config)}
-    nombre = nombre_intensa(config)
-    sesion = nombre or "sesión intensa"
-    cf = [a for a in activities if classify(a, config) in intensas and day_of(a) == ayer]
-    if not cf:
-        return _senal("ok", None, config["rpe_heavy"], f"sin {sesion} ayer")
-    rpes = [r for a in cf if (r := (details.get(str(a["activityId"])) or {}).get("rpe")) is not None]
-    if not rpes:
-        return _senal("sin_dato", None, config["rpe_heavy"], f"{nombre or 'Sesión intensa'} de ayer sin RPE")
-    v = max(rpes)
-    texto = f"RPE de {sesion} de ayer {v:g}, pesado desde {config['rpe_heavy']}"
-    return _senal("fuera" if v >= config["rpe_heavy"] else "ok", v, config["rpe_heavy"], texto)
-
-
 def signals(day: date, data: dict, config: dict) -> dict:
-    """Las 4 señales de anoche y ayer. data: daily_summaries, sleep, hrv, activities, details."""
+    """Las 3 señales de anoche: HRV, FC en reposo y sueño. data: daily_summaries, sleep, hrv."""
     return {
         "hrv": signal_hrv(day, data.get("hrv", [])),
         "rhr": signal_rhr(day, data.get("daily_summaries", []), config),
         "sueno": signal_sleep(day, data.get("sleep", []), config),
-        "rpe": signal_rpe(day, data.get("activities", []), data.get("details", {}), config),
     }
 
 
@@ -286,17 +296,34 @@ def traffic_light(sigs: dict, prev_light) -> dict:
             "repetir_semana": color == "rojo" and prev_light == "rojo"}
 
 
+def ayer_duro(day: date, activities: list, details: dict, config: dict):
+    """La actividad no-corrida de ayer con más esfuerzo: {categoria, esfuerzo, rpe}; None si no hubo.
+    Varias del mismo día: gana el esfuerzo más alto (una sin esfuerzo solo cuenta si no hay otra)."""
+    nombres = {c["id"]: c["nombre"] for c in config.get("categorias", [])}
+    ayer = day - timedelta(days=1)
+    cands = [(a, c) for a in activities if day_of(a) == ayer and (c := classify(a, config)) in nombres]
+    if not cands:
+        return None
+    a, c = max(cands, key=lambda x: esfuerzo_de(x[0], details, config) or 0)
+    return {"categoria": nombres[c], "esfuerzo": esfuerzo_de(a, details, config),
+            "rpe": (details.get(str(a["activityId"])) or {}).get("rpe")}
+
+
 MOTIVOS = {"hrv": "HRV baja", "rhr": "FC en reposo alta", "sueno": "Dormiste poco"}
 
 
-def motivo(sigs: dict, config=None):
-    """Por qué la sesión va suave o en descanso: textos de las señales `fuera`, unidos con ' · '; None si no hay."""
-    nombre = nombre_intensa(config or {})
-    motivos = {**MOTIVOS, "rpe": f"{nombre} pesado ayer" if nombre else "Sesión intensa pesada ayer"}
-    textos = [motivos[k] for k in ("hrv", "rhr", "sueno", "rpe") if sigs[k]["estado"] == "fuera"]
+def motivo(sigs: dict, config=None, ayer=None):
+    """Por qué la sesión va suave o en descanso: textos de las señales `fuera`, unidos con ' · '; None si no hay.
+    Si ayer fue un día duro (esfuerzo ≥ `esfuerzo_duro`), lo dice al final."""
+    textos = [MOTIVOS[k] for k in ("hrv", "rhr", "sueno") if sigs[k]["estado"] == "fuera"]
     if sigs["hrv"].get("hrv_baja") and MOTIVOS["hrv"] not in textos:
         textos.insert(0, MOTIVOS["hrv"])
-    return " · ".join(textos) or None
+    if not textos:
+        return None
+    texto = " · ".join(textos)
+    if ayer and ayer.get("esfuerzo") is not None and ayer["esfuerzo"] >= (config or {}).get("esfuerzo_duro", 8):
+        texto += " después de un día duro"
+    return texto
 
 
 def week_index(day: date, plan_start: date, repetidas=(), total: int = 12):
@@ -689,6 +716,7 @@ def stats_carrera(activity: dict, details: dict, config: dict) -> dict:
            if activity.get("averageRunningCadenceInStepsPerMinute") else None,
            "desnivel_m": round(activity["elevationGain"]) if activity.get("elevationGain") is not None else None,
            "caminadora": activity["activityType"]["typeKey"] == "treadmill_running",
+           "esfuerzo": esfuerzo_de(activity, details, config), "rpe": det.get("rpe"),
            "km": det.get("ritmos_km") or None}
     return out
 

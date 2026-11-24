@@ -74,16 +74,45 @@ def test_week_distribution_80_10_10():
     assert m.week_distribution([], lun)["bajo"] == 0.0
 
 
+def test_esfuerzo_casos_de_la_especificacion():
+    assert m.esfuerzo({"Z2": 28}) == 3.0                                            # Z2 continuo
+    hiit = {"Z0": 5, "Z1": 15, "Z4": 15, "Z5": 5}                                   # 15' Z4 + 5' Z5 + 20' suave
+    assert m.esfuerzo(hiit) == 8.0
+    assert m.esfuerzo({"Z1": 30, "Z3": 10, "Z0": 20}) == 3.2                        # mitad dura = 10' Z3 + 20' Z1
+    assert m.esfuerzo({}) is None and m.esfuerzo({"Z2": 0.0}) is None
+
+
+def test_esfuerzo_los_descansos_no_lo_bajan():
+    solo_trabajo = {"Z4": 10}
+    con_descansos = {"Z4": 10, "Z1": 6, "Z0": 4}
+    assert m.esfuerzo(solo_trabajo) == m.esfuerzo(con_descansos) == 7.5
+    assert m.esfuerzo({"Z4": 4, "Z2": 30}) == 4.1    # un pico corto en una sesión larga pesa poco
+
+
 def test_session_and_week_load():
     lun = date(2026, 10, 26)
-    acts = [act(1, "2026-10-26", dur=3600), act(2, "2026-10-27", "running", dur=1800),
-            act(3, "2026-10-28", dur=3600), act(4, "2026-10-29", "indoor_cycling")]
-    det = {"1": {"rpe": 7.0}, "2": {"rpe": 4.0}, "3": {"rpe": None}}
-    assert m.session_load(acts[0], det) == 420
-    assert m.session_load(acts[2], det) is None
-    assert m.session_load(acts[0], {}) is None
-    assert m.week_load(acts, det, lun, CFG) == {
-        "crossfit": 420, "run": 120, "sin_rpe": 1, "total": 540}
+    cfg = {**CFG, "zonas": ZONAS_T}
+    acts = [act(1, "2026-10-26", dur=3600, z=(0, 0, 0, 3600, 0)),     # 60' en Z4 -> esfuerzo 7.5
+            act(2, "2026-10-27", "running", dur=1800, z=(0, 1800, 0, 0, 0)),   # 30' en Z2 -> 3.0
+            {"activityId": 3, "startTimeLocal": "2026-10-28 18:00:00", "duration": 3600,
+             "activityType": {"typeKey": "hiit"}},                    # sin zonas del reloj: sin carga
+            act(4, "2026-10-29", "indoor_cycling")]
+    assert m.session_load(acts[0], {}, cfg) == 450
+    assert m.session_load(acts[2], {}, cfg) is None
+    assert m.week_load(acts, {}, lun, cfg) == {"crossfit": 450, "run": 90, "total": 540}
+
+
+def test_ayer_duro_toma_el_esfuerzo_mas_alto():
+    cfg = {**CFG, "zonas": ZONAS_T}
+    d = date(2026, 10, 24)
+    acts = [act(1, "2026-10-23", dur=3600, z=(0, 3600, 0, 0, 0)),
+            act(2, "2026-10-23", "strength_training", dur=1800, z=(0, 0, 0, 1800, 0)),
+            act(3, "2026-10-22", dur=3600, z=(0, 0, 0, 0, 3600)),        # anteayer: no cuenta
+            act(4, "2026-10-23", "running", dur=1800, z=(0, 0, 0, 1800, 0))]   # corrida: no cuenta
+    r = m.ayer_duro(d, acts, {"2": {"rpe": 7.0}}, cfg)
+    assert r == {"categoria": "CrossFit", "esfuerzo": 7.5, "rpe": 7.0}
+    assert m.ayer_duro(d, [acts[2]], {}, cfg) is None
+    assert m.ayer_duro(d, [], {}, cfg) is None
 
 
 HRV_OK = {"calendarDate": "2026-10-24", "lastNightAvg": 34, "status": "BALANCED",
@@ -123,26 +152,16 @@ def test_signal_sleep_texto_hmin():
     assert s["estado"] == "fuera" and round(s["valor"], 2) == 6.48
 
 
-def test_signal_rpe():
-    d = date(2026, 10, 24)
-    acts = [act(1, "2026-10-23"), act(2, "2026-10-23", "strength_training"), act(3, "2026-10-22")]
-    assert m.signal_rpe(d, acts, {"1": {"rpe": 6.0}, "2": {"rpe": 8.0}}, CFG)["estado"] == "fuera"
-    assert m.signal_rpe(d, acts, {"1": {"rpe": 6.0}, "2": {"rpe": 7.0}}, CFG)["valor"] == 7.0
-    assert m.signal_rpe(d, acts, {"1": {"rpe": None}}, CFG)["estado"] == "sin_dato"
-    sin = m.signal_rpe(d, [acts[2]], {}, CFG)
-    assert sin["estado"] == "ok" and sin["texto"] == "sin CrossFit ayer"
-
-
 def test_signals_completo():
     data = {"hrv": [HRV_OK], "daily_summaries": [], "sleep": [], "activities": [], "details": {}}
     s = m.signals(date(2026, 10, 24), data, CFG)
-    assert set(s) == {"hrv", "rhr", "sueno", "rpe"}
+    assert set(s) == {"hrv", "rhr", "sueno"}
     assert s["hrv"]["estado"] == "ok" and s["rhr"]["estado"] == "sin_dato"
 
 
-def _sigs(hrv="ok", rhr="ok", sueno="ok", rpe="ok", baja=False):
+def _sigs(hrv="ok", rhr="ok", sueno="ok", baja=False):
     mk = lambda e, **k: {"estado": e, **k}  # noqa: E731
-    return {"hrv": mk(hrv, hrv_baja=baja), "rhr": mk(rhr), "sueno": mk(sueno), "rpe": mk(rpe)}
+    return {"hrv": mk(hrv, hrv_baja=baja), "rhr": mk(rhr), "sueno": mk(sueno)}
 
 
 def test_traffic_light_tabla():
@@ -150,9 +169,9 @@ def test_traffic_light_tabla():
         (_sigs(), None, "verde", False),
         (_sigs(hrv="sin_dato", rhr="sin_dato"), None, "verde", False),
         (_sigs(hrv="sin_dato", rhr="sin_dato", sueno="sin_dato"), None, "sin_datos", False),
-        (_sigs(hrv="sin_dato", rhr="sin_dato", sueno="sin_dato", rpe="fuera"), "rojo", "sin_datos", False),
+        (_sigs(hrv="sin_dato", rhr="sin_dato", sueno="sin_dato"), "rojo", "sin_datos", False),
         (_sigs(sueno="fuera"), None, "amarillo", False),
-        (_sigs(sueno="fuera", rpe="fuera"), None, "rojo", False),
+        (_sigs(sueno="fuera", rhr="fuera"), None, "rojo", False),
         (_sigs(hrv="fuera", baja=True), None, "rojo", False),
         (_sigs(hrv="fuera"), None, "amarillo", False),
         (_sigs(sueno="fuera", rhr="fuera"), "rojo", "rojo", True),
@@ -417,10 +436,18 @@ def test_max_hr_above_watch():
 def test_motivo():
     assert m.motivo(_sigs()) is None
     assert m.motivo(_sigs(rhr="fuera")) == "FC en reposo alta"
-    assert m.motivo(_sigs(hrv="fuera", rpe="fuera"), CFG) == "HRV baja · CrossFit pesado ayer"
     assert m.motivo(_sigs(sueno="fuera", rhr="fuera")) == "FC en reposo alta · Dormiste poco"
     assert m.motivo(_sigs(baja=True)) == "HRV baja"
     assert m.motivo(_sigs(hrv="fuera", baja=True)) == "HRV baja"
+
+
+def test_motivo_despues_de_un_dia_duro():
+    duro = {"categoria": "CrossFit", "esfuerzo": 8.7, "rpe": 7.0}
+    assert m.motivo(_sigs(hrv="fuera"), CFG, duro) == "HRV baja después de un día duro"
+    assert m.motivo(_sigs(hrv="fuera"), {**CFG, "esfuerzo_duro": 9}, duro) == "HRV baja"          # umbral de la config
+    assert m.motivo(_sigs(hrv="fuera"), CFG, {**duro, "esfuerzo": 7.9}) == "HRV baja"
+    assert m.motivo(_sigs(), CFG, duro) is None                                                    # sin señal fuera no hay motivo
+    assert m.motivo(_sigs(hrv="fuera"), CFG, {**duro, "esfuerzo": None}) == "HRV baja"
 
 
 def test_today_card_proxima_id():
@@ -509,26 +536,12 @@ def test_classify_categorias():
 
 def test_week_load_por_categoria():
     lun = date(2026, 10, 19)
-    acts = [act(1, "2026-10-19", "strength_training", dur=3600), act(2, "2026-10-20", "hiit", dur=1800),
-            act(3, "2026-10-21", "running", dur=1800), act(4, "2026-10-22", "walking")]
-    c = m.week_load(acts, {"1": {"rpe": 5.0}, "2": {"rpe": 8.0}, "3": {"rpe": 4.0}}, lun, CFG3)
-    assert c == {"fuerza": 300.0, "hiit": 240.0, "cardio": 0.0, "run": 120.0, "sin_rpe": 0, "total": 660.0}
-
-
-def test_signal_rpe_solo_categorias_intensas():
-    d = date(2026, 10, 21)
-    acts = [act(1, "2026-10-20", "strength_training"), act(2, "2026-10-20", "hiit")]
-    s = m.signal_rpe(d, acts, {"1": {"rpe": 9.0}, "2": {"rpe": 6.0}}, CFG3)
-    assert s["valor"] == 6.0 and s["estado"] == "ok" and "HIIT" in s["texto"]
-
-
-def test_signal_rpe_nombre_unico_y_varias_intensas():
-    d = date(2026, 10, 21)
-    sin = m.signal_rpe(d, [], {}, CFG3)
-    assert sin["texto"] == "sin HIIT ayer"
-    dos = {**CFG3, "categorias": [{**c, "intensa": True} for c in CFG3["categorias"]]}
-    assert m.signal_rpe(d, [], {}, dos)["texto"] == "sin sesión intensa ayer"
-    assert m.motivo(_sigs(rpe="fuera"), dos) == "Sesión intensa pesada ayer"
+    cfg = {**CFG3, "zonas": ZONAS_T}
+    acts = [act(1, "2026-10-19", "strength_training", dur=3600, z=(0, 3600, 0, 0, 0)),
+            act(2, "2026-10-20", "hiit", dur=1800, z=(0, 0, 0, 1800, 0)),
+            act(3, "2026-10-21", "running", dur=1800, z=(0, 1800, 0, 0, 0)), act(4, "2026-10-22", "walking")]
+    c = m.week_load(acts, {}, lun, cfg)
+    assert c == {"fuerza": 180.0, "hiit": 225.0, "cardio": 0.0, "run": 90.0, "total": 495.0}
 
 
 def test_today_card_otra_con_nombre_de_categoria():
@@ -565,7 +578,7 @@ def test_max_hr_progress_sin_correa_configurada():
 
 # --- carreras y mejores marcas ---
 
-CFG_CARRERA = {"run_types": ["running", "treadmill_running"], "carreras": ["2026-11-21"]}
+CFG_CARRERA = {"run_types": ["running", "treadmill_running"], "carreras": ["2026-11-21"], "max_hr": 190}
 
 
 def _corrida(nombre=None, fecha="2026-11-07", evento=None, tipo="running", **kw):

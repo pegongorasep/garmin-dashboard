@@ -14,7 +14,7 @@ Habla en español, claro y corto. No pidas la key ni leas `.env`. Solo lectura h
    - **Corridas vs plan:** `plan.estado_sesiones` (hecha / incompleta / pendiente) y `semanas_hoy[]` (minutos y km
      vs `plan_min`). Si hay calidad, `corrida.calidad` dice "minutos en la zona objetivo: X de Y".
    - **Zonas:** `detalles.distribucion` (meta ~80 % en Z1–Z2; limbo Z3 lo mínimo).
-   - **Recuperación:** `hoy.semaforo` y `hoy["señales"]` (HRV, FC en reposo, sueño, RPE de ayer); tendencias en
+   - **Recuperación:** `hoy.semaforo` y `hoy["señales"]` (HRV, FC en reposo, sueño) y `hoy.ayer` (esfuerzo de la sesión de ayer, calculado con la FC); tendencias en
      `progreso.dias`.
    - **Carga:** `detalles.carga` vs `carga_anterior`. Una subida de más de ~30 % merece cautela.
    - **Cómo vas mejorando:** `progreso.mejora.frase`.
