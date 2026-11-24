@@ -1,15 +1,23 @@
 # Garmin · base aeróbica
 
-Dashboard personal que une mi CrossFit con 2 corridas por semana para construir base aeróbica, con un plan de 12 semanas. Lee los datos de la API personal de Garmin Connect (solo lectura) y publica un sitio estático con el semáforo de recuperación, la semana, el plan y las tendencias.
+Dashboard personal que une mi CrossFit con 3 corridas por semana para construir base aeróbica, con un plan de 12 semanas. Lee los datos de la API personal de Garmin Connect (solo lectura) y publica un sitio estático con el semáforo de recuperación, la semana, el plan y las tendencias.
+
+## Motor y plantilla (para otras personas)
+
+Este repo es el **motor**: el código del dashboard, el generador de plan por nivel (novato, intermedio, corredor) y el workflow reutilizable `.github/workflows/motor.yml`. Mi configuración vive en `config.yaml` y `plan/`.
+
+Cada persona tiene su propio repo chiquito (creado desde [`template/`](template/)) con su `config.yaml`, su plan y su propio GitHub Pages. Su workflow llama a `motor.yml` con la etiqueta `stable`, así que recibe las mejoras sin tocar nada.
+
+**Para invitar a alguien:** pásale el repo de la plantilla (o el contenido de `template/`) y su [`README`](template/README.md): crea su repo con "Use this template", lo abre con Claude Code y escribe `/setup`. Yo muevo `stable` cuando probé el cambio en mi página (ver [`CLAUDE.md`](CLAUDE.md)).
 
 Sitio: https://pegongorasep.github.io/garmin-dashboard/
 
 ## Correrlo en local
 
 1. Crea el entorno: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`
-2. Copia `.env.example` a `.env` y pon tu `PERSONAL_API_KEY`.
+2. Copia `.env.example` a `.env` y pon tu `PERSONAL_API_KEY`. La configuración personal está en `config.yaml`.
 3. Corre `./run_local.sh`: baja los datos, construye `site/data.json` y sirve el sitio en http://localhost:8000.
-4. Pruebas: `.venv/bin/pytest`
+4. Pruebas: `.venv/bin/python -m pytest -q`
 
 ## Actualizar el sitio
 

@@ -1,0 +1,38 @@
+# Configuración personal. Copia este archivo como config.yaml (o usa /setup en Claude Code).
+# Todo lo que no pongas aquí tiene un valor razonable por defecto.
+
+perfil:
+  titulo: Base aeróbica            # encabezado de tu página
+  zona_horaria: America/Mexico_City
+  edad: 30
+  fc_max: 190                      # opcional: si no la sabes, se usa 220 - edad (y el reloj la corrige solo)
+  # fc_max_piso: 185               # opcional
+  # fc_max_correa_desde: 2026-10-26  # opcional: desde cuándo usas correa de pecho en tus sesiones intensas
+
+corrida:
+  nivel: intermedio                # novato | intermedio | corredor
+  intensidad: z2_poca_z3           # solo_z2 | z2_poca_z3 | calidad
+  #   solo_z2      -> todo en zona 2 (ideal si ya haces tu zona 3-4 en HIIT, CrossFit, etc.)
+  #   z2_poca_z3   -> zona 2 con unos picos opcionales de zona 3 en los bloques 2 y 3
+  #   calidad      -> zona 2 + 1 sesión de calidad por semana + la larga (para corredores)
+  calidad_tipos: []                # solo si intensidad = calidad; de: tempo_z3, threshold, intervalos
+  caminatas: false                 # true = sesiones de trote/caminata (si aún no corres 20' seguidos)
+  inicio: 2026-12-07               # el lunes en que empieza el plan
+  semanas: 12
+  base_min: {z2: 20, larga: 40}    # minutos con los que arrancas (lo que corres hoy cómodo, sin pasarte)
+  semanas_repetidas: []            # semanas del plan que repetiste, p. ej. [3]
+
+actividades:
+  # Máximo 4 categorías. `tipos` son los tipos de actividad de Garmin; `intensa: true` cuenta para la
+  # señal de recuperación (RPE de ayer). Si omites `categorias`, se usan: fuerza, hiit, cardio y movilidad.
+  categorias:
+    - {id: fuerza, nombre: Fuerza, letra: F, tipos: [strength_training]}
+    - {id: hiit, nombre: HIIT, letra: H, tipos: [hiit], intensa: true}
+  semana: {lun: fuerza, mié: hiit}  # qué haces cada día (días: lun mar mié jue vie sáb dom)
+  dias_pierna: [lun]               # días en que entrenas pierna: el día siguiente evita la larga
+
+inbody: false                      # true si tienes plan/inbody.json con mediciones
+
+# umbrales:                        # opcional, para afinar la recuperación
+#   rpe_heavy: 8
+#   sleep_min_hours: 6.5
