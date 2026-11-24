@@ -231,4 +231,4 @@ Corrige lo que encuentres y actualiza la tabla de Seguimiento.
 | F4 Navegación 3 pestañas | ✅ |
 | F5 Composición InBody (UI) | ✅ |
 | F6 Capturas | ✅ |
-| Revisión Opus + publicar | ⬜ |
+| Revisión Opus + publicar | ✅ publicado y `stable` 2026-11-24 |
