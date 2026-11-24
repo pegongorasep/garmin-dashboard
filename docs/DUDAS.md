@@ -137,4 +137,11 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **F2 `carrera: true/false`** también en `ultima_corrida`, `estado_sesiones[].corrida`, `semanas_hoy[].sesiones[].corrida`, `extras`, `dias[].corrida` y `progreso.corridas[]`.
 - **F3 forma del resultado.** Lo nuevo de `composicion`: `historial`, `puntuacion`, `visceral` y `hoja` (barras ya con `pos`, `normal_pos`, `zona`; más `control_peso`, `investigacion`, `composicion_corporal` y `segmental_*` tal cual). `hoja` sale de la última medición que traiga `musculo_grasa`. Se agregó `composicion_corporal` (agua, proteínas, minerales con su rango) porque F5 lo pide en "Ver hoja completa". No se publican altura ni edad de la hoja.
 - **F3 `pos` y zona.** Se calcula sobre el % de la hoja (peso, MME, grasa) con la escala por tramos; IMC y PGC sobre su valor. `zona` compara contra el rango normal de la hoja (MME 117 % con normal 90–110 sale "alto"; su % es estimado).
+- **F4 frase de periodo.** La frase `progreso.resumen[periodo]` ("Trotas 98 % del tiempo…") ya no se pinta: el plan lista Progreso sin ella y la fila de números (`progreso.numeros`, calculada en Python con cambio contra el periodo anterior) la sustituye. El dato sigue en `data.json`.
+- **F4 números.** Ritmo en Z2 si no hubo caminatas en las últimas 4 semanas (mismo `modo` de "Cómo vas mejorando"); si no, % trote. `progreso.numeros.caminatas[periodo]` decide si aparece la vista "% trote" de Corridas.
+- **F4 Recuperación en Cuerpo** usa siempre las últimas 12 semanas (84 días); ya no depende del toggle de periodo, que es de Progreso.
+- **F4 Detalles** ya no trae "FC máxima y zonas" (se movió a Cuerpo) y solo se llega por el enlace al final de Progreso y Cuerpo.
+- **F4 tarjeta de carrera en Hoy** va después de "Tus corridas" (orden del plan); si existe, "Tus corridas" y ella se reparten las 2 columnas en ≥ 900 px. El enlace abre y lleva a la carrera más nueva en Progreso.
+- **F4 "Ver como tabla".** Corridas tiene la tabla de todas las corridas debajo y, solo en Volumen, otra "Ver semanas como tabla" (el volumen es por semana y no sale de la tabla de corridas).
+- **F4 grilla.** Con `grid-auto-flow: row dense` en ≥ 900 px el orden visual puede diferir un poco del del DOM para rellenar huecos.
 

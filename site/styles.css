@@ -56,6 +56,16 @@ body {
   padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
 }
 .top, #app { max-width: 720px; margin-inline: auto; }
+/* Vistas: una columna en teléfono; con ≥ 900 px, dos columnas y las tarjetas `.ancha` ocupan las dos */
+.vista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; align-content: start; }
+.vista[hidden] { display: none; }
+#app .vista > *, #app .vista #hoy-semana > * { margin: 0; min-width: 0; }
+#hoy-semana { display: contents; }
+.card.ancha, .ancha { grid-column: 1 / -1; }
+@media (min-width: 900px) {
+  .top, #app { max-width: 1080px; }
+  .vista { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 14px 16px; }
+}
 .top { padding-block: calc(14px + env(safe-area-inset-top, 0px)) 4px; }
 .top-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .tema-btn { flex: none; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer; }
@@ -316,3 +326,54 @@ details.recup .senales { margin-top: 6px; }
 .celda-prime small { display: block; color: var(--ink-2); font-size: 11px; font-weight: 600; }
 .tabla-scroll.ancha.comp table { font-size: 12px; }
 .tabla-scroll.ancha.comp th, .tabla-scroll.ancha.comp td { padding-inline: 3px; }
+
+/* v4.1: banner con chip de recuperación, tarjeta con vistas, números, marcas y carreras */
+.banner { padding: 8px 12px; }
+.banner-txt { margin: 0; font-weight: 600; font-size: 14px; }
+.banner details.recup { margin-block: 0; }
+.banner-txt + details.recup { margin-top: 2px; }
+.banner details.recup > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--ink); min-height: 32px; flex-wrap: wrap; }
+.banner .senales { padding-bottom: 4px; }
+
+.card .toggle { margin: 6px 0 10px; background: var(--page); box-shadow: none; }
+.toggle.segs button[aria-selected="true"], .toggle button[aria-selected="true"] { background: var(--ink); color: var(--page); font-weight: 600; }
+.toggle button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.vista-cuerpo { min-height: 60px; }
+.vista-cuerpo > div > .nota:first-child { margin-bottom: 4px; }
+.vista-cuerpo .leyenda { margin-top: 8px; }
+
+.card.sem-card { padding-inline: 16px; }
+.cal { margin: 10px -8px 0; }
+.sn-carrera { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); }
+.circ.carrera { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+.etiqueta-carrera { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); border-radius: 999px; padding: 1px 8px; }
+
+.numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.num { background: var(--surface); border-radius: 12px; box-shadow: 0 0 0 1px var(--ring); padding: 10px 12px; min-width: 0; }
+.num-v { font-size: 24px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.num-u { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.num-d { font-size: 12px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.num-d.bien { color: var(--bien-ink); }
+@media (min-width: 700px) { .numeros { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.marcas { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
+.marca { background: var(--page); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.marca-n { font-size: 12px; font-weight: 600; color: var(--ink-2); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.marca-v { font-size: 22px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.nuevo { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; background: var(--ink); color: var(--page); border-radius: 999px; padding: 1px 7px; }
+
+.carrera-cuerpo { padding-bottom: 12px; }
+.carrera-cuerpo h3 { margin-top: 14px; font-size: 13px; color: var(--ink-2); }
+.carrera-det { border-top: 1px solid var(--grid); }
+.ritmos-km .rk { display: grid; grid-template-columns: 18px minmax(0, 1fr) 44px; gap: 8px; align-items: center; padding-block: 2px; font-variant-numeric: tabular-nums; }
+.rk-n { color: var(--muted); font-size: 12px; text-align: right; }
+.rk-barra { display: block; height: 10px; }
+.rk-barra i { display: block; height: 100%; background: var(--s1); opacity: .55; border-radius: 0 4px 4px 0; }
+.rk-barra i.rapido { opacity: 1; }
+.rk-v { font-size: 13px; font-weight: 600; text-align: right; }
+.rk-v.rapido { font-weight: 800; }
+
+.carrera-hoy { box-shadow: 0 0 0 1px var(--ring), inset 4px 0 0 var(--s2); }
+.nums4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-block: 6px 4px; }
+@media (min-width: 560px) { .nums4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.num4-v { font-size: 22px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }

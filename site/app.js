@@ -1,8 +1,10 @@
 // Dashboard: solo pinta lo que recibe de data.json (la lógica vive en dashboard/build.py).
-const VISTAS = ["hoy", "progreso", "detalles"];
+const VISTAS = ["hoy", "progreso", "cuerpo", "detalles"];
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const DIAS_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 let datos = null;
+// Lo que cada vista vuelve a dibujar cuando ya tiene ancho (gráficas) o cambia el tamaño; lo llena su render.
+const PINTAR = { hoy: [], progreso: [], cuerpo: [], detalles: [] };
 
 // --- utilidades ---
 
@@ -153,21 +155,34 @@ function filaSesion(s, est) {
     ...cuerpoPlan(s));
 }
 
-const enlaceDetalles = () => h("a", { class: "enlace-detalles", href: "#detalles" }, "Detalles: zonas, reglas, intensidad y carga →");
+const enlaceDetalles = () => h("a", { class: "enlace-detalles ancha", href: "#detalles" }, "Detalles: zonas, reglas, intensidad y carga →");
 
 // --- vista Hoy ---
 
 const nombreSesion = (estado, id) => ((estado || []).find((e) => e.id === id) || {}).name;
 
-function banner(d) {
+function textoBanner(d) {
   const t = d.hoy.tarjeta, plan = d.plan || {}, est = plan.estado_sesiones || [];
   const prox = nombreSesion(est, t.proxima_id);
-  let texto = null;
-  if (t.tipo === "otra") texto = prox ? `Hoy ${t.categoria} · próxima corrida: ${prox}` : `Hoy ${t.categoria}`;
-  else if (t.tipo === "hecha_hoy") texto = prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
-  else if (t.tipo === "sin_plan" || t.tipo === "primera_sync") texto = t.texto;
-  else if (t.tipo === "completa") texto = "Semana completa: hiciste las 3";
-  return texto ? h("p", { class: "banner" }, texto) : null;
+  if (t.tipo === "otra") return prox ? `Hoy ${t.categoria} · próxima corrida: ${prox}` : `Hoy ${t.categoria}`;
+  if (t.tipo === "hecha_hoy") return prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
+  if (t.tipo === "sin_plan" || t.tipo === "primera_sync") return t.texto;
+  if (t.tipo === "completa") return "Semana completa: hiciste las 3";
+  return null;
+}
+
+/** Banner de la sesión de hoy con el semáforo como chip: «Recuperación: verde · ver señales» abre las señales. */
+function bannerHoy(d) {
+  const sem = d.hoy.semaforo, est = ESTADO_SEMAFORO[sem.color] || ESTADO_SEMAFORO.sin_datos;
+  const texto = textoBanner(d);
+  return h("div", { class: "banner ancha" },
+    texto ? h("p", { class: "banner-txt" }, texto) : null,
+    h("details", { class: "recup" },
+      h("summary", { class: "chip-recup" }, badge(est.clase, est.icono, est.titulo),
+        `Recuperación: ${sem.color === "sin_datos" ? "sin datos" : est.titulo.toLowerCase()}`, h("span", { class: "nota" }, " · ver señales")),
+      h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((x) =>
+        h("li", {}, badgeSenal(x.estado),
+          h("div", {}, h("div", { class: "nombre" }, nombreSenal(x.id)), h("div", { class: "nota" }, x.texto)))))));
 }
 
 // --- semanas navegables: selector, esta semana, calendario ---
@@ -200,7 +215,7 @@ function selectorSemana(d) {
   const sems = semanasHoy(d), s = sems[semIdx];
   const mover = (delta) => () => { semIdx = Math.min(Math.max(semIdx + delta, 0), sems.length - 1); pintarSemana(d); };
   const hoyIdx = d.semana_hoy_idx ?? 0;
-  return h("div", { class: "selector" },
+  return h("div", { class: "selector ancha" },
     h("div", { class: "selector-fila" },
       h("button", { type: "button", "aria-label": "Semana anterior", disabled: semIdx <= 0, onclick: mover(-1) }, "‹"),
       h("div", { class: "selector-txt", "aria-live": "polite" }, etiquetaSelector(d, s)),
@@ -242,7 +257,7 @@ function barraProgreso(min, plan) {
 
 function tarjetaEstaSemana(d, s) {
   const st = s.stats || {};
-  const c = h("div", { class: "card" }, h("h2", {}, tituloSemana(d, s)));
+  const c = h("div", { class: "card ancha" }, h("h2", {}, tituloSemana(d, s)));
   const partes = st.corridas
     ? [plural(st.corridas, "corrida", "corridas"), st.minutos != null ? `${fmt(st.minutos, 0)} min` : null,
       st.km != null ? `${fmt(st.km)} km` : null, st.pct_trote != null ? `${fmt(st.pct_trote, 0)} % trote` : null].filter(Boolean)
@@ -259,12 +274,13 @@ function tarjetaEstaSemana(d, s) {
   }
   const comp = comparacion(s);
   if (comp) c.append(h("p", { class: "nota" }, comp));
+  c.append(calendarioSemana(d, s));
   return c;
 }
 
 const diaTexto = (x) => {
   const partes = [];
-  if (x.corrida) partes.push(`corrida de ${fmt(x.corrida.minutos, 0)} min (${x.corrida.sesion_nombre}, ${{ hecha: "hecha", incompleta: "incompleta", extra: "sin sesión" }[x.corrida.estado] || x.corrida.estado})`);
+  if (x.corrida) partes.push(`${x.corrida.carrera ? "carrera" : "corrida"} de ${fmt(x.corrida.minutos, 0)} min (${x.corrida.sesion_nombre}, ${{ hecha: "hecha", incompleta: "incompleta", extra: "sin sesión" }[x.corrida.estado] || x.corrida.estado})`);
   if (x.corridas_n > 1) partes.push(`${x.corridas_n} corridas ese día`);
   for (const cf of x.otras || []) {
     partes.push(`${categoria(cf.cat).nombre}${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.te != null ? `, Training Effect aeróbico ${cf.te.toFixed(1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
@@ -282,8 +298,9 @@ function diaCalendario(x, hoyIso) {
   let marca = null;
   if (x.corrida) {
     const cls = x.corrida.estado === "hecha" ? "hecha" : x.corrida.estado === "incompleta" ? "incompleta" : "extra";
-    marca = [h("span", { class: `circ ${cls}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
-      h("span", { class: "sn" }, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))];
+    marca = [h("span", { class: `circ ${cls}${x.corrida.carrera ? " carrera" : ""}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
+      h("span", { class: "sn" }, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : "")),
+      x.corrida.carrera ? h("span", { class: "sn-carrera" }, "carrera") : null];
   }
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.rpe != null ? `RPE ${fmt(cf.rpe, 0)}` : cf.te != null ? cf.te.toFixed(1) : null));
   const plan = x.planeado ? (x.planeado === "larga" ? h("span", { class: "cf tenue" }, h("b", {}, "Larga?")) : marcaCat(x.planeado, null, true)) : null;
@@ -298,9 +315,9 @@ function leyendaCategorias(s) {
   return ui().categorias.filter((c) => ids.has(c.id)).map((c) => `${c.letra} = ${c.nombre} · `).join("");
 }
 
-function tarjetaCalendario(d, s) {
+function calendarioSemana(d, s) {
   const hoyIso = (d.generado || "").slice(0, 10);
-  return h("div", { class: "card cal" },
+  return h("div", { class: "cal" },
     h("div", { class: "dias7" }, (s.dias || []).map((x) => diaCalendario(x, hoyIso))),
     h("p", { class: "nota leyenda-cal" }, `${leyendaCategorias(s)}número = Training Effect aeróbico de Garmin (0–5)`));
 }
@@ -328,7 +345,7 @@ function filaCorrida(cabeza, titulo, c) {
     c.pct_trote != null ? `${fmt(c.pct_trote, 0)} % trote` : null,
     c.ritmo_trote_s ? `${mmss(c.ritmo_trote_s)} /km${c.caminadora ? " (caminadora)" : ""}` : null].filter(Boolean);
   return h("div", { class: "corrida" },
-    h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo)),
+    h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo), c.carrera ? h("span", { class: "etiqueta-carrera" }, "Carrera") : null),
     datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
     c.calidad ? lineaCalidad(c.calidad) : c.techo_ok !== undefined ? lineaTecho(c) : null,
     h("details", {}, h("summary", {}, "Ver detalle"),
@@ -372,7 +389,7 @@ function filaPendiente(e, s) {
     ...(s ? cuerpoPlan(s) : []));
 }
 
-function tarjetaTusCorridas(d, s) {
+function tarjetaTusCorridas(d, s, ancha) {
   const plan = d.plan || {}, t = d.hoy.tarjeta;
   const w = s.n != null ? (plan.semanas || []).find((x) => x.n === s.n) : null;
   const filas = (s.sesiones || []).map((e) => {
@@ -383,7 +400,7 @@ function tarjetaTusCorridas(d, s) {
     return filaPendiente(e, ses);
   });
   filas.push(...(s.extras || []).map(filaExtra));
-  return h("div", { class: "card" }, h("h2", {}, "Tus corridas"),
+  return h("div", { class: `card${ancha ? " ancha" : ""}` }, h("h2", {}, "Tus corridas"),
     ...(filas.length ? filas : [h("p", { class: "vacio" }, "Sin corridas esta semana")]));
 }
 
@@ -400,25 +417,6 @@ function deltaInbody(delta, buenoSiBaja) {
   return h("span", { class: `delta${bueno ? " bien" : ""}` }, `${delta > 0 ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}`);
 }
 
-function lineasInbody(c) {
-  const u = c.ultima, rango = c.visceral_rango || [1, 9], meta = c.meta || {};
-  const visceral = u.grasa_visceral == null ? null
-    : u.grasa_visceral > rango[1]
-      ? h("span", { class: "estado" }, badge("warn", "!", "fuera de rango"), `Visceral ${fmt(u.grasa_visceral, 0)} (sano ${rango[0]}–${rango[1]}): por encima`)
-      : `Visceral ${fmt(u.grasa_visceral, 0)} (sano ${rango[0]}–${rango[1]})`;
-  const sep = () => h("span", { class: "sep", "aria-hidden": "true" }, "·");
-  const items = [fechaCorta(u.fecha).split(" ").slice(1).join(" "),
-    h("span", {}, `Grasa ${fmt(u.pgc, 1)} % `, deltaInbody(u.delta_pgc, true)),
-    h("span", {}, `Músculo ${fmt(u.mme_kg, 1)} kg `, deltaInbody(u.delta_mme, false))];
-  const prime = c.prime;
-  const metaGrasa = meta.faltan_pgc > 0 ? `te faltan ${fmt(meta.faltan_pgc, 1)} puntos de grasa` : "ya superaste tu prime en grasa ✓";
-  const metaMusculo = meta.mme_ok ? "Músculo ya arriba de tu prime ✓" : `Te faltan ${fmt(meta.faltan_mme, 1)} kg de músculo para tu prime`;
-  return [h("p", { class: "inbody" }, ...items.flatMap((x, i) => (i ? [sep(), x] : [x]))),
-    visceral ? h("p", { class: "inbody v" }, visceral) : null,
-    h("p", { class: "nota" }, `Tu prime (${mesAnio(prime.fecha)}): ${fmt(prime.pgc, 1)} % · ${metaGrasa}`),
-    h("p", { class: "nota" }, metaMusculo)].filter(Boolean);
-}
-
 function tarjetaMejora(d) {
   const mj = (d.progreso || {}).mejora;
   if (!mj) return null;
@@ -432,10 +430,9 @@ function tarjetaMejora(d) {
       h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
       h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct))
     : null;
-  return h("div", { class: "card" }, h("h2", {}, "Cómo vas mejorando"),
-    h("p", { class: "frase-mej" }, mj.frase), graficas,
-    ...(d.composicion ? lineasInbody(d.composicion) : []),
-    h("a", { class: "ver-progreso", href: "#progreso" }, "Ver progreso →"));
+  PINTAR.progreso.push(dibujarMejora);
+  return h("div", { class: "card ancha" }, h("h2", {}, "Cómo vas mejorando"),
+    h("p", { class: "frase-mej" }, mj.frase), graficas);
 }
 
 function dibujarMejora() {
@@ -466,33 +463,45 @@ function dibujarMejora() {
     : h("p", { class: "vacio" }, "Aún no hay corridas con trote y caminata."));
 }
 
-function recuperacion(d) {
-  const sem = d.hoy.semaforo, est = ESTADO_SEMAFORO[sem.color] || ESTADO_SEMAFORO.sin_datos;
-  return h("details", { class: "recup" },
-    h("summary", {}, badge(est.clase, est.icono, est.titulo), est.texto, h("span", { class: "nota" }, " · ver señales")),
-    h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((x) =>
-      h("li", {}, badgeSenal(x.estado),
-        h("div", {}, h("div", { class: "nombre" }, nombreSenal(x.id)), h("div", { class: "nota" }, x.texto))))));
-}
-
 function pintarSemana(d) {
   const sems = semanasHoy(d), s = sems[semIdx];
   const caja = $("hoy-semana");
   if (!s) { caja.replaceChildren(); return; }
-  caja.replaceChildren(selectorSemana(d), tarjetaEstaSemana(d, s), tarjetaCalendario(d, s), tarjetaTusCorridas(d, s));
+  const reciente = carreraReciente(d);
+  caja.replaceChildren(selectorSemana(d), tarjetaEstaSemana(d, s), tarjetaTusCorridas(d, s, !reciente), reciente ? tarjetaCarreraHoy(reciente) : null);
+}
+
+// --- carrera destacada (últimos 7 días) ---
+
+const carreraReciente = (d) => ((d.carreras || [])[0] || {}).reciente ? d.carreras[0] : null;
+let abrirCarrera = false;   // «Ver en Progreso → Carreras» pide abrir y mostrar la carrera más nueva
+
+/** hh:mm:ss si pasa de una hora, si no mm:ss. */
+const tiempoLargo = (seg) => {
+  const t = Math.round(seg), hh = Math.floor(t / 3600);
+  return hh ? `${hh}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}` : mmss(t);
+};
+
+function tarjetaCarreraHoy(c) {
+  const num = (valor, etiqueta) => h("div", { class: "num4" }, h("div", { class: "num4-v" }, valor), h("div", { class: "nota" }, etiqueta));
+  return h("div", { class: "card carrera-hoy" }, h("h2", {}, `Tu carrera del ${fechaLarga(c.fecha)}`),
+    h("div", { class: "nums4" },
+      num(`${fmt(c.distancia_km, 2)} km`, "Distancia"), num(tiempoLargo(c.tiempo_s), "Tiempo"),
+      num(c.ritmo_s ? `${mmss(c.ritmo_s)} /km` : "—", "Ritmo"), num(c.fc_prom != null ? `${fmt(c.fc_prom, 0)} lpm` : "—", "FC promedio")),
+    h("a", { class: "ver-progreso", href: "#progreso", onclick: () => { abrirCarrera = true; } }, "Ver todo en Progreso → Carreras"));
 }
 
 function renderHoy(d) {
+  PINTAR.hoy = [];
   const sems = semanasHoy(d);
   if (semIdx === null) semIdx = Math.min(Math.max((d.semana_hoy_idx ?? 0) + semInicial, 0), Math.max(sems.length - 1, 0));
   $("vista-hoy").replaceChildren(...[
     d.hoy.semaforo.repetir_semana
-      ? h("div", { class: "aviso bad" }, badge("bad", "✕", "aviso"),
+      ? h("div", { class: "aviso bad ancha" }, badge("bad", "✕", "aviso"),
         h("div", {}, h("strong", {}, "Repetir la semana. "), "Dos días seguidos en rojo: repite la semana anterior del plan."))
       : null,
-    banner(d), h("div", { id: "hoy-semana" }), tarjetaMejora(d), recuperacion(d),
-    d.aviso_zonas ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, d.aviso_zonas)) : null,
-    enlaceDetalles()].filter(Boolean));
+    bannerHoy(d), h("div", { id: "hoy-semana" }),
+    d.aviso_zonas ? h("div", { class: "aviso warn ancha" }, badge("warn", "!", "aviso"), h("div", {}, d.aviso_zonas)) : null].filter(Boolean));
   pintarSemana(d);
 }
 function bloqueCarga(s) {

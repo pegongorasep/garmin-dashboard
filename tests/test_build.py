@@ -498,3 +498,17 @@ def test_historial_viejo_aporta_carrera_y_marcas():
     out = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
     assert [c["fecha"] for c in out["carreras"]] == ["2025-05-03"] and out["carreras"][0]["fc_prom"] is None
     assert [mm["clave"] for mm in out["mejores_marcas"]] == ["10k", "larga"]
+
+
+def test_numeros_de_progreso():
+    filas = [{"fecha": f, "minutos": mi, "km": km, "pct_trote": pt, "caminatas": 0, "ritmo_z2_s": rz}
+             for f, mi, km, pt, rz in [("2026-11-01", 40.0, 5.0, 100.0, 500), ("2026-11-03", 30.0, 3.0, 100.0, None),
+                                       ("2026-09-20", 20.0, 2.0, 100.0, 540)]]
+    out = build.build_numeros(date(2026, 11, 4), filas, "ritmo")
+    it = {i["id"]: i for i in out["periodos"]["4"]}
+    assert it["corridas"]["valor"] == 0.5 and it["minutos"]["valor"] == 17.5 and it["km"]["valor"] == 2.0
+    assert it["ritmo_z2"]["valor"] == 500 and it["ritmo_z2"]["anterior"] == 540 and it["ritmo_z2"]["delta"] == -40
+    assert out["caminatas"] == {"4": False, "8": False, "12": False}
+    ritmo = {i["id"]: i for i in build.build_numeros(date(2026, 11, 4), filas[:1] + [{**filas[2], "fecha": "2026-10-05", "ritmo_z2_s": 530}], "ritmo")["periodos"]["4"]}
+    assert ritmo["ritmo_z2"]["delta"] == -30 and ritmo["ritmo_z2"]["bueno"] is True
+    assert build.build_numeros(date(2026, 11, 4), [], "trote")["periodos"]["4"][3] == {"id": "pct_trote", "valor": None, "anterior": None, "delta": None, "bueno": None}

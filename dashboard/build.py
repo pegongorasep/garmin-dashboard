@@ -418,6 +418,37 @@ def build_mejora(hoy: date, filas: list, semanas: list, zonas: list) -> dict:
     return out
 
 
+def build_numeros(hoy: date, filas: list, modo: str) -> dict:
+    """Fila de números de Progreso por periodo (4, 8 o 12 semanas): corridas, minutos y km por semana y ritmo en Z2
+    (modo "ritmo") o % trote (modo "trote"), con el valor del periodo anterior y el cambio. `filas` ya trae `ritmo_z2_s`."""
+    def periodo(k, fin):
+        g = [f for f in filas if fin - timedelta(weeks=k) < date.fromisoformat(f["fecha"]) <= fin]
+        if not g:
+            return None
+        clave = "ritmo_z2_s" if modo == "ritmo" else "pct_trote"
+        return {"corridas": len(g) / k, "minutos": sum(f["minutos"] for f in g) / k, "km": sum(f["km"] for f in g) / k,
+                "extra": m.promedio([f[clave] for f in g])}
+    campos = [("corridas", "corridas"), ("minutos", "minutos"), ("km", "km"), ("extra", "ritmo_z2" if modo == "ritmo" else "pct_trote")]
+    out = {}
+    for k in (4, 8, 12):
+        ahora, antes = periodo(k, hoy), periodo(k, hoy - timedelta(weeks=k))
+        items = []
+        for campo, id_ in campos:
+            v = None if ahora is None else ahora[campo]
+            a = None if antes is None else antes[campo]
+            delta = None if v is None or a is None else v - a
+            if id_ == "ritmo_z2":
+                v, a, delta = (None if x is None else round(x) for x in (v, a, delta))
+            else:
+                v, a, delta = (None if x is None else round(x, 1) for x in (v, a, delta))
+            mejor = None if not delta else (delta < 0 if id_ == "ritmo_z2" else delta > 0)
+            items.append({"id": id_, "valor": v, "anterior": a, "delta": delta, "bueno": mejor})
+        out[str(k)] = items
+    caminatas = {str(k): any((f["caminatas"] or 0) > 0 and hoy - timedelta(weeks=k) < date.fromisoformat(f["fecha"]) <= hoy
+                             for f in filas) for k in (4, 8, 12)}
+    return {"modo": modo, "periodos": out, "caminatas": caminatas}
+
+
 def build_days(hoy: date, data: dict) -> list:
     """84 días de recuperación con promedios de 7 días (se calculan con 6 días extra antes)."""
     hrv = {r["calendarDate"]: r for r in data["hrv"]}
@@ -548,6 +579,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     filas = m.run_rows(data["activities"], data["details"], config)
     semanas_hoy, semana_hoy_idx = build_semanas(hoy, data, config, plan)
     semanas_12 = build_weeks(hoy, data, config, plan)
+    mejora = build_mejora(hoy, filas, semanas_12, zonas)
     return {
         "generado": ahora.isoformat(timespec="minutes"),
         "datos_al": datos_al,
@@ -567,7 +599,8 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "progreso": {"resumen": {str(k): m.progress_summary(filas, hoy, k) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,
-                     "mejora": build_mejora(hoy, filas, semanas_12, zonas),
+                     "mejora": mejora,
+                     "numeros": build_numeros(hoy, con_ritmo_z2(filas, zonas), mejora["modo"]),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": build_ui(config, plan),

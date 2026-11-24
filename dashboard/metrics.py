@@ -445,7 +445,7 @@ def run_rows(activities: list, details: dict, config: dict) -> list:
     return filas
 
 
-def _promedio(valores: list):
+def promedio(valores: list):
     vs = [v for v in valores if v is not None]
     return sum(vs) / len(vs) if vs else None
 
@@ -464,9 +464,9 @@ def progress_summary(rows: list, hoy: date, semanas: int) -> str:
     antes = [r for r in aire if antes_corte < date.fromisoformat(r["fecha"]) <= corte]
     if not ahora or not antes:
         return "Aún no hay corridas suficientes para comparar"
-    pct_a, pct_b = (_promedio([r["pct_trote"] for r in g]) for g in (ahora, antes))
+    pct_a, pct_b = (promedio([r["pct_trote"] for r in g]) for g in (ahora, antes))
     texto = f"Trotas {pct_a:.0f} % del tiempo (antes {pct_b:.0f} %)"
-    rit_a, rit_b = (_promedio([r["ritmo_trote_s"] for r in g]) for g in (ahora, antes))
+    rit_a, rit_b = (promedio([r["ritmo_trote_s"] for r in g]) for g in (ahora, antes))
     if rit_a and rit_b:
         texto += f" · ritmo trotando {_mmss(rit_b)} → {_mmss(rit_a)} /km"
     return texto
@@ -478,8 +478,8 @@ def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
     if not g:
         return None
     return {"corridas": len(g) / semanas, "minutos": sum(f["minutos"] for f in g) / semanas,
-            "pct_trote": _promedio([f.get("pct_trote") for f in g]),
-            "ritmo_z2": _promedio([f.get("ritmo_z2_s") for f in g])}
+            "pct_trote": promedio([f.get("pct_trote") for f in g]),
+            "ritmo_z2": promedio([f.get("ritmo_z2_s") for f in g])}
 
 
 def mejora_frase(filas: list, hoy: date, modo: str = "trote") -> str:

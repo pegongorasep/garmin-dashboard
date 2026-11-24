@@ -228,7 +228,7 @@ Corrige lo que encuentres y actualiza la tabla de Seguimiento.
 | F1 Config, título y tema | ✅ |
 | F2 Carreras y marcas | ✅ |
 | F3 Composición (Python) | ✅ |
-| F4 Navegación 3 pestañas | ⬜ |
+| F4 Navegación 3 pestañas | ✅ |
 | F5 Composición InBody (UI) | ⬜ |
 | F6 Capturas | ⬜ |
 | Revisión Opus + publicar | ⬜ |
