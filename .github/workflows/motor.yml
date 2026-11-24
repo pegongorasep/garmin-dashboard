@@ -67,8 +67,10 @@ jobs:
           path: motor/site
 
       # Solo en repos de amigos: CLAUDE.md y las skills se copian del motor. No toca .github/workflows/.
+      # Si el push choca (la persona subió algo a la vez), no frena la publicación: se reintenta en la próxima.
       - name: Dejar al día las instrucciones de Claude
         if: github.repository != 'pegongorasep/garmin-dashboard'
+        continue-on-error: true
         run: |
           cp motor/template/CLAUDE.md CLAUDE.md
           rm -rf .claude/skills
@@ -79,7 +81,7 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add CLAUDE.md .claude/skills
             git commit -m "chore: instrucciones al día (motor $(git -C motor rev-parse --short HEAD))"
-            git push
+            git pull --rebase && git push
           fi
 
   deploy:

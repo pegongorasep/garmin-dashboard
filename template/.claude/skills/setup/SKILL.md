@@ -10,7 +10,7 @@ en el chat ni leas `.env`.** Si algo falla, explica qué pasó y qué hacer, sin
 
 ## 1. Requisitos
 - `gh auth status`. Si falla, pide que la persona escriba `! gh auth login`.
-- `python3 --version` (3.9 o más). Si falta, ayúdale a instalarlo.
+- `python3 --version` (3.10 o más). Si falta, ayúdale a instalarlo.
 - Que el repo exista en GitHub: `gh repo view --json nameWithOwner,visibility`. Debe ser **público** (Pages gratis).
 
 ## 2. Nivel
@@ -50,6 +50,8 @@ Dile: "En Garmin Connect saca tu *Personal API key*. Luego escribe aquí `! gh s
 cuando te la pida. **No la pegues en el chat.**" Espera a que confirme.
 
 ## 7. Publicar
+0. Ajusta los 3 `cron` de `.github/workflows/deploy.yml` (están en UTC) para que caigan ~7:00, 13:00 y 19:00 en
+   su zona horaria. Es el único cambio permitido en ese archivo.
 1. Activa Pages: `gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow`; si ya existe,
    `gh api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow`.
 2. `git add -A && git commit -m "Configuración inicial" && git pull --rebase && git push`.
