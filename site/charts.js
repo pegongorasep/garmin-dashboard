@@ -268,3 +268,80 @@ function miniLinea(cfg) {
   });
   return svg;
 }
+
+// --- siluetas de entreno (línea escalonada, sin ejes ni números) ---
+
+const SIL_W = 300;                                   // ancho virtual; el SVG se estira al 100 %
+const NIVEL_ZONA = { Z1: 0.25, Z2: 0.45, Z3: 0.65, Z4: 0.82, Z5: 0.97 };
+
+/** Polilínea [[x,y],…] -> trazo con esquinas suaves (curva cuadrática por vértice, radio ≤ r y ≤ mitad de cada lado). */
+function trazoRedondo(pts, r) {
+  pts = pts.filter((p, i) => i === 0 || Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) > 1e-6);
+  if (pts.length < 2) return "";
+  let d = `M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1], [x, y] = pts[i], [nx, ny] = pts[i + 1];
+    const l1 = Math.hypot(x - px, y - py), l2 = Math.hypot(nx - x, ny - y);
+    const k = Math.min(r, l1 / 2, l2 / 2);
+    const a = [x - ((x - px) / l1) * k, y - ((y - py) / l1) * k], b = [x + ((nx - x) / l2) * k, y + ((ny - y) / l2) * k];
+    d += ` L${a[0].toFixed(2)},${a[1].toFixed(2)} Q${x.toFixed(2)},${y.toFixed(2)} ${b[0].toFixed(2)},${b[1].toFixed(2)}`;
+  }
+  const u = pts[pts.length - 1];
+  return `${d} L${u[0].toFixed(2)},${u[1].toFixed(2)}`;
+}
+
+/**
+ * Silueta de la FC en el tiempo.
+ * tramos: [{d: duración, n: nivel 0–1, n2?: nivel final (rampa), clase?: "g1".."g5", opcional?: bool, texto?: string}]
+ * Sin `clase` va en tinta del tema (catálogo); con `clase` cada tramo lleva el color de su zona (sesión) y
+ * un toque/hover muestra `texto`. opts: { alto, etiqueta }.
+ */
+function silueta(tramos, opts = {}) {
+  const H = opts.alto || 40, pad = 4, W = SIL_W;
+  const total = tramos.reduce((a, t) => a + t.d, 0) || 1;
+  const y = (n) => H - pad - n * (H - 2 * pad);
+  const cont = h("div", { class: "silueta", style: `height:${H}px` });
+  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, preserveAspectRatio: "none", role: "img",
+    "aria-label": opts.etiqueta || "Forma de la sesión" });
+  let x = 0;
+  const caja = tramos.map((t) => { const x0 = x; x += (t.d / total) * W; return { t, x0, x1: x }; });
+  const color = !!tramos.some((t) => t.clase);
+  if (!color) {
+    const pts = [];
+    for (const { t, x0, x1 } of caja) { pts.push([x0, y(t.n)], [x1, y(t.n2 ?? t.n)]); }
+    svg.append(sv("path", { d: trazoRedondo(pts, 5), class: "sil-ln" }));
+  } else {
+    // cada tramo es horizontal; el color cambia a media altura de cada salto vertical
+    caja.forEach(({ t, x0, x1 }, i) => {
+      const yy = y(t.n), ant = caja[i - 1], sig = caja[i + 1];
+      const pts = [];
+      if (ant) pts.push([x0, (y(ant.t.n) + yy) / 2]);
+      pts.push([x0, yy], [x1, yy]);
+      if (sig) pts.push([x1, (yy + y(sig.t.n)) / 2]);
+      svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `sil-ln ${t.clase}${t.opcional ? " opc" : ""}` }));
+    });
+    const tip = tooltipEn(cont);
+    for (const { t, x0, x1 } of caja) {
+      if (!t.texto) continue;
+      const r = sv("rect", { x: x0, y: 0, width: Math.max(x1 - x0, 1), height: H, class: "sil-capa", tabindex: "0", "aria-label": t.texto });
+      const mostrar = () => tip.mostrar(t.texto, ((x0 + x1) / 2 / W) * cont.clientWidth, y(t.n));
+      r.addEventListener("pointerenter", mostrar);
+      r.addEventListener("pointerdown", mostrar);
+      r.addEventListener("focus", mostrar);
+      r.addEventListener("pointerleave", tip.ocultar);
+      r.addEventListener("blur", tip.ocultar);
+      svg.append(r);
+    }
+  }
+  cont.prepend(svg);
+  return cont;
+}
+
+/** Catálogo: forma del tipo [[d, n] | [d, n1, n2]] -> silueta sin color. */
+const siluetaForma = (forma, alto = 48, etiqueta) =>
+  silueta(forma.map(([d, n, n2]) => ({ d, n, n2: n2 === undefined ? undefined : n2 })), { alto, etiqueta });
+
+/** Sesión: [[minutos, zona, opcional?]] -> silueta con el color Garmin de cada zona. */
+const siluetaSesion = (sil, alto = 40) =>
+  silueta(sil.map(([m, z, opc]) => ({ d: m, n: NIVEL_ZONA[z] ?? 0.45, clase: `g${(z || "Z2").slice(1)}`, opcional: !!opc,
+    texto: `${m}' · ${z}${opc ? " (opcional)" : ""}` })), { alto, etiqueta: "Silueta de la sesión: minutos y zona de cada tramo" });

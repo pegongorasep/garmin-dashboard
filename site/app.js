@@ -138,9 +138,30 @@ function bloqueCalidad(s) {
     h("p", { class: "nota" }, `Zona objetivo: ${o.zona}${o.lpm ? ` (${o.lpm[0]}–${o.lpm[1]} lpm)` : ""} · ${o.minutos} min de trabajo`));
 }
 
+/** "9' Z1 · 6' Z2 · 5' Z1": tramos seguidos de la misma zona juntos; si quedan más de 8, no se escribe (están los pasos). */
+function resumenSilueta(sil) {
+  const out = [];
+  for (const [m, z] of sil) {
+    if (out.length && out[out.length - 1][1] === z) out[out.length - 1][0] += m;
+    else out.push([m, z]);
+  }
+  return out.length <= 8 ? out.map(([m, z]) => `${m}' ${z}`).join(" · ") : null;
+}
+
+/** Silueta de la sesión con el color de cada zona, mini leyenda (solo las zonas que aparecen) y resumen. */
+function bloqueSilueta(sil) {
+  if (!sil || !sil.length) return null;
+  const zonas = [...new Set(sil.map(([, z]) => z))].sort();
+  const resumen = resumenSilueta(sil);
+  return h("div", { class: "bloque-sil" }, siluetaSesion(sil),
+    h("div", { class: "leyenda", "aria-label": "Zonas de la silueta" },
+      zonas.map((z) => h("span", {}, h("i", { class: `g${z.slice(1)}`, "aria-hidden": "true" }), z))),
+    resumen ? h("p", { class: "nota resumen-sil" }, resumen) : null);
+}
+
 function cuerpoPlan(s) {
-  return [bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
-    s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`),
+  return [bloqueSilueta(s.silueta), bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
+    s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`), bloqueSilueta(s.easy.silueta),
       h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null,
     comoGarmin()];
 }
@@ -370,7 +391,7 @@ function filaHoy(e, s, t) {
   if (t.version === "descanso") {
     c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
   } else if (ses) {
-    c.append(bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi)));
+    c.append(bloqueSilueta(ses.silueta), bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi)));
   }
   if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
   if (t.version !== "descanso" && ses) c.append(comoGarmin());

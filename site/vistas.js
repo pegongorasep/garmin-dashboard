@@ -119,11 +119,39 @@ function mostrarSubvista() {
 
 // --- Plan ---
 
+/** Tarjetita del catálogo: silueta en tinta (sin color ni tooltip), nombre y descripción. */
+function tipoCard(t, enPlan) {
+  return h("div", { class: "tipo" }, siluetaForma(t.forma, 48, `Forma de ${t.nombre}`),
+    enPlan ? h("div", {}, h("span", { class: "en-plan" }, "En tu plan")) : null, h("h3", {}, t.nombre), h("p", {}, t.descripcion));
+}
+
+function tarjetaTipos(d) {
+  const tp = d.tipos;
+  if (!tp || !(tp.catalogo || []).length) return null;
+  const enPlan = new Set(tp.en_plan || []);
+  const nombreGrupo = Object.fromEntries((tp.grupos || []).map((g) => [g.id, g.nombre]));
+  const c = h("div", { class: "card ancha" }, h("h2", {}, "Tipos de entreno"),
+    h("p", { class: "nota" }, "Así sube y baja tu esfuerzo en cada tipo de sesión. La Larga es un continuo más largo."));
+  const suyos = tp.catalogo.filter((t) => enPlan.has(t.id));
+  if (suyos.length) c.append(h("div", { class: "tipos" }, suyos.map((t) => tipoCard(t, true))));
+  const resto = tp.catalogo.filter((t) => !enPlan.has(t.id));
+  if (resto.length) {
+    const det = h("details", { class: "todos-tipos" }, h("summary", {}, suyos.length ? "Ver todos los tipos" : "Ver los tipos"));
+    for (const g of tp.grupos || []) {
+      const del = resto.filter((t) => t.grupo === g.id);
+      if (del.length) det.append(h("h3", { class: "tipos-grupo" }, nombreGrupo[g.id] || g.id), h("div", { class: "tipos" }, del.map((t) => tipoCard(t, false))));
+    }
+    c.append(det);
+  }
+  return c;
+}
+
 function renderPlan(d) {
   PINTAR.plan = [];
   const det = d.detalles || {};
   $("vista-plan").replaceChildren(...[
     tarjetaDoceSemanas(d),
+    tarjetaTipos(d),
     tarjetaFcMax(d),
     tarjetaComoFunciona(d),
     det.distribucion ? zonaBar(det.distribucion) : null].filter(Boolean));
@@ -599,6 +627,9 @@ function mostrarVista() {
   mostrarSubvista();
   REDIBUJAR[v]();
   window.scrollTo(0, 0);
+  if (datos && /[?&]abrir\b/.test(location.hash)) {   // para capturas: ?abrir despliega sesiones y "Ver todos los tipos"
+    document.querySelectorAll(`#vista-${v} details.ses, #vista-${v} details.todos-tipos`).forEach((x) => { x.open = true; });
+  }
   if (v === "progreso" && subProgreso === "cuerpo" && /[?&]hoja\b/.test(location.hash)) {   // para capturas: #cuerpo?hoja abre «Ver hoja completa»
     const hoja = document.querySelector(".ib-hoja");
     if (hoja) hoja.open = true;

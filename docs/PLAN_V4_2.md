@@ -188,7 +188,7 @@ Corrige lo que encuentres y actualiza la tabla.
 | F1 Sin CrossFit asumido | ✅ |
 | F2 Tipos y variada (Python) | ✅ |
 | F3 Navegación Hoy · Plan · Progreso | ✅ |
-| F4 Siluetas | ⬜ |
+| F4 Siluetas | ✅ |
 | F5 Íconos | ⬜ |
 | F6 Fuerza/HIIT y 80/20 | ⬜ |
 | F7 Capturas | ⬜ |
