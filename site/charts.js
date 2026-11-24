@@ -192,9 +192,11 @@ function barChart(cfg) {
   const ml = 38, mr = 10, mt = 14, mb = 22;
   const total = (s) => s.valores.reduce((a, v) => a + v, 0);
   const clases = cfg.clases || ["s1", "s2"];
-  const max = Math.max(...semanas.map((s) => Math.max(total(s), s.meta || 0)), 0);
+  const max = cfg.tope || Math.max(...semanas.map((s) => Math.max(total(s), s.meta || 0)), 0);
   if (max <= 0) return h("p", { class: "vacio" }, "Sin carga registrada en este periodo.");
-  const ticks = ticksNice(0, max * 1.08, 3);
+  // `tope`: eje fijo 0–tope (p. ej. 100 %); `entero`: marcas en números enteros (conteos de sesiones)
+  const ticks = cfg.tope ? [0, cfg.tope / 2, cfg.tope]
+    : cfg.entero ? Array.from({ length: Math.ceil(max / Math.ceil(max / 3)) + 1 }, (_, i) => i * Math.ceil(max / 3)) : ticksNice(0, max * 1.08, 3);
   const hi = ticks[ticks.length - 1];
   const y = (v) => mt + (1 - v / hi) * (H - mt - mb);
   const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Barras" });
@@ -203,6 +205,9 @@ function barChart(cfg) {
       sv("text", { class: "eje", x: ml - 6, y: y(v) + 4, "text-anchor": "end" }, fmt(v, 0)));
   }
   svg.append(sv("line", { class: "base", x1: ml, x2: W - mr, y1: H - mb, y2: H - mb }));
+  if (cfg.ref) {   // línea de referencia a todo el ancho (p. ej. meta 80 %)
+    svg.append(sv("line", { class: "meta-ref", x1: ml, x2: W - mr, y1: y(cfg.ref.y), y2: y(cfg.ref.y) }, sv("title", {}, cfg.ref.etiqueta)));
+  }
   const slot = (W - ml - mr) / semanas.length;
   const ancho = Math.min(24, slot * 0.64);
   const cada = Math.max(1, Math.ceil(42 / slot));

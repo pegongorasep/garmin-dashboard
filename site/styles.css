@@ -452,3 +452,15 @@ h2.con-ico { display: flex; }
 .marca-n .ico-svg { vertical-align: -2px; }
 details.ses.carrera-det > summary .ico-svg { color: var(--ink); }
 .circ.carrera { margin-bottom: 5px; }
+
+/* v4.2 F6: 80/20 compacto, otros entrenos e intensidad por semana */
+.zbar-wrap.compacta { margin-top: 10px; }
+.zbar-wrap.compacta .zbar { height: 10px; }
+.zbar-wrap.compacta .meta80 { top: -4px; height: 18px; border-left-width: 2px; }
+.int-sem { margin: 6px 0 2px; }
+.int-sem .nota { margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+.serie.z1 { fill: var(--z1); } .serie.z3 { fill: var(--z3); } .serie.z4 { fill: var(--z4); }
+.leyenda i.sw.z1 { background: var(--z1); } .leyenda i.sw.z3 { background: var(--z3); } .leyenda i.sw.z4 { background: var(--z4); }
+.meta-ref { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.leyenda .ico-svg { margin-right: 4px; margin-left: -2px; }
+.leyenda i.raya-disc { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed var(--ink); vertical-align: 3px; }

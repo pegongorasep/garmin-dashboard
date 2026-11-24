@@ -288,6 +288,13 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
             "corrida": corrida, "corridas_n": len(del_dia), "otras": otras}
 
 
+def intensidad_semana(acts: list, ini: date) -> dict:
+    """Minutos por zona (Z1–Z5, Z0 fuera) de corridas + actividades de la semana y % bajo / limbo / alto: la cuenta de 80/20."""
+    d = m.week_distribution(acts, ini)
+    return {"minutos": {z: r1(v) for z, v in d["minutos"].items()}, "bajo": r1(d["bajo"]), "limbo": r1(d["limbo"]),
+            "alto": r1(d["alto"])}
+
+
 def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> dict:
     """Una semana calendario (lun–dom) de la vista Hoy: stats de todas las corridas, calendario, sesiones y extras."""
     fin = ini + timedelta(days=6)
@@ -321,7 +328,8 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
                      "incompletas": sum(1 for e in sesiones if e["estado"] == "incompleta"),
                      "plan_min": sum(x["minutes"] for x in semana["sessions"])} if semana else None,
             "anterior": {k: v for k, v in resumen_corridas(previas).items() if k in ("minutos", "km", "min_trote")},
-            "dias": dias, "sesiones": sesiones, "extras": extras}
+            "dias": dias, "sesiones": sesiones, "extras": extras,
+            "intensidad": intensidad_semana(data["activities"], ini)}
 
 
 def build_semanas(hoy: date, data: dict, config: dict, plan: dict):
@@ -411,14 +419,24 @@ def con_ritmo_z2(filas: list, zonas: list) -> list:
     return out
 
 
-def build_mejora(hoy: date, filas: list, semanas: list, zonas: list) -> dict:
+def build_mejora(hoy: date, filas: list, semanas: list, zonas: list, data=None, config=None) -> dict:
     """Cómo vas mejorando: frase, minutos de las últimas 8 semanas (con plan) y, según haya caminatas o no,
     % trote (modo "trote") o ritmo en Z2 (modo "ritmo") de las últimas 12 corridas."""
     desde = monday(hoy) - timedelta(weeks=4)
     recientes = [f for f in filas if date.fromisoformat(f["fecha"]) >= desde]
     modo = "ritmo" if recientes and not any((f["caminatas"] or 0) > 0 for f in recientes) else "trote"
     filas = con_ritmo_z2(filas, zonas)
-    out = {"frase": m.mejora_frase(filas, hoy, modo), "modo": modo,
+    otras, frase_otras = [], []
+    if data is not None and config is not None:
+        acts, lunes = data["activities"], monday(hoy)
+        otras = [{"semana": s["inicio"], "conteos": m.conteos_otras(acts, config, date.fromisoformat(s["inicio"]),
+                                                                    date.fromisoformat(s["inicio"]) + timedelta(days=7))}
+                 for s in semanas[-8:]]
+        ahora = m.conteos_otras(acts, config, lunes - timedelta(weeks=4), lunes)
+        antes = m.conteos_otras(acts, config, lunes - timedelta(weeks=8), lunes - timedelta(weeks=4))
+        frase_otras = [{"nombre": c["nombre"], "ahora": ahora.get(c["id"], 0) / 4, "antes": antes.get(c["id"], 0) / 4}
+                       for c in config["categorias"]]
+    out = {"frase": m.mejora_frase(filas, hoy, modo, frase_otras), "modo": modo, "otras": otras,
            "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"]} for s in semanas[-8:]],
            "corridas": [{"fecha": f["fecha"], "pct_trote": r1(f["pct_trote"])} for f in filas[-12:]]}
     if modo == "ritmo":
@@ -583,7 +601,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     filas = m.run_rows(data["activities"], data["details"], config)
     semanas_hoy, semana_hoy_idx = build_semanas(hoy, data, config, plan)
     semanas_12 = build_weeks(hoy, data, config, plan)
-    mejora = build_mejora(hoy, filas, semanas_12, zonas)
+    mejora = build_mejora(hoy, filas, semanas_12, zonas, data, config)
     return {
         "generado": ahora.isoformat(timespec="minutes"),
         "datos_al": datos_al,
@@ -604,6 +622,9 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,
                      "mejora": mejora,
+                     "intensidad_semanas": [{"inicio": (monday(hoy) - timedelta(weeks=i)).isoformat(),
+                                             **intensidad_semana(data["activities"], monday(hoy) - timedelta(weeks=i))}
+                                            for i in range(11, -1, -1)],
                      "numeros": build_numeros(hoy, con_ritmo_z2(filas, zonas), mejora["modo"]),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),

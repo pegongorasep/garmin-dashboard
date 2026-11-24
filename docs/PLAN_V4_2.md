@@ -190,6 +190,6 @@ Corrige lo que encuentres y actualiza la tabla.
 | F3 Navegación Hoy · Plan · Progreso | ✅ |
 | F4 Siluetas | ✅ |
 | F5 Íconos | ✅ |
-| F6 Fuerza/HIIT y 80/20 | ⬜ |
+| F6 Fuerza/HIIT y 80/20 | ✅ |
 | F7 Capturas | ⬜ |
 | Revisión Opus + publicar | ⬜ |

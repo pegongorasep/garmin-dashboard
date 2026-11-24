@@ -693,3 +693,20 @@ def test_run_check_variada_suma_su_z3_planeado_a_la_tolerancia():
     assert m.run_check(a, ses, CFG)["tolerancia_min"] == CFG["ceiling_tolerance_min"] + 4
     assert m.run_check(a, ses, CFG)["techo_ok"] is True
     assert m.run_check(a, {**ses, "tipo": "z2"}, CFG)["techo_ok"] is False
+
+
+# --- v4.2 F6: otros entrenos y 80/20 ---
+
+def test_conteos_otras_y_frase():
+    acts = [act(1, "2026-10-14"), act(2, "2026-10-21"), act(3, "2026-10-22"), act(4, "2026-11-04", "running"),
+            act(5, "2026-11-05"), act(6, "2026-11-10", "strength_training"), act(7, "2026-11-11"), act(8, "2026-11-12")]
+    c = m.conteos_otras(acts, CFG, date(2026, 10, 12), date(2026, 11, 9))
+    assert c == {"crossfit": 4}                       # la corrida no cuenta; el 10 nov queda fuera
+    assert m.frase_otras([{"nombre": "CrossFit", "ahora": 3.25, "antes": 2.5}]) == " · CrossFit 3.2 por semana (antes 2.5)"
+    assert m.frase_otras([{"nombre": "A", "ahora": 0, "antes": 0}]) == ""
+    tres = [{"nombre": n, "ahora": a, "antes": 1} for n, a in (("A", 1), ("B", 3), ("C", 2))]
+    assert m.frase_otras(tres) == " · B 3.0 por semana (antes 1.0) · C 2.0 por semana (antes 1.0)"   # máximo 2, las de más sesiones
+    filas = [c_mej("2026-09-20", 34, 66), c_mej("2026-10-14", 50, 70)]
+    assert m.mejora_frase(filas, HOY, "trote", [{"nombre": "CrossFit", "ahora": 3.2, "antes": 2.5}]).endswith(
+        "(antes 66 %) · CrossFit 3.2 por semana (antes 2.5).")
+    assert "CrossFit" not in m.mejora_frase(filas, HOY, "trote", [])

@@ -281,7 +281,7 @@ function tarjetaEstaSemana(d, s) {
     ? [plural(st.corridas, "corrida", "corridas"), st.minutos != null ? `${fmt(st.minutos, 0)} min` : null,
       st.km != null ? `${fmt(st.km)} km` : null, st.pct_trote != null ? `${fmt(st.pct_trote, 0)} % trote` : null].filter(Boolean)
     : [s.estado === "futura" ? "Aún no empieza" : "Sin corridas"];
-  c.append(h("div", { class: "grande" }, partes.join(" · ")));
+  c.append(h("div", { class: "grande" }, partes.join(" · ")), intensidadCompacta(s));
   const p = s.plan;
   if (p) {
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, `Plan: ${p.total} sesiones · ${fmt(p.plan_min, 0)} min`));
@@ -385,7 +385,7 @@ function filaHoy(e, s, t) {
   if (t.version === "descanso") {
     c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
   } else if (ses) {
-    c.append(bloqueSilueta(ses.silueta), bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi)));
+    c.append(...[bloqueSilueta(ses.silueta), bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi))].filter(Boolean));
   }
   if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
   if (t.version !== "descanso" && ses) c.append(comoGarmin());
@@ -436,10 +436,15 @@ function tarjetaMejora(d) {
   const hayPct = ritmo ? (mj.ritmo || []).length > 0 : (mj.corridas || []).some((c) => c.pct_trote != null);
   MEJ.min = h("div", { class: "chart-wrap" });
   MEJ.pct = h("div", { class: "chart-wrap" });
+  MEJ.otras = h("div", { class: "chart-wrap" });
+  const cats = ui().categorias.filter((c) => (mj.otras || []).some((o) => (o.conteos || {})[c.id] > 0));
+  const hayOtras = cats.length > 0;
   const graficas = hayMin || hayPct
     ? h("div", { class: "mini2" },
       h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
-      h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct))
+      h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct),
+      hayOtras ? h("div", {}, h("h3", {}, "Otros entrenos por semana"), MEJ.otras,
+        h("div", { class: "leyenda" }, cats.map((c) => h("span", {}, h("i", { class: `sw ${c.clase}`, "aria-hidden": "true" }), icono(c.icono, 14), c.nombre)))) : null)
     : null;
   PINTAR.progreso.push(dibujarMejora);
   return h("div", { class: "card ancha" }, h("h2", {}, "Cómo vas mejorando"),
@@ -459,6 +464,14 @@ function dibujarMejora() {
     etiquetaFinal: ult ? `${fmt(ult.minutos, 0)}'` : null,
     texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}`,
   }));
+  const cats = ui().categorias.filter((c) => (mj.otras || []).some((o) => (o.conteos || {})[c.id] > 0));
+  if (cats.length && MEJ.otras) {
+    dibujar(MEJ.otras, (ancho) => barChart({
+      ancho, alto: 100, entero: true, clases: cats.map((c) => c.clase), etiqueta: "Sesiones de otros entrenos por semana, apiladas por categoría",
+      semanas: mj.otras.map((o) => ({ inicio: o.semana, valores: cats.map((c) => (o.conteos || {})[c.id] || 0), o })),
+      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${cats.map((c, i) => `${c.nombre} ${b.valores[i]}`).join(" · ")}`,
+    }));
+  }
   if (mj.modo === "ritmo") {
     const rp = (mj.ritmo || []).map((c) => ({ fecha: c.fecha, y: c.ritmo_s }));
     dibujar(MEJ.pct, (ancho) => rp.length
@@ -532,17 +545,13 @@ function bloqueCarga(s) {
       : null);
 }
 
-function zonaBar(dist) {
+/** Barra de minutos por zona (Z1–Z5) con la marca de 80 %. Compacta: más delgada, sin brackets ni textos de la marca. */
+function barraZonas(dist, compacta = false) {
   const z = ["Z1", "Z2", "Z3", "Z4", "Z5"];
   const total = z.reduce((a, k) => a + dist.minutos[k], 0);
-  const raiz = h("div", { class: "card" });
-  raiz.append(h("h2", {}, "Intensidad de la semana", h("span", { class: "etiqueta" }, "referencia")));
-  if (total <= 0) {
-    raiz.append(h("p", { class: "vacio" }, "Aún no hay minutos en zonas esta semana."));
-    return raiz;
-  }
+  if (total <= 0) return null;
   const pct = (k) => (dist.minutos[k] / total) * 100;
-  const wrap = h("div", { class: "zbar-wrap" });
+  const wrap = h("div", { class: `zbar-wrap${compacta ? " compacta" : ""}` });
   const barra = h("div", { class: "zbar", role: "img", "aria-label": `Bajo ${fmt(dist.bajo, 0)} %, limbo ${fmt(dist.limbo, 0)} %, alto ${fmt(dist.alto, 0)} %` });
   const tip = h("div", { class: "tip", hidden: true, role: "status" });
   const mostrar = (seg, k) => {
@@ -563,14 +572,38 @@ function zonaBar(dist) {
     seg.addEventListener("blur", () => (tip.hidden = true));
     barra.append(seg);
   }
-  const brackets = h("div", { class: "brackets", "aria-hidden": "true" },
-    [["Z1", "Z2"], ["Z3"], ["Z4", "Z5"]].map((g) => {
-      const m = g.reduce((a, k) => a + dist.minutos[k], 0);
-      return h("div", { style: `flex:${m} 1 0;${m <= 0 ? "display:none" : ""}` });
-    }));
-  const meta = h("div", { class: "meta80", "aria-hidden": "true" }, h("span", {}, "meta 80 %"));
-  wrap.append(tip, barra, brackets, meta);
-  raiz.append(wrap);
+  wrap.append(tip, barra);
+  if (!compacta) {
+    wrap.append(h("div", { class: "brackets", "aria-hidden": "true" },
+      [["Z1", "Z2"], ["Z3"], ["Z4", "Z5"]].map((g) => {
+        const m = g.reduce((a, k) => a + dist.minutos[k], 0);
+        return h("div", { style: `flex:${m} 1 0;${m <= 0 ? "display:none" : ""}` });
+      })));
+  }
+  wrap.append(h("div", { class: "meta80", "aria-hidden": "true" }, compacta ? null : h("span", {}, "meta 80 %")));
+  return wrap;
+}
+
+/** 80/20 compacto de una semana de Hoy: barra delgada y "Bajo 72 % · meta 80 %". Sin minutos en zonas, no se pinta. */
+function intensidadCompacta(s) {
+  const dist = s.intensidad;
+  if (!dist || !dist.minutos) return null;
+  const barra = barraZonas(dist, true);
+  if (!barra) return null;
+  return h("div", { class: "int-sem" }, barra, h("p", { class: "nota" }, `Bajo ${fmt(dist.bajo, 0)} % · meta 80 %`));
+}
+
+function zonaBar(dist) {
+  const z = ["Z1", "Z2", "Z3", "Z4", "Z5"];
+  const total = z.reduce((a, k) => a + dist.minutos[k], 0);
+  const raiz = h("div", { class: "card" });
+  raiz.append(h("h2", {}, "Intensidad de la semana", h("span", { class: "etiqueta" }, "referencia")));
+  if (total <= 0) {
+    raiz.append(h("p", { class: "vacio" }, "Aún no hay minutos en zonas esta semana."));
+    return raiz;
+  }
+  const pct = (k) => (dist.minutos[k] / total) * 100;
+  raiz.append(barraZonas(dist));
 
   const grupo = (zs, nombre, valor, meta) => h("div", { class: "grupo" },
     h("span", { class: "sw", "aria-hidden": "true" }, zs.map((k) => h("i", { style: `background:var(--${k.toLowerCase()})` }))),

@@ -339,7 +339,7 @@ def test_otras_del_dia_toma_te_maximo_y_suma_minutos():
 
 def test_mejora_y_composicion_en_el_json(salida):
     mj = salida["progreso"]["mejora"]
-    assert set(mj) == {"frase", "modo", "semanas", "corridas"} and len(mj["semanas"]) == 8
+    assert set(mj) == {"frase", "modo", "semanas", "corridas", "otras"} and len(mj["semanas"]) == 8
     assert mj["semanas"][-1]["inicio"] == "2026-11-02" and mj["semanas"][-1]["minutos"] == 30
     assert [c["pct_trote"] for c in mj["corridas"]] == [66.7, 66.7]
     assert salida["composicion"] is None                      # el fixture no trae inbody
@@ -581,3 +581,29 @@ def test_iconos_en_data_json_y_validador():
     assert validar.problemas(out) == []
     out["ui"]["categorias"][0]["icono"] = "dragon"
     assert any("ícono desconocido" in p for p in validar.problemas(out))
+
+
+def test_mejora_otras_e_intensidad_por_semana():
+    data = fixture()
+    data["activities"] = [*data["activities"], _act(30, "2026-11-02", "hiit"), _act(31, "2026-11-03", "strength_training"),
+                          _act(32, "2026-11-03", "hiit"), _act(33, "2026-10-13", "hiit"), _act(34, "2026-10-14", "hiit")]
+    out = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    mj = out["progreso"]["mejora"]
+    assert len(mj["otras"]) == 8 and mj["otras"][-1]["semana"] == "2026-11-02"
+    assert mj["otras"][-1]["conteos"] == {"crossfit": 5}            # 2 del fixture + 3 nuevas; las corridas no cuentan
+    assert mj["frase"].endswith(" · CrossFit 0.5 por semana (antes 0.0).")
+    sin = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    assert "CrossFit" not in sin["progreso"]["mejora"]["frase"]   # sin sesiones en las 8 semanas anteriores, la frase no la menciona
+    # 80/20: misma cuenta que la barra de Detalles; porcentajes Z1–Z2 / Z3 / Z4–Z5, Z0 fuera
+    semana = out["semanas_hoy"][out["semana_hoy_idx"]]["intensidad"]
+    assert semana == {**out["detalles"]["distribucion"]}
+    mins = semana["minutos"]
+    total = sum(mins.values())
+    assert total > 0 and abs(semana["bajo"] - (mins["Z1"] + mins["Z2"]) / total * 100) < 0.1
+    assert abs(semana["bajo"] + semana["limbo"] + semana["alto"] - 100) < 0.2
+    iw = out["progreso"]["intensidad_semanas"]
+    assert len(iw) == 12 and iw[-1]["inicio"] == "2026-11-02" and iw[-1] == {"inicio": "2026-11-02", **semana}
+    sin = next(x for x in iw if x["inicio"] == "2026-08-17")
+    assert sum(sin["minutos"].values()) == 0 and sin["bajo"] == 0
+    assert all("intensidad" in s for s in out["semanas_hoy"])
+    revisar_privacidad(out)

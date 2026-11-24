@@ -101,6 +101,7 @@ function renderProgreso(d) {
       filaNumeros(d),
       tarjetaMejora(d),
       tarjetaCorridasProgreso(d),
+      tarjetaIntensidadSemanas(d),
       tarjetaMejoresMarcas(d),
       tarjetaCarreras(d),
       d.detalles && d.detalles.carga ? tarjetaCarga(d.detalles) : null].filter(Boolean)),
@@ -245,6 +246,37 @@ function tablaCorridas(corridas) {
       h("thead", {}, h("tr", {}, ["Fecha", "Sesión", "Min", "Km", "% trote", "Ritmo", "FC"].map((c) => h("th", {}, c)))),
       h("tbody", {}, orden.map((r) => h("tr", {}, celdas(r).map((c) => h("td", {}, c))))))) : h("p", { class: "vacio" }, "Aún no hay corridas registradas."),
     orden.some((r) => r.caminadora) ? h("p", { class: "nota", style: "margin-top:8px" }, "cam. = caminadora (su ritmo no se compara).") : null)];
+}
+
+// --- intensidad por semana (80/20) ---
+
+const INT_GRUPOS = [["bajo", "Bajo Z1–Z2", "z1"], ["limbo", "Limbo Z3", "z3"], ["alto", "Alto Z4–Z5", "z4"]];
+
+/** Barras apiladas al 100 % por semana (Bajo / Limbo / Alto) con la raya de la meta de 80 % bajo. Sigue el selector 4/8/12. */
+function tarjetaIntensidadSemanas(d) {
+  const todas = (d.progreso || {}).intensidad_semanas || [];
+  if (!todas.length) return null;
+  const caja = h("div", { class: "chart-wrap" });
+  const pie = h("div", {});
+  const pintar = () => {
+    const ancho = caja.clientWidth;
+    if (!ancho) return;
+    const sem = todas.slice(-periodo);
+    const con = sem.filter((x) => Object.values(x.minutos || {}).some((v) => v > 0));
+    if (!con.length) { caja.replaceChildren(h("p", { class: "vacio" }, "Sin minutos en zonas en este periodo.")); pie.replaceChildren(); return; }
+    caja.replaceChildren(barChart({
+      ancho, alto: 130, tope: 100, ref: { y: 80, etiqueta: "meta 80 % bajo" }, clases: INT_GRUPOS.map((g) => g[2]),
+      etiqueta: "Intensidad por semana: porcentaje bajo, limbo y alto, con meta de 80 % bajo",
+      semanas: sem.map((x) => ({ inicio: x.inicio, valores: INT_GRUPOS.map(([k]) => x[k] || 0), x })),
+      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · Bajo ${fmt(b.x.bajo, 0)} % · Limbo ${fmt(b.x.limbo, 0)} % · Alto ${fmt(b.x.alto, 0)} %`,
+    }));
+    pie.replaceChildren(leyenda(INT_GRUPOS.map(([, n, c]) => [`sw ${c}`, n])), leyenda([["raya-disc", "Meta: 80 % bajo (la raya punteada)"]]),
+      tablaDatos(["Semana", "Bajo %", "Limbo %", "Alto %"], con.slice().reverse().map((x) => [fechaLarga(x.inicio), fmt(x.bajo, 0), fmt(x.limbo, 0), fmt(x.alto, 0)])));
+  };
+  PINTAR.progreso.push(pintar);
+  return h("div", { class: "card ancha" }, h("h2", {}, "Intensidad por semana"),
+    h("p", { class: "nota" }, `Últimas ${periodo} semanas: qué parte del tiempo en zonas fue suave (Z1–Z2), media (Z3) o fuerte (Z4–Z5), con tus corridas y actividades. Solo referencia.`),
+    caja, pie);
 }
 
 // --- mejores marcas y carreras ---
