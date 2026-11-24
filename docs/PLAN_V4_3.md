@@ -21,7 +21,7 @@ Las de v4 / v4.1 / v4.2, todas siguen:
 
 ---
 
-## F1 — Serie de FC por corrida + utilidades 🤖
+## F1 — Serie de FC por corrida + utilidades ✅
 
 **`garmin_connect.py`**
 - Para cada corrida (RUN_TYPES), además de lo que ya pide, baja la serie de `/activity-service/activity/{id}/details`
@@ -40,7 +40,7 @@ Las de v4 / v4.1 / v4.2, todas siguen:
   Z0 = duración − suma. Esta es la fuente para F2–F4.
 - `fc_referencia(zonas)` → `round((piso Z2 + techo Z2) / 2)`.
 
-## F2 — Esfuerzo y carga sin RPE; semáforo con 3 señales 🤖
+## F2 — Esfuerzo y carga sin RPE; semáforo con 3 señales ✅
 
 **Esfuerzo** (`metrics.esfuerzo(minutos_z0_z5)`): pesos `ESFUERZO = {Z0: 1, Z1: 2, Z2: 3, Z3: 5.5, Z4: 7.5, Z5: 9.5}`;
 promedio ponderado en **la mitad más dura de la sesión** (ordena los minutos de Z5 hacia Z0 y toma la mitad del
@@ -65,7 +65,7 @@ existe). El número del calendario para actividades no-corrida pasa de Training 
   skills.
 - Antes de cerrar: tabla en `DUDAS.md` de esfuerzo vs RPE manual para las actividades de Pedro que tienen RPE.
 
-## F3 — Ritmo a FC de referencia y deriva cardiaca 🤖
+## F3 — Ritmo a FC de referencia y deriva cardiaca ✅
 
 **Ritmo a FC ref** (`metrics.ritmo_fc_ref(fila, zonas)`): `ritmo_trote_s × fc_trote / fc_ref` (de los tramos RWD que
 ya se calculan). Solo si es al aire libre, no carrera, y `fc_trote` está dentro de Z2 (piso ≤ fc ≤ techo); si no,
@@ -88,7 +88,7 @@ ya se calculan). Solo si es al aire libre, no carrera, y `fc_trote` está dentro
   pestaña/gráfica "Deriva" en Progreso › Corridas (solo corridas con valor; línea en 5 %).
 - "Cómo funciona": qué es el ritmo a FC ref, que el calor lo afecta (ver la tendencia), y qué es la deriva.
 
-## F4 — Plan vs real por zona 🤖
+## F4 — Plan vs real por zona ✅
 
 `metrics.plan_vs_real(pasos, minutos_z)`:
 - Minutos planeados por zona de los pasos (con `repeat`; zona única con `tipos.zona_unica`), sin Z0/Z1.
@@ -100,7 +100,7 @@ ya se calculan). Solo si es al aire libre, no carrera, y `fc_trote` está dentro
 - Sitio, en "¿lo hice bien?" y en las corridas hechas de "Tus corridas": una fila por zona "Z3 o más · 2 de 4 min ·
   50 %" con ✓/⚠ (texto, no solo color). Si solo hay una zona planeada: "Z2 · 19 de 20 min ✓".
 
-## F5 — Resumen de la semana pasada en Hoy 🤖
+## F5 — Resumen de la semana pasada en Hoy ✅
 
 `build.resumen_semana_pasada(hoy, …)` → `hoy.semana_pasada` (o `null` si la semana pasada no tiene ni corridas ni plan):
 - `sesiones` "hechas de total" (del plan, si lo había), `minutos` y `plan_min`, `km`, `pct_trote`, `dias_verdes` de 7
@@ -114,7 +114,7 @@ ya se calculan). Solo si es al aire libre, no carrera, y `fc_trote` está dentro
   85 / 85 min · 6 de 7 días verdes · ✓ Sigue el plan"; al tocarla (`details`) el resto.
 - `/revision` (skill del template): menciona que el resumen ya está en Hoy y se enfoca en platicar y ajustes grandes.
 
-## F6 — Prueba al terminar el plan 🤖
+## F6 — Prueba al terminar el plan ✅
 
 **`gen_plan.py`**: en la **última semana del plan** la Larga se cambia por una sesión `tipo: "prueba"`, id `prueba`:
 - `intensidad` `solo_z2` / `z2_poca_z3` sin caminatas → `prueba: "fc_fija"`: 30' en Z2, nota "FC fija a la mitad de
@@ -138,7 +138,7 @@ ya se calculan). Solo si es al aire libre, no carrera, y `fc_trote` está dentro
 - **`/ajustar`** (template): al empezar un bloque nuevo, agrega el resultado de la prueba a `corrida.pruebas` y lo
   usa para proponer el siguiente plan. `config.example.yaml` documenta `pruebas`.
 
-## F7 — Cierre 🤖
+## F7 — Cierre ✅
 
 - "Cómo funciona" y textos de `ui` al día (esfuerzo, semáforo de 3 señales, ritmo a FC ref, deriva, plan vs real,
   prueba). `docs/REQUISITOS.md` §11 estado → "construido, falta publicar".

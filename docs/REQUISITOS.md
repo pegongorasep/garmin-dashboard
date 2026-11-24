@@ -261,7 +261,7 @@ sigue: es la suma de zonas bajas, no un tramo.
 - Silueta de una sola zona: "20 min Z2 / 138–150 lpm". Con más de una zona (compacta): arriba solo los minutos ("3′")
   con una línea del color del tramo (si dos chocan, una se alarga) y abajo una leyenda con zona y lpm.
 
-## 11. v4.3: medir la mejora, esfuerzo sin RPE, resumen semanal, prueba final (2026-11-24) — PROPUESTO
+## 11. v4.3: medir la mejora, esfuerzo sin RPE, resumen semanal, prueba final (2026-11-24) — construido, falta publicar
 
 ### 11.1 Ritmo a FC de referencia (reemplaza "ritmo trotando")
 - Por corrida: ritmo de los tramos de trote llevado a la **FC de referencia = mitad de Z2** (≈144 lpm):

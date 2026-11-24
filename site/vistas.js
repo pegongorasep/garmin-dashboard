@@ -584,7 +584,7 @@ function tarjetaComoFunciona(d) {
       li(ui().textos.semana || "Cada semana: tus sesiones del plan; la Larga va sábado o domingo."),
       li(h("strong", {}, "Asignación automática: "), "una corrida de sábado o domingo que dure al menos el ", fmt((u.done_ratio ?? 0.7) * 100, 0), " % de la Larga cuenta como Larga; las demás llenan Z2 #1 y Z2 #2 en orden. Si haces más, las sobrantes no se asignan."),
       li(h("strong", {}, "Hecha / incompleta: "), "hecha si duró al menos el ", fmt((u.done_ratio ?? 0.7) * 100, 0), " % de lo planeado (o de la versión suave si ese día era amarillo o rojo, y entonces sale “ajustada”); si duró menos, incompleta."),
-      li(h("strong", {}, "¿Lo hice bien?: "), `los minutos sobre el techo de Z2 (zonas 3 a 5) deben ser ${fmt(u.ceiling_tolerance_min ?? 2, 0)}' o menos; en la Z2 #1 con picos opcionales de Z3 se permiten 2' más.`),
+      li(h("strong", {}, "¿Lo hice bien?: "), `los minutos sobre el techo de Z2 (zonas 3 a 5) deben ser ${fmt(u.ceiling_tolerance_min ?? 2, 0)}' o menos; en la Z2 #1 con picos opcionales de Z3 se permiten 2' más. Además, plan vs real por zona: para cada zona del plan (Z2 o más), los minutos que hiciste en esa zona o más contra los planeados; con el ${fmt((u.done_ratio ?? 0.7) * 100, 0)} % se cumple (la FC tarda en subir).`),
       li(h("strong", {}, "Tiempo: "), "es tiempo de reloj, caminatas incluidas. Trote y caminata vienen de los tramos que detecta Garmin; el ritmo trotando no cuenta la caminata.")),
     h("p", { class: "nota" }, "Las zonas usan Karvonen (% de la reserva de FC)."),
     h("h3", { style: "margin-top:12px" }, "La prueba de la última semana"),

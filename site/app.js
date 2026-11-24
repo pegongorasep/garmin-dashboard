@@ -201,7 +201,7 @@ function textoBanner(d) {
   if (t.tipo === "hecha_hoy") return prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
   if (t.tipo === "sin_plan" || t.tipo === "primera_sync") return t.texto;
   if (t.tipo === "completa") return "Semana completa: hiciste las 3";
-  if (t.tipo === "plan_terminado") return "Plan terminado";
+  if (t.tipo === "plan_terminado") return null;   // lo dice su propia tarjeta
   return null;
 }
 
@@ -254,8 +254,7 @@ function resumenSemanaPasada(d) {
   const r = d.hoy.semana_pasada;
   if (!r) return null;
   const sug = r.sugerencia;
-  const linea = ["Semana pasada:",
-    r.sesiones_total != null ? `${r.sesiones_hechas} de ${r.sesiones_total}` : null,
+  const linea = [    r.sesiones_total != null ? `${r.sesiones_hechas} de ${r.sesiones_total}` : null,
     r.plan_min != null ? `${fmt(r.minutos, 0)} / ${fmt(r.plan_min, 0)} min` : `${fmt(r.minutos, 0)} min`,
     `${r.dias_verdes} de 7 días verdes${r.dias_sin_datos ? ` (${r.dias_sin_datos} sin datos)` : ""}`].filter(Boolean);
   const cuando = (a, b) => (a == null || b == null ? null : Math.abs(a - b) < 3 ? "igual que la anterior" : `${a < b ? "más rápido" : "más lento"} que la anterior (${mmss(b)})`);
@@ -263,7 +262,7 @@ function resumenSemanaPasada(d) {
   const ritmo = r.ritmo_ref_s != null ? `Ritmo a ${(d.progreso || {}).fc_ref} lpm: ${mmss(r.ritmo_ref_s)} /km${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s) ? `, ${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s)}` : ""}` : null;
   const dist = r.intensidad || {};
   return h("details", { class: "banner ancha semana-pasada" },
-    h("summary", {}, h("span", { class: "sp-linea" }, linea.join(" · ")),
+    h("summary", {}, h("span", { class: "sp-linea" }, `Semana pasada: ${linea.join(" · ")}`),
       sug ? h("span", { class: "sp-sug" }, badge(sug.tipo === "sigue" ? "ok" : "warn", sug.tipo === "sigue" ? "✓" : "!", "sugerencia"), sug.texto) : null),
     h("div", { class: "sp-cuerpo" },
       h("p", {}, `${fmt(r.km)} km${r.pct_trote != null ? ` · ${fmt(r.pct_trote, 0)} % trote` : ""}`),
