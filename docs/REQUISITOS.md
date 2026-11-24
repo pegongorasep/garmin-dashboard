@@ -199,6 +199,20 @@ Ya hecho: el plan arranca el **lun 9 nov 2026** (la corrida del jue 12 = Z2 #1).
 - Progreso: sección "Composición corporal": gráfica de recomposición (masa grasa y masa muscular, kg,
   un eje), % de grasa en el tiempo con la raya del prime, tabla de mediciones.
 
+## 9. v4: template para otras personas (2026-11-24) — APROBADO por Pedro
+
+Plan de construcción: [`PLAN_V4.md`](PLAN_V4.md).
+- Template, no app. Cada quien tiene un repo chiquito (config, plan, InBody opcional) y su GitHub Pages público.
+- El repo de Pedro es la fuente de verdad: el workflow del amigo llama al de Pedro con la etiqueta `stable`, así
+  que las actualizaciones y las instrucciones de Claude llegan solas.
+- Actividades genéricas por tipo de Garmin (fuerza, HIIT, cardio, movilidad), con semana típica y días de pierna.
+- Plan de 3 corridas por semana según nivel: novato solo Z2 (con caminatas si hace falta), intermedio Z2 con
+  poquita Z3, corredor Z2 + calidad (Z3 tempo / threshold / intervalos) + Larga. Siempre se puede elegir
+  "solo Z2" si ya hace intensidad en HIIT.
+- Configuración con Claude Code: `/setup`, `/ajustar`, `/revision`. Nada de ajustes dentro del sitio.
+- Dashboard con la misma estructura. Cambia: categorías, textos desde la config, tarjeta de calidad, mejora según
+  haya caminatas o no, estado de primer día, InBody opcional, enlace "Jalar datos" al repo de cada quien.
+
 ## 6. Preguntas abiertas
 1. ¿Algo del documento que quieras cambiar antes de aprobarlo?
 
