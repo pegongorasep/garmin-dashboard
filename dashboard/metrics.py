@@ -750,5 +750,5 @@ def max_hr_above_watch(estimacion, max_hr):
     """Aviso si la FC máx medida supera la que se usa; None si no."""
     if estimacion is None or estimacion <= max_hr:
         return None
-    return (f"Tu FC máx medida ({estimacion}) es mayor que la del reloj ({max_hr}). "
+    return (f"Tu FC máx medida ({round(estimacion)}) es mayor que la del reloj ({max_hr}). "
             "Súbela en Garmin Connect y el dashboard la tomará sola.")

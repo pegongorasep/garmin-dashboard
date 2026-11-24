@@ -178,7 +178,7 @@ function tablaCorridas(corridas) {
     r.pct_trote == null ? "—" : `${fmt(r.pct_trote, 0)} %`,
     r.caminadora ? "cam." : r.ritmo_trote_s == null ? "—" : mmss(r.ritmo_trote_s),
     r.fc_prom == null ? "—" : fmt(r.fc_prom, 0)];
-  return [h("details", {}, h("summary", {}, "Ver como tabla"),
+  return [h("details", {}, h("summary", {}, "Ver cada corrida como tabla"),
     orden.length ? h("div", { class: "tabla-scroll ancha" }, h("table", {},
       h("thead", {}, h("tr", {}, ["Fecha", "Sesión", "Min", "Km", "% trote", "Ritmo", "FC"].map((c) => h("th", {}, c)))),
       h("tbody", {}, orden.map((r) => h("tr", {}, celdas(r).map((c) => h("td", {}, c))))))) : h("p", { class: "vacio" }, "Aún no hay corridas registradas."),
