@@ -281,7 +281,9 @@ def test_semanas_hoy_escenario_real():
 def test_semanas_hoy_fuera_del_plan(salida):
     out = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG, AHORA)
     assert len(out["semanas_hoy"]) == 3                       # 2 del plan de ejemplo + la semana de hoy (sin plan)
-    s = out["semanas_hoy"][out["semana_hoy_idx"]]
+    # el plan empieza el 9 nov: se abre en la semana 1 como vista previa
+    assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1
+    s = next(x for x in out["semanas_hoy"] if x["inicio"] == "2026-11-02")
     assert s["n"] is None and s["plan"] is None and s["sesiones"] == []
     assert s["inicio"] == "2026-11-02" and s["stats"]["corridas"] == 1 and len(s["extras"]) == 1
 
@@ -336,7 +338,7 @@ def test_otras_del_dia_toma_te_maximo_y_suma_minutos():
 
 def test_mejora_y_composicion_en_el_json(salida):
     mj = salida["progreso"]["mejora"]
-    assert set(mj) == {"frase", "semanas", "corridas"} and len(mj["semanas"]) == 8
+    assert set(mj) == {"frase", "modo", "semanas", "corridas"} and len(mj["semanas"]) == 8
     assert mj["semanas"][-1]["inicio"] == "2026-11-02" and mj["semanas"][-1]["minutos"] == 30
     assert [c["pct_trote"] for c in mj["corridas"]] == [66.7, 66.7]
     assert salida["composicion"] is None                      # el fixture no trae inbody
@@ -382,3 +384,84 @@ def test_acciones_url_desde_variable(monkeypatch):
     monkeypatch.setenv("GITHUB_REPOSITORY", "amigo/mi-dashboard")
     ui = build.build_ui(CONFIG_CORREDOR, build.load(ROOT / "plan" / "plan.example.json"))
     assert ui["acciones_url"] == "https://github.com/amigo/mi-dashboard/actions/workflows/deploy.yml"
+
+
+# --- v4 F3: calidad, mejora por ritmo, primer día, InBody opcional ---
+
+sys.path.insert(0, str(ROOT / "plan"))
+import gen_plan  # noqa: E402
+
+VACIO = {"daily_summaries": [], "sleep": [], "hrv": [], "activities": [], "details": {}, "hr_zones": [],
+         "meta": {}, "inbody": None}
+
+
+def test_primer_dia_sin_datos_y_plan_futuro():
+    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07"}
+    plan = gen_plan.generar(cfg)
+    out = build.build(VACIO, plan, cfg, AHORA)
+    revisar_privacidad(out)
+    t = out["hoy"]["tarjeta"]
+    assert t["tipo"] == "primera_sync"
+    assert t["texto"] == ("Primera sincronización lista. Garmin tarda en mandar el historial; regresa en unas horas. "
+                          "Tu plan empieza el lun 7 dic")
+    assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1 and out["semanas_hoy"][out["semana_hoy_idx"]]["estado"] == "futura"
+    assert out["ultima_corrida"] is None and out["composicion"] is None
+    assert out["progreso"]["mejora"]["modo"] == "trote" and out["hoy"]["semaforo"]["color"] == "sin_datos"
+
+
+def test_primer_dia_con_plan_ya_empezado():
+    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-11-23"}
+    out = build.build(VACIO, gen_plan.generar(cfg), cfg, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
+    assert out["hoy"]["tarjeta"]["texto"] == "Primera sincronización lista. Garmin tarda en mandar el historial; regresa en unas horas"
+    assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1 and out["semanas_hoy"][out["semana_hoy_idx"]]["estado"] == "actual"
+
+
+def test_plan_futuro_con_datos_dice_cuando_empieza():
+    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07", "semana_tipica": {}}
+    out = build.build(fixture(), gen_plan.generar(cfg), cfg, AHORA)
+    assert out["hoy"]["tarjeta"]["tipo"] == "sin_plan" and out["hoy"]["tarjeta"]["texto"] == "Tu plan empieza el lun 7 dic"
+
+
+def test_inbody_opcional():
+    inbody = {"prime": "2026-11-13", "mediciones": [{"fecha": "2026-11-13", "peso_kg": 90, "mme_kg": 38, "pgc": 25}]}
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    con = build.build({**fixture(), "inbody": inbody}, plan, CONFIG_FIXTURE, AHORA)
+    assert con["composicion"] is not None
+    sin = build.build({**fixture(), "inbody": None}, plan, CONFIG_FIXTURE, AHORA)
+    apagado = build.build({**fixture(), "inbody": inbody}, plan, {**CONFIG_FIXTURE, "inbody": False}, AHORA)
+    assert sin["composicion"] is None and apagado["composicion"] is None
+
+
+def _corridas_sin_caminatas(fechas, ritmos):
+    acts = []
+    for i, (f, r) in enumerate(zip(fechas, ritmos)):
+        # 30 min a r s/km: km = 1800 / r; FC 145 (Z2 con max 190 / reposo 60: 138-151)
+        acts.append({"activityId": 100 + i, "startTimeLocal": f"{f} 07:00:00", "duration": 1800.0,
+                     "activityType": {"typeKey": "running"}, "averageHR": 145.0, "distance": 1800.0 / r * 1000,
+                     "hrTimeInZone_1": 300, "hrTimeInZone_2": 1500})
+    return acts
+
+
+def test_mejora_por_ritmo_sin_caminatas():
+    # hoy 24 nov (martes): últimas 4 semanas completas = 26 oct–22 nov; antes = 28 sep–25 oct
+    data = {**VACIO, "activities": _corridas_sin_caminatas(
+        ["2026-10-05", "2026-10-12", "2026-11-02", "2026-11-09"], [400, 400, 375, 375])}
+    plan = gen_plan.generar(CONFIG_CORREDOR)
+    out = build.build(data, plan, {**CONFIG_CORREDOR, "plan_start": "2026-11-09"}, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
+    mj = out["progreso"]["mejora"]
+    assert mj["modo"] == "ritmo"
+    assert mj["frase"].endswith("a la misma FC vas 0:25/km más rápido que hace 4 semanas.")
+    assert [r["ritmo_s"] for r in mj["ritmo"]] == [400, 400, 375, 375]
+
+
+def test_mejora_con_caminatas_sigue_en_trote(salida):
+    assert salida["progreso"]["mejora"]["modo"] == "trote" and "ritmo" not in salida["progreso"]["mejora"]
+
+
+def test_sesion_de_calidad_en_el_json():
+    plan = gen_plan.generar({**CONFIG_CORREDOR, "calidad_tipos": ["threshold"]})
+    out = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)
+    s = next(x for x in out["plan"]["semanas"][0]["sessions"] if x["tipo"] == "calidad")
+    assert s["estructura"] == "10' Z2 · 4×5' threshold (2' suave) · 5' suave"
+    assert s["objetivo"]["zona"] == "Z4" and s["objetivo"]["minutos"] == 20 and len(s["objetivo"]["lpm"]) == 2
+    assert s["calidad_tipo"] == "threshold"

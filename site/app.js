@@ -77,7 +77,7 @@ function pasoLi(p) {
   }
   const z = p.zone;
   const color = z.startsWith("Z") ? `var(--z${z.slice(1, 2)})` : "var(--axis)";
-  const nota = p.note && !(p.optional && p.note === "opcional") ? ` · ${p.note}` : "";
+  const nota = p.note && !(p.optional && p.note === "opcional") && p.note !== ETIQUETA_PASO[p.kind] ? ` · ${p.note}` : "";
   return h("li", {},
     h("span", { class: "min" }, `${p.minutes} min`),
     h("span", { class: "zchip" }, h("i", { style: `background:${color}`, "aria-hidden": "true" }), z),
@@ -128,8 +128,16 @@ function estadoSesion(est) {
 const GARMIN_COMO = "Entrenamientos → Crear entrenamiento → Correr. Agrega un paso por línea (los grupos “N× ( … )” van como repetición). En cada paso elige duración en minutos y, como objetivo, “Alerta de FC” con el rango de lpm de arriba.";
 
 /** Pasos, versión suave y cómo crearla en Garmin Connect (cuerpo desplegable de una sesión del plan). */
+/** Sesión de calidad: estructura legible y zona objetivo con sus lpm. */
+function bloqueCalidad(s) {
+  if (!s || !s.objetivo) return null;
+  const o = s.objetivo;
+  return h("div", { class: "calidad" }, h("p", { class: "estructura" }, s.estructura),
+    h("p", { class: "nota" }, `Zona objetivo: ${o.zona}${o.lpm ? ` (${o.lpm[0]}–${o.lpm[1]} lpm)` : ""} · ${o.minutos} min de trabajo`));
+}
+
 function cuerpoPlan(s) {
-  return [h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
+  return [bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, h("ul", { class: "pasos" }, (s.steps || []).map(pasoLi)),
     s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`),
       h("ul", { class: "pasos" }, (s.easy.steps || []).map(pasoLi))) : null,
     comoGarmin()];
@@ -157,9 +165,8 @@ function banner(d) {
   let texto = null;
   if (t.tipo === "otra") texto = prox ? `Hoy ${t.categoria} · próxima corrida: ${prox}` : `Hoy ${t.categoria}`;
   else if (t.tipo === "hecha_hoy") texto = prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
-  else if (t.tipo === "sin_plan") {
-    texto = plan.inicio && (d.generado || "").slice(0, 10) < plan.inicio ? `El plan arranca el ${fechaCorta(plan.inicio)}` : "Hoy no hay semana de plan activa";
-  } else if (t.tipo === "completa") texto = "Semana completa: hiciste las 3";
+  else if (t.tipo === "sin_plan" || t.tipo === "primera_sync") texto = t.texto;
+  else if (t.tipo === "completa") texto = "Semana completa: hiciste las 3";
   return texto ? h("p", { class: "banner" }, texto) : null;
 }
 
@@ -298,6 +305,15 @@ function tarjetaCalendario(d, s) {
     h("p", { class: "nota leyenda-cal" }, `${leyendaCategorias(s)}número = Training Effect aeróbico de Garmin (0–5)`));
 }
 
+/** "Minutos en Z4: 17 de 20 ✓" y aviso si pasó mucho tiempo por encima de la zona. */
+function lineaCalidad(q) {
+  const txt = `Minutos en ${q.zona}: ${fmt(q.min_zona, 0)} de ${fmt(q.objetivo_min, 0)}`;
+  return h("div", {},
+    q.ok ? h("p", { class: "estado" }, badge("ok", "✓", "objetivo cumplido"), `${txt} ✓`)
+      : h("p", { class: "estado" }, badge("warn", "!", "por debajo del objetivo"), txt),
+    q.mucho_arriba ? h("p", { class: "nota" }, `Pasaste ${fmt(q.min_arriba, 0)}' por encima de ${q.zona}: la próxima baja un poco el ritmo.`) : null);
+}
+
 function lineaTecho(c) {
   const txt = `${fmt(c.min_sobre_techo)}' sobre el techo (tolerancia ${fmt(c.tolerancia_min, 0)}')`;
   return c.techo_ok
@@ -314,7 +330,7 @@ function filaCorrida(cabeza, titulo, c) {
   return h("div", { class: "corrida" },
     h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo)),
     datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
-    c.techo_ok !== undefined ? lineaTecho(c) : null,
+    c.calidad ? lineaCalidad(c.calidad) : c.techo_ok !== undefined ? lineaTecho(c) : null,
     h("details", {}, h("summary", {}, "Ver detalle"),
       ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora })));
 }
@@ -341,7 +357,7 @@ function filaHoy(e, s, t) {
   if (t.version === "descanso") {
     c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
   } else if (ses) {
-    c.append(h("ul", { class: "pasos" }, ses.steps.map(pasoLi)));
+    c.append(bloqueCalidad(ses), h("ul", { class: "pasos" }, ses.steps.map(pasoLi)));
   }
   if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
   if (t.version !== "descanso" && ses) c.append(comoGarmin());
@@ -407,13 +423,14 @@ function tarjetaMejora(d) {
   const mj = (d.progreso || {}).mejora;
   if (!mj) return null;
   const hayMin = (mj.semanas || []).some((s) => (s.minutos || 0) > 0);
-  const hayPct = (mj.corridas || []).some((c) => c.pct_trote != null);
+  const ritmo = mj.modo === "ritmo";
+  const hayPct = ritmo ? (mj.ritmo || []).length > 0 : (mj.corridas || []).some((c) => c.pct_trote != null);
   MEJ.min = h("div", { class: "chart-wrap" });
   MEJ.pct = h("div", { class: "chart-wrap" });
   const graficas = hayMin || hayPct
     ? h("div", { class: "mini2" },
       h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
-      h("div", {}, h("h3", {}, "% trote por corrida"), MEJ.pct))
+      h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct))
     : null;
   return h("div", { class: "card" }, h("h2", {}, "Cómo vas mejorando"),
     h("p", { class: "frase-mej" }, mj.frase), graficas,
@@ -434,6 +451,14 @@ function dibujarMejora() {
     etiquetaFinal: ult ? `${fmt(ult.minutos, 0)}'` : null,
     texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}`,
   }));
+  if (mj.modo === "ritmo") {
+    const rp = (mj.ritmo || []).map((c) => ({ fecha: c.fecha, y: c.ritmo_s }));
+    dibujar(MEJ.pct, (ancho) => rp.length
+      ? lineChart({ ancho, alto: 100, serie: rp, marcadores: true, invertir: true, fmtY: mmss, etiqueta: "Ritmo en Z2 por corrida, arriba es más rápido",
+        etiquetaFinal: `${mmss(rp[rp.length - 1].y)}/km`, texto: (p) => `${fechaLarga(p.fecha)} · ${mmss(p.y)} /km en Z2` })
+      : h("p", { class: "vacio" }, "Aún no hay corridas en Z2."));
+    return;
+  }
   const pts = (mj.corridas || []).filter((c) => c.pct_trote != null).map((c) => ({ fecha: c.fecha, y: c.pct_trote }));
   dibujar(MEJ.pct, (ancho) => pts.length
     ? lineChart({ ancho, alto: 100, serie: pts, marcadores: true, fmtY: (v) => fmt(v, 0), etiqueta: "Porcentaje del tiempo trotando por corrida",

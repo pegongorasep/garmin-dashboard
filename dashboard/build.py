@@ -1,6 +1,6 @@
 """Convierte data/ + plan + config en site/data.json (solo campos de una lista blanca).
 
-Uso: python dashboard/build.py [--day YYYY-MM-DD] [--plan-start YYYY-MM-DD]
+Uso: python dashboard/build.py [--day YYYY-MM-DD] [--plan-start YYYY-MM-DD] [--out data.json]
 Es el único lugar con reloj: "hoy" se calcula en la zona horaria del config.
 """
 import argparse
@@ -15,6 +15,7 @@ from ajustes import USER_DIR, cargar_config
 
 ROOT = Path(__file__).parent.parent  # el motor (aquí vive site/)
 DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
 
 def load(path: Path, default=None):
@@ -77,9 +78,26 @@ def convert_steps(steps: list, zonas: list) -> list:
     return out
 
 
+ETIQUETA_CALIDAD = {"tempo_z3": "tempo Z3", "threshold": "threshold", "intervalos": "intervalos"}
+
+
+def estructura_calidad(s: dict) -> str:
+    """"10' Z2 · 4×5' threshold (2' suave) · 5' suave" a partir de los pasos de una sesión de calidad."""
+    cal, extras = [], s["steps"]
+    calen = next(p for p in extras if p["kind"] == "warmup")
+    enfria = next(p for p in extras if p["kind"] == "cooldown")
+    rep = next(p for p in extras if p["kind"] == "repeat")
+    trabajo, rec = rep["steps"][0], rep["steps"][1]
+    return (f"{calen['minutes']}' {calen['zone']} · {rep['times']}×{trabajo['minutes']}' "
+            f"{ETIQUETA_CALIDAD.get(s.get('calidad_tipo'), 'calidad')} ({rec['minutes']}' suave) · {enfria['minutes']}' suave")
+
+
 def convert_session(s: dict, zonas: list) -> dict:
     easy = s["easy"]
-    extra = {k: s[k] for k in ("nota", "objetivo", "calidad_tipo") if k in s}
+    extra = {k: s[k] for k in ("nota", "calidad_tipo") if k in s}
+    if "objetivo" in s:
+        extra["objetivo"] = {**s["objetivo"], "lpm": lpm_range(s["objetivo"]["zona"], zonas)}
+        extra["estructura"] = estructura_calidad(s)
     return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"], **extra,
             "steps": convert_steps(s["steps"], zonas),
             "easy": {"name": easy["name"], "minutes": easy["minutes"],
@@ -305,7 +323,9 @@ def build_semanas(hoy: date, data: dict, config: dict, plan: dict):
     total = len(plan["weeks"]) + len(config.get("semanas_repetidas", []))
     inicios = {inicio + timedelta(weeks=i) for i in range(total)} | {monday(hoy)}
     inicios = sorted(inicios)
-    return [build_semana(i, hoy, data, config, plan) for i in inicios], inicios.index(monday(hoy))
+    # Antes de que empiece el plan se muestra la semana 1 como vista previa.
+    mostrar = inicio if hoy < date.fromisoformat(config["plan_start"]) else monday(hoy)
+    return [build_semana(i, hoy, data, config, plan) for i in inicios], inicios.index(mostrar)
 
 
 def session_names(rows_acts: list, data: dict, config: dict, plan: dict) -> dict:
@@ -350,11 +370,31 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
     return out
 
 
-def build_mejora(hoy: date, filas: list, semanas: list) -> dict:
-    """Cómo vas mejorando: frase, minutos de las últimas 8 semanas (con plan) y % trote de las últimas 12 corridas."""
-    return {"frase": m.mejora_frase(filas, hoy),
-            "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"]} for s in semanas[-8:]],
-            "corridas": [{"fecha": f["fecha"], "pct_trote": r1(f["pct_trote"])} for f in filas[-12:]]}
+def con_ritmo_z2(filas: list, zonas: list) -> list:
+    """Agrega `ritmo_z2_s` a cada fila: ritmo (s/km) de las corridas al aire libre cuya FC promedio cayó en Z2.
+    Misma fuente que la gráfica de ritmo de Progreso (ritmo trotando); si Garmin no dio tramos, el ritmo total."""
+    _, lo, hi = zonas[1]
+    out = []
+    for f in filas:
+        ritmo = f["ritmo_trote_s"] or (f["minutos"] * 60 / f["km"] if f["km"] else None)
+        en_z2 = not f["caminadora"] and f["fc_prom"] is not None and lo <= f["fc_prom"] <= hi
+        out.append({**f, "ritmo_z2_s": ritmo if en_z2 else None})
+    return out
+
+
+def build_mejora(hoy: date, filas: list, semanas: list, zonas: list) -> dict:
+    """Cómo vas mejorando: frase, minutos de las últimas 8 semanas (con plan) y, según haya caminatas o no,
+    % trote (modo "trote") o ritmo en Z2 (modo "ritmo") de las últimas 12 corridas."""
+    desde = monday(hoy) - timedelta(weeks=4)
+    recientes = [f for f in filas if date.fromisoformat(f["fecha"]) >= desde]
+    modo = "ritmo" if recientes and not any((f["caminatas"] or 0) > 0 for f in recientes) else "trote"
+    filas = con_ritmo_z2(filas, zonas)
+    out = {"frase": m.mejora_frase(filas, hoy, modo), "modo": modo,
+           "semanas": [{"inicio": s["inicio"], "minutos": s["minutos"], "plan_min": s["plan_min"]} for s in semanas[-8:]],
+           "corridas": [{"fecha": f["fecha"], "pct_trote": r1(f["pct_trote"])} for f in filas[-12:]]}
+    if modo == "ritmo":
+        out["ritmo"] = [{"fecha": f["fecha"], "ritmo_s": round(f["ritmo_z2_s"])} for f in filas if f["ritmo_z2_s"]][-12:]
+    return out
 
 
 def build_days(hoy: date, data: dict) -> list:
@@ -400,6 +440,10 @@ def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj) -> d
     }
 
 
+def texto_inicio_plan(inicio: date) -> str:
+    return f"Tu plan empieza el {DIAS[inicio.weekday()]} {inicio.day} {MESES[inicio.month - 1]}"
+
+
 def lista_es(items: list) -> str:
     """['a', 'b', 'c'] -> 'a, b y c'."""
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " y " + items[-1] if items else ""
@@ -412,7 +456,7 @@ def build_ui(config: dict, plan: dict) -> dict:
     """Todo lo que el sitio necesita de la config: título, categorías y textos ya armados."""
     cats = config["categorias"]
     nombre = m.nombre_intensa(config)
-    sesiones = [s["name"] for s in plan["weeks"][0]["sessions"]] if plan.get("weeks") else []
+    sesiones = [("Calidad" if s.get("tipo") == "calidad" else s["name"]) for s in plan["weeks"][0]["sessions"]] if plan.get("weeks") else []
     partes = []
     if sesiones:
         partes.append("Cada semana: " + (", ".join(sesiones[:-1]) + " y la " + sesiones[-1] if len(sesiones) > 1 else sesiones[0])
@@ -436,7 +480,7 @@ def build_ui(config: dict, plan: dict) -> dict:
             "fcmax_vacia": (f"Aún no hay clases de {nombre} medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva."
                             if nombre else "Aún no hay sesiones intensas medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva.")
             if config["fc_max_correa_desde"] else
-            "Sin fecha de correa en la configuración: la FC máx sale del reloj. Si usas correa en tus sesiones intensas, agrega `fc_max_correa_desde` en config.yaml.",
+            "Sin fecha de correa en la configuración: la FC máx sale del reloj. Si usas correa en tus sesiones intensas, agrega la fecha (fc_max_correa_desde) en config.yaml.",
         },
     }
 
@@ -465,6 +509,15 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     if tarjeta["sesion_id"] and semana_plan:
         ses = next(s for s in semana_plan["sessions"] if s["id"] == tarjeta["sesion_id"])
         tarjeta["sesion"] = convert_session(ses, zonas)
+    sin_datos = not any(data[k] for k in ("activities", "daily_summaries", "sleep", "hrv"))
+    inicio_plan = date.fromisoformat(config["plan_start"])
+    if sin_datos:   # primera sincronización: Garmin tarda en mandar el historial
+        texto = "Primera sincronización lista. Garmin tarda en mandar el historial; regresa en unas horas"
+        if hoy < inicio_plan:
+            texto += f". {texto_inicio_plan(inicio_plan)}"
+        tarjeta = {**tarjeta, "tipo": "primera_sync", "texto": texto, "version": None, "sesion_id": None}
+    elif tarjeta["tipo"] == "sin_plan" and hoy < inicio_plan:
+        tarjeta = {**tarjeta, "texto": texto_inicio_plan(inicio_plan)}
     tarjeta["motivo"] = m.motivo(sigs, config) if tarjeta["version"] in ("suave", "descanso") else None
 
     pulled = data["meta"].get("pulled_at_utc")
@@ -491,9 +544,9 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "progreso": {"resumen": {str(k): m.progress_summary(filas, hoy, k) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,
-                     "mejora": build_mejora(hoy, filas, semanas_12),
+                     "mejora": build_mejora(hoy, filas, semanas_12, zonas),
                      "dias": build_days(hoy, data)},
-        "composicion": m.composicion(data.get("inbody")),
+        "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": build_ui(config, plan),
         "detalles": build_details(hoy, data, config, fc_max, reloj),
     }
@@ -502,6 +555,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--day", help="fecha local YYYY-MM-DD (para pruebas)")
+    ap.add_argument("--out", help="archivo de salida (por defecto <motor>/site/data.json)")
     ap.add_argument("--plan-start", help="inicio del plan YYYY-MM-DD (solo pruebas visuales)")
     args = ap.parse_args()
     config = cargar_config()
@@ -514,7 +568,7 @@ def main() -> None:
         config = {**config, "plan_start": args.plan_start}
         plan = {**plan, "start": args.plan_start}
     out = build(load_data(), plan, config, ahora)
-    destino = ROOT / "site" / "data.json"
+    destino = Path(args.out) if args.out else ROOT / "site" / "data.json"
     destino.parent.mkdir(exist_ok=True)
     destino.write_text(json.dumps(out, ensure_ascii=False, indent=1))
     print(f"OK: {destino} ({destino.stat().st_size / 1024:.1f} KB)")

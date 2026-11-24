@@ -476,11 +476,15 @@ def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
     if not g:
         return None
     return {"corridas": len(g) / semanas, "minutos": sum(f["minutos"] for f in g) / semanas,
-            "pct_trote": _promedio([f.get("pct_trote") for f in g])}
+            "pct_trote": _promedio([f.get("pct_trote") for f in g]),
+            "ritmo_z2": _promedio([f.get("ritmo_z2_s") for f in g])}
 
 
-def mejora_frase(filas: list, hoy: date) -> str:
-    """Compara las últimas 4 semanas calendario completas contra las 4 anteriores (filas = run_rows)."""
+def mejora_frase(filas: list, hoy: date, modo: str = "trote") -> str:
+    """Compara las últimas 4 semanas calendario completas contra las 4 anteriores (filas = run_rows).
+
+    modo "trote": agrega el % trote. modo "ritmo" (sin caminatas): agrega el cambio de ritmo en Z2
+    (usa `ritmo_z2_s` de cada fila: ritmo de las corridas cuya FC promedio cayó en Z2)."""
     lunes = hoy - timedelta(days=hoy.weekday())
     ahora = _grupo_mejora(filas, lunes - timedelta(weeks=4), lunes, 4)
     antes = _grupo_mejora(filas, lunes - timedelta(weeks=8), lunes - timedelta(weeks=4), 4)
@@ -491,7 +495,12 @@ def mejora_frase(filas: list, hoy: date) -> str:
     texto = f"Últimas 4 semanas: {ahora['corridas']:.1f} corridas y {ahora['minutos']:.0f} min por semana"
     if antes:
         texto += f" (antes {antes['corridas']:.1f} y {antes['minutos']:.0f})"
-    if ahora["pct_trote"] is not None:
+    if modo == "ritmo":
+        if ahora["ritmo_z2"] and antes and antes["ritmo_z2"]:
+            dif = antes["ritmo_z2"] - ahora["ritmo_z2"]       # positivo = más rápido ahora
+            texto += ("; a la misma FC vas al mismo ritmo que hace 4 semanas" if abs(dif) < 3 else
+                      f"; a la misma FC vas {_mmss(abs(dif))}/km {'más rápido' if dif > 0 else 'más lento'} que hace 4 semanas")
+    elif ahora["pct_trote"] is not None:
         texto += f"; trote {ahora['pct_trote']:.0f} %"
         if antes and antes["pct_trote"] is not None:
             texto += f" (antes {antes['pct_trote']:.0f} %)"
