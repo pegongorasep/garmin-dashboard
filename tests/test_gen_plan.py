@@ -187,7 +187,7 @@ def test_plan_vs_real_los_minutos_altos_cuentan_para_la_zona_de_abajo():
              {"kind": "repeat", "times": 2, "steps": [{"kind": "run", "minutes": 2, "zone": "Z4", "note": ""},
                                                        {"kind": "run", "minutes": 2, "zone": "Z1", "note": ""}]}]
     r = m.plan_vs_real(pasos, {"Z0": 0, "Z1": 4, "Z2": 4, "Z3": 0, "Z4": 2, "Z5": 0})
-    assert r == [{"zona": "Z4", "plan_min": 4, "hecho_min": 2.0, "pct": 50, "ok": False},
+    assert r == [{"zona": "Z4", "plan_min": 4, "hecho_min": 2.0, "pct": 50, "ok": False, "arriba_min": 0, "mucho_arriba": False},
                  {"zona": "Z2", "plan_min": 14, "hecho_min": 6.0, "pct": 43, "ok": False}]
     todo_mas_arriba = m.plan_vs_real(pasos, {"Z0": 0, "Z1": 0, "Z2": 0, "Z3": 0, "Z4": 14, "Z5": 0})
     assert [x["ok"] for x in todo_mas_arriba] == [True, True] and todo_mas_arriba[1]["pct"] == 100

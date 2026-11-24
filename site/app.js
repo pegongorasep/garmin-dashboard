@@ -410,7 +410,9 @@ function lineasPlanVsReal(filas) {
     const txt = solo ? `${nombre} · ${fmt(f.hecho_min, 0)} de ${fmt(f.plan_min, 0)} min` : `${nombre} · ${fmt(f.hecho_min, 0)} de ${fmt(f.plan_min, 0)} min · ${f.pct} %`;
     return f.ok ? h("p", { class: "estado" }, badge("ok", "✓", "cumplido"), `${txt} ✓`)
       : h("p", { class: "estado" }, badge("warn", "!", "por debajo del plan"), `${txt} ⚠`);
-  }));
+  }), filas[0].mucho_arriba
+    ? h("p", { class: "estado" }, badge("warn", "!", "muy por encima"), `${fmt(filas[0].arriba_min, 0)}' por encima de ${filas[0].zona} ⚠`)
+    : null);
 }
 
 function lineaTecho(c) {

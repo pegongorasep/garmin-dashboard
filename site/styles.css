@@ -257,7 +257,7 @@ details.ses > details > summary { margin-top: 8px; }
 .corrida .cab-c { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .corrida .n { font-weight: 650; }
 .corrida .datos { margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
-.corrida .estado { margin: 4px 0; }
+.corrida .estado { display: flex; margin: 4px 0; }
 .corrida.hoy { background: var(--page); box-shadow: inset 4px 0 0 var(--s1), 0 0 0 1px var(--ring); border-radius: 10px; padding: 12px 12px 12px 16px; margin-block: 6px; border-top: 0; }
 .corrida.hoy .aviso { margin-block: 8px; }
 .chip-hoy { font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--page); }

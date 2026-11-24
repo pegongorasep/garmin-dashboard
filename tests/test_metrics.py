@@ -954,3 +954,20 @@ def test_run_check_5k_no_exige_el_techo():
     a = act(1, "2026-11-18", "running", dur=1500, z=(0, 2, 5, 10, 8))
     r = m.run_check(a, ses, CFG, {"Z0": 0, "Z1": 0, "Z2": 2, "Z3": 5, "Z4": 10, "Z5": 8})
     assert r["techo_ok"] is True and "plan_vs_real" not in r
+
+
+def test_plan_vs_real_avisa_si_pasaste_mucho_arriba_de_la_zona_alta():
+    pasos = [{"kind": "run", "minutes": 10, "zone": "Z2"}, {"kind": "run", "minutes": 20, "zone": "Z3"}]
+    bien = m.plan_vs_real(pasos, {"Z2": 10, "Z3": 19, "Z4": 2})
+    assert bien[0]["zona"] == "Z3" and bien[0]["mucho_arriba"] is False
+    arriba = m.plan_vs_real(pasos, {"Z2": 10, "Z3": 8, "Z4": 12})
+    assert arriba[0]["ok"] is True and arriba[0]["arriba_min"] == 12 and arriba[0]["mucho_arriba"] is True
+    assert "mucho_arriba" not in m.plan_vs_real([{"kind": "run", "minutes": 20, "zone": "Z2"}], {"Z2": 20})[0]
+
+
+def test_run_check_calidad_tolera_su_z3_y_usa_las_zonas_del_dashboard():
+    ses = {"tipo": "calidad", "steps": [{"kind": "run", "minutes": 10, "zone": "Z2"},
+                                        {"kind": "run", "minutes": 20, "zone": "Z3"}]}
+    a = act(1, "2026-11-12", "running", z=(0, 0, 0, 0, 1800))     # el reloj dice todo en Z5
+    r = m.run_check(a, ses, None, {"Z0": 0, "Z1": 0, "Z2": 10, "Z3": 20, "Z4": 0, "Z5": 0})
+    assert r["min_sobre_techo"] == 20 and r["tolerancia_min"] == 22 and r["techo_ok"] is True

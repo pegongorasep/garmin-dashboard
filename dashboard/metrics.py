@@ -538,18 +538,23 @@ def plan_vs_real(pasos: list, minutos_z: dict, done_ratio: float = 0.7) -> list:
         hecho = sum(minutos_z.get(k, 0.0) for k in arriba)
         out.append({"zona": z, "plan_min": round(plan_acum, 1), "hecho_min": round(hecho, 1),
                     "pct": round(hecho / plan_acum * 100), "ok": hecho + 0.05 >= done_ratio * plan_acum})
+    if out and out[0]["zona"] in ("Z3", "Z4"):   # zona alta planeada: avisa si pasaste mucho por encima de ella
+        tope = out[0]
+        arriba = sum(minutos_z.get(k, 0.0) for k in ZONAS[ZONAS.index(tope["zona"]) + 1:])
+        tope["arriba_min"] = round(arriba, 1)
+        tope["mucho_arriba"] = arriba > max(2.0, 0.25 * tope["plan_min"])
     return out
 
 
 def run_check(activity: dict, session, config=None, minutos_z=None, suave: bool = False) -> dict:
     """¿Lo hice bien?: minutos sobre el techo de Z2 (Z3+Z4+Z5) vs la tolerancia, y el plan vs real por zona
     (si la corrida tiene sesión y minutos por zona; con `suave`, contra la versión suave)."""
-    zm = zone_minutes(activity)
+    zm = minutos_z if minutos_z is not None else zone_minutes(activity)
     sobre = round(zm["Z3"] + zm["Z4"] + zm["Z5"], 1)
     tolerancia = (config or {}).get("ceiling_tolerance_min", 2)
     if session and _tiene_opcionales(session.get("steps", [])):
         tolerancia += 2
-    if (session or {}).get("tipo") == "variada":   # su Z3 corto es parte del plan
+    if (session or {}).get("tipo") in ("variada", "calidad"):   # su Z3+ es parte del plan
         tolerancia += _min_z3_planeados(session.get("steps", []))
     es_5k = (session or {}).get("prueba") == "5k"
     if es_5k:   # 5 km a tope: pasarse de Z2 es la idea
