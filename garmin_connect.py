@@ -13,6 +13,7 @@ import requests
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent / "dashboard"))
+import metrics  # noqa: E402
 from ajustes import USER_DIR, cargar_config  # noqa: E402
 
 load_dotenv(USER_DIR / ".env")
@@ -89,6 +90,35 @@ def pull_activities(c: Client, since: date) -> list:
     return [a for a in activities if a["startTimeLocal"][:10] >= since.isoformat()]
 
 
+def pull_historial(c: Client) -> list:
+    """Todas las corridas de la cuenta (sin límite de fecha), solo con lo necesario para las mejores marcas.
+    Sin nombres, IDs ni GPS. Pagina la lista de actividades hasta el final."""
+    corridas, start, page = [], 0, 100
+    while True:
+        batch = c.get("/activitylist-service/activities/search/activities", {"start": start, "limit": page}) or []
+        for a in batch:
+            tipo = (a.get("activityType") or {}).get("typeKey")
+            if tipo not in RUN_TYPES:
+                continue
+            corridas.append({"startTimeLocal": a["startTimeLocal"], "activityType": {"typeKey": tipo},
+                             "distance": a.get("distance"), "duration": a.get("duration"),
+                             "eventType": {"typeKey": (a.get("eventType") or {}).get("typeKey")},
+                             **{k: v for k, v in a.items() if k.startswith("fastestSplit_")}})
+        if len(batch) < page:
+            return corridas
+        start += page
+
+
+def ritmos_km(c: Client, key: str) -> list:
+    """Segundos de cada kilómetro de una actividad, de la serie de distancia y tiempo (no se guarda GPS)."""
+    d = c.get(f"/activity-service/activity/{key}/details") or {}
+    idx = {x["key"]: x["metricsIndex"] for x in d.get("metricDescriptors") or []}
+    if "sumDistance" not in idx or "sumDuration" not in idx:
+        return []
+    return metrics.ritmos_por_km([(r["metrics"][idx["sumDistance"]], r["metrics"][idx["sumDuration"]])
+                                  for r in d.get("activityDetailMetrics") or []])
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text()) if path.exists() else {}
 
@@ -100,9 +130,10 @@ def tramos(summary: dict) -> list:
             for t in summary.get("splitSummaries") or []]
 
 
-def detalle_vigente(entrada: dict, es_corrida: bool) -> bool:
-    """Reusa la entrada guardada si tiene RPE y, en corridas, también sus tramos."""
-    return entrada.get("rpe") is not None and (not es_corrida or "splits" in entrada)
+def detalle_vigente(entrada: dict, es_corrida: bool, es_carrera: bool = False) -> bool:
+    """Reusa la entrada guardada si tiene RPE y, en corridas, también sus tramos (y en carreras, el ritmo por km)."""
+    return (entrada.get("rpe") is not None and (not es_corrida or "splits" in entrada)
+            and (not es_carrera or "ritmos_km" in entrada))
 
 
 def pull_activity_details(c: Client, activities: list) -> dict:
@@ -116,7 +147,8 @@ def pull_activity_details(c: Client, activities: list) -> dict:
         if tipo not in tipos:
             continue
         key, es_corrida = str(a["activityId"]), tipo in RUN_TYPES
-        if detalle_vigente(cache.get(key, {}), es_corrida):
+        carrera = es_corrida and metrics.es_carrera(a, CONFIG)
+        if detalle_vigente(cache.get(key, {}), es_corrida, carrera):
             out[key] = cache[key]
             continue
         detalle = c.get(f"/activity-service/activity/{key}") or {}
@@ -126,6 +158,8 @@ def pull_activity_details(c: Client, activities: list) -> dict:
                     "feel": s.get("directWorkoutFeel")}
         if es_corrida:
             out[key]["splits"] = tramos(detalle)
+        if carrera:
+            out[key]["ritmos_km"] = ritmos_km(c, key)
     path.write_text(json.dumps(out, indent=2))
     return out
 
@@ -140,6 +174,8 @@ def main() -> None:
 
     activities = pull_activities(c, today - timedelta(days=activity_days))
     details = pull_activity_details(c, activities)
+    historial = pull_historial(c)
+    (DATA_DIR / "historial_corridas.json").write_text(json.dumps(historial, indent=1))
     datasets = {
         "daily": pull_daily(c, today - timedelta(weeks=health_weeks), today),
         "activities": activities,
@@ -154,7 +190,7 @@ def main() -> None:
         "pulled_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }))
     print(f"OK: {len(datasets['activities'])} actividades, "
-          f"{len(details)} detalles, "
+          f"{len(details)} detalles, {len(historial)} corridas en el historial, "
           f"{len(datasets['daily']['daily_summaries'])} días de salud -> {DATA_DIR}")
 
 

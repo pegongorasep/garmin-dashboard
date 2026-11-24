@@ -556,3 +556,74 @@ def test_aviso_dia_de_pierna():
 def test_max_hr_progress_sin_correa_configurada():
     p = m.max_hr_progress([act(1, "2026-10-27", maxHR=180)], {**CFG, "fc_max_correa_desde": None})
     assert p["configurada"] is False and p["estimacion"] is None and p["sesiones"] == []
+
+
+# --- carreras y mejores marcas ---
+
+CFG_CARRERA = {"run_types": ["running", "treadmill_running"], "carreras": ["2026-11-21"]}
+
+
+def _corrida(nombre=None, fecha="2026-11-07", evento=None, tipo="running", **kw):
+    a = {"activityType": {"typeKey": tipo}, "startTimeLocal": f"{fecha} 07:00:00", "distance": 5000.0, "duration": 2400.0, **kw}
+    if nombre is not None:
+        a["activityName"] = nombre
+    if evento:
+        a["eventType"] = {"typeKey": evento}
+    return a
+
+
+def test_es_carrera_por_evento_nombre_y_fecha():
+    assert m.es_carrera(_corrida(evento="race"), CFG_CARRERA)
+    assert m.es_carrera(_corrida("Mérida CARRERA del Pavo"), CFG_CARRERA)
+    assert m.es_carrera(_corrida("Medio Maratón de Mérida"), CFG_CARRERA)
+    assert m.es_carrera(_corrida("Mi 10K"), CFG_CARRERA) and m.es_carrera(_corrida("Race day"), CFG_CARRERA)
+    assert m.es_carrera(_corrida("Corrida matutina", fecha="2026-11-21"), CFG_CARRERA)
+    assert m.es_carrera(_corrida("Maratón", tipo="treadmill_running"), CFG_CARRERA)
+
+
+def test_es_carrera_negativos():
+    assert not m.es_carrera(_corrida("Corrida matutina", evento="uncategorized"), CFG_CARRERA)
+    assert not m.es_carrera(_corrida("Trote de 15K pasos"), CFG_CARRERA) and not m.es_carrera(_corrida(), CFG_CARRERA)
+    assert not m.es_carrera(_corrida("Carrera", tipo="cycling"), CFG_CARRERA)
+    assert not m.es_carrera(_corrida("Embrace the pace"), CFG_CARRERA)
+
+
+def test_stats_carrera():
+    a = _corrida(distance=5049.8, duration=2457.3, averageHR=145.0, maxHR=176.0, fastestSplit_1000=409.3,
+                 hrTimeInZone_2=1700, hrTimeInZone_3=240, averageRunningCadenceInStepsPerMinute=151.2, elevationGain=8.4,
+                 activityId=7)
+    s = m.stats_carrera(a, {"7": {"ritmos_km": [501, 527]}}, CFG_CARRERA)
+    assert s["distancia_km"] == 5.05 and s["tiempo_s"] == 2457 and s["ritmo_s"] == 487
+    assert s["fc_prom"] == 145 and s["fc_max"] == 176 and s["zonas_min"]["Z2"] == 28.3 and s["zonas_min"]["Z3"] == 4
+    assert s["km_mas_rapido_s"] == 409 and s["cadencia"] == 151 and s["desnivel_m"] == 8 and s["km"] == [501, 527]
+    vacia = m.stats_carrera(_corrida(), {}, CFG_CARRERA)
+    assert vacia["km"] is None and vacia["zonas_min"] is None and vacia["fc_prom"] is None and vacia["km_mas_rapido_s"] is None
+
+
+def test_ritmos_por_km_interpola():
+    # 2.5 km a ritmo constante de 300 s/km, con puntos cada 500 m
+    pts = [(i * 500.0, i * 150.0) for i in range(6)]
+    assert m.ritmos_por_km(pts) == [300, 300]
+    assert m.ritmos_por_km([(0, 0)]) == [] and m.ritmos_por_km([(0, 0), (900, 300)]) == []
+
+
+def test_comparar_carrera():
+    ant = {"fecha": "2026-05-02", "distancia_km": 5.1, "tiempo_s": 2600, "ritmo_s": 510, "fc_prom": 150.0}
+    vieja = {"fecha": "2025-01-01", "distancia_km": 5.0, "tiempo_s": 2900, "ritmo_s": 580, "fc_prom": 155.0}
+    lejana = {"fecha": "2026-08-01", "distancia_km": 10.0, "tiempo_s": 5000, "ritmo_s": 500, "fc_prom": 160.0}
+    hoy = {"fecha": "2026-11-21", "distancia_km": 5.05, "tiempo_s": 2457, "ritmo_s": 487, "fc_prom": 145.0}
+    c = m.comparar_carrera(hoy, [vieja, ant, lejana])
+    assert c["fecha"] == "2026-05-02" and c["dif_tiempo_s"] == -143 and c["dif_ritmo_s"] == -23 and c["dif_fc"] == -5.0
+    assert m.comparar_carrera(hoy, [lejana]) is None and m.comparar_carrera(hoy, []) is None
+
+
+def test_mejores_marcas():
+    h = [_corrida(fecha="2026-06-13", fastestSplit_1000=393.0, fastestSplit_1609=649.0, distance=3000.0),
+         _corrida(fecha="2026-11-21", fastestSplit_1000=409.0, fastestSplit_5000=2422.0, distance=5050.0),
+         _corrida(fecha="2025-09-28", distance=5510.0, duration=2778.0)]
+    out = {x["clave"]: x for x in m.mejores_marcas(h, date(2026, 11, 24))}
+    assert list(out) == ["1k", "1mi", "5k", "larga"]
+    assert out["1k"]["tiempo_s"] == 393 and out["1k"]["fecha"] == "2026-06-13" and out["1k"]["nuevo"] is False
+    assert out["5k"]["tiempo_s"] == 2422 and out["5k"]["ritmo_s"] == 484 and out["5k"]["nuevo"] is True
+    assert out["larga"]["distancia_km"] == 5.51 and out["larga"]["tiempo_s"] == 2778 and out["larga"]["fecha"] == "2025-09-28"
+    assert m.mejores_marcas([]) == []

@@ -33,6 +33,7 @@ def load_data() -> dict:
         "details": load(d / "activity_details.json", {}),
         "hr_zones": load(d / "hr_zones.json", []),
         "meta": load(d / "meta.json", {}),
+        "historial": load(d / "historial_corridas.json"),
         "inbody": load(USER_DIR / "plan" / "inbody.json"),
     }
 
@@ -221,7 +222,7 @@ def last_run(data: dict, config: dict, plan: dict):
 def corrida_json(a: dict, plan_ses, data: dict, config: dict) -> dict:
     """Lo común de una corrida: minutos, km, caminadora, '¿lo hice bien?' y trote/caminata."""
     return {"minutos": r1(a["duration"] / 60), "km": r2((a.get("distance") or 0) / 1000),
-            "caminadora": a["activityType"]["typeKey"] == "treadmill_running",
+            "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": m.es_carrera(a, config),
             **m.run_check(a, plan_ses, config), "trote": rw_json(m.run_walk(a, data["details"]))}
 
 
@@ -267,7 +268,7 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
         a = max(del_dia, key=lambda a: a["duration"])
         e = next((e for e in sesiones if e["fecha"] == d.isoformat() and e["minutos"] == a["duration"] / 60), None)
         corrida = {"minutos": r1(a["duration"] / 60), "sesion_nombre": e["name"] if e else "Extra",
-                   "estado": e["estado"] if e else "extra"}
+                   "estado": e["estado"] if e else "extra", "carrera": m.es_carrera(a, config)}
     otras = otras_del_dia(d, data, config)
     planeado = None
     if d > hoy and not corrida and not otras:
@@ -345,11 +346,31 @@ def build_runs(data: dict, config: dict, plan: dict) -> list:
     acts = sorted((a for a in data["activities"] if m.classify(a, config) == "run"),
                   key=lambda a: a["startTimeLocal"])
     nombres = session_names(acts, data, config, plan)
-    return [{"fecha": f["fecha"], "sesion": nombres.get((f["fecha"], f["minutos"])),
+    return [{"fecha": f["fecha"], "sesion": nombres.get((f["fecha"], f["minutos"])), "carrera": m.es_carrera(a, config),
              "minutos": r1(f["minutos"]), "km": r2(f["km"]), "fc_prom": r1(f["fc_prom"]),
              "pct_z1z2": r1(f["pct_z1z2"]), "caminadora": f["caminadora"],
              **(rw_json(f) or dict.fromkeys(m.RW_CLAVES))}
-            for f in m.run_rows(acts, data["details"], config)]
+            for a, f in zip(acts, m.run_rows(acts, data["details"], config))]
+
+
+def historial_corridas(data: dict, config: dict) -> list:
+    """Corridas de toda la cuenta (historial_corridas.json); si aún no existe, las actividades que ya se bajaron."""
+    if data.get("historial") is not None:
+        return data["historial"]
+    return [a for a in data["activities"] if m.classify(a, config) == "run"]
+
+
+def build_carreras(hoy: date, data: dict, config: dict) -> list:
+    """Carreras (de la más nueva a la más vieja) con sus stats y la comparación con la anterior parecida.
+    Las de las actividades recientes traen todo; las más viejas, del historial, solo distancia, tiempo y ritmo."""
+    recientes = {a["startTimeLocal"]: a for a in data["activities"] if m.classify(a, config) == "run"}
+    todas = {**{h["startTimeLocal"]: h for h in historial_corridas(data, config)}, **recientes}
+    stats = [m.stats_carrera(a, data["details"], config) for _, a in sorted(todas.items()) if m.es_carrera(a, config)]
+    out = []
+    for i, s in enumerate(stats):
+        dias = (hoy - date.fromisoformat(s["fecha"])).days
+        out.append({**s, "comparacion": m.comparar_carrera(s, stats[:i]), "hace_dias": dias, "reciente": 0 <= dias <= 7})
+    return out[::-1]
 
 
 def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
@@ -541,6 +562,8 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                  "semanas": [convert_week(w, zonas) for w in plan["weeks"]],
                  "estado_sesiones": [{**e, "minutos": r1(e["minutos"]),
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
+        "carreras": build_carreras(hoy, data, config),
+        "mejores_marcas": m.mejores_marcas(historial_corridas(data, config), hoy),
         "progreso": {"resumen": {str(k): m.progress_summary(filas, hoy, k) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,

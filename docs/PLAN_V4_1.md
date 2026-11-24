@@ -225,8 +225,8 @@ Corrige lo que encuentres y actualiza la tabla de Seguimiento.
 
 | Fase | Estado |
 |---|---|
-| F1 Config, título y tema | ⬜ |
-| F2 Carreras y marcas | ⬜ |
+| F1 Config, título y tema | ✅ |
+| F2 Carreras y marcas | ✅ |
 | F3 Composición (Python) | ⬜ |
 | F4 Navegación 3 pestañas | ⬜ |
 | F5 Composición InBody (UI) | ⬜ |

@@ -296,7 +296,7 @@ def test_semana_con_cuatro_corridas_trae_un_extra():
     assert s["stats"]["corridas"] == 4 and s["estado"] == "actual"
     assert [e["estado"] for e in s["sesiones"]] == ["hecha", "hecha", "hecha"]
     assert len(s["extras"]) == 1 and s["extras"][0]["fecha"] == "2026-11-08" and s["extras"][0]["minutos"] == 30
-    assert s["dias"][6]["corrida"] == {"minutos": 30, "sesion_nombre": "Extra", "estado": "extra"}
+    assert s["dias"][6]["corrida"] == {"minutos": 30, "sesion_nombre": "Extra", "estado": "extra", "carrera": False}
     assert s["dias"][5]["corrida"]["sesion_nombre"] == "Larga"
 
 
@@ -466,3 +466,35 @@ def test_sesion_de_calidad_en_el_json():
     assert s["estructura"] == "10' Z2 · 4×5' threshold (2' suave) · 5' suave"
     assert s["objetivo"]["zona"] == "Z4" and s["objetivo"]["minutos"] == 20 and len(s["objetivo"]["lpm"]) == 2
     assert s["calidad_tipo"] == "threshold"
+
+
+def test_carreras_y_mejores_marcas_en_data_json():
+    data = fixture()
+    carrera = _act(50, "2026-11-01", "running", minutos=41, distance=5050.0, averageHR=145.0, maxHR=176.0,
+                   activityName="Carrera de la Calle Secreta", fastestSplit_1000=409.0, fastestSplit_5000=2422.0,
+                   hrTimeInZone_3=240)
+    anterior = _act(51, "2026-10-04", "running", minutos=44, distance=5100.0, averageHR=150.0, activityName="Carrera 5K",
+                    fastestSplit_1000=420.0)
+    data["activities"] = [*data["activities"], carrera, anterior]
+    data["details"] = {**data["details"], "50": {"rpe": 4, "ritmos_km": [500, 510, 490, 480, 420]}}
+    out = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    assert [c["fecha"] for c in out["carreras"]] == ["2026-11-01", "2026-10-04"]
+    c = out["carreras"][0]
+    assert c["distancia_km"] == 5.05 and c["tiempo_s"] == 2460 and c["fc_prom"] == 145 and c["fc_max"] == 176
+    assert c["km"] == [500, 510, 490, 480, 420] and c["reciente"] is True and c["hace_dias"] == 3
+    assert c["comparacion"]["fecha"] == "2026-10-04" and c["comparacion"]["dif_tiempo_s"] == -180
+    assert out["carreras"][1]["comparacion"] is None and out["carreras"][1]["km"] is None
+    filas = {r["fecha"]: r["carrera"] for r in out["progreso"]["corridas"]}
+    assert filas["2026-11-01"] is True and sum(filas.values()) == 2 and len(filas) > 2
+    claves = {mm["clave"] for mm in out["mejores_marcas"]}
+    assert {"1k", "5k", "larga"} <= claves and "10k" not in claves
+    assert json.dumps(out, ensure_ascii=False).count("Calle Secreta") == 0
+
+
+def test_historial_viejo_aporta_carrera_y_marcas():
+    data = fixture()
+    data["historial"] = [{"startTimeLocal": "2025-05-03 07:00:00", "activityType": {"typeKey": "running"}, "distance": 10100.0,
+                          "duration": 3300.0, "eventType": {"typeKey": "race"}, "fastestSplit_10000": 3290.0}]
+    out = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    assert [c["fecha"] for c in out["carreras"]] == ["2025-05-03"] and out["carreras"][0]["fc_prom"] is None
+    assert [mm["clave"] for mm in out["mejores_marcas"]] == ["10k", "larga"]
