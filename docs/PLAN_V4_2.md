@@ -214,3 +214,10 @@ Corrige lo que encuentres y actualiza la tabla.
 - Silueta de sesión con título (`titulo`, p. ej. "Continuo en Z2", de `tipos.titulo_de`); las rampas de subida y bajada
   van en color de Z0 (`--g0`) y la leyenda incluye Z0.
 - InBody: hojas completas del 25 may 2024 y del 8 oct 2026 en `plan/inbody.json`.
+
+## Ajuste v4.2.4 (2026-11-24, pedido de Pedro)
+
+- Hoy › Esta semana: barra 80/20 como la de Plan › Intensidad (26 px, corchetes, "meta 80 %") con zona y % dentro de
+  cada tramo; cada tramo esconde lo que no le cabe (container queries) y en pantalla chica va solo el % más una leyenda.
+- Plan › Cómo funciona: plegable, cerrada al abrir.
+- Cuerpo › Puntuación InBody: se quitó el "null" suelto; la medición del 25 oct 2025 sale como hueco (puntos null, "—").

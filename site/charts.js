@@ -276,13 +276,21 @@ function miniLinea(cfg) {
   const { ancho: W, valores, fechas, prime, clase = "s1" } = cfg;
   const fmtV = cfg.fmt || ((v) => fmt(v, 1));
   const pad = 30, mt = 22, mb = fechas ? 46 : 32, H = mt + 28 + mb;
-  const n = valores.length, lo = Math.min(...valores), hi = Math.max(...valores);
+  // un valor null es una medición sin ese dato: lleva su fecha y un "—", y la línea une los puntos que sí tienen
+  const hay = valores.filter((v) => v != null);
+  const n = valores.length, lo = Math.min(...hay), hi = Math.max(...hay);
   const x = (i) => (n === 1 ? W / 2 : pad + (i * (W - 2 * pad)) / (n - 1));
   const y = (v) => mt + (hi === lo ? 14 : ((hi - v) / (hi - lo)) * 28);
   const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Historial" });
   svg.append(sv("line", { class: "base", x1: 4, x2: W - 4, y1: H - mb + 6, y2: H - mb + 6 }));
-  if (n > 1) svg.append(sv("polyline", { class: `ln ${clase}`, points: valores.map((v, i) => `${x(i)},${y(v)}`).join(" ") }));
+  if (hay.length > 1) svg.append(sv("polyline", { class: `ln ${clase}`,
+    points: valores.map((v, i) => (v == null ? null : `${x(i)},${y(v)}`)).filter(Boolean).join(" ") }));
   valores.forEach((v, i) => {
+    if (v == null) {
+      svg.append(sv("text", { class: "eje", x: x(i), y: H - mb + 2, "text-anchor": "middle" }, "—"));
+      if (fechas) svg.append(sv("text", { class: "eje", x: x(i), y: H - 6, "text-anchor": "middle" }, fechas[i]));
+      return;
+    }
     if (i === prime) svg.append(sv("circle", { class: "anillo-prime", cx: x(i), cy: y(v), r: 8.5 }));
     svg.append(sv("circle", { class: `pt ${clase}`, cx: x(i), cy: y(v), r: 4 }, sv("title", {}, (cfg.textos || [])[i] || fmtV(v))));
     svg.append(sv("text", { class: "eje valor-fin", x: x(i), y: y(v) - (i === prime ? 13 : 9), "text-anchor": "middle" }, fmtV(v)));

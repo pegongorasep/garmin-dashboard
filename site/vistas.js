@@ -419,7 +419,7 @@ function historialInbody(c) {
 function puntuacionInbody(c) {
   const pts = c.puntuacion || [], v = c.visceral;
   if (!pts.length && !v) return null;
-  const ult = pts[pts.length - 1];
+  const ult = [...pts].reverse().find((p) => p.puntos != null);
   const bloqueP = ult ? h("div", { class: "ib-punt" }, h("h3", {}, "Puntuación InBody"),
     h("div", { class: "ib-punt-n" }, h("span", { class: "grande" }, fmt(ult.puntos, 0)), h("span", { class: "nota" }, "/100"),
       ult.delta != null ? h("span", { class: `delta${ult.delta > 0 ? " bien" : ""}` }, ` ${ult.delta > 0 ? "▲" : ult.delta < 0 ? "▼" : "="}${Math.abs(ult.delta)}`) : null),
@@ -439,9 +439,11 @@ function miniPuntuacion(pts) {
   PINTAR.cuerpo.push(() => {
     const ancho = caja.clientWidth;
     if (!ancho) return;
-    caja.replaceChildren(miniLinea({ ancho, valores: pts.map((p) => p.puntos), clase: "s1", prime: null, fmt: (v) => fmt(v, 0),
-      fechas: pts.map((p) => fechaMes(p.fecha)), etiqueta: "Historial de la puntuación InBody" }),
-    pts.length === 1 ? h("p", { class: "nota" }, "Se llena con tus próximas mediciones.") : null);
+    const graf = miniLinea({ ancho, valores: pts.map((p) => p.puntos), clase: "s1", prime: null, fmt: (v) => fmt(v, 0),
+      fechas: pts.map((p) => fechaMes(p.fecha)), etiqueta: "Historial de la puntuación InBody" });
+    const con = pts.filter((p) => p.puntos != null).length;
+    caja.replaceChildren(graf, ...(con === 1 ? [h("p", { class: "nota" }, "Se llena con tus próximas mediciones.")]
+      : con < pts.length ? [h("p", { class: "nota" }, "— = esa medición no tiene la hoja con puntuación.")] : []));
   });
   return caja;
 }
@@ -547,7 +549,7 @@ function tarjetaFcMax(d) {
 function tarjetaComoFunciona(d) {
   const u = (d.detalles || {}).umbrales || {};
   const li = (...t) => h("li", {}, ...t);
-  return h("div", { class: "card" }, h("h2", {}, "Cómo funciona"),
+  return h("details", { class: "card plegable" }, h("summary", {}, h("h2", {}, "Cómo funciona")),
     h("p", {}, "Cada mañana se revisan 4 señales; el semáforo decide la sesión de hoy."),
     h("ul", { class: "reglas" },
       li(h("strong", {}, "HRV: "), "fuera si anoche quedó por debajo de tu rango base. Si el reloj la marca “baja”, el semáforo va directo a rojo."),

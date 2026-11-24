@@ -743,11 +743,15 @@ def composicion(inbody):
            "visceral_rango": rango,
            "historial": [{"fecha": x["fecha"], "peso_kg": x["peso_kg"], "mme_kg": x["mme_kg"], "pgc": x["pgc"],
                           "es_prime": x["fecha"] == prime["fecha"]} for x in meds]}
-    puntos = [x for x in meds if x.get("puntuacion") is not None]
-    if puntos:
-        out["puntuacion"] = [{"fecha": x["fecha"], "puntos": x["puntuacion"],
-                              "delta": None if i == 0 else x["puntuacion"] - puntos[i - 1]["puntuacion"]}
-                             for i, x in enumerate(puntos)]
+    # puntuación: todas las mediciones desde la primera con puntos; las que no la tienen van con puntos None (hueco)
+    con = [i for i, x in enumerate(meds) if x.get("puntuacion") is not None]
+    if con:
+        out["puntuacion"], previo = [], None
+        for x in meds[con[0]:]:
+            p = x.get("puntuacion")
+            out["puntuacion"].append({"fecha": x["fecha"], "puntos": p,
+                                      "delta": p - previo if p is not None and previo is not None else None})
+            previo = p if p is not None else previo
     visc = next((x for x in reversed(meds) if x.get("grasa_visceral") is not None), None)
     if visc:
         out["visceral"] = {"fecha": visc["fecha"], "valor": visc["grasa_visceral"], "rango": rango,

@@ -557,12 +557,14 @@ function bloqueCarga(s) {
 }
 
 /** Barra de minutos por zona (Z1–Z5) con la marca de 80 %. Compacta: más delgada, sin brackets ni textos de la marca. */
-function barraZonas(dist, compacta = false) {
+/** Barra de minutos por zona. `compacta`: delgada y sin corchetes. `etiquetas`: zona y % dentro de cada tramo (en
+ *  pantalla chica solo el %, y abajo una leyenda); cada tramo esconde lo que no le cabe (container queries en styles.css). */
+function barraZonas(dist, compacta = false, etiquetas = false) {
   const z = ["Z1", "Z2", "Z3", "Z4", "Z5"];
   const total = z.reduce((a, k) => a + dist.minutos[k], 0);
   if (total <= 0) return null;
   const pct = (k) => (dist.minutos[k] / total) * 100;
-  const wrap = h("div", { class: `zbar-wrap${compacta ? " compacta" : ""}` });
+  const wrap = h("div", { class: `zbar-wrap${compacta ? " compacta" : ""}${etiquetas ? " con-etiquetas" : ""}` });
   const barra = h("div", { class: "zbar", role: "img", "aria-label": `Bajo ${fmt(dist.bajo, 0)} %, limbo ${fmt(dist.limbo, 0)} %, alto ${fmt(dist.alto, 0)} %` });
   const tip = h("div", { class: "tip", hidden: true, role: "status" });
   const mostrar = (seg, k) => {
@@ -576,6 +578,8 @@ function barraZonas(dist, compacta = false) {
     const seg = h("div", { style: `flex:${Math.max(dist.minutos[k], 0)} 1 0;background:var(--${k.toLowerCase()})`, tabindex: "0",
       "aria-label": `${k}: ${fmt(dist.minutos[k])} minutos, ${fmt(pct(k), 0)} %` });
     if (dist.minutos[k] <= 0) seg.style.display = "none";
+    const p = pct(k);
+    if (etiquetas) seg.append(h("span", { class: "zb-t", "aria-hidden": "true" }, h("span", { class: "zb-z" }, k), h("span", {}, `${fmt(p, 0)} %`)));
     seg.addEventListener("pointerenter", () => mostrar(seg, k));
     seg.addEventListener("pointerdown", () => mostrar(seg, k));
     seg.addEventListener("focus", () => mostrar(seg, k));
@@ -592,14 +596,19 @@ function barraZonas(dist, compacta = false) {
       })));
   }
   wrap.append(h("div", { class: "meta80", "aria-hidden": "true" }, compacta ? null : h("span", {}, "meta 80 %")));
+  if (etiquetas) {
+    wrap.append(h("div", { class: "leyenda zb-ley" }, z.filter((k) => dist.minutos[k] > 0).map((k) =>
+      h("span", {}, h("i", { class: "sw", style: `background:var(--${k.toLowerCase()})`, "aria-hidden": "true" }), k))));
+  }
   return wrap;
 }
 
-/** 80/20 compacto de una semana de Hoy: barra delgada y "Bajo 72 % · meta 80 %". Sin minutos en zonas, no se pinta. */
+/** 80/20 de una semana de Hoy, como la de Plan › Intensidad: zona y % dentro de la barra y "Bajo 72 % · meta 80 %".
+ *  Sin minutos en zonas, no se pinta. */
 function intensidadCompacta(s) {
   const dist = s.intensidad;
   if (!dist || !dist.minutos) return null;
-  const barra = barraZonas(dist, true);
+  const barra = barraZonas(dist, false, true);
   if (!barra) return null;
   return h("div", { class: "int-sem" }, barra, h("p", { class: "nota" }, `Bajo ${fmt(dist.bajo, 0)} % · meta 80 %`));
 }
