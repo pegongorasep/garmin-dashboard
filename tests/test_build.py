@@ -359,7 +359,8 @@ def test_composicion_real():
 CONFIG_CORREDOR = {**cargar_config(ROOT / "tests" / "fixtures" / "config_corredor.yaml"), "plan_start": "2026-10-26"}
 
 
-def test_build_con_tres_categorias():
+def test_build_con_tres_categorias(monkeypatch):
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
     data = fixture()
     data["activities"] = [*data["activities"], {**data["activities"][0], "activityId": 7, "activityUUID": "u7",
                                                  "startTimeLocal": "2026-11-02 07:00:00",
