@@ -202,7 +202,7 @@ def test_sin_sesion_no_hay_data_y_el_sitio_no_sirve_data_json_del_disco(web_ctx)
     cl = web_ctx.cliente()
     assert cl.get("/data.json").status_code == 401
     assert "Entrar" in cl.get("/").text
-    for nombre in ("app.js", "vistas.js", "charts.js", "iconos.js", "styles.css"):
+    for nombre in ("app.js", "vistas.js", "charts.js", "iconos.js", "styles.css", "tokens.css", "fuentes/Lexend-latin.woff2"):
         assert cl.get("/" + nombre).status_code == 200
     for nombre in ("index.html", "../config.yaml", "plan.json", ".env"):
         assert cl.get("/" + nombre).status_code == 404

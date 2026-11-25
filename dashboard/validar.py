@@ -13,7 +13,9 @@ CLAVES = {"generado", "datos_al", "zonas", "rhr_promedio_7d", "aviso_zonas", "ho
           "semanas_hoy", "semana_hoy_idx", "plan", "progreso", "composicion", "detalles", "ui",
           "carreras", "mejores_marcas", "tipos", "ayuda",
           "avisos"}   # avisos: solo la web, [{id, texto, fecha, url relativa}]
-ICONOS = {"correr", "medalla", "mancuerna", "rayo", "bici", "nadar", "caminar", "yoga", "punto"}   # site/iconos.js
+# Los de site/iconos.js: los del sistema de diseño (diseno/iconos) más los de siempre por si falta la carpeta.
+ICONOS = {"correr", "medalla", "mancuerna", "rayo", "bici", "nadar", "caminar", "yoga", "punto"} | {
+    f.stem for f in (ROOT / "diseno" / "iconos").glob("*.svg")}
 OBLIGATORIAS = {"generado", "zonas", "hoy", "plan", "progreso", "detalles", "ui", "semanas_hoy"}
 # Nada de esto puede aparecer como clave en ningún nivel: IDs de Garmin, nombres, GPS, tramos crudos.
 PROHIBIDAS = {"activityId", "activityName", "ownerDisplayName", "ownerFullName", "userProfilePk", "userProfilePK",

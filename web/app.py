@@ -21,7 +21,8 @@ log = logging.getLogger("web")
 SITE = ROOT / "site"
 # Archivos del sitio que se sirven tal cual. `data.json` NO está aquí a propósito: sale de /data.json, por usuario.
 ESTATICOS_SITE = {"app.js": "text/javascript", "charts.js": "text/javascript", "iconos.js": "text/javascript",
-                  "vistas.js": "text/javascript", "styles.css": "text/css"}
+                  "vistas.js": "text/javascript", "styles.css": "text/css", "tokens.css": "text/css"}
+FUENTES = {"Lexend-latin.woff2"}
 PIE_SITIO = ('<footer class="pie-web"><p>Esto no es consejo médico: si algo duele, para. · Datos de Garmin · '
              '<a href="/privacidad">Aviso de privacidad</a></p></footer>')
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
@@ -203,6 +204,13 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     @app.get("/a/{atleta_id}/data.json")
     def data_atleta(atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
         return data_de(db, usuario, atleta_id)
+
+    @app.get("/fuentes/{archivo}")
+    def fuente(archivo: str):
+        if archivo not in FUENTES:
+            raise HTTPException(404)
+        return FileResponse(SITE / "fuentes" / archivo, media_type="font/woff2",
+                            headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
     @app.get("/{archivo}")   # siempre al final: el resto del sitio, solo la lista de arriba
     def sitio(archivo: str):

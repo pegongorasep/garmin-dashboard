@@ -1,0 +1,163 @@
+/* Generado por scripts/tokens.py desde diseno/tokens.json (Ahí la Llevas v2). No lo edites a mano. */
+@font-face {
+  font-family: Lexend;
+  src: url("fuentes/Lexend-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+:root {
+  color-scheme: dark;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --radius-card: 20px;
+  --radius-inner: 16px;
+  --radius-control: 12px;
+  --radius-bar: 13px;
+  --radius-pill: 999px;
+  --font-sans: Lexend, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --page: #111a24;
+  --surface: #1a2532;
+  --ink: #e9eef4;
+  --ink-2: #c0cbd8;
+  --muted: #95a4b5;
+  --grid: #2a3746;
+  --ring: rgba(180, 200, 230, 0.10);
+  --accent: #52cfc2;
+  --on-accent: #111a24;
+  --accent-bg: rgba(82, 207, 194, 0.18);
+  --focus: #52cfc2;
+  --z1: #3987e5;
+  --z2: #199e70;
+  --z3: #9085e9;
+  --z4: #e5632f;
+  --z5: #c0417f;
+  --g0: #67655f;
+  --g1: #96948e;
+  --g2: #4590e8;
+  --g3: #2bb89b;
+  --g4: #ee9a2c;
+  --g5: #ee5a54;
+  --serie-1: #3987e5;
+  --serie-2: #d95926;
+  --caminata: #8a8882;
+  --axis: #445468;
+  --sin-dato: #222f3e;
+  --cat-1: #3987e5;
+  --cat-2: #199e70;
+  --cat-3: #9085e9;
+  --cat-4: #c98500;
+  --ok: #0ca30c;
+  --warn: #fab219;
+  --bad: #d03b3b;
+  --on-ok: #ffffff;
+  --on-warn: #0b0b0b;
+  --on-bad: #ffffff;
+  --ok-bg: #12301a;
+  --warn-bg: #33290c;
+  --bad-bg: #3a1717;
+  --bien: #4cc47a;
+  --mal: #f0b43c;
+  --shadow-card: 0 0 0 1px rgba(180, 200, 230, 0.10);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --page: #eef3f7;
+    --surface: #ffffff;
+    --ink: #1d2a3a;
+    --ink-2: #44546a;
+    --muted: #5e6e80;
+    --grid: #d8e1ea;
+    --ring: rgba(29, 42, 58, 0.07);
+    --accent: #177e75;
+    --on-accent: #ffffff;
+    --accent-bg: rgba(23, 126, 117, 0.12);
+    --focus: #177e75;
+    --z1: #2a78d6;
+    --z2: #1baf7a;
+    --z3: #6250d6;
+    --z4: #eb6834;
+    --z5: #a8326e;
+    --g0: #b5b3ad;
+    --g1: #7d7b75;
+    --g2: #2a78d6;
+    --g3: #139c82;
+    --g4: #d9780f;
+    --g5: #c42f34;
+    --serie-1: #2a78d6;
+    --serie-2: #eb6834;
+    --caminata: #8f8d86;
+    --axis: #b4c1ce;
+    --sin-dato: #e6ecf2;
+    --cat-1: #2a78d6;
+    --cat-2: #1baf7a;
+    --cat-3: #6250d6;
+    --cat-4: #eda100;
+    --ok-bg: #e6f5e6;
+    --warn-bg: #fdf3d9;
+    --bad-bg: #fae3e3;
+    --bien: #0b7a35;
+    --mal: #8a5300;
+    --shadow-card: 0 1px 2px rgba(29, 42, 58, 0.06), 0 0 0 1px rgba(29, 42, 58, 0.07);
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #eef3f7;
+  --surface: #ffffff;
+  --ink: #1d2a3a;
+  --ink-2: #44546a;
+  --muted: #5e6e80;
+  --grid: #d8e1ea;
+  --ring: rgba(29, 42, 58, 0.07);
+  --accent: #177e75;
+  --on-accent: #ffffff;
+  --accent-bg: rgba(23, 126, 117, 0.12);
+  --focus: #177e75;
+  --z1: #2a78d6;
+  --z2: #1baf7a;
+  --z3: #6250d6;
+  --z4: #eb6834;
+  --z5: #a8326e;
+  --g0: #b5b3ad;
+  --g1: #7d7b75;
+  --g2: #2a78d6;
+  --g3: #139c82;
+  --g4: #d9780f;
+  --g5: #c42f34;
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --caminata: #8f8d86;
+  --axis: #b4c1ce;
+  --sin-dato: #e6ecf2;
+  --cat-1: #2a78d6;
+  --cat-2: #1baf7a;
+  --cat-3: #6250d6;
+  --cat-4: #eda100;
+  --ok-bg: #e6f5e6;
+  --warn-bg: #fdf3d9;
+  --bad-bg: #fae3e3;
+  --bien: #0b7a35;
+  --mal: #8a5300;
+  --shadow-card: 0 1px 2px rgba(29, 42, 58, 0.06), 0 0 0 1px rgba(29, 42, 58, 0.07);
+}
+.t-marca { font: 600 19px/1 var(--font-sans); letter-spacing: -0.01em; }
+.t-titular { font: 600 17px/22px var(--font-sans); }
+.t-titulo-tarjeta { font: 600 14px/18px var(--font-sans); }
+.t-numero-xl { font: 600 34px/38px var(--font-sans); }
+.t-numero { font: 600 22px/26px var(--font-sans); }
+.t-numero-anillo { font: 600 15px/18px var(--font-sans); }
+.t-cuerpo { font: 400 14px/20px var(--font-sans); }
+.t-cuerpo-fuerte { font: 600 13.5px/19px var(--font-sans); }
+.t-secundario { font: 400 12.5px/17px var(--font-sans); }
+.t-etiqueta { font: 600 11px/14px var(--font-sans); }
+.t-chip { font: 700 10.5px/12px var(--font-sans); letter-spacing: 0.06em; }
