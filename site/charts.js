@@ -133,14 +133,14 @@ function lineChart(cfg) {
   const valoresValidos = validos.flat();
   const prev = valoresValidos.length > 1 ? serie[valoresValidos[valoresValidos.length - 2]].y : null;
   if (ult !== undefined && cfg.nombre) etiquetaDirecta(cfg.nombre, ult, serie[ult].y, prev);
-  if (ult !== undefined && !cfg.puntos) svg.append(sv("circle", { class: `pt fin ${cl}`, cx: x(t[ult]), cy: y(serie[ult].y), r: 4.5 }));
+  if (ult !== undefined && !cfg.puntos) svg.append(sv("circle", { class: `pt ${cl}`, cx: x(t[ult]), cy: y(serie[ult].y), r: 4.5 }));
   if (ult !== undefined && cfg.etiquetaFinal) {
     etiquetaDirecta(cfg.etiquetaFinal, ult, serie[ult].y, prev);
   }
 
   // cruz + tooltip
   const cruz = sv("line", { class: "cruz", y1: mt, y2: H - mb, visibility: "hidden" });
-  const punto = sv("circle", { class: `pt fin ${cl}`, r: 4.5, visibility: "hidden" });
+  const punto = sv("circle", { class: `pt ${cl}`, r: 4.5, visibility: "hidden" });
   const capa = sv("rect", { class: "capa", x: ml, y: 0, width: W - ml - mr, height: H, tabindex: 0,
     "aria-label": "Recorre los puntos con las flechas" });
   svg.append(cruz, punto, capa);

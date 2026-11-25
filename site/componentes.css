@@ -2,6 +2,16 @@
    Solo variables de tokens.css; los únicos valores crudos permitidos están en tests/test_componentes.py. */
 
 
+/* Base: reinicio mínimo para que la app y el catálogo coincidan (el sistema no trae márgenes de p/ul/h*) */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 14px/20px var(--font-sans); }
+h1, h2, h3, p, ul, ol, figure { margin: 0; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.tabs svg { box-sizing: content-box; }   /* su ancho de 20 px suma el relleno del círculo */
+
 /* Logo */
 .marca { display: inline-flex; align-items: center; gap: 8px; }
 .marca svg { width: 30px; height: 30px; flex: none; }
@@ -407,3 +417,4 @@
 .slt-ln.tinta { stroke: var(--ink-2); }
 .error-carga .ec-t, .error-carga .ec-x, .confirmacion p, .confirmacion li, .vacio .vc-t, .vacio .vc-x { overflow-wrap: anywhere; }
 .botones, .bc-acc { min-width: 0; max-width: 100%; }
+.graf-w { width: 100%; min-width: 0; }

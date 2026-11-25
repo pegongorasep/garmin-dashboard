@@ -25,8 +25,8 @@ ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "ch
                   "iconos.js": "text/javascript", "componentes.js": "text/javascript", "vistas.js": "text/javascript",
                   "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css"}
 FUENTES = {"Lexend-latin.woff2"}
-PIE_SITIO = ('<footer class="pie-web"><p>Esto no es consejo médico: si algo duele, para. · Datos de Garmin · '
-             '<a href="/privacidad">Aviso de privacidad</a></p></footer>')
+PIE_SITIO = ('<footer class="pie"><p>Esto no es consejo médico: si algo duele, para.</p>'
+             '<p>Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p></footer>')
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 

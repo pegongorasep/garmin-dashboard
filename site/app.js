@@ -32,14 +32,9 @@ const ESTADO_SEMAFORO = {
   sin_datos: { clase: "nd", icono: "—", titulo: "Sin datos", texto: "Recuperación: sin datos de anoche" },
 };
 
-const badge = (clase, icono, etiqueta) =>
-  h("span", { class: `badge ${clase}`, role: "img", "aria-label": etiqueta }, icono);
+const badge = (clase, simbolo, etiqueta) => DS.insignia(clase, simbolo, etiqueta);
 
-function badgeSenal(estado) {
-  if (estado === "ok") return badge("ok", "✓", "en rango");
-  if (estado === "fuera") return badge("warn", "!", "fuera de rango");
-  return badge("nd", "—", "sin dato");
-}
+const estadoSenal = (estado) => (estado === "ok" ? { clase: "ok", simbolo: "✓" } : estado === "fuera" ? { clase: "warn", simbolo: "!" } : { clase: "nd", simbolo: "—" });
 
 // --- vista Hoy ---
 
@@ -75,14 +70,7 @@ const mmss = (seg) => {
 
 function barraRW(tr) {
   const total = tr.trote_min + tr.camina_min;
-  if (total <= 0) return null;
-  const seg = (min, cls) => (min > 0 ? h("div", { class: cls, style: `flex:${min} 1 0` }) : null);
-  return h("div", {},
-    h("div", { class: "barra-rw", role: "img", "aria-label": `Trote ${fmt(tr.trote_min, 0)} min, caminata ${fmt(tr.camina_min, 0)} min` },
-      seg(tr.trote_min, "trote"), seg(tr.camina_min, "camina")),
-    h("div", { class: "leyenda" },
-      h("span", {}, h("i", { class: "sw s1", "aria-hidden": "true" }), `Trote ${fmt(tr.trote_min, 0)}'`),
-      h("span", {}, h("i", { class: "sw walk", "aria-hidden": "true" }), `Caminata ${fmt(tr.camina_min, 0)}'`)));
+  return total <= 0 ? null : DS.barraTroteCaminata({ trote: Math.round(tr.trote_min), caminata: Math.round(tr.camina_min) });
 }
 
 function detalleTrote(u) {
@@ -94,24 +82,25 @@ function detalleTrote(u) {
   const ritmo = tr.ritmo_trote_s
     ? `Ritmo trotando ${mmss(tr.ritmo_trote_s)} /km${tr.fc_trote ? ` a ${fmt(tr.fc_trote, 0)} lpm` : ""}${u.caminadora ? " · caminadora" : ""}`
     : null;
-  return [barraRW(tr), h("p", { class: "nota", style: "margin-top:8px" }, patron), ritmo ? h("p", {}, ritmo) : null].filter(Boolean);
+  return [barraRW(tr), h("p", { class: "nota" }, patron), ritmo ? h("p", {}, ritmo) : null].filter(Boolean);
 }
 
 // --- Sesiones del plan ---
 
+/** Estado de una sesión del plan como {clase, simbolo, texto, etiqueta} para DS.filaSesion. */
 function estadoSesion(est) {
   if (!est) return null;
-  if (est.estado === "pendiente") return h("span", { class: "estado" }, badge("nd", "—", "pendiente"), "Pendiente");
-  if (est.estado === "incompleta") return h("span", { class: "estado" }, badge("warn", "!", "incompleta"), "Incompleta");
-  if (est.ajustada) return h("span", { class: "estado" }, badge("warn", "!", "hecha y ajustada"), "Hecha · ajustada");
-  return h("span", { class: "estado" }, badge("ok", "✓", "hecha"), "Hecha");
+  if (est.estado === "pendiente") return { clase: "nd", simbolo: "—", texto: "Pendiente", etiqueta: "pendiente" };
+  if (est.estado === "incompleta") return { clase: "warn", simbolo: "!", texto: "Incompleta", etiqueta: "incompleta" };
+  if (est.ajustada) return { clase: "warn", simbolo: "!", texto: "Hecha · ajustada", etiqueta: "hecha y ajustada" };
+  return { clase: "ok", simbolo: "✓", texto: "Hecha", etiqueta: "hecha" };
 }
 
 /** Sesión de calidad: estructura legible y zona objetivo con sus lpm. */
 function bloqueCalidad(s) {
   if (!s || !s.objetivo) return null;
   const o = s.objetivo;
-  return h("div", { class: "calidad" }, h("p", { class: "estructura" }, s.estructura),
+  return h("div", { class: "calidad" }, h("p", { class: "b-t" }, s.estructura),
     h("p", { class: "nota" }, `Zona objetivo: ${o.zona}${o.lpm ? ` (${o.lpm[0]}–${o.lpm[1]} lpm)` : ""} · ${o.minutos} min de trabajo`));
 }
 
@@ -119,7 +108,7 @@ function bloqueCalidad(s) {
 function bloqueSilueta(ses) {
   if (!ses || !ses.silueta || !ses.silueta.length) return null;
   return h("div", { class: "bloque-sil" }, ses.titulo ? h("p", { class: "titulo-sil" }, ses.titulo) : null,
-    siluetaSesion(ses.silueta, 40, true, ses.rachas, ses), leyendaRachas(ses.rachas));
+    DS.silueta(ses.silueta, { alto: 40, conTip: true, rachas: ses.rachas, con_calentamiento: ses.con_calentamiento, con_enfriamiento: ses.con_enfriamiento }), leyendaRachas(ses.rachas));
 }
 
 /** Leyenda de una silueta compacta (más de una zona: arriba solo van los minutos): color, zona y sus lpm. */
@@ -127,9 +116,8 @@ function leyendaRachas(rachas) {
   if (!rachas || rachas.length <= 1) return null;
   const lpm = {};
   for (const r of rachas) lpm[r.zona] = lpm[r.zona] || r.lpm;
-  return h("div", { class: "leyenda ley-sil" }, Object.keys(lpm).sort().map((z) =>
-    h("span", {}, h("i", { class: `g${z.slice(1)}`, "aria-hidden": "true" }), h("b", {}, z),
-      lpm[z] ? h("small", {}, `${lpm[z][0]}–${lpm[z][1]}`) : null)));
+  return DS.leyenda(Object.keys(lpm).sort().map((z) =>
+    [`var(--g${z.slice(1)})`, [h("b", {}, z), lpm[z] ? h("small", {}, ` ${lpm[z][0]}–${lpm[z][1]}`) : null]]));
 }
 
 /** Lo que la silueta no dice. Sesión sencilla (hasta 3 rachas, sin repeticiones): solo las notas de sus pasos
@@ -139,32 +127,29 @@ function detallePasos(ses) {
   if ((ses.rachas || []).length <= 3 && !pasos.some((p) => p.kind === "repeat")) {
     const notas = pasos.filter((p) => p.note && p.note !== "opcional" && p.note !== ETIQUETA_PASO[p.kind]).map((p) => {
       const tipo = ETIQUETA_PASO[p.kind] || p.kind;
-      return h("p", { class: "nota nota-paso" }, `${tipo[0].toUpperCase()}${tipo.slice(1)}${p.optional ? " (opcional)" : ""}: ${p.note}`);
+      return h("p", { class: "nota" }, `${tipo[0].toUpperCase()}${tipo.slice(1)}${p.optional ? " (opcional)" : ""}: ${p.note}`);
     });
-    return notas.length ? h("div", {}, ...notas) : null;
+    return notas.length ? h("div", { class: "notas-paso" }, ...notas) : null;
   }
-  return h("details", {}, h("summary", {}, "Ver pasos"), h("ul", { class: "pasos" }, pasos.map(pasoLi)));
+  return DS.desplegable({ titulo: "Ver pasos", liga: true }, h("ul", { class: "pasos-ses" }, pasos.map(pasoLi)));
 }
 
 /** Cuerpo desplegable de una sesión del plan (la silueta ya se ve en la fila): pasos y versión suave. */
 function cuerpoPlan(s) {
-  return [bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, detallePasos(s), versionSuave(s)];
+  return [bloqueCalidad(s), s.nota ? h("p", { class: "nota" }, s.nota) : null, detallePasos(s), versionSuave(s)].filter(Boolean);
 }
 
 function versionSuave(s) {
-  return s.easy ? h("details", {}, h("summary", {}, `Versión suave (${s.easy.minutes} min)`),
-    bloqueSilueta(s.easy), detallePasos(s.easy)) : null;
+  return s.easy ? DS.desplegable({ titulo: `Versión suave (${s.easy.minutes} min)`, liga: true }, bloqueSilueta(s.easy), detallePasos(s.easy)) : null;
 }
 
-/** Silueta a color dentro de la fila cerrada (sin globito: tocarla abre la fila). */
+/** Silueta a color dentro de la fila cerrada (sin globito: tocarla abre la fila), con su leyenda si es compacta. */
 const silFila = (s) => (s && s.silueta && s.silueta.length
-  ? h("div", { class: "sil-fila" }, s.titulo ? h("p", { class: "titulo-sil" }, s.titulo) : null, siluetaSesion(s.silueta, 36, false, s.rachas, s), leyendaRachas(s.rachas)) : null);
+  ? h("span", { class: "sil-fila" }, DS.silueta(s.silueta, { alto: 36, conTip: false, rachas: s.rachas, con_calentamiento: s.con_calentamiento, con_enfriamiento: s.con_enfriamiento }), leyendaRachas(s.rachas)) : null);
 
-/** Fila compacta de una sesión: nombre, minutos, estado y su silueta; al abrirla, pasos y versión suave. */
-function filaSesion(s, est) {
-  return h("details", { class: "ses" },
-    h("summary", {}, h("span", { class: "n" }, s.name), h("span", { class: "m" }, `${s.minutes} min`), estadoSesion(est), silFila(s)),
-    ...cuerpoPlan(s));
+/** Fila compacta de una sesión del plan: nombre, minutos, estado y su silueta; al abrirla, pasos y versión suave. */
+function filaSesion(s, est, extra = {}) {
+  return DS.filaSesion({ nombre: s.name, minutos: s.minutes, estado: estadoSesion(est), silueta: silFila(s), titulo: s.titulo, cuerpo: cuerpoPlan(s), ...extra });
 }
 
 const nombreSesion = (estado, id) => ((estado || []).find((e) => e.id === id) || {}).name;
@@ -185,15 +170,11 @@ function textoBanner(d) {
 function bannerHoy(d) {
   const sem = d.hoy.semaforo, est = ESTADO_SEMAFORO[sem.color] || ESTADO_SEMAFORO.sin_datos;
   const texto = textoBanner(d);
-  return h("div", { class: "banner ancha" },
-    texto ? h("p", { class: "banner-txt" }, texto) : null,
-    h("details", { class: "recup" },
-      h("summary", { class: "chip-recup" }, badge(est.clase, est.icono, est.titulo),
-        `Recuperación: ${sem.color === "sin_datos" ? "sin datos" : est.titulo.toLowerCase()}`, h("span", { class: "nota" }, " · ver señales")),
-      h("ul", { class: "senales" }, (d.hoy["señales"] || []).map((x) =>
-        h("li", {}, badgeSenal(x.estado),
-          h("div", {}, h("div", { class: "nombre" }, nombreSenal(x.id)), h("div", { class: "nota" }, x.texto))))),
-      d.hoy.ayer ? h("p", { class: "nota ayer" }, `Ayer: ${d.hoy.ayer.categoria}${d.hoy.ayer.esfuerzo != null ? `, esfuerzo ${fmt(d.hoy.ayer.esfuerzo, 1)}` : ""}`) : null));
+  const ayer = d.hoy.ayer ? `Ayer: ${d.hoy.ayer.categoria}${d.hoy.ayer.esfuerzo != null ? `, esfuerzo ${fmt(d.hoy.ayer.esfuerzo, 1)}` : ""}` : null;
+  return DS.tarjeta({ clase: "ancha banner" },
+    texto ? h("p", { class: "b-t" }, texto) : null,
+    DS.desplegable({ titulo: [badge(est.clase, est.icono, est.titulo), `Recuperación: ${sem.color === "sin_datos" ? "sin datos" : est.titulo.toLowerCase()}`, h("span", { class: "mu" }, " · ver señales")] },
+      DS.senales({ senales: (d.hoy["señales"] || []).map((x) => ({ ...estadoSenal(x.estado), nombre: nombreSenal(x.id), texto: x.texto })), nota: ayer })));
 }
 
 const PRUEBA_NOMBRE = { fc_fija: "30 min a FC fija", trote_continuo: "trote continuo", "5k": "5 km" };
@@ -208,17 +189,17 @@ function tarjetaPlanTerminado(d) {
   const t = d.hoy.tarjeta;
   if (t.tipo !== "plan_terminado") return null;
   const p = t.prueba;
-  const c = h("div", { class: "card ancha plan-fin" }, h("h2", {}, "Plan terminado"));
-  if (!p) c.append(h("p", { class: "estado" }, badge("nd", "—", "falta"), "Falta la prueba: no hay una corrida de la última semana que cuente como prueba."));
+  const c = DS.tarjeta({ titulo: "Plan terminado", clase: "ancha plan-fin" });
+  if (!p) c.append(DS.estado("nd", "—", "Falta la prueba: no hay una corrida de la última semana que cuente como prueba.", "falta"));
   else {
-    c.append(h("p", { class: "grande" }, p.valor == null ? `Prueba de ${PRUEBA_NOMBRE[p.tipo]}: sin resultado` : valorPrueba(p.tipo, p.valor)),
+    c.append(h("p", { class: "big" }, p.valor == null ? `Prueba de ${PRUEBA_NOMBRE[p.tipo]}: sin resultado` : valorPrueba(p.tipo, p.valor)),
       h("p", { class: "nota" }, `Prueba de ${PRUEBA_NOMBRE[p.tipo]} · ${fechaCorta(p.fecha)}${p.km ? ` · ${fmt(p.km, 2)} km` : ""}`));
     if (p.base && p.dif != null) {
       const donde = p.base.fuente === "prueba" ? `tu prueba del ${fechaCorta(p.base.fecha)}` : p.base.fuente === "mejor_5k" ? `tu mejor 5 km (${fechaCorta(p.base.fecha)})` : "el inicio del plan (semanas 1–2)";
       const mag = p.tipo === "trote_continuo" ? `${fmt(Math.abs(p.dif), 0)} puntos de trote` : p.tipo === "5k" ? tiempoLargo(Math.abs(p.dif)) : `${fmt(Math.abs(p.dif), 0)} s/km`;
       const mejor = p.tipo === "trote_continuo" ? "más trote" : "más rápido", peor = p.tipo === "trote_continuo" ? "menos trote" : "más lento";
-      c.append(h("p", { class: "estado" }, p.mejor == null ? badge("nd", "=", "igual") : badge(p.mejor ? "ok" : "warn", p.mejor ? "✓" : "!", p.mejor ? "mejor" : "peor"),
-        p.mejor == null ? `Igual que ${donde} (${valorPrueba(p.tipo, p.base.valor)})` : `${mag} ${p.mejor ? mejor : peor} que ${donde} (${valorPrueba(p.tipo, p.base.valor)})`));
+      c.append(p.mejor == null ? DS.estado("nd", "=", `Igual que ${donde} (${valorPrueba(p.tipo, p.base.valor)})`, "igual")
+        : DS.estado(p.mejor ? "ok" : "warn", p.mejor ? "✓" : "!", `${mag} ${p.mejor ? mejor : peor} que ${donde} (${valorPrueba(p.tipo, p.base.valor)})`, p.mejor ? "mejor" : "peor"));
     } else if (!p.base) c.append(h("p", { class: "nota" }, "Sin base para comparar: la próxima prueba se comparará con esta."));
   }
   c.append(h("p", {}, t.siguiente || "Corre /ajustar para el siguiente bloque",
@@ -238,14 +219,14 @@ function resumenSemanaPasada(d) {
   const carga = r.carga_anterior ? `Carga ${fmt(r.carga, 0)} (${r.carga >= r.carga_anterior ? "▲" : "▼"} ${Math.abs(Math.round(((r.carga - r.carga_anterior) / r.carga_anterior) * 100))} % vs ${fmt(r.carga_anterior, 0)})` : `Carga ${fmt(r.carga, 0)}`;
   const ritmo = r.ritmo_ref_s != null ? `Ritmo a ${(d.progreso || {}).fc_ref} lpm: ${mmss(r.ritmo_ref_s)} /km${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s) ? `, ${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s)}` : ""}` : null;
   const dist = r.intensidad || {};
-  return h("details", { class: "banner ancha semana-pasada" },
-    h("summary", {}, h("span", { class: "sp-linea" }, `Semana pasada: ${linea.join(" · ")}`),
-      sug ? h("span", { class: "sp-sug" }, badge(sug.tipo === "sigue" ? "ok" : "warn", sug.tipo === "sigue" ? "✓" : "!", "sugerencia"), sug.texto) : null),
-    h("div", { class: "sp-cuerpo" },
-      h("p", {}, `${fmt(r.km)} km${r.pct_trote != null ? ` · ${fmt(r.pct_trote, 0)} % trote` : ""}`),
-      dist.bajo != null ? h("p", {}, `80/20: bajo ${fmt(dist.bajo, 0)} % · limbo ${fmt(dist.limbo, 0)} % · alto ${fmt(dist.alto, 0)} %`) : null,
-      h("p", {}, carga), ritmo ? h("p", {}, ritmo) : null,
-      ...(r.plan_vs_real || []).map((x) => h("div", {}, h("p", { class: "nota" }, x.sesion), lineasPlanVsReal(x.filas)))));
+  return DS.tarjeta({ clase: "ancha banner semana-pasada" }, DS.desplegable({
+    titulo: h("span", { class: "sp-titulo" }, h("span", { class: "sp-linea" }, `Semana pasada: ${linea.join(" · ")}`),
+      sug ? h("span", { class: "estado" }, badge(sug.tipo === "sigue" ? "ok" : "warn", sug.tipo === "sigue" ? "✓" : "!", "sugerencia"), sug.texto) : null) },
+  h("div", { class: "sp-cuerpo" },
+    h("p", {}, `${fmt(r.km)} km${r.pct_trote != null ? ` · ${fmt(r.pct_trote, 0)} % trote` : ""}`),
+    dist.bajo != null ? h("p", {}, `80/20: bajo ${fmt(dist.bajo, 0)} % · limbo ${fmt(dist.limbo, 0)} % · alto ${fmt(dist.alto, 0)} %`) : null,
+    h("p", {}, carga), ritmo ? h("p", {}, ritmo) : null,
+    ...(r.plan_vs_real || []).map((x) => h("div", {}, h("p", { class: "nota" }, x.sesion), lineasPlanVsReal(x.filas))))));
 }
 
 // --- semanas navegables: selector, esta semana, calendario ---
@@ -280,13 +261,8 @@ function selectorSemana(d) {
   const mover = (delta) => () => { semIdx = Math.min(Math.max(semIdx + delta, 0), sems.length - 1); pintarSemana(d); };
   const hoyIdx = d.semana_hoy_idx ?? 0;
   return h("div", { class: "selector ancha" },
-    h("div", { class: "selector-fila" },
-      h("button", { type: "button", "aria-label": "Semana anterior", disabled: semIdx <= 0, onclick: mover(-1) }, "‹"),
-      h("div", { class: "selector-txt", "aria-live": "polite" }, etiquetaSelector(d, s)),
-      h("button", { type: "button", "aria-label": "Semana siguiente", disabled: semIdx >= sems.length - 1, onclick: mover(1) }, "›")),
-    semIdx !== hoyIdx
-      ? h("button", { type: "button", class: "volver-sem", onclick: () => { semIdx = hoyIdx; pintarSemana(d); } }, "Volver a esta semana")
-      : null);
+    DS.selectorSemana({ texto: etiquetaSelector(d, s), sinAnterior: semIdx <= 0, sinSiguiente: semIdx >= sems.length - 1, onAnterior: mover(-1), onSiguiente: mover(1) }),
+    semIdx !== hoyIdx ? DS.boton("Volver a esta semana", { variante: "texto", chico: true, onclick: () => { semIdx = hoyIdx; pintarSemana(d); } }) : null);
 }
 
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
@@ -310,30 +286,21 @@ function comparacion(s) {
 
 const flecha = (delta, texto) => `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${texto}`;
 
-/** Barra de progreso: minutos hechos / minutos del plan; el relleno se corta en 100 %. */
-function barraProgreso(min, plan) {
-  const pct = Math.round((min / plan) * 100);
-  return h("div", {},
-    h("div", { class: "prog fina", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": Math.min(pct, 100),
-      "aria-label": `${fmt(min, 0)} de ${fmt(plan, 0)} minutos` }, h("div", { style: `width:${Math.min(pct, 100)}%` })),
-    h("p", { class: "prog-txt" }, `${fmt(min, 0)} / ${fmt(plan, 0)} min · ${pct} %`));
-}
-
 function tarjetaEstaSemana(d, s) {
   const st = s.stats || {};
-  const c = h("div", { class: "card ancha" }, h("h2", {}, tituloSemana(d, s)));
   const partes = st.corridas
     ? [plural(st.corridas, "corrida", "corridas"), st.minutos != null ? `${fmt(st.minutos, 0)} min` : null,
       st.km != null ? `${fmt(st.km)} km` : null, st.pct_trote != null ? `${fmt(st.pct_trote, 0)} % trote` : null].filter(Boolean)
     : [s.estado === "futura" ? "Aún no empieza" : "Sin corridas"];
-  c.append(h("div", { class: "grande" }, partes.join(" · ")), ...[intensidadCompacta(s)].filter(Boolean));
+  const c = DS.tarjeta({ titulo: tituloSemana(d, s), clase: "ancha" }, h("p", { class: "titular" }, partes.join(" · ")), intensidadCompacta(s));
   const p = s.plan;
   if (p) {
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, `Plan: ${p.total} sesiones · ${fmt(p.plan_min, 0)} min`));
     else {
-      c.append(h("p", { class: "nota", style: "margin-top:8px" },
-        `Plan: ${p.hechas} de ${p.total} sesiones${p.incompletas ? ` · ${plural(p.incompletas, "incompleta", "incompletas")}` : ""}`),
-        barraProgreso(st.minutos || 0, p.plan_min));
+      const min = st.minutos || 0, pct = Math.round((min / p.plan_min) * 100);
+      c.append(DS.anilloPlan({ pct, titulo: `${fmt(min, 0)} / ${fmt(p.plan_min, 0)} min · ${pct} %`,
+        texto: `Plan: ${p.hechas} de ${p.total} sesiones${p.incompletas ? ` · ${plural(p.incompletas, "incompleta", "incompletas")}` : ""}`,
+        etiqueta: `${fmt(min, 0)} de ${fmt(p.plan_min, 0)} minutos` }));
     }
   }
   const comp = comparacion(s);
@@ -356,26 +323,23 @@ function diaCalendario(x, hoyIso) {
   const varias = ui().categorias.length > 1;   // con una sola categoría no hace falta distinguir por color
   const marcaCat = (cat, cfTxt) => {
     const c = categoria(cat);
-    return h("span", { class: `cf${varias ? ` cat ${c.clase}` : ""}`, title: c.nombre }, h("b", {}, icono(c.icono, 18)), cfTxt ? h("span", {}, cfTxt) : null);
+    return h("span", { class: `cf${varias ? ` cat ${c.clase}` : ""}`, title: c.nombre }, DS.ico(c.icono), cfTxt ? h("span", {}, cfTxt) : null);
   };
-  let marca = null;
+  let marca = [];
   if (x.corrida) {
-    const cls = x.corrida.estado === "hecha" ? "hecha" : x.corrida.estado === "incompleta" ? "incompleta" : "extra";
-    marca = [h("span", { class: `circ ${cls}${x.corrida.carrera ? " carrera" : ""}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
-      h("span", { class: "sn" }, icono(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr"), 14), h("span", {}, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
+    const cls = x.corrida.estado === "hecha" ? "" : x.corrida.estado === "incompleta" ? " incompleta" : " extra";
+    marca = [h("span", { class: `circ${cls}${x.corrida.carrera ? " carrera" : ""}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
+      h("span", { class: "sn" }, DS.ico(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr")), h("span", {}, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, "carrera") : null];
   }
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.esfuerzo != null ? fmt(cf.esfuerzo, 1) : null));
-  return h("div", { class: `dia${x.fecha === hoyIso ? " es-hoy" : ""}`, role: "group", title: diaTexto(x), "aria-label": diaTexto(x) },
-    h("span", { class: "dn" }, x.dia_semana), h("span", { class: "df" }, parseFecha(x.fecha).getDate()),
-    marca, cfMarca);
+  return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), hijos: [...marca, ...cfMarca] });
 }
 
 function calendarioSemana(d, s) {
   const hoyIso = (d.generado || "").slice(0, 10);
-  return h("div", { class: "cal" },
-    h("div", { class: "dias7" }, (s.dias || []).map((x) => diaCalendario(x, hoyIso))),
-    h("p", { class: "nota leyenda-cal" }, "número = esfuerzo calculado con tu FC (1–10)"));
+  return h("div", { class: "cal-caja" }, DS.calendario((s.dias || []).map((x) => diaCalendario(x, hoyIso))),
+    h("p", { class: "nota" }, "número = esfuerzo calculado con tu FC (1–10)"));
 }
 
 /** Plan vs real por zona: "Z3 o más · 2 de 4 min · 50 %" con ✓/⚠; con una sola zona planeada, "Z2 · 19 de 20 min ✓". */
@@ -385,78 +349,64 @@ function lineasPlanVsReal(filas) {
   return h("div", { class: "pvr" }, filas.map((f) => {
     const nombre = solo ? f.zona : f.zona === "Z5" ? "Z5" : `${f.zona} o más`;
     const txt = solo ? `${nombre} · ${fmt(f.hecho_min, 0)} de ${fmt(f.plan_min, 0)} min` : `${nombre} · ${fmt(f.hecho_min, 0)} de ${fmt(f.plan_min, 0)} min · ${f.pct} %`;
-    return f.ok ? h("p", { class: "estado" }, badge("ok", "✓", "cumplido"), `${txt} ✓`)
-      : h("p", { class: "estado" }, badge("warn", "!", "por debajo del plan"), `${txt} ⚠`);
+    return f.ok ? DS.estado("ok", "✓", `${txt} ✓`, "cumplido") : DS.estado("warn", "!", `${txt} ⚠`, "por debajo del plan");
   }), filas[0].mucho_arriba
-    ? h("p", { class: "estado" }, badge("warn", "!", "muy por encima"), `${fmt(filas[0].arriba_min, 0)}' por encima de ${filas[0].zona} ⚠`)
+    ? DS.estado("warn", "!", `${fmt(filas[0].arriba_min, 0)}' por encima de ${filas[0].zona} ⚠`, "muy por encima")
     : null);
 }
 
 function lineaTecho(c) {
   const txt = `${fmt(c.min_sobre_techo)}' sobre el techo (tolerancia ${fmt(c.tolerancia_min, 0)}')`;
-  return c.techo_ok
-    ? h("p", { class: "estado" }, badge("ok", "✓", "dentro del techo"), txt)
-    : h("p", { class: "estado" }, badge("warn", "!", "sobre el techo"), txt);
+  return c.techo_ok ? DS.estado("ok", "✓", txt, "dentro del techo") : DS.estado("warn", "!", txt, "sobre el techo");
 }
 
 function lineaDeriva(c) {
   const txt = `Deriva ${fmt(c.deriva_pct, 1)} %`;
-  return c.deriva_ok
-    ? h("p", { class: "estado" }, badge("ok", "✓", "deriva baja"), `${txt} ✓`)
-    : h("p", { class: "estado" }, badge("warn", "!", "deriva alta"), `${txt} (menos de 5 % es buena base)`);
+  return c.deriva_ok ? DS.estado("ok", "✓", `${txt} ✓`, "deriva baja") : DS.estado("warn", "!", `${txt} (menos de 5 % es buena base)`, "deriva alta");
 }
 
-/** Fila de una corrida hecha: cabecera (estado + título), datos, techo y detalle de trote/caminata. */
-function filaCorrida(cabeza, titulo, c) {
+/** Fila de una corrida hecha o extra: estado + título, y al abrirla (ya viene abierta) datos, techo y detalle de trote/caminata. */
+function filaCorrida(estado, titulo, c, extra = {}) {
   c = c || {};
   const datos = [c.minutos != null ? `${fmt(c.minutos, 0)}'` : null, c.km != null ? `${fmt(c.km)} km` : null,
     c.pct_trote != null ? `${fmt(c.pct_trote, 0)} % trote` : null,
     c.ritmo_trote_s ? `${mmss(c.ritmo_trote_s)} /km${c.caminadora ? " (caminadora)" : ""}` : null, textoEsfuerzo(c) || null].filter(Boolean);
-  return h("div", { class: "corrida" },
-    h("div", { class: "cab-c" }, cabeza, h("span", { class: "n" }, titulo), c.carrera ? h("span", { class: "etiqueta-carrera" }, "Carrera") : null),
-    datos.length ? h("p", { class: "datos" }, datos.join(" · ")) : null,
+  return DS.filaSesion({ nombre: titulo, estado, abierta: true, ...extra, cuerpo: [
+    c.carrera ? DS.chip("CARRERA", "neutro") : null,
+    datos.length ? h("p", {}, datos.join(" · ")) : null,
     c.plan_vs_real ? lineasPlanVsReal(c.plan_vs_real) : null,
     c.techo_ok !== undefined ? lineaTecho(c) : null,
     c.deriva_pct != null ? lineaDeriva(c) : null,
-    h("details", {}, h("summary", {}, "Ver detalle"),
-      ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora }),
-      c.ritmo_ref_s ? h("p", {}, `Ritmo a ${(datos.progreso || {}).fc_ref} lpm: ${mmss(c.ritmo_ref_s)} /km`) : null));
+    DS.desplegable({ titulo: "Ver detalle", liga: true }, ...detalleTrote({ trote: c.trote_min != null ? c : null, caminadora: c.caminadora }),
+      c.ritmo_ref_s ? h("p", {}, `Ritmo a ${(datos.progreso || {}).fc_ref} lpm: ${mmss(c.ritmo_ref_s)} /km`) : null)].filter(Boolean) });
 }
 
 const filaHecha = (e) => filaCorrida(estadoSesion(e), `${e.name} · ${e.fecha ? fechaCorta(e.fecha) : ""}`, e.corrida);
 
 function filaExtra(x) {
-  return filaCorrida(h("span", { class: "estado" }, badge("nd", "+", "extra")), `Extra · ${fechaCorta(x.fecha)}`, x);
+  return filaCorrida({ clase: "nd", simbolo: "+", texto: "Extra", etiqueta: "extra" }, `Extra · ${fechaCorta(x.fecha)}`, x);
 }
 
 function filaNoHecha(e, s) {
-  return h("div", { class: "corrida no-hecha" },
-    h("div", { class: "cab-c" }, h("span", { class: "estado" }, badge("nd", "✗", "no hecha"), "No hecha"),
-      h("span", { class: "n" }, `${e.name}${s ? ` · ${s.minutes} min` : ""}`)));
+  return DS.filaSesion({ nombre: e.name, sub: s ? `${s.minutes} min` : null, estado: { clase: "nd", simbolo: "✗", texto: "No hecha", etiqueta: "no hecha" } });
 }
 
 function filaHoy(e, s, t) {
   const suave = t.version === "suave";
   const ses = s && suave ? s.easy : s;
-  const c = h("div", { class: "corrida hoy" },
-    h("div", { class: "cab-c" }, h("span", { class: "chip-hoy" }, "HOY"),
-      h("span", { class: "n" }, t.version === "descanso" ? e.name : `${e.name}${ses ? ` · ${ses.minutes} min` : ""}${suave ? " (versión suave)" : ""}`)));
-  if (t.motivo) c.append(h("p", { class: "nota" }, `Por: ${t.motivo}`));
-  if (t.version === "descanso") {
-    c.append(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
-  } else if (ses) {
-    c.append(...[bloqueSilueta(ses), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
-  }
-  if (t.aviso) c.append(h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, t.aviso)));
-  return c;
+  const cuerpo = [];
+  if (t.motivo) cuerpo.push(h("p", { class: "nota" }, `Por: ${t.motivo}`));
+  if (t.version === "descanso") cuerpo.push(h("p", {}, "Hoy descanso o caminata ligera de 20–30' en Z1"));
+  else if (ses) cuerpo.push(...[bloqueSilueta(ses), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
+  if (t.aviso) cuerpo.push(DS.aviso({ clase: "warn", simbolo: "!", texto: t.aviso }));
+  return DS.filaSesion({ nombre: t.version === "descanso" ? e.name : `${e.name}${suave ? " (versión suave)" : ""}`, minutos: t.version === "descanso" || !ses ? null : ses.minutes,
+    hoy: true, abierta: true, cuerpo });
 }
 
 function filaPendiente(e, s) {
   const larga = e.tipo === "larga";
-  return h("details", { class: "ses corrida" },
-    h("summary", {}, h("span", { class: "n" }, e.name),
-      h("span", { class: "m" }, `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}`), silFila(s)),
-    ...(s ? cuerpoPlan(s) : []));
+  return DS.filaSesion({ nombre: e.name, sub: `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}` || null,
+    silueta: silFila(s), titulo: s && s.titulo, cuerpo: s ? cuerpoPlan(s) : [] });
 }
 
 function tarjetaTusCorridas(d, s, ancha) {
@@ -470,8 +420,8 @@ function tarjetaTusCorridas(d, s, ancha) {
     return filaPendiente(e, ses);
   });
   filas.push(...(s.extras || []).map(filaExtra));
-  return h("div", { class: `card${ancha ? " ancha" : ""}` }, h("h2", {}, "Tus corridas"),
-    ...(filas.length ? filas : [h("p", { class: "vacio" }, "Sin corridas esta semana")]));
+  return DS.tarjeta({ titulo: "Tus corridas", clase: `filas${ancha ? " ancha" : ""}` },
+    ...(filas.length ? filas : [DS.estadoVacio({ icono: null, titulo: "Sin corridas esta semana" })]));
 }
 
 // --- cómo vas mejorando ---
@@ -481,17 +431,17 @@ const mesAnio = (iso) => { const f = parseFecha(iso); return `${f.getDate()} ${M
 /** Cambio respecto a la medición anterior: ▼/▲ con 1 decimal; verde si es bueno, tinta neutra si no (sin rojo). */
 function deltaInbody(delta, buenoSiBaja) {
   if (delta === null || delta === undefined) return null;
-  if (delta === 0) return h("span", { class: "delta" }, "= 0.0");
+  if (delta === 0) return h("span", { class: "delta neutro" }, "= 0.0");
   const bueno = buenoSiBaja ? delta < 0 : delta > 0;
-  return h("span", { class: `delta${bueno ? " bien" : ""}` }, `${delta > 0 ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}`);
+  return h("span", { class: `delta${bueno ? "" : " neutro"}` }, `${delta > 0 ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}`);
 }
 
 /** Leyenda con los íconos de entreno que aparecen arriba de las barras (`semanas[].entrenos`), detrás de `base`. */
 function leyendaIconos(semanas, base) {
   const vistos = new Map();
   for (const e of semanas.flatMap((s) => s.entrenos || [])) vistos.set(e.icono, e.nombre);
-  const ley = leyenda(base);
-  ley.append(...[...vistos].map(([ic, nombre]) => h("span", {}, icono(ic, 14), nombre)));
+  const ley = DS.leyenda(base);
+  ley.append(...[...vistos].map(([ic, nombre]) => h("span", {}, DS.ico(ic), nombre)));
   return ley;
 }
 
@@ -500,18 +450,16 @@ function leyendaIconos(semanas, base) {
 function tarjetaMejora(d) {
   const mj = (d.progreso || {}).mejora;
   if (!mj || !mj.ritmo) return null;
-  const cuadro = (titulo, valor, sub, clase) => h("div", { class: "num" }, h("div", { class: "nota" }, titulo),
-    h("div", { class: "num-v" }, valor ?? "—"), h("div", { class: `num-d${clase ? " " + clase : ""}` }, sub));
+  const clase = (v) => (v == null ? "neutro" : v ? "" : "mal");   // "" = verde (mejora); "mal" = ámbar; "neutro" = tinta
+  const cuadro = (titulo, valor, sub, bueno, extra) => DS.tile({ k: titulo, valor: valor ?? "—", deltas: [[sub, clase(bueno)], ...(extra ? [[extra, "neutro"]] : [])] });
   const r = mj.ritmo, v = mj.deriva, p = mj.prueba;
   const cuadros = [cuadro(`Ritmo a ${r.fc_ref} lpm`, r.valor,
     r.valor == null ? r.motivo : r.cambio ? `${r.cambio}${r.mejora == null ? "" : r.mejora ? " · mejor" : " · más lento"}` : r.motivo,
-    r.mejora == null ? "" : r.mejora ? "bien" : "mal")];
-  if (r.valor != null && r.cambio) cuadros[0].append(h("div", { class: "num-d" }, r.motivo));
+    r.mejora, r.valor != null && r.cambio ? r.motivo : null)];
   cuadros.push(cuadro("Deriva cardiaca", v.valor,
-    v.valor == null ? v.motivo : `${v.ok ? "✓ cumple" : "⚠ pasó de 5 %"} · ${fechaCorta(v.fecha)}`, v.valor == null ? "" : v.ok ? "bien" : "mal"));
-  if (p) cuadros.push(cuadro(`Prueba · ${p.nombre}`, p.valor, p.cambio, p.mejor == null ? "" : p.mejor ? "bien" : "mal"));
-  return h("div", { class: "card ancha" }, h("h2", {}, "Cómo vas mejorando"),
-    h("div", { class: "numeros mejora", role: "group", "aria-label": "Cómo vas mejorando" }, cuadros));
+    v.valor == null ? v.motivo : `${v.ok ? "✓ cumple" : "⚠ pasó de 5 %"} · ${fechaCorta(v.fecha)}`, v.valor == null ? null : v.ok));
+  if (p) cuadros.push(cuadro(`Prueba · ${p.nombre}`, p.valor, p.cambio, p.mejor));
+  return DS.tarjeta({ titulo: "Cómo vas mejorando", clase: "ancha" }, DS.tiles({ etiqueta: "Cómo vas mejorando", clase: "mejora" }, ...cuadros));
 }
 
 /** " · 2× Corrida · 1× CrossFit" a partir de los entrenos de la semana (para el globito y lectores de pantalla). */
@@ -537,12 +485,12 @@ const tiempoLargo = (seg) => {
 };
 
 function tarjetaCarreraHoy(c) {
-  const num = (valor, etiqueta) => h("div", { class: "num4" }, h("div", { class: "num4-v" }, valor), h("div", { class: "nota" }, etiqueta));
-  return h("div", { class: "card carrera-hoy" }, h("h2", { class: "con-ico" }, icono(c.icono || "medalla", 18), `Tu carrera del ${fechaLarga(c.fecha)}`),
+  const num = (valor, etiqueta) => h("div", {}, h("div", { class: "big" }, valor), h("div", { class: "k" }, etiqueta));
+  return DS.tarjeta({ titulo: [DS.ico(c.icono || "medalla"), `Tu carrera del ${fechaLarga(c.fecha)}`], clase: "carrera carrera-hoy" },
     h("div", { class: "nums4" },
       num(`${fmt(c.distancia_km, 2)} km`, "Distancia"), num(tiempoLargo(c.tiempo_s), "Tiempo"),
       num(c.ritmo_s ? `${mmss(c.ritmo_s)} /km` : "—", "Ritmo"), num(c.fc_prom != null ? `${fmt(c.fc_prom, 0)} lpm` : "—", "FC promedio")),
-    h("a", { class: "ver-progreso", href: "#progreso", onclick: () => { abrirCarrera = true; } }, "Ver todo en Progreso › Carreras"));
+    h("a", { class: "liga", href: "#progreso", onclick: () => { abrirCarrera = true; } }, "Ver todo en Progreso › Carreras"));
 }
 
 function renderHoy(d) {
@@ -551,11 +499,10 @@ function renderHoy(d) {
   if (semIdx === null) semIdx = Math.min(Math.max((d.semana_hoy_idx ?? 0) + semInicial, 0), Math.max(sems.length - 1, 0));
   $("vista-hoy").replaceChildren(...[
     d.hoy.semaforo.repetir_semana
-      ? h("div", { class: "aviso bad ancha" }, badge("bad", "✕", "aviso"),
-        h("div", {}, h("strong", {}, "Repetir la semana. "), "Dos días seguidos en rojo: repite la semana anterior del plan."))
+      ? DS.aviso({ clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, "Repetir la semana. "), "Dos días seguidos en rojo: repite la semana anterior del plan."] })
       : null,
     bannerHoy(d), tarjetaPlanTerminado(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
-    d.aviso_zonas ? h("div", { class: "aviso warn ancha" }, badge("warn", "!", "aviso"), h("div", {}, d.aviso_zonas)) : null].filter(Boolean));
+    d.aviso_zonas ? DS.aviso({ clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
   pintarSemana(d);
 }
 function bloqueCarga(s) {
@@ -565,58 +512,11 @@ function bloqueCarga(s) {
     const pct = Math.round(((a - b) / b) * 100);
     delta = `${pct >= 0 ? "▲" : "▼"} ${Math.abs(pct)} % vs semana anterior (${fmt(b, 0)})`;
   }
-  return h("div", { class: "card" }, h("h2", {}, "Carga semanal (esfuerzo × min)"),
-    h("div", { class: "grande" }, fmt(a, 0)),
+  return DS.tarjeta({ titulo: "Carga semanal (esfuerzo × min)" },
+    h("p", { class: "big" }, fmt(a, 0)),
     h("p", { class: "nota" }, delta),
     ...ui().categorias.map((c) => h("div", { class: "kv" }, h("span", {}, c.nombre), h("span", {}, fmt(s.carga[c.id], 0)))),
     h("div", { class: "kv" }, h("span", {}, "Corridas"), h("span", {}, fmt(s.carga.run, 0))));
-}
-
-/** Barra de minutos por zona (Z1–Z5) con la marca de 80 %. Compacta: más delgada, sin brackets ni textos de la marca. */
-/** Barra de minutos por zona. `compacta`: delgada y sin corchetes. `etiquetas`: zona y % dentro de cada tramo (en
- *  pantalla chica solo el %, y abajo una leyenda); cada tramo esconde lo que no le cabe (container queries en styles.css). */
-function barraZonas(dist, compacta = false, etiquetas = false) {
-  const z = ["Z1", "Z2", "Z3", "Z4", "Z5"];
-  const total = z.reduce((a, k) => a + dist.minutos[k], 0);
-  if (total <= 0) return null;
-  const pct = (k) => (dist.minutos[k] / total) * 100;
-  const wrap = h("div", { class: `zbar-wrap${compacta ? " compacta" : ""}${etiquetas ? " con-etiquetas" : ""}` });
-  const barra = h("div", { class: "zbar", role: "img", "aria-label": `Bajo ${fmt(dist.bajo, 0)} %, limbo ${fmt(dist.limbo, 0)} %, alto ${fmt(dist.alto, 0)} %` });
-  const tip = h("div", { class: "tip", hidden: true, role: "status" });
-  const mostrar = (seg, k) => {
-    tip.textContent = `${k} · ${fmt(dist.minutos[k])} min · ${fmt(pct(k), 0)} %`;
-    tip.hidden = false;
-    const r = seg.getBoundingClientRect(), w = wrap.getBoundingClientRect();
-    const x = r.left - w.left + r.width / 2;
-    tip.style.left = `${Math.min(Math.max(x, 60), w.width - 60)}px`;
-  };
-  for (const k of z) {
-    const seg = h("div", { style: `flex:${Math.max(dist.minutos[k], 0)} 1 0;background:var(--${k.toLowerCase()})`, tabindex: "0",
-      "aria-label": `${k}: ${fmt(dist.minutos[k])} minutos, ${fmt(pct(k), 0)} %` });
-    if (dist.minutos[k] <= 0) seg.style.display = "none";
-    const p = pct(k);
-    if (etiquetas) seg.append(h("span", { class: "zb-t", "aria-hidden": "true" }, h("span", { class: "zb-z" }, k), h("span", {}, `${fmt(p, 0)} %`)));
-    seg.addEventListener("pointerenter", () => mostrar(seg, k));
-    seg.addEventListener("pointerdown", () => mostrar(seg, k));
-    seg.addEventListener("focus", () => mostrar(seg, k));
-    seg.addEventListener("pointerleave", () => (tip.hidden = true));
-    seg.addEventListener("blur", () => (tip.hidden = true));
-    barra.append(seg);
-  }
-  wrap.append(tip, barra);
-  if (!compacta) {
-    wrap.append(h("div", { class: "brackets", "aria-hidden": "true" },
-      [["Z1", "Z2"], ["Z3"], ["Z4", "Z5"]].map((g) => {
-        const m = g.reduce((a, k) => a + dist.minutos[k], 0);
-        return h("div", { style: `flex:${m} 1 0;${m <= 0 ? "display:none" : ""}` });
-      })));
-  }
-  wrap.append(h("div", { class: "meta80", "aria-hidden": "true" }, compacta ? null : h("span", {}, "meta 80 %")));
-  if (etiquetas) {
-    wrap.append(h("div", { class: "leyenda zb-ley" }, z.filter((k) => dist.minutos[k] > 0).map((k) =>
-      h("span", {}, h("i", { class: "sw", style: `background:var(--${k.toLowerCase()})`, "aria-hidden": "true" }), k))));
-  }
-  return wrap;
 }
 
 /** 80/20 de una semana de Hoy, como la de Plan › Intensidad: zona y % dentro de la barra y "Bajo 72 % · meta 80 %".
@@ -624,7 +524,7 @@ function barraZonas(dist, compacta = false, etiquetas = false) {
 function intensidadCompacta(s) {
   const dist = s.intensidad;
   if (!dist || !dist.minutos) return null;
-  const barra = barraZonas(dist, false, true);
+  const barra = DS.barraZonas(dist, { etiquetas: true });
   if (!barra) return null;
   return h("div", { class: "int-sem" }, barra, h("p", { class: "nota" }, `Bajo ${fmt(dist.bajo, 0)} % · meta 80 %`));
 }
@@ -632,15 +532,13 @@ function intensidadCompacta(s) {
 function zonaBar(dist) {
   const z = ["Z1", "Z2", "Z3", "Z4", "Z5"];
   const total = z.reduce((a, k) => a + dist.minutos[k], 0);
-  const raiz = h("div", { class: "card" });
-  raiz.append(h("h2", {}, "Intensidad de la semana", h("span", { class: "etiqueta" }, "referencia")));
+  const raiz = DS.tarjeta({ titulo: ["Intensidad de la semana", DS.chip("REFERENCIA", "neutro")] });
   if (total <= 0) {
-    raiz.append(h("p", { class: "vacio" }, "Aún no hay minutos en zonas esta semana."));
+    raiz.append(DS.estadoVacio({ icono: null, titulo: "Aún no hay minutos en zonas esta semana." }));
     return raiz;
   }
   const pct = (k) => (dist.minutos[k] / total) * 100;
-  raiz.append(barraZonas(dist));
-
+  raiz.append(DS.barraZonas(dist));
   const grupo = (zs, nombre, valor, meta) => h("div", { class: "grupo" },
     h("span", { class: "sw", "aria-hidden": "true" }, zs.map((k) => h("i", { style: `background:var(--${k.toLowerCase()})` }))),
     h("strong", {}, `${nombre} ${zs.length > 1 ? `${zs[0]}–${zs[1]}` : zs[0]}`),
@@ -649,10 +547,9 @@ function zonaBar(dist) {
     grupo(["Z1", "Z2"], "Bajo", dist.bajo, "· meta 80 %"),
     grupo(["Z3"], "Limbo", dist.limbo, "· lo menos posible"),
     grupo(["Z4", "Z5"], "Alto", dist.alto, "· 20 %")));
-  raiz.append(h("p", { class: "nota", style: "margin-top:10px" }, `${ui().textos.incluye || "Incluye tus actividades y corridas."} Solo referencia: no cambia el plan. El tiempo bajo Z1 (Z0) es descanso y no cuenta.`));
-  raiz.append(h("details", {}, h("summary", {}, "Ver como tabla"),
-    h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Zona"), h("th", {}, "Min"), h("th", {}, "%"))),
-      h("tbody", {}, z.map((k) => h("tr", {}, h("td", {}, k), h("td", {}, fmt(dist.minutos[k])), h("td", {}, fmt(pct(k), 0))))))));
+  raiz.append(h("p", { class: "nota" }, `${ui().textos.incluye || "Incluye tus actividades y corridas."} Solo referencia: no cambia el plan. El tiempo bajo Z1 (Z0) es descanso y no cuenta.`));
+  raiz.append(DS.desplegable({ titulo: "Ver como tabla", liga: true }, DS.tabla({ etiqueta: "Minutos por zona",
+    columnas: [{ texto: "Zona" }, { texto: "Min", num: true }, { texto: "%", num: true }],
+    filas: z.map((k) => ({ celdas: [k, fmt(dist.minutos[k]), fmt(pct(k), 0)] })) })));
   return raiz;
 }
-

@@ -11,14 +11,15 @@ function horasMin(hh) {
   return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")} min`;
 }
 
+/** «Ver como tabla»: desplegable con una tabla (la primera columna a la izquierda, las demás a la derecha). */
 function tablaDatos(cabeza, filas, titulo = "Ver como tabla") {
-  return h("details", {}, h("summary", {}, titulo),
-    h("div", { class: "tabla-scroll" }, h("table", {},
-      h("thead", {}, h("tr", {}, cabeza.map((c) => h("th", {}, c)))),
-      h("tbody", {}, filas.map((f) => h("tr", {}, f.map((c) => h("td", {}, c))))))));
+  return DS.desplegable({ titulo, liga: true }, DS.tabla({ etiqueta: titulo,
+    columnas: cabeza.map((texto, i) => ({ texto, num: i > 0 })), filas: filas.map((celdas) => ({ celdas })) }));
 }
 
-const leyenda = (items) => h("div", { class: "leyenda" }, items.map(([cls, txt]) => h("span", {}, h("i", { class: cls, "aria-hidden": "true" }), txt)));
+/** Color CSS de cada clase de serie de las gráficas (para las leyendas). */
+const COLOR_CLASE = { s1: "var(--serie-1)", s2: "var(--serie-2)", walk: "var(--caminata)", z1: "var(--z1)", z3: "var(--z3)", z4: "var(--z4)",
+  azul: "var(--cat-1)", aqua: "var(--cat-2)", violeta: "var(--cat-3)", amarillo: "var(--cat-4)" };
 
 // --- tarjeta con vistas ---
 
@@ -32,24 +33,14 @@ const SEL = {};   // vista elegida en cada tarjeta, solo en memoria
 function tarjetaConVistas(vista, titulo, resumen, vistas, opts = {}) {
   if (!(SEL[titulo] < vistas.length)) SEL[titulo] = 0;
   const cuerpo = h("div", { class: "vista-cuerpo", role: "tabpanel" });
-  const botones = vistas.map((v, i) => h("button", { type: "button", role: "tab", onclick: () => elegir(i, false),
-    onkeydown: (ev) => {
-      const k = { ArrowRight: 1, ArrowLeft: -1 }[ev.key];
-      if (k) { ev.preventDefault(); elegir((SEL[titulo] + k + vistas.length) % vistas.length, true); }
-    } }, v.etiqueta));
   const pintar = () => {
     const ancho = cuerpo.clientWidth;
     if (ancho) cuerpo.replaceChildren(vistas[SEL[titulo]].pintar(ancho));
   };
-  const marcar = () => botones.forEach((b, i) => {
-    b.setAttribute("aria-selected", i === SEL[titulo] ? "true" : "false");
-    b.tabIndex = i === SEL[titulo] ? 0 : -1;
-  });
-  function elegir(i, foco) { SEL[titulo] = i; marcar(); pintar(); if (foco) botones[i].focus(); }
-  marcar();
   PINTAR[vista].push(pintar);
-  return h("div", { class: `card ${opts.clase || ""}` }, h("h2", {}, titulo), resumen ? h("p", { class: "nota" }, resumen) : null,
-    vistas.length > 1 ? h("div", { class: "toggle segs", role: "tablist", "aria-label": titulo }, botones) : null, cuerpo, ...(opts.pie || []));
+  return DS.tarjeta({ titulo, clase: opts.clase || "" }, resumen ? h("p", { class: "nota" }, resumen) : null,
+    vistas.length > 1 ? DS.segmento({ etiqueta: titulo, opciones: vistas.map((v, i) => ({ id: i, texto: v.etiqueta })), activo: SEL[titulo],
+      onCambio: (i) => { SEL[titulo] = Number(i); pintar(); } }) : null, cuerpo, ...(opts.pie || []));
 }
 
 // --- Progreso ---
@@ -66,27 +57,24 @@ const NUMEROS = {
 function filaNumeros(d) {
   const prog = d.progreso || {};
   const items = ((prog.numeros || {}).periodos || {})[String(periodo)] || [];
-  return h("div", { class: "numeros ancha", role: "group", "aria-label": `Números de las últimas ${periodo} semanas` }, items.map((x) => {
+  return DS.tiles({ etiqueta: `Números de las últimas ${periodo} semanas`, clase: "ancha" }, ...items.map((x) => {
     let [nombre, fv, unidad] = NUMEROS[x.id] || [x.id, (v) => fmt(v, 1), ""];
     if (x.id === "ritmo_ref" && prog.fc_ref) nombre = `Ritmo a ${prog.fc_ref} lpm`;
     const cambio = x.valor == null ? "Sin corridas"
       : x.anterior == null ? "Sin periodo anterior"
         : x.delta === 0 || x.delta == null ? "= igual que el periodo anterior"
           : `${x.delta > 0 ? "▲" : "▼"} ${fv(Math.abs(x.delta))}${x.id === "ritmo_ref" ? "/km" : unidad && unidad !== "/km" ? " " + unidad : ""} vs periodo anterior`;
-    return h("div", { class: "num" }, h("div", { class: "nota" }, nombre),
-      h("div", { class: "num-v" }, x.valor == null ? "—" : fv(x.valor), x.valor != null && unidad ? h("span", { class: "num-u" }, ` ${unidad}`) : null),
-      h("div", { class: `num-d${x.bueno ? " bien" : ""}` }, cambio));
+    return DS.tile({ k: nombre, valor: x.valor == null ? "—" : fv(x.valor), unidad: x.valor != null && unidad ? unidad : null, delta: cambio, deltaClase: x.bueno ? "" : "neutro" });
   }));
 }
 
 let subProgreso = "corridas";   // "corridas" | "cuerpo", lo decide la ruta (#progreso o #progreso/cuerpo)
 
-/** Control segmentado Corridas | Cuerpo (mismo estilo que los botones de vista). Cambia la ruta; mostrarVista hace el resto. */
+/** Control segmentado Corridas | Cuerpo. Cambia la ruta; mostrarVista hace el resto. */
 function selectorProgreso() {
-  const boton = (id, etiqueta) => h("button", { type: "button", role: "tab", "aria-selected": id === subProgreso ? "true" : "false",
-    onclick: () => { location.hash = id === "cuerpo" ? "#progreso/cuerpo" : "#progreso"; } }, etiqueta);
-  return h("div", { class: "toggle segs ancha", id: "prog-subtabs", role: "tablist", "aria-label": "Progreso" },
-    boton("corridas", "Corridas"), boton("cuerpo", "Cuerpo"));
+  return DS.segmento({ id: "prog-subtabs", clase: "ancha", etiqueta: "Progreso", activo: subProgreso,
+    opciones: [{ id: "corridas", texto: "Corridas" }, { id: "cuerpo", texto: "Cuerpo" }],
+    onCambio: (id) => { location.hash = id === "cuerpo" ? "#progreso/cuerpo" : "#progreso"; } });
 }
 
 function renderProgreso(d) {
@@ -94,11 +82,10 @@ function renderProgreso(d) {
   PINTAR.cuerpo = [];
   const raiz = $("vista-progreso");
   const prog = d.progreso || {};
-  const boton = (n) => h("button", { type: "button", "aria-pressed": n === periodo ? "true" : "false",
-    onclick: () => { periodo = n; renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }, `${n} semanas`);
   raiz.replaceChildren(selectorProgreso(),
     h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...[
-      h("div", { class: "toggle ancha", role: "group", "aria-label": "Periodo" }, [4, 8, 12].map(boton)),
+      DS.segmento({ etiqueta: "Periodo", modo: "grupo", clase: "ancha", activo: periodo, opciones: [4, 8, 12].map((n) => ({ id: n, texto: `${n} semanas` })),
+        onCambio: (n) => { periodo = Number(n); renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }),
       filaNumeros(d),
       tarjetaMejora(d),
       tarjetaCorridasProgreso(d),
@@ -115,7 +102,11 @@ function mostrarSubvista() {
   if (!corr || !cue) return;
   corr.hidden = subProgreso !== "corridas";
   cue.hidden = subProgreso !== "cuerpo";
-  document.querySelectorAll("#prog-subtabs button").forEach((b, i) => b.setAttribute("aria-selected", (i === 0) === (subProgreso === "corridas") ? "true" : "false"));
+  document.querySelectorAll("#prog-subtabs button").forEach((b) => {
+    const on = b.dataset.id === subProgreso;
+    b.setAttribute("aria-selected", String(on));
+    b.tabIndex = on ? 0 : -1;
+  });
 }
 
 // --- Plan ---
@@ -123,7 +114,7 @@ function mostrarSubvista() {
 /** Tarjetita del catálogo: silueta en tinta (sin color ni tooltip), nombre y descripción. */
 function tipoCard(t, enPlan) {
   return h("div", { class: "tipo" }, siluetaForma(t.forma, 48, `Forma de ${t.nombre}`),
-    enPlan ? h("div", {}, h("span", { class: "en-plan" }, "En tu plan")) : null, h("h3", {}, t.nombre), h("p", {}, t.descripcion));
+    enPlan ? h("div", {}, DS.chip("EN TU PLAN", "suave")) : null, h("h3", {}, t.nombre), h("p", {}, t.descripcion));
 }
 
 function tarjetaTipos(d) {
@@ -131,13 +122,13 @@ function tarjetaTipos(d) {
   if (!tp || !(tp.catalogo || []).length) return null;
   const enPlan = new Set(tp.en_plan || []);
   const nombreGrupo = Object.fromEntries((tp.grupos || []).map((g) => [g.id, g.nombre]));
-  const c = h("div", { class: "card ancha" }, h("h2", {}, "Tipos de entreno"),
+  const c = DS.tarjeta({ titulo: "Tipos de entreno", clase: "ancha" },
     h("p", { class: "nota" }, "Así sube y baja tu esfuerzo en cada tipo de sesión. La Larga es un continuo más largo."));
   const suyos = tp.catalogo.filter((t) => enPlan.has(t.id));
   if (suyos.length) c.append(h("div", { class: "tipos" }, suyos.map((t) => tipoCard(t, true))));
   const resto = tp.catalogo.filter((t) => !enPlan.has(t.id));
   if (resto.length) {
-    const det = h("details", { class: "todos-tipos" }, h("summary", {}, suyos.length ? "Ver todos los tipos" : "Ver los tipos"));
+    const det = DS.desplegable({ titulo: suyos.length ? "Ver todos los tipos" : "Ver los tipos", liga: true, clase: "todos-tipos" });
     for (const g of tp.grupos || []) {
       const del = resto.filter((t) => t.grupo === g.id);
       if (del.length) det.append(h("h3", { class: "tipos-grupo" }, nombreGrupo[g.id] || g.id), h("div", { class: "tipos" }, del.map((t) => tipoCard(t, false))));
@@ -160,8 +151,8 @@ function renderPlan(d) {
 function tarjetaDoceSemanas(d) {
   const plan = d.plan || {};
   const semanas = plan.semanas || [];
-  const c = h("div", { class: "card ancha" }, h("h2", {}, "12 semanas"));
-  if (!semanas.length) { c.append(h("p", { class: "vacio" }, "Aún no hay plan cargado.")); return c; }
+  const c = DS.tarjeta({ titulo: "12 semanas", clase: "ancha" });
+  if (!semanas.length) { c.append(DS.estadoVacio({ icono: null, titulo: "Aún no hay plan cargado." })); return c; }
   const actual = plan.semana_actual ?? null;
   if (planSel === null || !semanas.some((w) => w.n === planSel)) planSel = actual ?? semanas[0].n;
   const w = semanas.find((x) => x.n === planSel);
@@ -179,10 +170,10 @@ function tarjetaDoceSemanas(d) {
   }
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,
-    h("p", { class: "nota", style: "margin-top:10px" }, `${ui().textos.descarga || "Las semanas de descarga (línea punteada) bajan la carga."} Toca una semana para ver sus sesiones.`),
-    h("h3", { style: "margin-top:12px" }, `Semana ${w.n} · bloque ${w.block} · ${w.kind}`),
+    h("p", { class: "nota" }, `${ui().textos.descarga || "Las semanas de descarga (línea punteada) bajan la carga."} Toca una semana para ver sus sesiones.`),
+    h("h3", { class: "titular" }, `Semana ${w.n} · bloque ${w.block} · ${w.kind}`),
     h("p", { class: "nota" }, w.focus || ""),
-    ...(w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id))),
+    h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id)))),
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, `Semanas repetidas: ${plan.semanas_repetidas.join(", ")}.`)] : []),
     ...listaEventos(plan.eventos));
   return c;
@@ -193,7 +184,7 @@ const NOMBRE_EVENTO = { viaje: "Viaje", enfermedad: "Enfermedad", lesion: "Lesi�
 /** Viajes, enfermedades y carreras con fecha (plan.eventos, solo en la web); nada si no hay. */
 function listaEventos(eventos) {
   if (!(eventos || []).length) return [];
-  return [h("h3", { style: "margin-top:12px" }, "Eventos"),
+  return [h("h3", { class: "titular" }, "Eventos"),
     ...eventos.map((e) => h("p", { class: "nota" },
       `${NOMBRE_EVENTO[e.tipo] || e.tipo}${e.nombre ? ` «${e.nombre}»` : ""} · ${e.desde}${e.hasta && e.hasta !== e.desde ? ` al ${e.hasta}` : e.hasta ? "" : " · sigue"}${e.distancia_km ? ` · ${e.distancia_km} km` : ""}`))];
 }
@@ -231,27 +222,27 @@ function graficaCorridas(d, ancho, id) {
   const extra = { ...cfg.extra, ...(cfg.prom ? { promedio: pts.map((p) => cfg.prom(p.r) ?? null) } : {}) };
   return h("div", {}, h("p", { class: "nota" }, cfg.nota),
     pts.length ? lineChart({ ancho, serie: pts, dominio, marcadores: !cfg.prom, puntos: !!cfg.prom, ...extra, texto: (p) => cfg.texto(p.r) })
-      : h("p", { class: "vacio" }, cfg.vacio));
+      : DS.estadoVacio({ icono: null, titulo: cfg.vacio }));
 }
 
 function graficaVolumen(d, ancho) {
   const prog = d.progreso || {};
   const semanas = (prog.semanas || []).slice(-periodo);
   const hay = semanas.some((s) => (s.minutos || 0) > 0 || s.plan_min);
-  if (!hay) return h("p", { class: "vacio" }, "Sin corridas en este periodo.");
+  if (!hay) return DS.estadoVacio({ icono: null, titulo: "Sin corridas en este periodo." });
   const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [s.min_trote || 0, s.min_camina || 0], meta: s.plan_min || 0, s }));
   return h("div", {}, h("p", { class: "nota" }, "Minutos de reloj por semana (lun–dom); la raya marca el plan y arriba van tus entrenos de la semana."),
     barChart({ ancho, semanas: barras, clases: ["s1", "walk"], etiqueta: "Volumen semanal: trote y caminata con raya del plan y un ícono por entreno",
       entrenos: semanas.some((s) => (s.entrenos || []).length) ? (b) => b.s.entrenos || [] : null,
       texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""} · ${fmt(b.s.km)} km · trote ${fmt(b.s.min_trote, 0)}'${textoEntrenos(b.s.entrenos)}` }),
-    leyendaIconos(semanas, [["sw s1", "Trote"], ["sw walk", "Caminata"], ["raya", "Plan"]]),
+    leyendaIconos(semanas, [[COLOR_CLASE.s1, "Trote"], [COLOR_CLASE.walk, "Caminata"], ["raya", "Plan"]]),
     tablaDatos(["Semana", "Min", "Plan", "Km", "Trote", "Caminata"], semanas.slice().reverse().map((s) =>
       [fechaLarga(s.inicio), fmt(s.minutos, 0), s.plan_min ?? "—", fmt(s.km), fmt(s.min_trote, 0), fmt(s.min_camina, 0)]), "Ver semanas como tabla"));
 }
 
 function graficaKm(d, ancho) {
   const semanas = ((d.progreso || {}).semanas || []).slice(-periodo);
-  if (!semanas.some((s) => (s.km || 0) > 0)) return h("p", { class: "vacio" }, "Sin corridas en este periodo.");
+  if (!semanas.some((s) => (s.km || 0) > 0)) return DS.estadoVacio({ icono: null, titulo: "Sin corridas en este periodo." });
   return h("div", {}, h("p", { class: "nota" }, "Kilómetros por semana (lun–dom), trote y caminata."),
     barChart({ ancho, semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.km || 0], s })), clases: ["s1"],
       etiqueta: "Kilómetros por semana",
@@ -273,16 +264,16 @@ function tarjetaCorridasProgreso(d) {
 
 function tablaCorridas(corridas) {
   const orden = corridas.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
-  const celdas = (r) => [fechaLarga(r.fecha), h("span", { class: "con-ico" }, icono(r.icono || (r.carrera ? "medalla" : "correr"), 14), `${r.sesion || "—"}${r.carrera ? " · carrera" : ""}`), fmt(r.minutos, 0), fmt(r.km),
+  const celdas = (r) => [fechaLarga(r.fecha), h("span", { class: "con-ico" }, DS.ico(r.icono || (r.carrera ? "medalla" : "correr")), `${r.sesion || "—"}${r.carrera ? " · carrera" : ""}`), fmt(r.minutos, 0), fmt(r.km),
     r.pct_trote == null ? "—" : `${fmt(r.pct_trote, 0)} %`,
     r.caminadora ? "cam." : r.ritmo_trote_s == null ? "—" : mmss(r.ritmo_trote_s),
     r.ritmo_ref_s == null ? "—" : mmss(r.ritmo_ref_s), r.deriva_pct == null ? "—" : `${fmt(r.deriva_pct, 1)} %`,
     r.fc_prom == null ? "—" : fmt(r.fc_prom, 0), textoEsfuerzo(r) || "—"];
-  return [h("details", {}, h("summary", {}, "Ver cada corrida como tabla"),
-    orden.length ? h("div", { class: "tabla-scroll ancha" }, h("table", {},
-      h("thead", {}, h("tr", {}, ["Fecha", "Sesión", "Min", "Km", "% trote", "Ritmo trote", "Ritmo a FC ref", "Deriva", "FC", "Esfuerzo"].map((c) => h("th", {}, c)))),
-      h("tbody", {}, orden.map((r) => h("tr", {}, celdas(r).map((c) => h("td", {}, c))))))) : h("p", { class: "vacio" }, "Aún no hay corridas registradas."),
-    orden.some((r) => r.caminadora) ? h("p", { class: "nota", style: "margin-top:8px" }, "cam. = caminadora (su ritmo no se compara).") : null)];
+  const cab = ["Fecha", "Sesión", "Min", "Km", "% trote", "Ritmo trote", "Ritmo a FC ref", "Deriva", "FC", "Esfuerzo"];
+  return [DS.desplegable({ titulo: "Ver cada corrida como tabla", liga: true },
+    orden.length ? DS.tabla({ etiqueta: "Corridas", columnas: cab.map((texto, i) => ({ texto, num: i > 1 })), filas: orden.map((r) => ({ celdas: celdas(r) })) })
+      : DS.estadoVacio({ icono: null, titulo: "Aún no hay corridas registradas." }),
+    orden.some((r) => r.caminadora) ? h("p", { class: "nota" }, "cam. = caminadora (su ritmo no se compara).") : null)];
 }
 
 // --- intensidad por semana (80/20) ---
@@ -294,24 +285,24 @@ function tarjetaIntensidadSemanas(d) {
   const todas = (d.progreso || {}).intensidad_semanas || [];
   if (!todas.length) return null;
   const caja = h("div", { class: "chart-wrap" });
-  const pie = h("div", {});
+  const pie = h("div", { class: "pie-graf" });
   const pintar = () => {
     const ancho = caja.clientWidth;
     if (!ancho) return;
     const sem = todas.slice(-periodo);
     const con = sem.filter((x) => Object.values(x.minutos || {}).some((v) => v > 0));
-    if (!con.length) { caja.replaceChildren(h("p", { class: "vacio" }, "Sin minutos en zonas en este periodo.")); pie.replaceChildren(); return; }
+    if (!con.length) { caja.replaceChildren(DS.estadoVacio({ icono: null, titulo: "Sin minutos en zonas en este periodo." })); pie.replaceChildren(); return; }
     caja.replaceChildren(barChart({
       ancho, alto: 130, tope: 100, ref: { y: 80, etiqueta: "meta 80 % bajo" }, clases: INT_GRUPOS.map((g) => g[2]),
       etiqueta: "Intensidad por semana: porcentaje bajo, limbo y alto, con meta de 80 % bajo",
       semanas: sem.map((x) => ({ inicio: x.inicio, valores: INT_GRUPOS.map(([k]) => x[k] || 0), x })),
       texto: (b) => `Semana del ${fechaLarga(b.inicio)} · Bajo ${fmt(b.x.bajo, 0)} % · Limbo ${fmt(b.x.limbo, 0)} % · Alto ${fmt(b.x.alto, 0)} %`,
     }));
-    pie.replaceChildren(leyenda(INT_GRUPOS.map(([, n, c]) => [`sw ${c}`, n])), leyenda([["raya-disc", "Meta: 80 % bajo (la raya punteada)"]]),
+    pie.replaceChildren(DS.leyenda([...INT_GRUPOS.map(([, n, c]) => [COLOR_CLASE[c], n]), ["raya-disc", "Meta: 80 % bajo (la raya punteada)"]]),
       tablaDatos(["Semana", "Bajo %", "Limbo %", "Alto %"], con.slice().reverse().map((x) => [fechaLarga(x.inicio), fmt(x.bajo, 0), fmt(x.limbo, 0), fmt(x.alto, 0)])));
   };
   PINTAR.progreso.push(pintar);
-  return h("div", { class: "card ancha" }, h("h2", {}, "Intensidad por semana"),
+  return DS.tarjeta({ titulo: "Intensidad por semana", clase: "ancha" },
     h("p", { class: "nota" }, `Últimas ${periodo} semanas: qué parte del tiempo en zonas fue suave (Z1–Z2), media (Z3) o fuerte (Z4–Z5), con tus corridas y actividades. Solo referencia.`),
     caja, pie);
 }
@@ -323,21 +314,20 @@ const fechaConAnio = (iso, ref) => {
   return `${f.getDate()} ${MESES[f.getMonth()]}${f.getFullYear() !== anioRef ? ` ${f.getFullYear()}` : ""}`;
 };
 
-/** Mejores marcas (siempre que haya). Devuelve los nodos, no la tarjeta: los junta tarjetaMarcasYCarreras. */
-function bloqueMarcas(d) {
-  const marcas = d.mejores_marcas || [];
-  if (!marcas.length) return [];
-  return [h("div", { class: "marcas" }, marcas.map((x) => {
+/** Mejores marcas (siempre que haya), como entradas de DS.ranking. */
+function datosMarcas(d) {
+  return (d.mejores_marcas || []).map((x) => {
     const larga = x.clave === "larga";
-    return h("div", { class: "marca", role: "group", "aria-label": `${x.nombre}: ${larga ? `${fmt(x.distancia_km, 2)} km en ${tiempoLargo(x.tiempo_s)}` : tiempoLargo(x.tiempo_s)}, ${fechaConAnio(x.fecha, d.generado)}` },
-      h("div", { class: "marca-n" }, x.icono ? icono(x.icono, 14) : null, x.nombre, x.nuevo ? h("span", { class: "nuevo" }, "nuevo") : null),
-      h("div", { class: "marca-v" }, larga ? `${fmt(x.distancia_km, 2)} km` : tiempoLargo(x.tiempo_s)),
-      h("div", { class: "nota" }, larga ? `${tiempoLargo(x.tiempo_s)} · ` : "", fechaConAnio(x.fecha, d.generado)));
-  }))];
+    const fecha = fechaConAnio(x.fecha, d.generado);
+    return { icono: x.icono || "medalla", nombre: x.nombre, nueva: !!x.nuevo, valor: larga ? `${fmt(x.distancia_km, 2)} km` : tiempoLargo(x.tiempo_s),
+      fecha: larga ? `${tiempoLargo(x.tiempo_s)} · ${fecha}` : fecha,
+      etiqueta: `${x.nombre}: ${larga ? `${fmt(x.distancia_km, 2)} km en ${tiempoLargo(x.tiempo_s)}` : tiempoLargo(x.tiempo_s)}, ${fecha}${x.nuevo ? ", nueva" : ""}` };
+  });
 }
 
+/** Una fila nombre/valor del detalle de una carrera (null si no hay dato). */
 function filaStat(nombre, valor) {
-  return valor == null ? null : h("div", { class: "kv" }, h("span", {}, nombre), h("span", {}, valor));
+  return valor == null ? null : [nombre, valor];
 }
 
 /** Ritmo de cada km como barras pequeñas: más larga = más rápido. El valor siempre va en texto. */
@@ -361,7 +351,7 @@ function zonasCarrera(c) {
   return h("div", {}, h("h3", {}, "Minutos por zona"),
     h("div", { class: "zbar", role: "img", "aria-label": ks.map((k) => `${k} ${fmt(z[k], 0)} min`).join(", ") },
       ks.filter((k) => z[k] > 0).map((k) => h("div", { style: `flex:${z[k]} 1 0;background:var(--${k.toLowerCase()})` }))),
-    h("div", { class: "leyenda" }, ks.map((k) => h("span", {}, h("i", { style: `background:var(--${k.toLowerCase()})`, "aria-hidden": "true" }), `${k} ${fmt(z[k], 0)}'`))));
+    DS.leyenda(ks.map((k) => [`var(--${k.toLowerCase()})`, `${k} ${fmt(z[k], 0)}'`])));
 }
 
 function comparacionCarrera(c) {
@@ -375,33 +365,27 @@ function comparacionCarrera(c) {
     h("p", {}, partes.length ? `Ahora: ${partes.join(" · ")}` : "Igual que la anterior"));
 }
 
-function carreraDetalle(c, abierta, ref) {
-  const det = h("details", { class: "ses carrera-det", open: abierta },
-    h("summary", {}, icono(c.icono || "medalla", 16), h("span", { class: "n" }, fechaLarga(c.fecha)),
-      h("span", { class: "m" }, `${fmt(c.distancia_km, 2)} km · ${tiempoLargo(c.tiempo_s)}`)),
-    h("div", { class: "carrera-cuerpo" },
+/** Una carrera como entrada de DS.ranking: fecha, resumen, filas de datos y, abajo, ritmo por km, zonas y comparación. */
+function carreraDetalle(c, abierta) {
+  return { icono: c.icono || "medalla", fecha: fechaLarga(c.fecha), resumen: `${fmt(c.distancia_km, 2)} km · ${tiempoLargo(c.tiempo_s)}`, abierta,
+    filas: [
       filaStat("Distancia", `${fmt(c.distancia_km, 2)} km`), filaStat("Tiempo", tiempoLargo(c.tiempo_s)),
       filaStat("Ritmo promedio", c.ritmo_s ? `${mmss(c.ritmo_s)} /km` : null),
       filaStat("FC promedio / máxima", c.fc_prom != null ? `${fmt(c.fc_prom, 0)} / ${c.fc_max != null ? fmt(c.fc_max, 0) : "—"} lpm` : null),
       filaStat("Km más rápido", c.km_mas_rapido_s ? `${mmss(c.km_mas_rapido_s)} /km` : null),
       filaStat("Cadencia", c.cadencia ? `${c.cadencia} pasos/min` : null),
-      filaStat("Desnivel", c.desnivel_m != null ? `+${c.desnivel_m} m` : null),
-      barrasKm(c), zonasCarrera(c), comparacionCarrera(c)));
-  return det;
-}
-
-/** Carreras con su detalle plegable, bajo un subtítulo; [] si no hay. */
-function bloqueCarreras(d) {
-  const cs = d.carreras || [];
-  if (!cs.length) return [];
-  return [h("div", { id: "prog-carreras" }, h("h3", { class: "sub-carreras" }, "Carreras"),
-    ...cs.map((x, i) => carreraDetalle(x, i === 0 && abrirCarrera)))];
+      filaStat("Desnivel", c.desnivel_m != null ? `+${c.desnivel_m} m` : null)].filter(Boolean),
+    cuerpo: [barrasKm(c), zonasCarrera(c), comparacionCarrera(c)].filter(Boolean) };
 }
 
 /** "Marcas y carreras": marcas arriba y, si hay carreras, su lista debajo. Sin ninguna de las dos, no sale. */
 function tarjetaMarcasYCarreras(d) {
-  const partes = [...bloqueMarcas(d), ...bloqueCarreras(d)];
-  return partes.length ? h("div", { class: "card ancha" }, h("h2", {}, "Marcas y carreras"), ...partes) : null;
+  const marcas = datosMarcas(d), cs = d.carreras || [];
+  if (!marcas.length && !cs.length) return null;
+  const r = DS.ranking({ marcas, carreras: cs.map((x, i) => carreraDetalle(x, i === 0 && abrirCarrera)) });
+  const lista = r.querySelector(".carreras");
+  if (lista) { lista.id = "prog-carreras"; lista.before(h("h3", { class: "sub-carreras" }, "Carreras")); }
+  return DS.tarjeta({ titulo: "Marcas y carreras", clase: "ancha" }, r);
 }
 
 // --- Composición corporal estilo InBody ---
@@ -410,30 +394,21 @@ const ZONA_TXT = { bajo: ["▼", "bajo"], normal: ["✓", "normal"], alto: ["▲
 const fechaMes = (iso) => { const f = parseFecha(iso); return `${f.getDate()} ${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}`; };
 const kg1 = (v) => fmt(v, 1);
 
-/** Una barra de la hoja: la franja Bajo·Normal·Alto va arriba del grupo; la barra llega a `pos` y su valor va al final. */
-function barraInbody(f) {
+/** Una barra de la hoja como fila de DS.ibGrupo: la barra llega a `pos` y su valor va al final. */
+function filaInbody(f) {
   const txt = f.estimado ? `≈${fmt(f.valor, 1)}` : fmt(f.valor, 1);
-  const [icono, zona] = ZONA_TXT[f.zona];
-  const dentro = f.pos > 0.8;
+  const [simbolo, zona] = ZONA_TXT[f.zona];
   const etiqueta = `${f.nombre}: ${fmt(f.valor, 1)} ${f.unidad}${f.pct != null ? `, ${f.pct} % del valor estándar` : ""}${f.estimado ? " (estimado)" : ""}, zona ${zona}`;
-  return h("div", { class: "ib-fila", role: "img", "aria-label": etiqueta },
-    h("div", { class: "ib-nombre" }, h("strong", {}, f.nombre), h("span", { class: "nota" }, ` ${f.unidad}`),
-      h("span", { class: `ib-zona ${f.zona}`, "aria-hidden": "true" }, `${icono} ${zona}`)),
-    h("div", { class: "ib-pista" },
-      h("i", { class: "ib-normal", style: `left:${f.normal_pos[0] * 100}%;width:${(f.normal_pos[1] - f.normal_pos[0]) * 100}%` }),
-      h("i", { class: "ib-barra", style: `width:${f.pos * 100}%` }),
-      h("span", { class: `ib-valor${dentro ? " dentro" : ""}`, style: `left:${f.pos * 100}%` }, txt)),
-    h("div", { class: "ib-ticks", "aria-hidden": "true" }, f.escala.map((v, i) => h("span", { style: `left:${(i / (f.escala.length - 1)) * 100}%` }, fmt(v, v % 1 ? 1 : 0)))));
+  return { nombre: f.nombre, unidad: f.unidad, zona: f.zona, textoZona: `${simbolo} ${zona}`, aria: etiqueta,
+    normal: [f.normal_pos[0] * 100, (f.normal_pos[1] - f.normal_pos[0]) * 100], barra: f.pos * 100, valor: txt, dentro: f.pos > 0.8,
+    ticks: f.escala.map((v, i) => [(i / (f.escala.length - 1)) * 100, fmt(v, v % 1 ? 1 : 0)]) };
 }
 
 function grupoInbody(titulo, filas) {
   if (!filas || !filas.length) return null;
   const n = filas[0].normal_pos;
-  return h("div", { class: "ib-grupo" }, h("h3", {}, titulo),
-    h("div", { class: "ib-franja", "aria-hidden": "true" },
-      h("span", { style: `width:${n[0] * 100}%` }, "Bajo"), h("span", { class: "normal", style: `width:${(n[1] - n[0]) * 100}%` }, "Normal"),
-      h("span", { style: `width:${(1 - n[1]) * 100}%` }, "Alto")),
-    filas.map(barraInbody));
+  return DS.ibGrupo({ titulo, franja: [{ texto: "Bajo", pct: n[0] * 100 }, { texto: "Normal", pct: (n[1] - n[0]) * 100, normal: true }, { texto: "Alto", pct: (1 - n[1]) * 100 }],
+    filas: filas.map(filaInbody) });
 }
 
 function historialInbody(c) {
@@ -453,7 +428,7 @@ function historialInbody(c) {
   PINTAR.cuerpo.push(pintar);
   const meta = c.meta || {};
   return h("div", { class: "ib-grupo" }, h("h3", {}, "Historial de composición corporal"), caja,
-    h("p", { class: "meta-prime" }, meta.faltan_pgc > 0 ? `Te faltan ${fmt(meta.faltan_pgc, 1)} % de grasa para tu prime` : "Ya superaste tu prime en grasa ✓"),
+    h("p", { class: "titular" }, meta.faltan_pgc > 0 ? `Te faltan ${fmt(meta.faltan_pgc, 1)} % de grasa para tu prime` : "Ya superaste tu prime en grasa ✓"),
     meta.mme_ok ? h("p", { class: "nota" }, "Tu músculo ya está arriba del de tu prime ✓") : h("p", { class: "nota" }, `Te faltan ${fmt(meta.faltan_mme, 1)} kg de músculo para tu prime`));
 }
 
@@ -461,17 +436,12 @@ function puntuacionInbody(c) {
   const pts = c.puntuacion || [], v = c.visceral;
   if (!pts.length && !v) return null;
   const ult = [...pts].reverse().find((p) => p.puntos != null);
-  const bloqueP = ult ? h("div", { class: "ib-punt" }, h("h3", {}, "Puntuación InBody"),
-    h("div", { class: "ib-punt-n" }, h("span", { class: "grande" }, fmt(ult.puntos, 0)), h("span", { class: "nota" }, "/100"),
-      ult.delta != null ? h("span", { class: `delta${ult.delta > 0 ? " bien" : ""}` }, ` ${ult.delta > 0 ? "▲" : ult.delta < 0 ? "▼" : "="}${Math.abs(ult.delta)}`) : null),
-    h("div", { class: "ib-punt-h" }, miniPuntuacion(pts))) : null;
-  const rango = v ? v.rango : null;
-  const [icono, clase] = v ? (v.zona === "normal" ? ["✓", "ok"] : v.zona === "alto" ? ["!", "warn"] : ["!", "warn"]) : [];
-  const bloqueV = v ? h("div", { class: "ib-visc" }, h("h3", {}, "Grasa visceral"),
-    h("div", { class: "ib-punt-n" }, h("span", { class: "grande" }, fmt(v.valor, 0)), h("span", { class: "nota" }, ` · rango ${rango[0]}–${rango[1]}`)),
-    h("p", { class: "estado" }, badge(clase, icono, `grasa visceral ${v.zona}`),
-      v.zona === "normal" ? "Dentro del rango" : v.zona === "alto" ? "Por encima del rango" : "Por debajo del rango")) : null;
-  return h("div", { class: "ib-grupo ib-fila2" }, bloqueP, bloqueV);
+  const [simbolo, clase] = v ? (v.zona === "normal" ? ["✓", "ok"] : ["!", "warn"]) : [];
+  return h("div", { class: "ib-grupo" }, DS.ibPuntuacion({
+    puntuacion: ult ? { valor: fmt(ult.puntos, 0), delta: ult.delta != null ? `${ult.delta > 0 ? "▲" : ult.delta < 0 ? "▼" : "="}${Math.abs(ult.delta)}` : null, deltaClase: ult.delta > 0 ? "" : "neutro" } : null,
+    visceral: v ? { valor: fmt(v.valor, 0), rango: `${v.rango[0]}–${v.rango[1]}`, clase, simbolo,
+      texto: v.zona === "normal" ? "Dentro del rango" : v.zona === "alto" ? "Por encima del rango" : "Por debajo del rango" } : null }),
+    ult ? miniPuntuacion(pts) : null);
 }
 
 /** Historial de la puntuación: con un solo punto, solo el punto y una nota. */
@@ -494,8 +464,8 @@ const SEGMENTOS = [["brazo_izq", "Brazo izq."], ["brazo_der", "Brazo der."], ["t
 function hojaCompleta(c) {
   const hoja = c.hoja;
   if (!hoja) return null;
-  const tabla = (cabeza, filas) => h("div", { class: "tabla-scroll ancha" }, h("table", {},
-    h("thead", {}, h("tr", {}, cabeza.map((x) => h("th", {}, x)))), h("tbody", {}, filas.map((f) => h("tr", {}, f.map((x) => h("td", {}, x)))))));
+  const tabla = (cabeza, filas) => DS.tabla({ etiqueta: cabeza.filter(Boolean).join(", ") || "Hoja InBody",
+    columnas: cabeza.map((texto, i) => ({ texto, num: i > 0 })), filas: filas.map((celdas) => ({ celdas })) });
   const zonaTxt = (z) => `${ZONA_TXT[z][0]} ${ZONA_TXT[z][1]}`;
   const bloques = [];
   const barras = [...(hoja.musculo_grasa || []), ...(hoja.obesidad || [])];
@@ -518,14 +488,14 @@ function hojaCompleta(c) {
     [fechaMes(x.fecha) + (x.fecha === c.prime.fecha ? " ★ prime" : ""), ...[x.peso_kg, x.pgc, x.masa_grasa_kg, x.mme_kg].map((v) => (v == null ? "—" : v.toFixed(1))),
       x.puntuacion == null ? "—" : fmt(x.puntuacion, 0), x.grasa_visceral == null ? "—" : fmt(x.grasa_visceral, 0)])),
   h("p", { class: "nota" }, "MME = masa muscular esquelética. Visc. = grasa visceral. — = sin dato. ≈ = estimado de la barra."));
-  return h("details", { class: "ib-hoja" }, h("summary", {}, "Ver hoja completa"), ...bloques);
+  return DS.desplegable({ titulo: "Ver hoja completa", liga: true, clase: "ib-hoja" }, ...bloques);
 }
 
 /** Tarjeta única «Composición corporal · fecha» en el orden de la hoja InBody. Sin InBody no hay tarjeta. */
 function tarjetaComposicion(c) {
   if (!c || !(c.mediciones || []).length) return null;
   const hoja = c.hoja || {};
-  return h("div", { class: "card ancha ib" }, h("h2", {}, `Composición corporal · ${fechaMes(hoja.fecha || c.ultima.fecha)}`),
+  return DS.tarjeta({ titulo: `Composición corporal · ${fechaMes(hoja.fecha || c.ultima.fecha)}`, clase: "ancha ib" },
     grupoInbody("Análisis músculo-grasa", hoja.musculo_grasa), grupoInbody("Análisis de obesidad", hoja.obesidad),
     historialInbody(c), puntuacionInbody(c), hojaCompleta(c));
 }
@@ -552,7 +522,7 @@ function graficaRecuperacion(d, ancho, id) {
   return h("div", {}, h("p", { class: "nota" }, sub),
     lineChart({ ancho, serie: s, dominio: dom, puntos: true, promedio: s.map((p) => p.p), etiqueta: def.nombre, ...def.extra,
       texto: (p, prom) => `${fechaLarga(p.fecha)} · ${def.fmtV(p.y)}${u}${prom != null ? ` · prom. 7 d ${def.fmtV(prom)}` : ""}${def.extra.banda && p.lo != null ? ` · base ${p.lo}–${p.hi}` : ""}` }),
-    leyenda([["pto", "Diario"], ["rayaln", "Promedio 7 días"], ...(id === "hrv" && dias.some((x) => x.hrv_base_alta != null) ? [["banda-sw", "Rango base (HRV)"]] : [])]),
+    DS.leyenda([["pto", "Diario"], ["rayaln", "Promedio 7 días"], ...(id === "hrv" && dias.some((x) => x.hrv_base_alta != null) ? [["banda-sw", "Rango base (HRV)"]] : [])]),
     filas.length ? tablaDatos(["Fecha", def.unidad || "Sueño", "Prom. 7 d"], filas) : "");
 }
 
@@ -577,14 +547,14 @@ function tarjetaFcMax(d) {
     : [h("div", { class: "kv" }, h("span", {}, "Clases medidas"), h("span", {}, ses.length)),
       h("div", { class: "kv" }, h("span", {}, "Pico"), h("span", {}, `${fmt(f.pico, 0)} lpm`)),
       h("div", { class: "kv" }, h("span", {}, `FC máx estimada (pico + 3, mín ${fmt(u.max_hr_floor, 0)})`), h("span", {}, `${fmt(f.estimacion, 0)} lpm`)),
-      h("p", { class: "estado" }, f.listo ? badge("ok", "✓", "listo") : badge("nd", "—", "en curso"),
-        f.listo ? "Medición lista" : `Faltan ${faltan} ${faltan === 1 ? "semana" : "semanas"} de medición`),
-      f.revisar ? h("div", { class: "aviso warn" }, badge("warn", "!", "aviso"), h("div", {}, `La estimación pasa de ${fmt(u.max_hr_review_above, 0)} lpm: revísala antes de usarla.`)) : null];
+      f.listo ? DS.estado("ok", "✓", "Medición lista", "listo") : DS.estado("nd", "—", `Faltan ${faltan} ${faltan === 1 ? "semana" : "semanas"} de medición`, "en curso"),
+      f.revisar ? DS.aviso({ clase: "warn", simbolo: "!", texto: `La estimación pasa de ${fmt(u.max_hr_review_above, 0)} lpm: revísala antes de usarla.` }) : null];
   const zonas = d.zonas || [];
-  return h("div", { class: "card" }, h("h2", {}, "FC máxima y zonas"), ...cuerpo,
-    zonas.length ? h("div", {}, h("p", { class: "nota", style: "margin-top:10px" }, `FC máx en uso: ${fmt(f.config, 0)} lpm (${f.fuente === "reloj" ? "del reloj" : "respaldo, el reloj no la dio"}) · reposo promedio 7 días: ${fmt(d.rhr_promedio_7d, 0)} lpm (Karvonen)`),
-      h("table", {}, h("thead", {}, h("tr", {}, ["Zona", "Rango (lpm)"].map((c) => h("th", {}, c)))),
-        h("tbody", {}, zonas.map((z) => h("tr", {}, h("td", {}, h("span", { class: "zchip" }, h("i", { style: `background:var(--${z.zona.toLowerCase()})`, "aria-hidden": "true" }), z.zona)), h("td", {}, `${z.piso}–${z.techo}`)))))) : h("p", { class: "vacio" }, "Sin zonas calculadas."));
+  return DS.tarjeta({ titulo: "FC máxima y zonas" }, ...cuerpo,
+    zonas.length ? h("div", { class: "zonas-fc" }, h("p", { class: "nota" }, `FC máx en uso: ${fmt(f.config, 0)} lpm (${f.fuente === "reloj" ? "del reloj" : "respaldo, el reloj no la dio"}) · reposo promedio 7 días: ${fmt(d.rhr_promedio_7d, 0)} lpm (Karvonen)`),
+      DS.tabla({ etiqueta: "Zonas de FC", columnas: [{ texto: "Zona" }, { texto: "Rango (lpm)", num: true }],
+        filas: zonas.map((z) => ({ celdas: [h("span", { class: "zchip" }, h("i", { style: `background:var(--${z.zona.toLowerCase()})`, "aria-hidden": "true" }), z.zona), `${z.piso}–${z.techo}`] })) }))
+      : DS.estadoVacio({ icono: null, titulo: "Sin zonas calculadas." }));
 }
 
 // --- ayuda (#ayuda): bloques ya armados en Python con la config de cada persona ---
@@ -593,19 +563,19 @@ let rutaPrevia = "#hoy";   // a dónde regresa «← Volver»
 
 function renderAyuda(d) {
   const bloques = d.ayuda || [];
-  const volver = h("button", { type: "button", class: "volver", onclick: () => { location.hash = rutaPrevia; } }, "← Volver");
-  const tarjeta = (b) => h("div", { class: "card ancha ayuda-bloque" }, h("h2", {}, b.titulo),
+  const volver = h("div", { class: "ancha" }, DS.boton("← Volver", { variante: "texto", onclick: () => { location.hash = rutaPrevia; } }));
+  const tarjeta = (b) => DS.tarjeta({ titulo: b.titulo, clase: "ancha ayuda-bloque" },
     ...(b.parrafos || []).map((p) => h("p", {}, p)),
     (b.lista || []).length ? h("ul", { class: "reglas" }, b.lista.map((i) => h("li", {}, i.t ? h("strong", {}, `${i.t}: `) : null, i.x))) : null);
-  $("vista-ayuda").replaceChildren(volver, h("h2", { class: "ayuda-titulo" }, "Ayuda"),
-    ...(bloques.length ? bloques.map(tarjeta) : [h("p", { class: "vacio" }, "Aún no hay ayuda disponible.")]));
+  $("vista-ayuda").replaceChildren(volver, h("h2", { class: "titular ancha" }, "Ayuda"),
+    ...(bloques.length ? bloques.map(tarjeta) : [DS.estadoVacio({ icono: null, titulo: "Aún no hay ayuda disponible." })]));
 }
 
 function tarjetaCarga(det) {
   PINTAR.progreso.push(dibujarDetalles);
   const c = bloqueCarga(det);
-  DET.carga = { sub: h("p", { class: "nota" }), chart: h("div", { class: "chart-wrap" }), extra: h("div", {}) };
-  c.append(h("h3", { style: "margin-top:14px" }, "Últimas 12 semanas"), DET.carga.sub, DET.carga.chart, DET.carga.extra);
+  DET.carga = { sub: h("p", { class: "nota" }), chart: h("div", { class: "chart-wrap" }), extra: h("div", { class: "pie-graf" }) };
+  c.append(h("h3", { class: "titular" }, "Últimas 12 semanas"), DET.carga.sub, DET.carga.chart, DET.carga.extra);
   c.classList.add("ancha");
   return c;
 }
@@ -625,7 +595,7 @@ function dibujarDetalles() {
     ancho, semanas: barras, etiqueta: "Carga semanal apilada", clases,
     texto: (s) => `Semana del ${fechaLarga(s.inicio)} · ${nombres.map((n, i) => `${n} ${fmt(s.valores[i], 0)}`).join(" · ")} · Total ${fmt(suma(s), 0)}`,
   }));
-  t.extra.replaceChildren(leyenda(clases.map((c, i) => [`sw ${c}`, nombres[i]])),
+  t.extra.replaceChildren(DS.leyenda(clases.map((c, i) => [COLOR_CLASE[c], nombres[i]])),
     barras.length ? tablaDatos(["Semana", ...nombres], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), ...s.valores.map((v) => fmt(v, 0))])) : "");
 }
 
@@ -633,18 +603,12 @@ function dibujarDetalles() {
 
 const temaActual = () => (document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
 
-function pintarBotonTema() {
-  const claro = temaActual() === "light", btn = $("tema-btn");
-  btn.firstChild.textContent = claro ? "☾" : "☀";
-  btn.setAttribute("aria-label", claro ? "Cambiar a tema oscuro" : "Cambiar a tema claro");
-}
-
 function cambiarTema() {
   const nuevo = temaActual() === "light" ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", nuevo);
   document.querySelector('meta[name="color-scheme"]').setAttribute("content", nuevo);
   try { localStorage.setItem("tema", nuevo); } catch (e) { /* sin almacenamiento: vale solo esta visita */ }
-  pintarBotonTema();
+  pintarEncabezado();
 }
 
 // --- arranque ---
@@ -661,30 +625,54 @@ let vistaActual = null;
 // Rutas viejas que siguen sirviendo.
 const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
-/** Título y enlace de GitHub Actions vienen de data.json (ui), no del HTML. */
+const TABS = [{ id: "hoy", texto: "Hoy", icono: "hoy", href: "#hoy" }, { id: "plan", texto: "Plan", icono: "plan", href: "#plan" },
+  { id: "progreso", texto: "Progreso", icono: "progreso", href: "#progreso" }];
+
+/** Ícono de cada liga del menú ☰ (si ui.menu trae `icono`, gana el suyo). */
+const ICONO_MENU = { "/ajustes": "editar", "/plan": "plan", "/cuerpo": "progreso", "/historial": "deshacer", "/privacidad": "check", "/salir": "flecha", "/diseno": "hoy" };
+
+let menuAbierto = false;
+
+/** Abre o cierra el menú ☰: Esc y tocar fuera lo cierran, y el foco regresa al botón. */
+function ponerMenu(abrir, foco = true) {
+  const pop = $("menu-pop"), btn = document.querySelector("#encabezado [aria-label=\"Menú\"]");
+  menuAbierto = abrir;
+  pop.hidden = !abrir;
+  if (btn) btn.setAttribute("aria-expanded", String(abrir));
+  if (abrir) {
+    pop.replaceChildren(DS.menu({ quien: ui().usuario || null, items: (ui().menu || []).map((i) => ({ texto: i.texto, href: i.url, icono: i.icono || ICONO_MENU[i.url] || "punto" })) }));
+    const primera = pop.querySelector("a, button");
+    if (primera) primera.focus();
+  } else if (foco && btn) btn.focus();
+}
+
+/** Encabezado del sistema: logo y título, «Actualizado hace…» (con la liga a Garmin si existe), ayuda, tema y, en la web, el ☰. */
 function pintarEncabezado() {
-  const u = ui();
-  if (u.titulo) { $("titulo").textContent = u.titulo; document.title = `Garmin · ${u.titulo}`; }
-  $("acciones").hidden = !u.acciones_url;
-  if (u.acciones_url) $("acciones-link").href = u.acciones_url;
-  // Menú de la web (Ajustes, Privacidad, Salir…): lo arma Python; en GitHub Pages viene vacío.
-  const menu = $("menu-web"), items = u.menu || [];
-  menu.hidden = !items.length;
-  menu.replaceChildren(...items.map((i) => h("a", { href: i.url }, i.texto)));
+  const u = ui(), items = u.menu || [];
+  if (u.titulo) document.title = `Garmin · ${u.titulo}`;
+  const act = h("span", { id: "actualizado", "aria-live": "polite" });
+  const enc = DS.encabezado({ nombre: u.titulo || "Mi entreno", tema: temaActual() === "light" ? "claro" : "oscuro", conAyuda: !!(datos && (datos.ayuda || []).length),
+    conMenu: items.length > 0, menuAbierto, actualizado: [act, u.acciones_url ? [" · ", h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener",
+      title: "En GitHub toca «Run workflow»; en 1–2 min recarga esta página" }, "Jalar datos de Garmin ↗")] : null],
+    onAyuda: () => { location.hash = "#ayuda"; }, onTema: cambiarTema, onMenu: () => ponerMenu(!menuAbierto) });
+  $("encabezado").replaceChildren(enc);
+  if (!items.length) ponerMenu(false, false);
+  actualizarEncabezado();
   // Aviso de repo atrasado (lo decide Python: ui.repo_estado = {texto, ligas}); no existe en GitHub Pages.
   const re = $("repo-estado"), est = u.repo_estado;
   re.hidden = !est;
+  re.replaceChildren(...(est ? [DS.aviso({ clase: "warn", simbolo: "!", texto: [est.texto, " ", ...(est.ligas || []).map((l) => h("a", { href: l.url, target: "_blank", rel: "noopener" }, `${l.texto} `))] })] : []));
   // Avisos de cambios del coach o de tu IA (data.avisos, solo en la web): ver y deshacer en el historial.
   const av = $("avisos-web"), lista = (datos && datos.avisos) || [];
   av.hidden = !lista.length;
-  av.replaceChildren(...lista.map((a) => h("p", {}, a.texto, " · ", h("a", { href: a.url }, "Ver y deshacer"))));
-  re.replaceChildren(...(est ? [h("p", {}, est.texto), h("p", {}, ...(est.ligas || []).map((l) => h("a", { href: l.url, target: "_blank", rel: "noopener" }, l.texto)))] : []));
+  av.replaceChildren(...lista.map((a) => DS.bannerCambio({ texto: a.texto, verHref: a.url, verTexto: "Ver y deshacer" })));
 }
 
 function actualizarEncabezado() {
   const iso = datos && (datos.datos_al || datos.generado);
   const hace = haceCuanto(iso);
-  $("actualizado").textContent = hace ? `Actualizado ${hace}` : "";
+  const act = $("actualizado");
+  if (act) act.textContent = hace ? `Actualizado ${hace}` : "";
 }
 
 function mostrarVista() {
@@ -703,7 +691,7 @@ function mostrarVista() {
   REDIBUJAR[v]();
   window.scrollTo(0, 0);
   if (datos && /[?&]abrir\b/.test(location.hash)) {   // para capturas: ?abrir despliega sesiones y "Ver todos los tipos"
-    document.querySelectorAll(`#vista-${v} details.ses, #vista-${v} details.todos-tipos`).forEach((x) => { x.open = true; });
+    document.querySelectorAll(`#vista-${v} details.fila-ses, #vista-${v} details.todos-tipos`).forEach((x) => { x.open = true; });
   }
   if (v === "progreso" && subProgreso === "cuerpo" && /[?&]hoja\b/.test(location.hash)) {   // para capturas: #cuerpo?hoja abre «Ver hoja completa»
     const hoja = document.querySelector(".ib-hoja");
@@ -711,37 +699,41 @@ function mostrarVista() {
   }
   if (datos && abrirCarrera && v === "progreso" && subProgreso === "corridas") {   // venimos de la tarjeta de carrera de Hoy
     abrirCarrera = false;
-    const det = document.querySelector("#prog-carreras .carrera-det");
+    const det = document.querySelector("#prog-carreras details");
     if (det) { det.open = true; det.scrollIntoView({ block: "start" }); }
   }
 }
 
 function aviso(id, msg) {
-  $(`vista-${id}`).replaceChildren(h("p", { class: "vacio" }, msg));
+  $(`vista-${id}`).replaceChildren(DS.estadoVacio({ icono: null, titulo: msg }));
 }
 
 async function iniciar() {
-  pintarBotonTema();
-  $("tema-btn").addEventListener("click", cambiarTema);
-  $("ayuda-btn").addEventListener("click", () => { location.hash = "#ayuda"; });
+  $("tabs").replaceChildren(DS.tabs({ items: TABS, actual: null }));
+  pintarEncabezado();
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && menuAbierto) ponerMenu(false); });
+  document.addEventListener("pointerdown", (ev) => { if (menuAbierto && !ev.target.closest("#menu-pop, #encabezado [aria-label=\"Menú\"]")) ponerMenu(false, false); });
   leerSemanaInicial();
   window.addEventListener("hashchange", mostrarVista);
   let resizeT;
   window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { for (const f of Object.values(REDIBUJAR)) f(); }, 150); });
   mostrarVista();
+  // Mientras llega data.json: el logo que se arma; si falla, el error con «Volver a intentar».
+  $("app").hidden = true;
+  $("carga").replaceChildren(DS.cargando("Armando tu semana…"));
   try {
     const resp = await fetch("data.json", { cache: "no-cache" });
-    if (!resp.ok) throw new Error(resp.status);
+    if (!resp.ok) throw new Error(`data.json: ${resp.status}`);
     datos = await resp.json();
   } catch (e) {
-    $("actualizado").textContent = "Sin datos";
-    aviso("hoy", "No se pudieron cargar los datos. Intenta de nuevo en unos minutos.");
+    $("carga").replaceChildren(DS.errorCarga({ texto: "Revisa tu conexión y vuelve a intentar. Si sigue igual, puede que tu repo no haya subido datos hoy.",
+      detalle: e && e.message ? e.message : String(e), onReintentar: () => location.reload() }));
     return;
   }
+  $("carga").replaceChildren();
+  $("app").hidden = false;
   pintarEncabezado();
-  actualizarEncabezado();
   setInterval(actualizarEncabezado, 60000);
-  $("ayuda-btn").hidden = !(datos.ayuda || []).length;
   const vistas = { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
   for (const [id, fn] of Object.entries(vistas)) {
     try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, "No se pudo mostrar esta sección con los datos actuales."); }

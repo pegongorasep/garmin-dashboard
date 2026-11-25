@@ -19,25 +19,20 @@
 </script>
 <title>Garmin · Mi entreno</title>
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="componentes.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="top">
-  <div class="top-fila">
-    <h1 id="titulo">Mi entreno</h1>
-    <div class="top-btns">
-    <button type="button" id="ayuda-btn" class="tema-btn" aria-label="Ayuda" hidden><span aria-hidden="true">?</span></button>
-    <button type="button" id="tema-btn" class="tema-btn" aria-label="Cambiar a tema claro"><span aria-hidden="true">☀</span></button>
-    </div>
+  <div class="enc-caja">
+    <div id="encabezado"></div>
+    <div id="menu-pop" class="menu-pop" hidden></div>
   </div>
-  <p class="muted"><span id="actualizado" aria-live="polite">Cargando…</span><span id="acciones" hidden> ·
-    <a id="acciones-link" href="#" target="_blank" rel="noopener"
-       title="En GitHub toca «Run workflow»; en 1–2 min recarga esta página">Jalar datos de Garmin ↗</a></span></p>
-  <nav id="menu-web" class="menu-web" aria-label="Cuenta" hidden></nav>
-  <div id="repo-estado" class="repo-estado" role="status" hidden></div>
-  <div id="avisos-web" class="repo-estado" role="status" hidden></div>
+  <div id="repo-estado" role="status" hidden></div>
+  <div id="avisos-web" role="status" hidden></div>
 </header>
 
+<div id="carga" aria-live="polite"></div>
 <main id="app">
   <section id="vista-hoy" class="vista" hidden></section>
   <section id="vista-plan" class="vista" hidden></section>
@@ -45,11 +40,7 @@
   <section id="vista-ayuda" class="vista" hidden></section>
 </main>
 
-<nav class="tabs" aria-label="Secciones">
-  <a href="#hoy" data-tab="hoy"><span class="ico" aria-hidden="true">●</span>Hoy</a>
-  <a href="#plan" data-tab="plan"><span class="ico" aria-hidden="true">≡</span>Plan</a>
-  <a href="#progreso" data-tab="progreso"><span class="ico" aria-hidden="true">↗</span>Progreso</a>
-</nav>
+<div id="tabs"></div>
 
 <script src="base.js"></script>
 <script src="iconos.js"></script>

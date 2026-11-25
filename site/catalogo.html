@@ -18,8 +18,7 @@
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="componentes.css">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--page); color: var(--ink); font: 400 14px/20px var(--font-sans); padding-inline: 16px; padding-block: 8px 48px; }
+  body { padding-inline: 16px; padding-block: 8px 48px; }
   main { max-width: 720px; margin-inline: auto; display: grid; gap: var(--space-24); }
   .cat-top { display: flex; align-items: center; gap: var(--space-8); max-width: 720px; margin-inline: auto; padding-block: var(--space-8); }
   .cat-top h1 { flex: 1; margin: 0; font: 600 19px/24px var(--font-sans); }
@@ -29,7 +28,6 @@
   .comp > h3 code { margin-left: var(--space-8); font: 400 12px/16px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
   .comp > .que { margin: 0; color: var(--ink-2); font-size: 12.5px; line-height: 17px; }
   .muestra { display: grid; gap: var(--space-12); min-width: 0; align-content: start; }
-  p { margin: 0; }
 </style>
 </head>
 <body>
@@ -207,6 +205,34 @@ def("Datos", "Fila de sesión", "DS.filaSesion()", "Sesión del plan: cerrada, d
     DS.filaSesion({ nombre: "Intervalos", minutos: 40, estado: { clase: "warn", simbolo: "!", texto: "Incompleta" }, silueta: DS.silueta(silInt, { alto: 30, conTip: false, rachas: rachasDe(silInt) }) })));
 def("Datos", "Barra trote y caminata", "DS.barraTroteCaminata()", "Minutos trotando contra caminando en una corrida.",
   DS.tarjeta({ titulo: "Trote y caminata" }, DS.barraTroteCaminata({ trote: 22, caminata: 8, nota: "6 caminatas · patrón ≈ 3:40 / 1:20 · ritmo trotando 7:42 /km a 146 lpm" })));
+
+// Hoy: selector de semana, anillo, calendario, números, barra de zonas y pestañas inferiores
+def("Datos", "Selector de semana", "DS.selectorSemana()", "Anterior y siguiente con la semana al centro.",
+  DS.selectorSemana({ texto: "Semana 7 de 12 · 24–30 nov · carga", sinSiguiente: false }));
+def("Datos", "Anillo del plan", "DS.anilloPlan()", "Avance de la semana contra el plan.",
+  DS.tarjeta({ titulo: "Esta semana" }, DS.anilloPlan({ pct: 62, titulo: "56 / 90 min · 62 %", texto: "Plan: 1 de 3 sesiones" })));
+def("Datos", "Calendario", "DS.calendario()", "Los 7 días con la corrida (círculo con los minutos), otras actividades y el día de hoy.",
+  DS.tarjeta({}, DS.calendario(
+    DS.diaCal({ nombre: "lun", numero: 23, titulo: "lunes 23 nov: CrossFit 60 min", hijos: [h("span", { class: "cf" }, DS.ico("rayo"), h("span", {}, "7.5"))] }),
+    DS.diaCal({ nombre: "mar", numero: 24, titulo: "martes 24 nov: corrida de 24 min", hijos: [h("span", { class: "circ" }, "24"), h("span", { class: "sn" }, DS.ico("correr"), h("span", {}, "Z2 #1"))] }),
+    DS.diaCal({ nombre: "mié", numero: 25, hoy: true, titulo: "miércoles 25 nov: sin actividad" }),
+    DS.diaCal({ nombre: "jue", numero: 26, titulo: "jueves 26 nov: corrida incompleta", hijos: [h("span", { class: "circ incompleta" }, "12")] }),
+    DS.diaCal({ nombre: "vie", numero: 27, titulo: "viernes 27 nov: sin actividad" }),
+    DS.diaCal({ nombre: "sáb", numero: 28, titulo: "sábado 28 nov: sin actividad" }),
+    DS.diaCal({ nombre: "dom", numero: 29, titulo: "domingo 29 nov: sin actividad" })),
+  h("p", { class: "nota" }, "número = esfuerzo calculado con tu FC (1–10)")));
+def("Datos", "Números", "DS.tiles() · DS.tile()", "Cuadros de número con su cambio contra el periodo anterior.",
+  DS.tiles({ etiqueta: "Números de las últimas 8 semanas" },
+    DS.tile({ k: "Minutos por semana", valor: "50", unidad: "min", delta: "▲ 46 min vs periodo anterior" }),
+    DS.tile({ k: "Km por semana", valor: "5.9", unidad: "km", delta: "= igual que el periodo anterior", deltaClase: "neutro" }),
+    DS.tile({ k: "Ritmo a 144 lpm", valor: "7:42", unidad: "/km", delta: "▼ 5 s vs inicio", deltaClase: "mal" }),
+    DS.tile({ k: "% trote", valor: "71", unidad: "%", delta: "Sin periodo anterior", deltaClase: "neutro" })));
+const distEj = { minutos: { Z1: 12, Z2: 70, Z3: 11, Z4: 18, Z5: 0 }, bajo: 73, limbo: 10, alto: 17 };
+def("Datos", "Barra de zonas", "DS.barraZonas()", "Minutos por zona con la meta de 80 % bajo; la compacta lleva el % dentro de cada tramo.",
+  DS.tarjeta({ titulo: "Intensidad de la semana" }, DS.barraZonas(distEj)),
+  DS.tarjeta({ titulo: "Esta semana" }, DS.barraZonas(distEj, { compacta: true, etiquetas: true }), h("p", { class: "nota" }, "Bajo 73 % · meta 80 %")));
+def("Navegación", "Pestañas inferiores", "DS.tabs()", "La barra de abajo de la app (aquí sin fijar a la pantalla).",
+  h("div", { style: "position:relative" }, DS.tabs({ actual: "plan", items: [{ id: "hoy", texto: "Hoy", icono: "hoy", href: "#" }, { id: "plan", texto: "Plan", icono: "plan", href: "#" }, { id: "progreso", texto: "Progreso", icono: "progreso", href: "#" }] })));
 
 // Gráficas
 const una = [[20, "Z2"]];

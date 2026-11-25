@@ -40,6 +40,13 @@ COMPONENTES = {
     "Senales": ("senales", "senales"),
     "Silueta": ("slt", "silueta"),
     "Tabla": ("tabla", "tabla"),
+    # Piezas de Hoy que no tenían preview propio (se agregaron en D3a)
+    "SelectorSemana": ("sel", "selectorSemana"),
+    "AnilloPlan": ("plan", "anilloPlan"),
+    "Calendario": ("cal", "calendario"),
+    "Numeros": ("tiles", "tiles"),
+    "BarraZonas": ("zbar-w", "barraZonas"),
+    "Pestanas inferiores": ("tabs", "tabs"),
 }
 
 # Únicos valores crudos que se permiten en componentes.css (decisión explícita; todo lo demás va con var(--token))
@@ -122,3 +129,34 @@ def test_filas_de_botones_y_textos_largos_no_desbordan():
     cuerpo = dict(reglas(CSS))
     assert "flex-wrap: wrap" in cuerpo[".botones"] and "flex-wrap: wrap" in cuerpo[".banner-cambio .bc-acc"]
     assert "overflow-wrap: anywhere" in cuerpo[".error-carga .ec-t, .error-carga .ec-x, .confirmacion p, .confirmacion li, .vacio .vc-t, .vacio .vc-x"]
+
+
+def _clases_usadas():
+    """Clases que arman app.js, vistas.js, componentes.js y charts.js (class: "a b", plantillas con ${}, classList.add) y index.html."""
+    usadas = set()
+    for nombre in ("app.js", "vistas.js", "componentes.js", "charts.js", "iconos.js"):
+        texto = (ROOT / "site" / nombre).read_text()
+        for m in re.finditer(r'class(?:Name)?\s*[:=]\s*("([^"]*)"|`([^`]*)`)', texto):
+            crudo = m.group(2) if m.group(2) is not None else m.group(3)
+            usadas |= {t for t in re.sub(r"\$\{[^}]*\}", " ", crudo).split() if re.fullmatch(r"[A-Za-z][\w-]*", t)}
+        usadas |= set(re.findall(r'classList\.add\("([^"]+)"\)', texto))
+    for m in re.finditer(r'class="([^"]+)"', (ROOT / "site" / "index.html").read_text()):
+        usadas |= set(m.group(1).split())
+    return usadas
+
+
+def _clases_de(css: str):
+    return set(re.findall(r"\.([A-Za-z_][\w-]*)", re.sub(r"/\*.*?\*/", "", css, flags=re.S)))
+
+
+def test_toda_clase_usada_por_el_sitio_tiene_regla():
+    reglas = _clases_de(CSS) | _clases_de((ROOT / "site" / "styles.css").read_text())
+    assert not sorted(_clases_usadas() - reglas)
+
+
+def test_styles_css_no_tiene_reglas_muertas():
+    codigo = "".join((ROOT / "site" / n).read_text() for n in ("app.js", "vistas.js", "componentes.js", "charts.js", "iconos.js", "index.html"))
+    dinamicas = {"g0", "g1", "g2", "g3", "g4", "g5", "z1", "z2", "z3", "z4", "z5", "s1", "s2", "walk", "azul", "aqua", "violeta", "amarillo"}   # se arman con ${…}
+    propias = _clases_de((ROOT / "site" / "styles.css").read_text())
+    muertas = {c for c in propias if c not in dinamicas and not re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", codigo)}
+    assert not muertas, muertas
