@@ -47,9 +47,11 @@ Se trabaja en el artifact, por grupos, con una revisión de Pedro al cerrar cada
 - **D0a, células**: los colores que faltan (validados con el script de `dataviz` en los dos temas, contraste ≥ 4.5:1
   en texto), la fuente Lexend como archivos, los íconos como archivos (mismo trazo de 1.75 px) y las notas del
   README. Se marca el ✓ blanco sobre `ok` (3.3:1) como pendiente si Pedro quiere cambiarlo.
-- **D0b, controles y navegación**: README y preview de cada componente, en los dos temas.
-- **D0c, datos y contenedores**: igual; las gráficas siguen el skill `dataviz` (marcas finas, una sola escala,
-  leyenda con 2 o más series, tooltip).
+- **D0b, controles y navegación**: README y preview de cada componente, en los dos temas. Se adelanta
+  **Graficas** (pedido de Pedro): siluetas de una zona, pirámide y muchos intervalos (las repeticiones se juntan en
+  un corchete «10 × 1′ Z5 + 1′ Z1»), barras sencillas y apiladas por semana (sin datos, meta) y línea de tendencia,
+  con las reglas de `dataviz` (marcas finas, una sola escala, leyenda con 2 o más series, tooltip).
+- **D0c, datos y contenedores**: igual, con el resto de los componentes de datos.
 - **D0d, pantallas como guía**: una sección del README por pantalla (Hoy, Plan, Progreso, Ayuda, Entrar, Bienvenida,
   Ajustes, Historial, InBody) que dice qué componentes lleva y en qué orden. No son componentes nuevos.
 
@@ -78,9 +80,16 @@ Pedro aprueba D0 → empieza el código.
    `grafica()`, …) que arma el HTML; `vistas.js` y `app.js` solo las llaman. El JS solo pinta.
 3. `web/plantillas/componentes.html`: macros Jinja con el mismo HTML para las páginas de la web (botón, campo,
    aviso, tarjeta, pasos, confirmación, pie…).
-4. `site/catalogo.html`: todos los componentes con datos de ejemplo, en los dos temas, para revisarlos (no se liga
-   desde la app). Prueba: cada componente del sistema tiene su bloque en `componentes.css` y su ejemplo en el
-   catálogo.
+4. **Sección «Sistema de diseño»** (pedido de Pedro: poder entrar siempre a ver cómo se ve todo):
+   `site/catalogo.html` con todos los componentes y datos de ejemplo, usando las mismas funciones de
+   `componentes.js` que la app (no copias). Arriba, un botón para cambiar entre oscuro y claro. Incluye la sección
+   **Gráficas** con todos los ejemplos del componente (siluetas con muchos intervalos, barras, línea).
+   - En la web: `/diseno`, solo para el admin (Pedro), con liga en el menú ☰ («Sistema de diseño»). A cualquier
+     otra persona le responde 404.
+   - En local: `./run_local.sh` lo sirve en `http://localhost:8000/catalogo.html`.
+   - En las Pages de los amigos no se publica.
+   - Prueba: cada componente del sistema tiene su bloque en `componentes.css` y su ejemplo en el catálogo; `/diseno`
+     da 404 a quien no es admin.
 
 ## D3 — Pantallas 🤖
 
