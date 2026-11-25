@@ -39,6 +39,7 @@ jobs:
           URL="$(gcloud secrets versions access latest --secret=DATABASE_URL --project "${{ vars.GCP_PROYECTO }}")"
           echo "::add-mask::${URL}"
           URL="${URL/postgresql+psycopg:/postgresql:}"
+          URL="${URL/-pooler./.}"   # pg_dump va directo, no por el pooler de Neon
           /usr/lib/postgresql/17/bin/pg_dump --no-owner --no-privileges "${URL}" | gzip > respaldo.sql.gz
           test -s respaldo.sql.gz
           gcloud storage cp respaldo.sql.gz "gs://${{ vars.GCP_BUCKET_RESPALDOS }}/respaldos/$(date -u +%F).sql.gz"
