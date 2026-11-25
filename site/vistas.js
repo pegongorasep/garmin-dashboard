@@ -656,6 +656,10 @@ function pintarEncabezado() {
   if (u.titulo) { $("titulo").textContent = u.titulo; document.title = `Garmin · ${u.titulo}`; }
   $("acciones").hidden = !u.acciones_url;
   if (u.acciones_url) $("acciones-link").href = u.acciones_url;
+  // Menú de la web (Ajustes, Privacidad, Salir…): lo arma Python; en GitHub Pages viene vacío.
+  const menu = $("menu-web"), items = u.menu || [];
+  menu.hidden = !items.length;
+  menu.replaceChildren(...items.map((i) => h("a", { href: i.url }, i.texto)));
 }
 
 function actualizarEncabezado() {

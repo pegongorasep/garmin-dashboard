@@ -1,0 +1,193 @@
+import json
+import random
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+import pytest
+from alembic import command
+from alembic.config import Config
+
+import ajustes
+import build
+import validar
+from web import calculo, cli, datos, importar
+from web.modelos import Ajustes, Base, CacheData, DatoGarmin, Usuario
+
+ROOT = Path(__file__).parent.parent
+HAY_DATOS = (ROOT / "data" / "activities.json").exists() and (ROOT / "config.yaml").exists()
+AHORA_UTC = datetime(2026, 11, 25, 18, 0)   # 12:00 en Mérida
+
+
+def usuario_pedro(ctx):
+    with ctx.sesiones() as db:
+        u = Usuario(correo="pedro@example.com")
+        db.add(u)
+        db.commit()
+        return u.id
+
+
+def esperado(modo_web: bool):
+    cfg = ajustes.cargar_config(ROOT)
+    if modo_web:
+        cfg = {**cfg, "modo": "web", "menu": calculo.MENU}
+    ahora = AHORA_UTC.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
+    return build.build(build.load_data(ROOT), build.load_plan(ROOT), cfg, ahora)
+
+
+def norm(d, a_pages=False):
+    texto = json.dumps(d, sort_keys=True, ensure_ascii=False)
+    if a_pages:   # los textos que cambian en modo web (el plan los nombra)
+        texto = texto.replace("(desde Ajustes)", "(con /ajustar)").replace("vayas a Ajustes", "corras /ajustar") \
+                     .replace("Ve a Ajustes para", "Corre /ajustar para")
+    return json.loads(texto)
+
+
+@pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
+def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
+    uid = usuario_pedro(web_ctx)
+    with web_ctx.sesiones() as db:
+        importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
+        web = calculo.calcular(db, db.get(Usuario, uid), AHORA_UTC)
+        assert validar.problemas(web) == []
+        assert "serie" not in json.dumps(web)
+    # diferencias permitidas: ui.menu (lista de la web) y los textos de /ajustar (modo web)
+    esp = norm(esperado(modo_web=True))
+    assert norm(web) == esp
+    pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
+    for d in (pages, web_n):
+        d["ui"].pop("menu")
+    assert pages == web_n
+
+
+@pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
+def test_el_orden_de_las_filas_guardadas_no_cambia_el_resultado(web_ctx):
+    uid = usuario_pedro(web_ctx)
+    with web_ctx.sesiones() as db:
+        importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
+        u = db.get(Usuario, uid)
+        antes = norm(calculo.calcular(db, u, AHORA_UTC))
+        cache = db.get(CacheData, uid)
+        db.delete(cache)
+        filas = db.query(DatoGarmin).all()
+        contenidos = [(f.tipo, f.clave, f.contenido) for f in filas]
+        random.Random(1).shuffle(contenidos)
+        for f in filas:
+            db.delete(f)
+        db.commit()
+        for tipo, clave, c in contenidos:
+            db.add(DatoGarmin(usuario_id=uid, tipo=tipo, clave=clave, contenido=c))
+        db.commit()
+        assert norm(calculo.calcular(db, u, AHORA_UTC)) == antes
+
+
+@pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
+def test_cache_se_reusa_y_se_invalida(web_ctx):
+    uid = usuario_pedro(web_ctx)
+    with web_ctx.sesiones() as db:
+        importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
+        u = db.get(Usuario, uid)
+        calculo.calcular(db, u, AHORA_UTC)
+        h1 = db.get(CacheData, uid).huella
+        calculo.calcular(db, u, AHORA_UTC)
+        assert db.get(CacheData, uid).huella == h1
+        # cambia el día local -> otra huella
+        calculo.calcular(db, u, datetime(2026, 11, 26, 18, 0))
+        assert db.get(CacheData, uid).huella != h1
+        # una subida nueva -> otra huella
+        h2 = db.get(CacheData, uid).huella
+        d = db.query(DatoGarmin).filter_by(usuario_id=uid, tipo="meta").one()
+        d.contenido = {**d.contenido, "pulled_at": "2030-01-01"}
+        d.actualizado = datetime(2030, 1, 1)
+        db.commit()
+        calculo.calcular(db, u, datetime(2026, 11, 26, 18, 0))
+        assert db.get(CacheData, uid).huella != h2
+
+
+@pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
+def test_ruta_data_json_de_la_web_sirve_el_del_usuario(web_ctx):
+    from test_web_cuentas import csrf_de, liga_de  # noqa: F401
+    uid = usuario_pedro(web_ctx)
+    with web_ctx.sesiones() as db:
+        importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
+    from test_web_cuentas import entrar
+    cl = entrar(web_ctx, web_ctx.cliente(), "pedro@example.com")
+    assert "<title>" in cl.get("/").text
+    r = cl.get("/data.json")
+    assert r.status_code == 200 and validar.problemas(r.json()) == []
+    assert r.json()["ui"]["menu"] == calculo.MENU
+
+
+def test_data_con_claves_prohibidas_no_se_sirve(web_ctx, monkeypatch):
+    from test_web_cuentas import CONFIG, entrar
+    with web_ctx.sesiones() as db:
+        u = Usuario(correo="a@x.com")
+        db.add(u)
+        db.commit()
+        db.add(Ajustes(usuario_id=u.id, config=CONFIG))
+        db.commit()
+    monkeypatch.setattr(build, "build", lambda *a, **k: {**norm(esperado_vacio()), "activityName": "x"})
+    cl = entrar(web_ctx, web_ctx.cliente(), "a@x.com")
+    r = cl.get("/data.json")
+    assert r.status_code == 500 and "activityName" not in r.text
+
+
+def esperado_vacio():
+    return {}
+
+
+def test_guardar_paquete_es_upsert_y_no_borra(web_ctx):
+    pq = {"esquema": 1, "motor": "x", "archivos": {
+        "daily": {"daily_summaries": [{"calendarDate": "2026-11-01", "heartRate": {"restingValue": 60}}],
+                  "sleep": [], "hrv": []},
+        "activities": [{"id": "a1", "startTimeLocal": "2026-11-01 07:00:00", "activityType": {"typeKey": "running"}}],
+        "activity_details": {"a1": {"rpe": 3.0}}, "hr_zones": [], "historial_corridas": [], "meta": {}}}
+    with web_ctx.sesiones() as db:
+        u = Usuario(correo="a@x.com")
+        db.add(u)
+        db.commit()
+        r1 = datos.guardar_paquete(db, u.id, pq)
+        assert r1["actividad"] == {"nuevos": 1, "cambiados": 0}
+        r2 = datos.guardar_paquete(db, u.id, pq)
+        assert r2["actividad"] == {"nuevos": 0, "cambiados": 0} and db.query(DatoGarmin).count() == 3
+        pq["archivos"]["activity_details"]["a1"]["rpe"] = 5.0
+        pq["archivos"]["activities"] = []   # un paquete sin esa actividad no la borra
+        assert datos.guardar_paquete(db, u.id, pq)["detalle"]["cambiados"] == 1
+        assert db.query(DatoGarmin).filter_by(tipo="actividad").count() == 1
+        assert datos.leer_archivos(db, u.id)["details"]["a1"]["rpe"] == 5.0
+
+
+def test_cli_invitar_crear_admin_importar(web_ctx, capsys, tmp_path):
+    args = dict(settings=web_ctx.settings, motor=web_ctx.motor)
+    assert cli.main(["crear-admin", "Pedro@Example.com"], **args) == 0
+    assert cli.main(["invitar", "--nota", "Adrián"], **args) == 0
+    liga = capsys.readouterr().out.strip().splitlines()[-1]
+    assert liga.startswith("https://ahilallevas.test/invitacion/")
+    assert "Adrián" in web_ctx.cliente().get(liga.removeprefix("https://ahilallevas.test")).text
+    with web_ctx.sesiones() as db:
+        assert db.query(Usuario).filter_by(correo="pedro@example.com", es_admin=True).count() == 1
+    assert cli.main(["importar", "nadie@x.com", str(tmp_path)], **args) == 1
+    (tmp_path / "config.yaml").write_text((ROOT / "tests" / "fixtures" / "config.yaml").read_text())
+    assert cli.main(["importar", "pedro@example.com", str(tmp_path)], **args) == 0
+    with web_ctx.sesiones() as db:
+        assert db.query(Ajustes).count() == 1
+
+
+def test_migracion_inicial_crea_las_mismas_tablas_que_los_modelos(tmp_path):
+    db = tmp_path / "m.db"
+    cfg = Config(str(ROOT / "web" / "alembic.ini"))
+    cfg.cmd_opts = type("O", (), {"x": [f"url=sqlite:///{db}"]})()
+    command.upgrade(cfg, "head")
+    tablas = {r[0] for r in sqlite3.connect(db).execute("select name from sqlite_master where type='table'")}
+    assert set(Base.metadata.tables) <= tablas
+
+
+def test_settings_exigen_secret_key_fuera_de_localhost_y_arreglan_la_url_de_postgres():
+    from web.config import Settings
+    with pytest.raises(RuntimeError):
+        Settings(base_url="https://ahilallevas.com")
+    s = Settings(base_url="http://localhost:8000", database_url="postgres://u:p@h/db")
+    assert s.database_url.startswith("postgresql+psycopg://") and not s.cookie_segura
+    assert Settings(base_url="https://ahilallevas.com/", secret_key="x").cookie_segura
+    assert s.oidc_audience == "http://localhost:8000"

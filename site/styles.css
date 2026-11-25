@@ -524,3 +524,8 @@ details.ses > summary .ley-sil { margin-left: 20px; }
 .ayuda-bloque p { margin: 0 0 8px; }
 .volver { justify-self: start; }
 .ayuda-titulo { text-align: left; }
+
+/* v5: menú de la web junto al encabezado (lo llena vistas.js desde ui.menu; vacío en GitHub Pages) */
+.menu-web { display: flex; gap: 14px; flex-wrap: wrap; margin: 6px 0 0; font-size: 0.9rem; }
+.menu-web a { color: var(--ink-2); }
+.menu-web[hidden] { display: none; }

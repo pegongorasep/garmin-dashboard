@@ -167,6 +167,8 @@ def normalizar_config(crudo: dict) -> dict:
     desde = perfil.get("fc_max_correa_desde")
     return {
         "modo": modo,
+        "menu": list(cfg.get("menu") or []),   # solo la web: [{texto, url}] para ui.menu
+        "acciones_url": cfg.get("acciones_url"),
         **umbrales,
         "titulo": perfil.get("titulo") or "Mi entreno",
         "timezone": tz, "edad": edad,
