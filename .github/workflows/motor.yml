@@ -16,6 +16,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      publicar: ${{ steps.decidir.outputs.publicar }}
+    env:
+      # La web de Ahí la Llevas (v5). Si no responde, todo sigue como antes: nunca falla el workflow por ella.
+      AHILALLEVAS_URL: https://ahilallevas.com
     permissions:
       contents: write   # para dejar al día CLAUDE.md y .claude/skills en repos de amigos
       pages: write      # actions/configure-pages
@@ -46,30 +51,56 @@ jobs:
           key: activity-details-${{ github.run_id }}
           restore-keys: activity-details-
 
+      # 3. Instrucciones de la web (qué tanto historial bajar). Sin respuesta: los argumentos de siempre (vacío).
+      - name: Pedir instrucciones a la web
+        id: instrucciones
+        run: echo "args=$(python motor/scripts/subir.py instrucciones || true)" >> "$GITHUB_OUTPUT"
+
       - name: Bajar datos de Garmin
-        run: python motor/garmin_connect.py
+        run: python motor/garmin_connect.py ${{ steps.instrucciones.outputs.args }}
         env:
           PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
           GARMIN_USER_DIR: ${{ github.workspace }}
 
+      # 4. Mandar el paquete limpio (lista blanca) a la web. `publicar_pages=false` cuando la persona ya migró.
+      - name: Subir datos a la web
+        id: subida
+        run: python motor/scripts/subir.py subir || echo "publicar_pages=true" >> "$GITHUB_OUTPUT"
+        env:
+          GARMIN_USER_DIR: ${{ github.workspace }}
+
+      # 5. Sin config.yaml (repo nuevo que solo es tubo de datos) o ya migrado: no se construye ni se publica Pages.
+      - name: Decidir si se publica Pages
+        id: decidir
+        run: |
+          if [ -f config.yaml ] && [ "${{ steps.subida.outputs.publicar_pages }}" != "false" ]; then
+            echo "publicar=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publicar=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Construir el sitio
+        if: steps.decidir.outputs.publicar == 'true'
         run: python motor/dashboard/build.py
         env:
           GARMIN_USER_DIR: ${{ github.workspace }}
 
       - name: Validar data.json (lista blanca de privacidad)
+        if: steps.decidir.outputs.publicar == 'true'
         run: python motor/dashboard/validar.py
 
       - uses: actions/configure-pages@v5
+        if: steps.decidir.outputs.publicar == 'true'
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.decidir.outputs.publicar == 'true'
         with:
           path: motor/site
 
       # Solo en repos de amigos: CLAUDE.md y las skills se copian del motor. No toca .github/workflows/.
       # Si el push choca (la persona subió algo a la vez), no frena la publicación: se reintenta en la próxima.
       - name: Dejar al día las instrucciones de Claude
-        if: github.repository != 'pegongorasep/garmin-dashboard'
+        if: github.repository != 'pegongorasep/garmin-dashboard' && steps.decidir.outputs.publicar == 'true'
         continue-on-error: true
         run: |
           cp motor/template/CLAUDE.md CLAUDE.md
@@ -86,6 +117,7 @@ jobs:
 
   deploy:
     needs: build
+    if: needs.build.outputs.publicar == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write

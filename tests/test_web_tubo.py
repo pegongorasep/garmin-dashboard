@@ -1,0 +1,516 @@
+import gzip
+import json
+import re
+import sys
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import jwt
+import pytest
+import yaml
+from cryptography.hazmat.primitives.asymmetric import rsa
+from jwt.algorithms import RSAAlgorithm
+
+import ajustes
+import build
+import paquete
+import validar
+from test_web_cuentas import CONFIG, crear_usuario, csrf_de, entrar, post
+from web import calculo, importar, onboarding, tubo
+from web.modelos import Ajustes, Cambio, Consentimiento, DatoGarmin, Plan, Subida, Usuario, ahora
+
+ROOT = Path(__file__).parent.parent
+HAY_DATOS = (ROOT / "data" / "activities.json").exists() and (ROOT / "config.yaml").exists()
+ISS = "https://token.actions.githubusercontent.com"
+WORKFLOW = "pegongorasep/garmin-dashboard/.github/workflows/motor.yml@refs/tags/stable"
+LLAVE = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+OTRA_LLAVE = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+
+def jwks_falso():
+    jwk = json.loads(RSAAlgorithm.to_jwk(LLAVE.public_key()))
+    jwk.update({"kid": "k1", "use": "sig", "alg": "RS256"})
+    return {"keys": [jwk]}
+
+
+def token(web_ctx, llave=LLAVE, **extra):
+    claims = {"iss": ISS, "aud": web_ctx.settings.oidc_audience, "exp": int(time.time()) + 600,
+              "repository": "amigo/garmin-prueba", "repository_id": "777", "repository_owner": "Amigo",
+              "repository_owner_id": "5", "job_workflow_ref": WORKFLOW, **extra}
+    return jwt.encode({k: v for k, v in claims.items() if v is not None}, llave, algorithm="RS256", headers={"kid": "k1"})
+
+
+@pytest.fixture
+def ctx(web_ctx):
+    web_ctx.app.state.jwks_fetch = lambda url: jwks_falso()
+    web_ctx.app.state.__dict__.pop("jwks_cache", None)
+    return web_ctx
+
+
+def usuario_amigo(ctx, owner="amigo", consentimiento=True, repo_id=None):
+    with ctx.sesiones() as db:
+        u = Usuario(correo="amigo@x.com", github_owner=owner, repo_id=repo_id, repo="amigo/garmin-prueba" if repo_id else None)
+        db.add(u)
+        db.commit()
+        if consentimiento:
+            db.add(Consentimiento(usuario_id=u.id, version_aviso="2026-12"))
+            db.commit()
+        return u.id
+
+
+def auth(tok):
+    return {"Authorization": f"Bearer {tok}"}
+
+
+def paquete_chico(**cambios):
+    pq = {"esquema": 1, "motor": "abc123", "archivos": {
+        "daily": {"daily_summaries": [{"calendarDate": "2026-11-01", "heartRate": {"restingValue": 60}}], "sleep": [], "hrv": []},
+        "activities": [{"id": "a1", "es_carrera": False, "startTimeLocal": "2026-11-01 07:00:00",
+                        "activityType": {"typeKey": "running"}, "duration": 1200.0, "distance": 3000.0}],
+        "activity_details": {"a1": {"rpe": 3.0, "serie": [[0, 0, 100]]}}, "hr_zones": [{"sport": "DEFAULT", "maxHeartRateUsed": 190}],
+        "historial_corridas": [], "meta": {"pulled_at": "2026-11-01", "pulled_at_utc": "2026-11-01T12:00:00+00:00"}}}
+    pq.update(cambios)
+    return pq
+
+
+def subir(cl, tok, pq, comprimir=True):
+    cuerpo = json.dumps(pq).encode()
+    cab = auth(tok)
+    if comprimir:
+        cuerpo, cab = gzip.compress(cuerpo), {**cab, "Content-Encoding": "gzip"}
+    return cl.post("/api/tubo/subida", content=cuerpo, headers={**cab, "Content-Type": "application/json"})
+
+
+# --- OIDC ---
+
+@pytest.mark.parametrize("extra,llave,codigo", [
+    ({}, LLAVE, 200),
+    ({"aud": "https://otra.web"}, LLAVE, 401),
+    ({"exp": int(time.time()) - 10}, LLAVE, 401),
+    ({"iss": "https://evil.example"}, LLAVE, 401),
+    ({"job_workflow_ref": "otro/repo/.github/workflows/motor.yml@refs/tags/stable"}, LLAVE, 403),
+    ({"job_workflow_ref": "pegongorasep/garmin-dashboard/.github/workflows/otro.yml@refs/tags/stable"}, LLAVE, 403),
+    ({"job_workflow_ref": "pegongorasep/garmin-dashboard/.github/workflows/motor.yml@refs/heads/dev"}, LLAVE, 403),
+    ({"job_workflow_ref": "pegongorasep/garmin-dashboard/.github/workflows/motor.yml@refs/heads/main"}, LLAVE, 200),
+    ({}, OTRA_LLAVE, 401),
+])
+def test_verificacion_del_token(ctx, extra, llave, codigo):
+    usuario_amigo(ctx)
+    r = ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx, llave, **extra)))
+    assert r.status_code == codigo, r.text
+
+
+def test_sin_token_o_con_basura_es_401(ctx):
+    cl = ctx.cliente()
+    assert cl.post("/api/tubo/instrucciones").status_code == 401
+    assert cl.post("/api/tubo/instrucciones", headers=auth("basura")).status_code == 401
+    assert cl.post("/api/tubo/subida", content=b"{}").status_code == 401
+
+
+def test_token_sin_alg_none(ctx):
+    usuario_amigo(ctx)
+    falso = jwt.encode({"iss": ISS, "aud": ctx.settings.oidc_audience, "exp": int(time.time()) + 60}, None, algorithm="none")
+    assert ctx.cliente().post("/api/tubo/instrucciones", headers=auth(falso)).status_code == 401
+
+
+# --- vinculación ---
+
+def test_vincula_por_owner_con_consentimiento(ctx):
+    uid = usuario_amigo(ctx, owner="AMIGO")   # sin distinguir mayúsculas
+    r = ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx)))
+    assert r.status_code == 200 and r.json()["vinculado"] is True
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert (u.repo, u.repo_id, u.github_owner_id) == ("amigo/garmin-prueba", 777, 5)
+        c = db.query(Cambio).filter_by(atleta_id=uid).one()
+        assert c.via == "sistema" and "amigo/garmin-prueba" in c.descripcion
+
+
+def test_no_vincula_sin_consentimiento_ni_owner_equivocado(ctx):
+    usuario_amigo(ctx, consentimiento=False)
+    cl = ctx.cliente()
+    r = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx)))
+    assert r.status_code == 403 and r.json()["error"] == "repo no vinculado"
+    with ctx.sesiones() as db:
+        assert db.query(Usuario).one().repo_id is None
+        db.add(Consentimiento(usuario_id=1, version_aviso="2026-12"))
+        db.commit()
+    assert cl.post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_owner="otro"))).status_code == 403
+    assert cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).status_code == 200
+
+
+def test_un_repo_ya_vinculado_a_otro_usuario_no_se_roba(ctx):
+    usuario_amigo(ctx, owner="amigo", repo_id=777)
+    with ctx.sesiones() as db:
+        db.add(Usuario(correo="b@x.com", github_owner="amigo"))
+        db.commit()
+    # el repo 777 sigue siendo del primero; otro repo del mismo owner no se vincula a nadie (el primero ya tiene repo)
+    assert ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx))).status_code == 200
+    r = ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_id="999")))
+    assert r.status_code == 403 or r.json()["vinculado"]
+    with ctx.sesiones() as db:
+        assert db.query(Usuario).filter_by(correo="amigo@x.com").one().repo_id == 777
+
+
+def test_instrucciones_primera_corrida_y_historial_pedido(ctx):
+    uid = usuario_amigo(ctx, repo_id=777)
+    cl = ctx.cliente()
+    d = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
+    assert d["dias_actividades"] == 365 and d["historial_desde"] == (ahora().date() - timedelta(days=365)).isoformat()
+    assert subir(cl, token(ctx), paquete_chico()).status_code == 200
+    d = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
+    assert d == {"vinculado": True, "historial_desde": None, "dias_actividades": 120}
+    with ctx.sesiones() as db:
+        db.get(Usuario, uid).historial_desde = "2024-01-01"
+        db.commit()
+    assert cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()["historial_desde"] == "2024-01-01"
+    assert subir(cl, token(ctx), paquete_chico()).status_code == 200   # la subida cumple el pedido
+    assert cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()["historial_desde"] is None
+
+
+# --- subida ---
+
+def test_subida_guarda_con_upsert_y_registra(ctx):
+    uid = usuario_amigo(ctx, repo_id=777)
+    cl = ctx.cliente()
+    r = subir(cl, token(ctx), paquete_chico())
+    assert r.status_code == 200 and r.json() == {"ok": True, "publicar_pages": True}
+    n = None
+    for _ in range(2):   # subir lo mismo dos veces no duplica
+        subir(cl, token(ctx), paquete_chico())
+        with ctx.sesiones() as db:
+            filas = db.query(DatoGarmin).filter_by(usuario_id=uid).count()
+        n = n or filas
+        assert filas == n
+    with ctx.sesiones() as db:
+        s = db.query(Subida).filter_by(usuario_id=uid).first()
+        assert s.ok and s.motor == "abc123" and s.bytes > 0
+        db.get(Usuario, uid).migrado = True
+        db.commit()
+    assert subir(cl, token(ctx), paquete_chico()).json()["publicar_pages"] is False
+
+
+def test_subida_con_clave_prohibida_da_422(ctx):
+    uid = usuario_amigo(ctx, repo_id=777)
+    pq = paquete_chico()
+    pq["archivos"]["activities"][0]["activityName"] = "Carrera secreta"
+    r = subir(ctx.cliente(), token(ctx), pq)
+    assert r.status_code == 422 and any("activityName" in p for p in r.json()["problemas"])
+    with ctx.sesiones() as db:
+        assert db.query(DatoGarmin).count() == 0
+        s = db.query(Subida).one()
+        assert not s.ok and "activityName" in s.error
+
+
+def test_subida_sin_gzip_gzip_roto_y_muy_grande(ctx):
+    usuario_amigo(ctx, repo_id=777)
+    cl = ctx.cliente()
+    assert subir(cl, token(ctx), paquete_chico(), comprimir=False).status_code == 200
+    r = cl.post("/api/tubo/subida", content=b"no es gzip", headers={**auth(token(ctx)), "Content-Encoding": "gzip"})
+    assert r.status_code == 400
+    r = cl.post("/api/tubo/subida", content=b"{no json", headers=auth(token(ctx)))
+    assert r.status_code == 400
+    bomba = gzip.compress(b"0" * (30 * 1024 * 1024))   # chiquito comprimido, enorme al abrirlo
+    r = cl.post("/api/tubo/subida", content=bomba, headers={**auth(token(ctx)), "Content-Encoding": "gzip"})
+    assert r.status_code == 413
+    assert cl.post("/api/tubo/subida", content=b"x" * (tubo.MAX_COMPRIMIDO + 1), headers=auth(token(ctx))).status_code == 413
+
+
+def test_subida_de_un_repo_no_vinculado_no_guarda_nada(ctx):
+    usuario_amigo(ctx, owner="otro")
+    r = subir(ctx.cliente(), token(ctx), paquete_chico())
+    assert r.status_code == 403
+    with ctx.sesiones() as db:
+        assert db.query(DatoGarmin).count() == 0
+
+
+@pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
+def test_regla_de_oro_por_el_tubo(ctx):
+    """Los archivos de data/ -> paquete -> endpoint -> base -> data.json == build() con los archivos de data/."""
+    uid = usuario_amigo(ctx, repo_id=777)
+    with ctx.sesiones() as db:
+        db.query(Consentimiento).delete()
+        importar.importar_carpeta(db, db.get(Usuario, uid), ROOT / "tests" / "no-existe")   # no falla: carpeta vacía
+        # solo ajustes, plan e InBody de Pedro; los datos entran por el tubo
+        import shutil, tempfile
+        with tempfile.TemporaryDirectory() as t:
+            shutil.copy(ROOT / "config.yaml", t)
+            shutil.copytree(ROOT / "plan", Path(t) / "plan", ignore=shutil.ignore_patterns("__pycache__"))
+            importar.importar_carpeta(db, db.get(Usuario, uid), t)
+    pq = paquete.armar(ROOT / "data", salt="777")
+    assert subir(ctx.cliente(), token(ctx), pq).status_code == 200
+    ahora_utc = datetime(2026, 11, 25, 18, 0)
+    with ctx.sesiones() as db:
+        web = calculo.calcular(db, db.get(Usuario, uid), ahora_utc)
+    cfg = ajustes.cargar_config(ROOT)
+    from zoneinfo import ZoneInfo
+    local = ahora_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
+    esp = build.build(build.load_data(ROOT), build.load_plan(ROOT), {**cfg, "modo": "web", "menu": calculo.MENU,
+                      "acciones_url": "https://github.com/amigo/garmin-prueba/actions/workflows/deploy.yml"}, local)
+    web["ui"].pop("repo_estado")   # depende de la hora de la última subida; se prueba aparte
+    assert json.dumps(web, sort_keys=True) == json.dumps(esp, sort_keys=True)
+    assert validar.problemas(web) == []
+
+
+# --- estado del repo ---
+
+def test_banner_de_repo_atrasado(ctx):
+    uid = usuario_amigo(ctx, repo_id=777)
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert calculo.estado_repo(db, u, ahora())["texto"].startswith("Tu repo todavía no ha mandado datos")
+        db.add(Subida(usuario_id=uid, fecha=ahora() - timedelta(hours=30), ok=True))
+        db.commit()
+        e = calculo.estado_repo(db, u, ahora())
+        assert "30 h" in e["texto"] and e["ligas"][0]["url"] == "https://github.com/amigo/garmin-prueba/actions"
+        d = {"ui": {"repo_estado": e}}
+        assert [p for p in validar.problemas({**d, **{k: {} for k in validar.OBLIGATORIAS if k != "ui"}}) if "URL" in p] == []
+        db.add(Subida(usuario_id=uid, fecha=ahora() - timedelta(hours=2), ok=True))
+        db.commit()
+        assert calculo.estado_repo(db, u, ahora()) is None
+        u.repo_id = None
+        assert calculo.estado_repo(db, u, ahora()) is None
+
+
+def test_validar_no_deja_pasar_otras_urls_en_repo_estado():
+    base = {k: {} for k in validar.OBLIGATORIAS}
+    malo = {**base, "ui": {"repo_estado": {"ligas": [{"url": "https://evil.example/x"}]}}}
+    assert any("URL" in p for p in validar.problemas(malo))
+    malo = {**base, "ui": {"otra": {"url": "https://github.com/x/actions"}}}
+    assert any("URL" in p for p in validar.problemas(malo))
+
+
+# --- onboarding ---
+
+def test_onboarding_completo(ctx):
+    uid = crear_usuario(ctx, "nuevo@x.com")
+    cl = entrar(ctx, ctx.cliente(), "nuevo@x.com")
+    r = cl.get("/")
+    assert r.status_code == 303 and r.headers["location"] == "/bienvenida"
+    assert "acepto expresamente" in cl.get("/bienvenida").text
+    # sin consentimiento no avanza (ni siquiera pidiendo el paso 4)
+    assert "acepto expresamente" in cl.get("/bienvenida?paso=4").text
+    assert cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "yo"}).status_code == 403
+    # consentimiento: debe estar marcada la casilla
+    cl.post("/bienvenida/consentimiento", data={"csrf": csrf_de(cl.get("/bienvenida").text)})
+    with ctx.sesiones() as db:
+        assert db.query(Consentimiento).count() == 0
+    cl.post("/bienvenida/consentimiento", data={"csrf": csrf_de(cl.get("/bienvenida").text), "acepto": "on"})
+    with ctx.sesiones() as db:
+        c = db.query(Consentimiento).one()
+        assert c.version_aviso == "2026-12" and c.fecha
+    assert "usuario de GitHub" in cl.get("/bienvenida").text
+    # usuario inválido
+    r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "no válido!"})
+    assert r.status_code == 400 and "Escribe tu usuario" in r.text
+    r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "@Yo-Mismo"})
+    assert r.status_code == 303
+    p3 = cl.get("/bienvenida?paso=3").text
+    assert "template_owner=pegongorasep" in p3 and "template_name=garmin-prueba" in p3 and "visibility=private" in p3
+    p4 = cl.get("/bienvenida?paso=4").text
+    assert "https://github.com/Yo-Mismo/garmin-prueba/settings/secrets/actions/new" in p4 and "PERSONAL_API_KEY" in p4
+    assert "no la pedimos nunca" in p4 and 'type="password"' not in p4 and "<input" not in p4   # ningún campo para la key
+    assert "https://github.com/Yo-Mismo/garmin-prueba/actions" in cl.get("/bienvenida?paso=5").text
+    # todavía no hay datos: el paso 7 no se abre
+    assert "Esperando tus datos" in cl.get("/bienvenida?paso=7").text
+    assert cl.get("/api/estado").json() == {"vinculado": False, "repo": None, "datos": False, "ultima_subida": None,
+                                            "consentimiento": True, "plan": False}
+    # el repo sube su primer paquete (esto vincula)
+    tok = token(ctx, repository_owner="yo-mismo", repository="Yo-Mismo/garmin-prueba")
+    assert subir(ctx.cliente(), tok, paquete_chico()).status_code == 200
+    e = cl.get("/api/estado").json()
+    assert e["vinculado"] and e["datos"] and e["repo"] == "Yo-Mismo/garmin-prueba" and e["ultima_subida"].endswith("Z")
+    p7 = cl.get("/bienvenida").text   # sin paso: salta al 7
+    assert "Crear mi plan" in p7
+    # preguntas
+    datos = {"titulo": "Mi plan", "nivel": "novato", "intensidad": "solo_z2", "caminatas": "on", "z2": "15", "larga": "30",
+             "edad": "35", "fc_max": "", "cats": ["fuerza", "hiit"], "pierna": ["lun"], "inicio": "2030-01-07",
+             "sensor": "muñeca", "zona": "America/Merida"}
+    malos = [{**datos, "inicio": "2030-01-08"}, {**datos, "edad": "", "fc_max": ""}, {**datos, "zona": "Marte/Base"},
+             {**datos, "z2": "abc"}]
+    for m in malos:
+        r = cl.post("/bienvenida/plan", data={"csrf": csrf_de(cl.get("/bienvenida").text), **m})
+        assert r.status_code == 400 and 'role="alert"' in r.text
+    r = cl.post("/bienvenida/plan", data={"csrf": csrf_de(cl.get("/bienvenida").text), **datos})
+    assert r.status_code == 303 and r.headers["location"] == "/"
+    with ctx.sesiones() as db:
+        a, p = db.get(Ajustes, uid), db.get(Plan, uid)
+        assert a.config["corrida"]["inicio"] == "2030-01-07" and a.config["perfil"]["titulo"] == "Mi plan"
+        assert [c["id"] for c in a.config["actividades"]["categorias"]] == ["fuerza", "hiit"]
+        assert len(p.plan["weeks"]) == 12 and p.plan["start"] == "2030-01-07"
+        assert db.get(Usuario, uid).sensor == "muñeca"
+    # ya con plan: el dashboard (con el pie y el aviso), y /bienvenida regresa a /
+    inicio = cl.get("/")
+    assert inicio.status_code == 200 and "Aviso de privacidad" in inicio.text and "no es consejo médico" in inicio.text
+    assert cl.get("/bienvenida").headers["location"] == "/"
+    r = cl.get("/data.json")
+    assert r.status_code == 200 and validar.problemas(r.json()) == []
+    assert cl.post("/bienvenida/plan", data={"csrf": csrf_de(cl.get("/salir").text), **datos}).status_code in (403, 400)
+
+
+def test_onboarding_usuario_de_github_repetido(ctx):
+    usuario_amigo(ctx, owner="ocupado")
+    crear_usuario(ctx, "otro@x.com")
+    cl = entrar(ctx, ctx.cliente(), "otro@x.com")
+    with ctx.sesiones() as db:
+        db.add(Consentimiento(usuario_id=2, version_aviso="2026-12"))
+        db.commit()
+    r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "OCUPADO"})
+    assert r.status_code == 400 and "ya está ligado" in r.text
+
+
+def test_privacidad_publica_con_lo_necesario(ctx):
+    t = ctx.cliente().get("/privacidad").text
+    for frase in ("consentimiento expreso", "datos sensibles", "Google Cloud", "Neon", "Resend", "GitHub", "Cloudflare",
+                  "Garmin", "ARCO", "no es consejo médico", "Datos de Garmin", "2026-12", ctx.settings.admin_correo):
+        assert frase.lower() in t.lower(), frase
+
+
+def test_paso_a_paso_no_pide_la_key():
+    """Ninguna plantilla tiene un campo (input) que pida la key de Garmin."""
+    for f in (ROOT / "web" / "plantillas").glob("*.html"):
+        texto = f.read_text().lower()
+        assert not re.search(r"<input[^>]*(key|token|password)", texto), f.name
+        assert "name=\"key\"" not in texto
+
+
+# --- scripts/subir.py ---
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import subir as sub  # noqa: E402
+
+
+class RespuestaFalsa:
+    def __init__(self, status=200, cuerpo=None):
+        self.status_code, self._c = status, cuerpo or {}
+
+    def json(self):
+        return self._c
+
+    def raise_for_status(self):
+        pass
+
+
+class HttpFalso:
+    def __init__(self, post, get=None):
+        self._post, self._get, self.llamadas = post, get, []
+
+    def post(self, url, **kw):
+        self.llamadas.append(("post", url, kw))
+        return self._post(url, **kw)
+
+    def get(self, url, **kw):
+        self.llamadas.append(("get", url, kw))
+        return self._get(url, **kw)
+
+
+def _caido(url, **kw):
+    raise sub.requests.ConnectionError("web caída")
+
+
+ENTORNO = {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://actions.example/t?x=1", "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "tok",
+           "GITHUB_REPOSITORY_ID": "777"}
+
+
+def test_subir_con_la_web_caida_no_falla_y_publica_pages(tmp_path):
+    (tmp_path / "meta.json").write_text('{"pulled_at": "2026-11-01"}')
+    http = HttpFalso(_caido, lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    pausas = []
+    assert sub.subir(tmp_path, ENTORNO, http, pausas.append) is True
+    assert len([c for c in http.llamadas if c[0] == "post"]) == 1 + sub.REINTENTOS and len(pausas) == sub.REINTENTOS
+    assert sub.instrucciones(http, lambda s: None) == ""
+    # sin token OIDC tampoco truena
+    assert sub.subir(tmp_path, {}, http, lambda s: None) is True
+
+
+def test_subir_ok_y_migrado(tmp_path):
+    (tmp_path / "meta.json").write_text('{"pulled_at": "2026-11-01"}')
+    for publicar in (True, False):
+        http = HttpFalso(lambda url, **kw: RespuestaFalsa(200, {"ok": True, "publicar_pages": publicar}),
+                         lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+        assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) is publicar
+        _, url, kw = [c for c in http.llamadas if c[0] == "post"][0]
+        assert url.endswith("/api/tubo/subida") and kw["headers"]["Content-Encoding"] == "gzip"
+        assert json.loads(gzip.decompress(kw["data"]))["esquema"] == 1
+        assert kw["timeout"] == 60 and "key" not in json.dumps(json.loads(gzip.decompress(kw["data"]))).lower()
+
+
+def test_web_responde_403_no_vinculado(tmp_path):
+    http = HttpFalso(lambda url, **kw: RespuestaFalsa(403, {"error": "repo no vinculado"}),
+                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) is True
+    assert sub.instrucciones(http, lambda s: None) == ""
+
+
+def test_instrucciones_a_argumentos(monkeypatch):
+    monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", "https://actions.example/t")
+    monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "tok")
+    http = HttpFalso(lambda url, **kw: RespuestaFalsa(200, {"vinculado": True, "historial_desde": "2025-11-25", "dias_actividades": 365}),
+                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    assert sub.instrucciones(http, lambda s: None) == "--dias-actividades 365 --historial-desde 2025-11-25"
+    http = HttpFalso(lambda url, **kw: RespuestaFalsa(200, {"dias_actividades": 120, "historial_desde": None}),
+                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    assert sub.instrucciones(http, lambda s: None) == "--dias-actividades 120"
+    # una respuesta con forma rara jamás llega al shell
+    http = HttpFalso(lambda url, **kw: RespuestaFalsa(200, {"dias_actividades": 1, "historial_desde": "2025-01-01; rm -rf /"}),
+                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    assert sub.instrucciones(http, lambda s: None) == ""
+
+
+def test_main_siempre_sale_con_cero_y_escribe_la_salida(tmp_path, monkeypatch):
+    salida = tmp_path / "out"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(salida))
+    monkeypatch.setenv("GARMIN_USER_DIR", str(tmp_path))
+    monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_URL", raising=False)
+    assert sub.main(["subir"]) == 0
+    assert salida.read_text().strip() == "publicar_pages=true"
+    assert sub.main(["instrucciones"]) == 0
+
+
+# --- flujo de GitHub y despliegue ---
+
+def test_motor_yml_pide_instrucciones_sube_y_condiciona_pages():
+    wf = yaml.safe_load((ROOT / ".github" / "workflows" / "motor.yml").read_text())
+    pasos = wf["jobs"]["build"]["steps"]
+    texto = (ROOT / ".github" / "workflows" / "motor.yml").read_text()
+    assert "subir.py instrucciones" in texto and "subir.py subir" in texto
+    assert wf["jobs"]["deploy"]["if"] == "needs.build.outputs.publicar == 'true'"
+    por_nombre = {p.get("name") or p.get("uses"): p for p in pasos}
+    for nombre in ("Construir el sitio", "Validar data.json (lista blanca de privacidad)", "actions/configure-pages@v5",
+                   "actions/upload-pages-artifact@v3"):
+        assert "decidir.outputs.publicar == 'true'" in por_nombre[nombre]["if"]
+    assert wf["jobs"]["build"]["permissions"]["id-token"] == "write"
+    assert "config.yaml" in por_nombre["Decidir si se publica Pages"]["run"]
+
+
+def test_dockerignore_excluye_lo_personal():
+    lineas = {l.strip() for l in (ROOT / ".dockerignore").read_text().splitlines() if l.strip() and not l.startswith("#")}
+    for debe in (".env", "data/", "config.yaml", "plan/plan.json", "plan/inbody.json", "site/data.json", ".venv/", "tests/"):
+        assert debe in lineas, debe
+
+
+def test_dockerfile_copia_solo_lo_necesario():
+    d = (ROOT / "Dockerfile").read_text()
+    assert "FROM python:3.12-slim" in d and "web/requirements.txt" in d and "alembic -c web/alembic.ini upgrade head" in d
+    assert "uvicorn web.app:app --host 0.0.0.0 --port ${PORT:-8080}" in d
+    copias = [l.split()[1:-1] for l in d.splitlines() if l.startswith("COPY ")]
+    planas = {x for c in copias for x in c}
+    assert not planas & {"data/", ".env", "config.yaml", "plan/plan.json", "plan/inbody.json", "plan/", "."}
+    assert {"dashboard/", "site/", "web/", "scripts/"} <= planas
+
+
+@pytest.mark.skipif(not __import__("shutil").which("docker"), reason="no hay docker")
+def test_imagen_no_contiene_archivos_personales():
+    import subprocess
+    try:
+        ok = subprocess.run(["docker", "info"], capture_output=True, timeout=20).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    if not ok:
+        pytest.skip("el daemon de docker no está corriendo")
+    subprocess.run(["docker", "build", "-q", "-t", "ahi-prueba", str(ROOT)], check=True, timeout=900)
+    r = subprocess.run(["docker", "run", "--rm", "--entrypoint", "sh", "ahi-prueba", "-c",
+                        "ls -a /app /app/plan /app/site; ls /app/data /app/config.yaml 2>&1"], capture_output=True, text=True)
+    for malo in (".env", "config.yaml", "plan.json", "inbody.json", "data.json"):
+        assert malo not in r.stdout.replace("No such file or directory", ""), malo

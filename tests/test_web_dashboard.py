@@ -13,7 +13,7 @@ import ajustes
 import build
 import validar
 from web import calculo, cli, datos, importar
-from web.modelos import Ajustes, Base, CacheData, DatoGarmin, Usuario
+from web.modelos import Ajustes, Base, Consentimiento, CacheData, DatoGarmin, Usuario
 
 ROOT = Path(__file__).parent.parent
 HAY_DATOS = (ROOT / "data" / "activities.json").exists() and (ROOT / "config.yaml").exists()
@@ -52,7 +52,8 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
         web = calculo.calcular(db, db.get(Usuario, uid), AHORA_UTC)
         assert validar.problemas(web) == []
         assert "serie" not in json.dumps(web)
-    # diferencias permitidas: ui.menu (lista de la web) y los textos de /ajustar (modo web)
+    # diferencias permitidas: ui.menu (lista de la web), ui.repo_estado (None si no hay repo) y los textos de /ajustar
+    assert web["ui"].pop("repo_estado") is None
     esp = norm(esperado(modo_web=True))
     assert norm(web) == esp
     pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
@@ -111,6 +112,8 @@ def test_ruta_data_json_de_la_web_sirve_el_del_usuario(web_ctx):
     uid = usuario_pedro(web_ctx)
     with web_ctx.sesiones() as db:
         importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
+        db.add(Consentimiento(usuario_id=uid, version_aviso="2026-12"))
+        db.commit()
     from test_web_cuentas import entrar
     cl = entrar(web_ctx, web_ctx.cliente(), "pedro@example.com")
     assert "<title>" in cl.get("/").text

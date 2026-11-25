@@ -195,3 +195,8 @@ def config_por_defecto() -> dict:
     garmin_connect.py solo necesita los tipos de actividad)."""
     return normalizar_config({"perfil": {"zona_horaria": "America/Merida", "fc_max": 190},
                               "corrida": {"inicio": "2026-01-05"}})
+
+
+def categorias_por_defecto() -> list:
+    """Las categorías de actividad de defaults.yaml (sin validar): [{id, nombre, letra, tipos, intensa}]."""
+    return list(_leer_yaml(Path(__file__).parent / "defaults.yaml")["categorias"])

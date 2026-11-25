@@ -12,12 +12,12 @@ import build
 import validar
 from ajustes import normalizar_config
 
-from . import datos
+from . import datos, tubo
 from .modelos import Ajustes, CacheData, DatoGarmin, InBody, Plan, Usuario, ahora
 
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
-MENU = [{"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; crece con cada fase
+MENU = [{"texto": "Privacidad", "url": "/privacidad"}, {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; crece con cada fase
 
 
 class SinConfig(Exception):
@@ -74,9 +74,38 @@ def huella(db: Session, usuario: Usuario, hoy_local: str) -> str:
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
 
 
+HORAS_SIN_SUBIR = 24
+LIGA_KEY = "https://connect.garmin.com/app/settings/personalApiToken"
+
+
+def estado_repo(db: Session, usuario: Usuario, ahora_utc: datetime) -> dict | None:
+    """Aviso para quien tiene repo vinculado y lleva más de 24 h sin subir (o nunca ha subido). Nada si no está vinculado."""
+    if not usuario.repo_id:
+        return None
+    ultima = tubo.ultima_subida(db, usuario.id)
+    if ultima and ahora_utc - ultima < timedelta(hours=HORAS_SIN_SUBIR):
+        return None
+    cuando = "todavía no ha mandado datos" if ultima is None else f"no manda datos desde hace {int((ahora_utc - ultima).total_seconds() // 3600)} h"
+    return {"texto": f"Tu repo {cuando}: revisa que Actions esté activo o renueva tu key de Garmin.",
+            "ligas": [{"texto": "Abrir Actions", "url": f"https://github.com/{usuario.repo}/actions"},
+                      {"texto": "Renovar mi key de Garmin", "url": LIGA_KEY}]}
+
+
 def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None) -> dict:
-    """data.json de la persona: de la caché si la huella no cambió y tiene menos de 30 min; si no, recalcula.
+    """data.json de la persona (con el aviso de repo atrasado, que no se guarda en la caché porque depende de la hora).
     Truena con SinConfig o DataInvalido."""
+    base = _calcular_cacheado(db, usuario, ahora_utc)
+    ahora_naive = ahora_utc or ahora()
+    salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive)}}
+    problemas = validar.problemas(salida)
+    if problemas:
+        log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)
+        raise DataInvalido(problemas)
+    return salida
+
+
+def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None = None) -> dict:
+    """De la caché si la huella no cambió y tiene menos de 30 min; si no, recalcula."""
     cfg = config_de(db, usuario)
     tz = ZoneInfo(cfg["timezone"])
     local = (ahora_utc.replace(tzinfo=ZoneInfo("UTC")) if ahora_utc else datetime.now(ZoneInfo("UTC"))).astimezone(tz)

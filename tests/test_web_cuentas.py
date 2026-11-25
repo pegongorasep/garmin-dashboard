@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from ajustes import leer_config_yaml
 from web import auth
-from web.modelos import Ajustes, Coach, LigaLogin, Sesion, Usuario, ahora
+from web.modelos import Ajustes, Coach, Consentimiento, LigaLogin, Sesion, Usuario, ahora
 
 
 CONFIG = json.loads(json.dumps(leer_config_yaml(Path(__file__).parent / "fixtures" / "config.yaml"), default=str))
@@ -40,6 +40,7 @@ def crear_usuario(ctx, correo="a@x.com", con_ajustes=False):
         db.commit()
         if con_ajustes:
             db.add(Ajustes(usuario_id=u.id, config=CONFIG))
+            db.add(Consentimiento(usuario_id=u.id, version_aviso="2026-12"))
             db.commit()
         return u.id
 
@@ -111,7 +112,8 @@ def test_liga_un_uso_y_sesion(web_ctx):
     assert r.status_code == 303 and r.headers["location"] == "/"
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "secure" in cookie and "samesite=lax" in cookie
-    assert "Tu cuenta está lista" in cl.get("/").text
+    r = cl.get("/")   # sin consentimiento ni plan: al onboarding
+    assert r.status_code == 303 and r.headers["location"] == "/bienvenida"
     # la liga ya no vale
     assert "ya se usó o venció" in web_ctx.cliente().get(url).text
     assert cl.post(url, data={"csrf": csrf_de(cl.get("/salir").text)}).status_code == 400

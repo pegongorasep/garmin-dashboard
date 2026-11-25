@@ -21,6 +21,10 @@ PROHIBIDAS = {"activityId", "activityName", "ownerDisplayName", "ownerFullName",
               "startLatitude", "startLongitude", "endLatitude", "endLongitude", "splitSummaries", "splits", "serie"}   # `serie` = FC por segundo: nunca se publica
 
 
+# Ligas que el banner `ui.repo_estado` puede traer (a GitHub y a la página de la key de Garmin); ninguna otra URL.
+PREFIJOS_LIGAS = ("https://github.com/", "https://connect.garmin.com/app/settings/")
+
+
 def problemas(datos: dict) -> list:
     out = []
     if not isinstance(datos, dict):
@@ -44,7 +48,8 @@ def problemas(datos: dict) -> list:
         elif isinstance(o, list):
             for i, v in enumerate(o):
                 recorrer(v, f"{ruta}[{i}]")
-        elif isinstance(o, str) and o.startswith("http") and o != permitida:
+        elif isinstance(o, str) and o.startswith("http") and o != permitida and not (
+                ruta.startswith("/ui/repo_estado/") and o.startswith(PREFIJOS_LIGAS)):
             out.append(f"URL en el JSON: {ruta}")
     recorrer(datos, "")
     return out

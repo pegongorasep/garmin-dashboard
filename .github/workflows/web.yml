@@ -1,0 +1,73 @@
+name: Web
+
+# Despliegue manual de la web (Ahí la Llevas) a Google Cloud Run: pruebas -> imagen -> `gcloud run deploy`.
+# Entra a Google con Workload Identity Federation (sin llaves JSON). Variables del repo (no secretos):
+# GCP_PROYECTO, GCP_PROVEEDOR_WIF, GCP_CUENTA_SERVICIO, ADMIN_CORREO (opcional: contacto del aviso de privacidad).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGION: us-central1
+  SERVICIO: ahi-la-llevas
+  REPOSITORIO: web   # repo de Artifact Registry
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r web/requirements.txt
+      - run: pytest -q
+
+  desplegar:
+    needs: pruebas
+    if: github.repository == 'pegongorasep/garmin-dashboard' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_PROVEEDOR_WIF }}
+          service_account: ${{ vars.GCP_CUENTA_SERVICIO }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Construir y subir la imagen
+        run: |
+          IMAGEN="${REGION}-docker.pkg.dev/${{ vars.GCP_PROYECTO }}/${REPOSITORIO}/${SERVICIO}:${GITHUB_SHA}"
+          echo "IMAGEN=${IMAGEN}" >> "$GITHUB_ENV"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build -t "${IMAGEN}" .
+          docker push "${IMAGEN}"
+
+      - name: Desplegar en Cloud Run
+        run: |
+          gcloud run deploy "${SERVICIO}" \
+            --project "${{ vars.GCP_PROYECTO }}" --region "${REGION}" --image "${IMAGEN}" \
+            --min-instances 0 --max-instances 1 --memory 512Mi \
+            --allow-unauthenticated \
+            --set-secrets "SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,RESEND_API_KEY=RESEND_API_KEY:latest" \
+            --set-env-vars "BASE_URL=https://ahilallevas.com,ADMIN_CORREO=${{ vars.ADMIN_CORREO }}"
+
+      # Comandos de admin (invitar, crear-admin): un Cloud Run Job con la misma imagen y los mismos secretos, para que
+      # nadie copie la cadena de la base a su compu. Uso: gcloud run jobs execute ahi-cli --args="invitar,--nota,Adrián"
+      - name: Actualizar el Job de comandos de admin
+        run: |
+          gcloud run jobs deploy ahi-cli \
+            --project "${{ vars.GCP_PROYECTO }}" --region "${REGION}" --image "${IMAGEN}" \
+            --command python --args "-m,web.cli,--help" \
+            --memory 512Mi --max-retries 0 \
+            --set-secrets "SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
+            --set-env-vars "BASE_URL=https://ahilallevas.com"

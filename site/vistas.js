@@ -660,6 +660,10 @@ function pintarEncabezado() {
   const menu = $("menu-web"), items = u.menu || [];
   menu.hidden = !items.length;
   menu.replaceChildren(...items.map((i) => h("a", { href: i.url }, i.texto)));
+  // Aviso de repo atrasado (lo decide Python: ui.repo_estado = {texto, ligas}); no existe en GitHub Pages.
+  const re = $("repo-estado"), est = u.repo_estado;
+  re.hidden = !est;
+  re.replaceChildren(...(est ? [h("p", {}, est.texto), h("p", {}, ...(est.ligas || []).map((l) => h("a", { href: l.url, target: "_blank", rel: "noopener" }, l.texto)))] : []));
 }
 
 function actualizarEncabezado() {

@@ -1,0 +1,22 @@
+# Nada personal ni de desarrollo entra a la imagen.
+.env
+.env.*
+**/.env
+data/
+config.yaml
+plan/plan.json
+plan/inbody.json
+site/data.json
+.venv/
+.git/
+.github/
+tests/
+template/
+docs/
+reloj.py
+requirements-reloj.txt
+**/__pycache__/
+.pytest_cache/
+web/dev.db
+.garminconnect/
+*.db

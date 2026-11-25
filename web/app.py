@@ -4,16 +4,17 @@ import secrets
 from datetime import timedelta
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from ajustes import ConfigError
 
-from . import ROOT, auth, calculo, correo
+from . import ROOT, auth, calculo, correo, onboarding, tubo
+from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
-from .modelos import Ajustes, Usuario
+from .modelos import Usuario
 from .permisos import puede_ver
 
 log = logging.getLogger("web")
@@ -21,6 +22,8 @@ SITE = ROOT / "site"
 # Archivos del sitio que se sirven tal cual. `data.json` NO está aquí a propósito: sale de /data.json, por usuario.
 ESTATICOS_SITE = {"app.js": "text/javascript", "charts.js": "text/javascript", "iconos.js": "text/javascript",
                   "vistas.js": "text/javascript", "styles.css": "text/css"}
+PIE_SITIO = ('<footer class="pie-web"><p>Esto no es consejo médico: si algo duele, para. · Datos de Garmin · '
+             '<a href="/privacidad">Aviso de privacidad</a></p></footer>')
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
@@ -155,16 +158,24 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None) -> Fast
         resp.delete_cookie(auth.COOKIE_SESION, path="/")
         return resp
 
+    @app.get("/privacidad")
+    def privacidad(request: Request):
+        return render(request, "privacidad.html", version=VERSION_AVISO)
+
+    tubo.montar(app, get_db, settings)
+    onboarding.montar(app, get_db, actual, render, formulario, settings)
+
     # --- dashboard por usuario ---
 
     @app.get("/")
     def inicio(request: Request, usuario=Depends(actual), db=Depends(get_db)):
         if usuario is None:
             return render(request, "inicio.html")
-        if db.get(Ajustes, usuario.id) is None:
-            return render(request, "mensaje.html", titulo="Tu cuenta está lista",
-                          texto="Todavía no tienes un plan. El paso a paso para crearlo llega muy pronto.")
-        return FileResponse(SITE / "index.html", media_type="text/html")
+        e = onboarding.estado(db, usuario)
+        if not (e["consentimiento"] and e["ajustes"]):
+            return RedirectResponse("/bienvenida", 303)
+        html = (SITE / "index.html").read_text().replace("</main>", PIE_SITIO + "</main>", 1)
+        return HTMLResponse(html)
 
     def data_de(db, usuario, atleta_id: int) -> Response:
         if not puede_ver(db, usuario, atleta_id):

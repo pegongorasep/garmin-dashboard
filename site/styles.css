@@ -529,3 +529,10 @@ details.ses > summary .ley-sil { margin-left: 20px; }
 .menu-web { display: flex; gap: 14px; flex-wrap: wrap; margin: 6px 0 0; font-size: 0.9rem; }
 .menu-web a { color: var(--ink-2); }
 .menu-web[hidden] { display: none; }
+
+/* v5: pie de la web y aviso de repo atrasado (solo aparecen en la web) */
+.pie-web { margin: 24px 0 8px; padding-top: 12px; border-top: 1px solid var(--grid); color: var(--muted); font-size: 0.8rem; }
+.pie-web a { color: var(--ink-2); }
+.repo-estado { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--warn-bg); font-size: 0.9rem; }
+.repo-estado[hidden] { display: none; }
+.repo-estado a { color: var(--ink); font-weight: 600; margin-right: 12px; }

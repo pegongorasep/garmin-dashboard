@@ -1,0 +1,44 @@
+name: Respaldo
+
+# Respaldo nocturno de la base (pg_dump) a un bucket PRIVADO de Cloud Storage (regla de borrado a 30 días).
+# Nunca como artefacto de Actions: el repo es público y los artefactos se pueden descargar.
+# Variables del repo: GCP_PROYECTO, GCP_PROVEEDOR_WIF, GCP_CUENTA_SERVICIO, GCP_BUCKET_RESPALDOS.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  respaldar:
+    if: github.repository == 'pegongorasep/garmin-dashboard'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_PROVEEDOR_WIF }}
+          service_account: ${{ vars.GCP_CUENTA_SERVICIO }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Cliente de Postgres (misma versión mayor que Neon)
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+
+      - name: pg_dump a Cloud Storage
+        run: |
+          set +x
+          URL="$(gcloud secrets versions access latest --secret=DATABASE_URL --project "${{ vars.GCP_PROYECTO }}")"
+          echo "::add-mask::${URL}"
+          URL="${URL/postgresql+psycopg:/postgresql:}"
+          /usr/lib/postgresql/17/bin/pg_dump --no-owner --no-privileges "${URL}" | gzip > respaldo.sql.gz
+          test -s respaldo.sql.gz
+          gcloud storage cp respaldo.sql.gz "gs://${{ vars.GCP_BUCKET_RESPALDOS }}/respaldos/$(date -u +%F).sql.gz"
