@@ -515,3 +515,4 @@ details.ses > summary .ley-sil { margin-left: 20px; }
 .pvr .estado { margin: 2px 0; }
 .plan-fin .grande { margin: 0; }
 .plan-fin .estado { margin: 6px 0; }
+.sub-carreras { margin: 16px 0 4px; font-size: 13px; color: var(--ink-2); font-weight: 600; }

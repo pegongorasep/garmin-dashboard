@@ -104,8 +104,7 @@ function renderProgreso(d) {
       tarjetaMejora(d),
       tarjetaCorridasProgreso(d),
       tarjetaIntensidadSemanas(d),
-      tarjetaMejoresMarcas(d),
-      tarjetaCarreras(d),
+      tarjetaMarcasYCarreras(d),
       d.detalles && d.detalles.carga ? tarjetaCarga(d.detalles) : null].filter(Boolean)),
     h("div", { class: "sub", id: "prog-cuerpo", hidden: subProgreso !== "cuerpo" },
       ...[tarjetaRecuperacion(d), tarjetaComposicion(d.composicion)].filter(Boolean)));
@@ -315,18 +314,17 @@ const fechaConAnio = (iso, ref) => {
   return `${f.getDate()} ${MESES[f.getMonth()]}${f.getFullYear() !== anioRef ? ` ${f.getFullYear()}` : ""}`;
 };
 
-function tarjetaMejoresMarcas(d) {
+/** Mejores marcas (siempre que haya). Devuelve los nodos, no la tarjeta: los junta tarjetaMarcasYCarreras. */
+function bloqueMarcas(d) {
   const marcas = d.mejores_marcas || [];
-  const c = h("div", { class: "card" }, h("h2", {}, "Mejores marcas"));
-  if (!marcas.length) { c.append(h("p", { class: "vacio" }, "Aún no hay marcas: se llenan con tus corridas de Garmin.")); return c; }
-  c.append(h("div", { class: "marcas" }, marcas.map((x) => {
+  if (!marcas.length) return [];
+  return [h("div", { class: "marcas" }, marcas.map((x) => {
     const larga = x.clave === "larga";
     return h("div", { class: "marca", role: "group", "aria-label": `${x.nombre}: ${larga ? `${fmt(x.distancia_km, 2)} km en ${tiempoLargo(x.tiempo_s)}` : tiempoLargo(x.tiempo_s)}, ${fechaConAnio(x.fecha, d.generado)}` },
       h("div", { class: "marca-n" }, x.icono ? icono(x.icono, 14) : null, x.nombre, x.nuevo ? h("span", { class: "nuevo" }, "nuevo") : null),
       h("div", { class: "marca-v" }, larga ? `${fmt(x.distancia_km, 2)} km` : tiempoLargo(x.tiempo_s)),
       h("div", { class: "nota" }, larga ? `${tiempoLargo(x.tiempo_s)} · ` : "", fechaConAnio(x.fecha, d.generado)));
-  })));
-  return c;
+  }))];
 }
 
 function filaStat(nombre, valor) {
@@ -383,12 +381,18 @@ function carreraDetalle(c, abierta, ref) {
   return det;
 }
 
-function tarjetaCarreras(d) {
+/** Carreras con su detalle plegable, bajo un subtítulo; [] si no hay. */
+function bloqueCarreras(d) {
   const cs = d.carreras || [];
-  const c = h("div", { class: "card", id: "prog-carreras" }, h("h2", {}, "Carreras"));
-  if (!cs.length) { c.append(h("p", { class: "vacio" }, "Cuando marques una actividad como Carrera en Garmin, aparece aquí.")); return c; }
-  c.append(...cs.map((x, i) => carreraDetalle(x, i === 0 && abrirCarrera)));
-  return c;
+  if (!cs.length) return [];
+  return [h("div", { id: "prog-carreras" }, h("h3", { class: "sub-carreras" }, "Carreras"),
+    ...cs.map((x, i) => carreraDetalle(x, i === 0 && abrirCarrera)))];
+}
+
+/** "Marcas y carreras": marcas arriba y, si hay carreras, su lista debajo. Sin ninguna de las dos, no sale. */
+function tarjetaMarcasYCarreras(d) {
+  const partes = [...bloqueMarcas(d), ...bloqueCarreras(d)];
+  return partes.length ? h("div", { class: "card ancha" }, h("h2", {}, "Marcas y carreras"), ...partes) : null;
 }
 
 // --- Composición corporal estilo InBody ---
