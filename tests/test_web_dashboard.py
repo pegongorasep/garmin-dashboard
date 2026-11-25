@@ -31,7 +31,8 @@ def usuario_pedro(ctx):
 def esperado(modo_web: bool):
     cfg = ajustes.cargar_config(ROOT)
     if modo_web:
-        cfg = {**cfg, "modo": "web", "menu": calculo.MENU}
+        cfg = {**cfg, "modo": "web", "menu": calculo.MENU,
+               "plan_acciones": calculo.PLAN_ACCIONES, "editar_sesion": True}
     ahora = AHORA_UTC.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
     return build.build(build.load_data(ROOT), build.load_plan(ROOT), cfg, ahora)
 
@@ -58,7 +59,8 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
     assert norm(web) == esp
     pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
     for d in (pages, web_n):
-        d["ui"].pop("menu")
+        for k in ("menu", "plan_acciones", "editar_sesion"):
+            d["ui"].pop(k)
     assert pages == web_n
 
 

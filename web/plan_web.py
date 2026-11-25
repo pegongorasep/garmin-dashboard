@@ -63,9 +63,23 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return render(request, "plan.html", status=status, atleta=atleta, pref=aw.prefijo(usuario, atleta),
                       ok=request.query_params.get("ok"), **ctx)
 
-    def ver_plan(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    def ver_acciones(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         return pagina(request, usuario, db, atleta_id)
+    doble("get", "/plan/acciones", ver_acciones)
+
+    def ver_plan(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+        """El plan vive en la pestaña Plan del sitio: /plan solo redirige (tras comprobar sesión y permiso)."""
+        atleta, redir = aw.resolver(db, usuario, atleta_id)
+        if redir:
+            return redir
+        pref = aw.prefijo(usuario, atleta)
+        return RedirectResponse(f"{pref}/plan/acciones" if pref else "/#plan", 303)
     doble("get", "/plan", ver_plan)
+
+    def volver(usuario, atleta) -> str:
+        """Adónde regresa un POST del plan: la pestaña Plan (para quien ve su propio sitio) o la página de acciones."""
+        pref = aw.prefijo(usuario, atleta)
+        return f"{pref}/plan/acciones?ok=1" if pref else "/#plan"
 
     def accion(nombre: str, hacer, desc_de=None):
         """Registra POST /plan/<nombre>. `hacer(crudo, cfg, plan, form, hoy, data)` devuelve (crudo, plan o None, descripción)."""
@@ -86,7 +100,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                 return pagina(request, usuario, db, atleta_id, status=400, error=str(ex) if not isinstance(ex, KeyError) else "Faltan datos.")
             paquete = {"ajustes": nuevo_crudo, **({"plan": nuevo_plan} if nuevo_plan is not None else {})}
             cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), descripcion, paquete)
-            return RedirectResponse(f"{aw.prefijo(usuario, atleta)}/plan?ok=1", 303)
+            return RedirectResponse(volver(usuario, atleta), 303)
         return ruta
 
     def lindo(d: str) -> str:
@@ -156,7 +170,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             except (ConfigError, ValueError) as ex:
                 return pagina(request, usuario, db, atleta_id, status=400, error=str(ex))
             cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), descripcion, {"ajustes": nuevo})
-            return RedirectResponse(f"{aw.prefijo(usuario, atleta)}/plan?ok=1", 303)
+            return RedirectResponse(volver(usuario, atleta), 303)
         doble("post", f"/plan/{sufijo}", ruta)
 
     con_id("evento/{ident}/cerrar", lambda c, i, hoy: plan_vivo.cerrar_evento(c, i, hoy.isoformat()),
@@ -218,5 +232,5 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return editor(request, usuario, db, atleta_id, n, sid, status=400, filas=filas, veces=veces, error=str(ex))
         cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta),
                                f"Cambió la sesión «{s['name']}» de la semana {n}", {"plan": nuevo_plan})
-        return RedirectResponse(f"{aw.prefijo(usuario, atleta)}/plan?ok=1", 303)
+        return RedirectResponse(volver(usuario, atleta), 303)
     doble("post", "/plan/sesion/{n}/{sid}", sesion_post)

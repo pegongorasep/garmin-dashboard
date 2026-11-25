@@ -262,7 +262,7 @@ def test_subir_escalon_por_la_web(web_ctx):
         db.get(Ajustes, uid).config = copy.deepcopy(CAMINATAS)
         db.get(Plan, uid).plan = plan_base(CAMINATAS)
         db.commit()
-    assert "Escalera de trote y caminata" in cl.get("/plan").text
+    assert "Escalera de trote y caminata" in cl.get("/plan/acciones").text
     assert cl.post("/plan/escalon/subir", data={"csrf": tok(cl)}).status_code == 303
     assert crudo(web_ctx, uid)["corrida"]["escalon"] == "5/1"
     p = plan_de(web_ctx, uid)
@@ -396,8 +396,8 @@ def test_siguiente_bloque_con_plan_terminado(web_ctx):
     uid, cl = listo(web_ctx)
     web_ctx.app.state.reloj = lambda: datetime(2027, 2, 3, 18, 0, tzinfo=timezone.utc)   # el plan terminó el 2027-01-31
     d = cl.get("/data.json").json()
-    assert d["hoy"]["tarjeta"]["tipo"] == "plan_terminado" and d["hoy"]["tarjeta"]["siguiente_url"] == "/plan#siguiente"
-    assert "Armar siguiente bloque" in cl.get("/plan").text
+    assert d["hoy"]["tarjeta"]["tipo"] == "plan_terminado" and d["hoy"]["tarjeta"]["siguiente_url"] == "/plan/acciones#siguiente"
+    assert "Armar siguiente bloque" in cl.get("/plan/acciones").text
     assert cl.post("/plan/siguiente-bloque", data={"csrf": tok(cl)}).status_code == 303
     cr = crudo(web_ctx, uid)
     assert cr["corrida"]["inicio"] == "2027-02-01" and cr["corrida"]["semanas_repetidas"] == []
@@ -413,7 +413,7 @@ def test_siguiente_bloque_con_plan_terminado(web_ctx):
 
 def test_no_se_arma_bloque_antes_de_terminar(web_ctx):
     uid, cl = listo(web_ctx)
-    assert "Armar siguiente bloque" not in cl.get("/plan").text
+    assert "Armar siguiente bloque" not in cl.get("/plan/acciones").text
     assert cl.post("/plan/siguiente-bloque", data={"csrf": tok(cl)}).status_code == 400
     assert crudo(web_ctx, uid) == CONFIG
 
@@ -428,7 +428,7 @@ def test_siguiente_bloque_guarda_la_prueba_para_compararla():
 
 def test_viaje_enfermedad_carrera_por_la_web_con_historial_y_deshacer(web_ctx):
     uid, cl = listo(web_ctx)
-    assert "Plan vivo" in cl.get("/plan").text
+    assert "Plan vivo" in cl.get("/plan/acciones").text
     r = cl.post("/plan/viaje", data={"csrf": tok(cl), "desde": "2026-12-01", "hasta": "2026-12-06", "correr": "no"})
     assert r.status_code == 303
     r = cl.post("/plan/viaje", data={"csrf": tok(cl), "desde": "2026-12-10", "hasta": "2026-12-01", "correr": "si"})
@@ -442,7 +442,7 @@ def test_viaje_enfermedad_carrera_por_la_web_con_historial_y_deshacer(web_ctx):
     assert validar.problemas(d) == []
     assert {e["tipo"] for e in d["plan"]["eventos"]} == {"viaje", "lesion", "carrera"}
     assert d["hoy"]["tarjeta"]["tipo"] == "pausa"
-    html = cl.get("/plan").text
+    html = cl.get("/plan/acciones").text
     assert "Ya estoy bien" in html and "10K" in html
     ev = next(e for e in c["eventos"] if e["tipo"] == "lesion")
     assert cl.post(f"/plan/evento/{ev['id']}/cerrar", data={"csrf": tok(cl)}).status_code == 303
@@ -476,12 +476,12 @@ def test_el_coach_agrega_un_viaje_y_el_atleta_se_entera(web_ctx):
         db.add(Coach(atleta_id=uid_a, coach_id=uid_c))
         db.commit()
     r = cl_c.post(f"/a/{uid_a}/plan/viaje", data={"csrf": tok(cl_c), "desde": "2026-12-01", "hasta": "2026-12-06", "correr": "si"})
-    assert r.status_code == 303 and r.headers["location"] == f"/a/{uid_a}/plan?ok=1"
-    assert "Estás editando a" in cl_c.get(f"/a/{uid_a}/plan").text
+    assert r.status_code == 303 and r.headers["location"] == f"/a/{uid_a}/plan/acciones?ok=1"
+    assert "Estás editando a" in cl_c.get(f"/a/{uid_a}/plan/acciones").text
     assert crudo(web_ctx, uid_a)["corrida"]["eventos"][0]["correr"] is True
     d = cl_a.get("/data.json").json()
     assert "Agregó un viaje" in d["avisos"][0]["texto"]
-    assert cl_a.get("/plan").status_code == 200
+    assert cl_a.get("/plan/acciones").status_code == 200
 
 
 def test_sin_acceso_otro_no_toca_el_plan(web_ctx):
@@ -514,3 +514,24 @@ def test_el_plan_de_pedro_sin_metas_ni_eventos_queda_identico():
     web = plan_vivo.con_pausas({**cfg, "modo": "web"}, HOY_D)
     assert web["pausas"] == [] and plan_vivo.plan_efectivo(plan, web) is plan
     assert gen_plan.generar(cfg) == plan
+
+
+def test_plan_redirige_a_la_pestana_y_el_menu_no_trae_plan_vivo(web_ctx):
+    uid, cl = listo(web_ctx)
+    r = cl.get("/plan")
+    assert r.status_code == 303 and r.headers["location"] == "/#plan"
+    ui = cl.get("/data.json").json()["ui"]
+    assert ui["editar_sesion"] is True and ui["plan_acciones"]
+    assert all(a["url"].startswith("/plan/acciones") for a in ui["plan_acciones"])
+    assert "Plan vivo" not in [i["texto"] for i in ui["menu"]]
+    assert cl.get("/plan/acciones").status_code == 200
+    assert cl.post("/plan/repetir", data={"csrf": tok(cl)}).headers["location"] in ("/#plan", "/plan/acciones?ok=1")
+
+
+def test_ui_del_plan_trae_valores_por_defecto_en_pages():
+    from dashboard import ajustes, build, validar
+    cfg = ajustes.cargar_config(build.ROOT)
+    d = build.build(build.load_data(build.ROOT), build.load_plan(build.ROOT), cfg, __import__("datetime").datetime(2026, 11, 25))
+    assert d["ui"]["plan_acciones"] == [] and d["ui"]["editar_sesion"] is False
+    d["ui"]["plan_acciones"] = [{"texto": "X", "url": "/plan/acciones"}]
+    assert validar.problemas(d) == []

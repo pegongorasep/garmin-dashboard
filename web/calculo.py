@@ -17,9 +17,14 @@ from .modelos import Ajustes, CacheData, DatoGarmin, InBody, Plan, Usuario, ahor
 
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
-MENU = [{"texto": "Ajustes", "url": "/ajustes"}, {"texto": "Plan vivo", "url": "/plan"}, {"texto": "Cuerpo", "url": "/cuerpo"},
-        {"texto": "Historial", "url": "/historial"}, {"texto": "Privacidad", "url": "/privacidad"},
-        {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; crece con cada fase
+MENU = [{"texto": "Ajustes", "url": "/ajustes"}, {"texto": "Historial", "url": "/historial"},
+        {"texto": "InBody", "url": "/cuerpo"}, {"texto": "Privacidad", "url": "/privacidad"},
+        {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; el plan vive en la pestaña Plan (Coach/Admin: cuando existan sus rutas)
+# Botones de la pestaña Plan (ui.plan_acciones): llevan a los formularios del plan vivo.
+PLAN_ACCIONES = [{"texto": "Voy de viaje", "url": "/plan/acciones#viaje"},
+                 {"texto": "Estoy enfermo o lastimado", "url": "/plan/acciones#enfermo"},
+                 {"texto": "Agregar carrera", "url": "/plan/acciones#carrera"},
+                 {"texto": "Repetir semana y eventos", "url": "/plan/acciones"}]
 
 
 class SinConfig(Exception):
@@ -38,7 +43,8 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None) -> dict:
     aj = db.get(Ajustes, usuario.id)
     if aj is None:
         raise SinConfig()
-    crudo = {**aj.config, "modo": "web", "menu": MENU if menu is None else menu}
+    crudo = {**aj.config, "modo": "web", "menu": MENU if menu is None else menu,
+             "plan_acciones": PLAN_ACCIONES, "editar_sesion": True}   # el que ve su data.json puede editar (permisos.puede_editar == puede_ver)
     if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
@@ -74,7 +80,7 @@ def huella(db: Session, usuario: Usuario, hoy_local: str) -> str:
                            .where(DatoGarmin.usuario_id == usuario.id)).one()
     aj, pl = db.get(Ajustes, usuario.id), db.get(Plan, usuario.id)
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
-    partes = [hoy_local, json.dumps(MENU), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
+    partes = [hoy_local, json.dumps([MENU, PLAN_ACCIONES]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
               usuario.repo, usuario.sensor]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()

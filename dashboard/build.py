@@ -763,6 +763,8 @@ def build_ui(config: dict, plan: dict) -> dict:
         "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase", "icono")} for c in cats],
         "nombre_intensa": nombre,
         "acciones_url": acciones,
+        "plan_acciones": list(config.get("plan_acciones") or []),   # solo en la web: [{texto, url}] sobre el plan
+        "editar_sesion": bool(config.get("editar_sesion", False)),   # solo en la web: cada sesión editable lleva «Editar»
         "menu": [{"texto": i["texto"], "url": i["url"]} for i in config.get("menu") or []],   # solo en la web: [{texto, url relativa}]
         "textos": {
             "semana": ". ".join(partes) + ".",
@@ -826,7 +828,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                    "prueba": prueba_resultado(data, config, plan),
                    "siguiente": ("Ve a Ajustes para el siguiente bloque" if config.get("modo") == "web"
                                  else "Corre /ajustar para el siguiente bloque"),
-                   **({"siguiente_url": "/plan#siguiente"} if config.get("modo") == "web" else {})}
+                   **({"siguiente_url": "/plan/acciones#siguiente"} if config.get("modo") == "web" else {})}
     elif m.en_pausa(hoy, config):   # semana de viaje sin correr o de enfermedad: el plan espera
         tarjeta = {**tarjeta, "tipo": "pausa", "texto": "Esta semana el plan está en pausa (viaje o recuperación)",
                    "version": None, "sesion_id": None}

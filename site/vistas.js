@@ -138,10 +138,15 @@ function tarjetaTipos(d) {
   return c;
 }
 
+/** Tipos de sesión que el editor de la web acepta (los mismos que plan_vivo.TIPOS_EDITABLES). */
+const TIPOS_EDITABLES = ["z2", "larga", "variada"];
+
 function renderPlan(d) {
   PINTAR.plan = [];
   const det = d.detalles || {};
+  const acciones = ui().plan_acciones || [];
   $("vista-plan").replaceChildren(...[
+    acciones.length ? h("div", { class: "botones" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
@@ -173,7 +178,8 @@ function tarjetaDoceSemanas(d) {
     h("p", { class: "nota" }, `${ui().textos.descarga || "Las semanas de descarga (línea punteada) bajan la carga."} Toca una semana para ver sus sesiones.`),
     h("h3", { class: "titular" }, `Semana ${w.n} · bloque ${w.block} · ${w.kind}`),
     h("p", { class: "nota" }, w.focus || ""),
-    h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id)))),
+    h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), ui().editar_sesion && TIPOS_EDITABLES.includes(s.tipo)
+      ? { cuerpo: [...cuerpoPlan(s), DS.boton("Editar", { variante: "sec", chico: true, href: `/plan/sesion/${w.n}/${s.id}` })] } : {}))),
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, `Semanas repetidas: ${plan.semanas_repetidas.join(", ")}.`)] : []),
     ...listaEventos(plan.eventos));
   return c;
