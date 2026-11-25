@@ -48,7 +48,8 @@ Se trabaja en el artifact, por grupos, con una revisión de Pedro al cerrar cada
   en texto), la fuente Lexend como archivos, los íconos como archivos (mismo trazo de 1.75 px) y las notas del
   README. Se marca el ✓ blanco sobre `ok` (3.3:1) como pendiente si Pedro quiere cambiarlo.
 - **D0b, controles y navegación**: README y preview de cada componente, en los dos temas. Se adelanta
-  **Graficas** (pedido de Pedro): siluetas de una zona, pirámide y muchos intervalos (las repeticiones se juntan en
+  las gráficas (pedido de Pedro), en tres componentes que se ven en el celular: **Silueta**, **GraficaBarras** y
+  **GraficaLinea**, probados a 340 px: siluetas de una zona, pirámide y muchos intervalos (las repeticiones se juntan en
   un corchete «10 × 1′ Z5 + 1′ Z1»), barras sencillas y apiladas por semana (sin datos, meta) y línea de tendencia,
   con las reglas de `dataviz` (marcas finas, una sola escala, leyenda con 2 o más series, tooltip).
 - **D0c, datos y contenedores**: igual, con el resto de los componentes de datos.
