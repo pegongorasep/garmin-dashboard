@@ -68,7 +68,7 @@ jobs:
         run: |
           gcloud run jobs deploy ahi-cli \
             --project "${{ vars.GCP_PROYECTO }}" --region "${REGION}" --image "${IMAGEN}" \
-            --command python --args "-m,web.cli,--help" \
+            --command python --args="-m,web.cli,--help" \
             --memory 512Mi --max-retries 0 \
             --service-account "servidor-web@${{ vars.GCP_PROYECTO }}.iam.gserviceaccount.com" \
             --set-secrets "SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
