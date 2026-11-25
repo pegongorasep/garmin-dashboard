@@ -1,13 +1,4 @@
 // Gráficas SVG a mano: una sola escala por gráfica, marcas finas, rejilla tenue.
-const NS = "http://www.w3.org/2000/svg";
-
-function sv(tag, attrs, ...hijos) {
-  const el = document.createElementNS(NS, tag);
-  for (const [k, v] of Object.entries(attrs || {})) if (v !== null && v !== undefined) el.setAttribute(k, v);
-  for (const hijo of hijos.flat()) if (hijo) el.append(hijo.nodeType ? hijo : document.createTextNode(String(hijo)));
-  return el;
-}
-
 function pasoNice(crudo) {
   const p = 10 ** Math.floor(Math.log10(crudo));
   const f = crudo / p;
@@ -27,12 +18,14 @@ function ticksNice(lo, hi, n = 3) {
 
 const fechaCorta2 = (ms) => { const f = new Date(ms); return `${f.getDate()} ${MESES[f.getMonth()]}`; };
 
+/** Globito sobre la gráfica. Si el texto trae "\n", la primera línea va en negritas (<b>) y las demás en <small>. */
 function tooltipEn(cont) {
   const tip = h("div", { class: "tip", hidden: true });
   cont.append(tip);
   return {
     mostrar(texto, x, y) {
-      tip.textContent = texto;
+      const [primera, ...resto] = String(texto).split("\n");
+      tip.replaceChildren(h("b", {}, primera), ...resto.map((t) => h("small", {}, t)));
       tip.hidden = false;
       const w = cont.clientWidth, tw = tip.offsetWidth;
       tip.style.left = `${Math.min(Math.max(x, tw / 2 + 2), w - tw / 2 - 2)}px`;
@@ -55,7 +48,7 @@ function tooltipEn(cont) {
  */
 function lineChart(cfg) {
   const { ancho: W, alto: H = 170, serie } = cfg;
-  const cont = h("div", { class: "chart" });
+  const cont = h("div", { class: "graf" });
   const ml = 38, mr = 10, mt = 10, mb = 22;
   const t = serie.map((p) => parseFecha(p.fecha).getTime());
   const [t0, t1] = cfg.dominio || [Math.min(...t), Math.max(...t)];
@@ -76,14 +69,14 @@ function lineChart(cfg) {
 
   const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Gráfica" });
   for (const v of ticks) {
-    svg.append(sv("line", { class: "grid", x1: ml, x2: W - mr, y1: y(v), y2: y(v) }),
-      sv("text", { class: "eje", x: ml - 6, y: y(v) + 4, "text-anchor": "end" }, fmtY(v)));
+    svg.append(sv("line", { class: "rej", x1: ml, x2: W - mr, y1: y(v), y2: y(v) }),
+      sv("text", { x: ml - 6, y: y(v) + 4, "text-anchor": "end" }, fmtY(v)));
   }
-  svg.append(sv("line", { class: "base", x1: ml, x2: W - mr, y1: H - mb, y2: H - mb }));
+  svg.append(sv("line", { class: "eje", x1: ml, x2: W - mr, y1: H - mb, y2: H - mb }));
   const nx = W < 300 ? 3 : 4;
   for (let i = 0; i < nx; i++) {
     const ms = t0 + ((t1 - t0) * i) / (nx - 1);
-    svg.append(sv("text", { class: "eje", x: x(ms), y: H - 6, "text-anchor": i === 0 ? "start" : i === nx - 1 ? "end" : "middle" }, (cfg.fmtX || fechaCorta2)(ms)));
+    svg.append(sv("text", { x: x(ms), y: H - 6, "text-anchor": i === 0 ? "start" : i === nx - 1 ? "end" : "middle" }, (cfg.fmtX || fechaCorta2)(ms)));
   }
   // banda: un polígono por tramo continuo
   const tramos = (ok) => {
@@ -101,12 +94,12 @@ function lineChart(cfg) {
   }
   if (cfg.ref) {
     svg.append(sv("line", { class: "ref", x1: ml, x2: W - mr, y1: y(cfg.ref.y), y2: y(cfg.ref.y) }));
-    if (cfg.ref.etiqueta) svg.append(sv("text", { class: "eje ref-t", x: W - mr, y: y(cfg.ref.y) - 4, "text-anchor": "end" }, cfg.ref.etiqueta));
+    if (cfg.ref.etiqueta) svg.append(sv("text", { class: "ref-t", x: W - mr, y: y(cfg.ref.y) - 4, "text-anchor": "end" }, cfg.ref.etiqueta));
   }
   for (const v of cfg.verticales || []) {
     const vx = x(parseFecha(v.fecha).getTime());
     svg.append(sv("line", { class: "vert", x1: vx, x2: vx, y1: mt, y2: H - mb }),
-      sv("text", { class: "eje vert-t", x: vx + 4, y: mt + 9, "text-anchor": "start" }, v.etiqueta));
+      sv("text", { class: "vert-t", x: vx + 4, y: mt + 9, "text-anchor": "start" }, v.etiqueta));
   }
   const cl = cfg.clase || "s1";
   const validos = tramos((i) => serie[i].y != null);
@@ -129,7 +122,7 @@ function lineChart(cfg) {
     return idx;
   };
   // la etiqueta va arriba del último punto, o abajo si la serie venía bajando (así no tapa la línea)
-  const etiquetaDirecta = (nombre, i, v, previo) => svg.append(sv("text", { class: "eje valor-fin", x: Math.min(x(t[i]) + 4, W - 2),
+  const etiquetaDirecta = (nombre, i, v, previo) => svg.append(sv("text", { class: "dato", x: Math.min(x(t[i]) + 4, W - 2),
     y: previo != null && previo > v ? Math.min(y(v) + 16, H - mb - 2) : Math.max(y(v) - 9, 10), "text-anchor": "end" }, nombre));
   for (const e of cfg.extra || []) {
     const idx = dibujarExtra(e);
@@ -188,7 +181,7 @@ function lineChart(cfg) {
  */
 function barChart(cfg) {
   const { ancho: W, semanas } = cfg;
-  const cont = h("div", { class: "chart" });
+  const cont = h("div", { class: "graf" });
   const ml = 38, mr = 10, mb = 22;
   // `entrenos`: (semana) => [{icono, n}]; arriba de cada barra, un renglón por tipo: ícono y "2x" si hubo más de uno
   const slot = (W - ml - mr) / semanas.length;
@@ -207,10 +200,10 @@ function barChart(cfg) {
   const y = (v) => mt + (1 - v / hi) * (H - mt - mb);
   const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Barras" });
   for (const v of ticks) {
-    svg.append(sv("line", { class: "grid", x1: ml, x2: W - mr, y1: y(v), y2: y(v) }),
-      sv("text", { class: "eje", x: ml - 6, y: y(v) + 4, "text-anchor": "end" }, fmt(v, 0)));
+    svg.append(sv("line", { class: "rej", x1: ml, x2: W - mr, y1: y(v), y2: y(v) }),
+      sv("text", { x: ml - 6, y: y(v) + 4, "text-anchor": "end" }, fmt(v, 0)));
   }
-  svg.append(sv("line", { class: "base", x1: ml, x2: W - mr, y1: H - mb, y2: H - mb }));
+  svg.append(sv("line", { class: "eje", x1: ml, x2: W - mr, y1: H - mb, y2: H - mb }));
   if (cfg.ref) {   // línea de referencia a todo el ancho (p. ej. meta 80 %)
     svg.append(sv("line", { class: "meta-ref", x1: ml, x2: W - mr, y1: y(cfg.ref.y), y2: y(cfg.ref.y) }, sv("title", {}, cfg.ref.etiqueta)));
   }
@@ -243,14 +236,14 @@ function barChart(cfg) {
         ic.setAttribute("y", yy);
         ic.classList.add("ico-sem");
         svg.append(ic);
-        if (txt) svg.append(sv("text", { class: "eje ico-n", x: x0 + ICO + 2, y: yy + ICO - 2 }, txt));
+        if (txt) svg.append(sv("text", { class: "ico-n", x: x0 + ICO + 2, y: yy + ICO - 2 }, txt));
       });
     }
     if (s.meta) svg.append(sv("line", { class: "meta", x1: cx - ancho / 2 - 3, x2: cx + ancho / 2 + 3, y1: y(s.meta), y2: y(s.meta) }));
     if (cfg.etiquetaFinal && i === semanas.length - 1) {
-      svg.append(sv("text", { class: "eje valor-fin", x: Math.min(cx + 6, W - 2), y: Math.max(y(Math.max(total(s), s.meta || 0)) - 5, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
+      svg.append(sv("text", { class: "dato", x: Math.min(cx + 6, W - 2), y: Math.max(y(Math.max(total(s), s.meta || 0)) - 5, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
     }
-    if (i % cada === 0) svg.append(sv("text", { class: "eje", x: cx, y: H - 6, "text-anchor": "middle" }, fechaCorta2(parseFecha(s.inicio).getTime())));
+    if (i % cada === 0) svg.append(sv("text", { x: cx, y: H - 6, "text-anchor": "middle" }, fechaCorta2(parseFecha(s.inicio).getTime())));
     const hit = sv("rect", { class: "capa", x: cx - slot / 2, y: 0, width: slot, height: H - mb, tabindex: 0,
       "aria-label": cfg.texto(s) });
     const ver = () => tip.mostrar(cfg.texto(s), cx, y(total(s)));
@@ -268,7 +261,7 @@ function barChart(cfg) {
 /**
  * Mini gráfica de línea con los puntos igual de separados (como el historial de la hoja InBody): el valor va sobre
  * cada punto y la medición `prime` lleva un anillo y la palabra «prime».
- * cfg: { ancho, valores:[n], fechas:[texto] (se escriben abajo si vienen), prime:índice|null, clase:"s1"|"s2"|"neutro",
+ * Devuelve un `.graf` con el SVG dentro. cfg: { ancho, valores:[n], fechas:[texto] (se escriben abajo si vienen), prime:índice|null, clase:"s1"|"s2"|"neutro",
  *        fmt:(v)=>string, etiqueta:string, textos:[string] (hover de cada punto) }
  */
 function miniLinea(cfg) {
@@ -281,28 +274,30 @@ function miniLinea(cfg) {
   const x = (i) => (n === 1 ? W / 2 : pad + (i * (W - 2 * pad)) / (n - 1));
   const y = (v) => mt + (hi === lo ? 14 : ((hi - v) / (hi - lo)) * 28);
   const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Historial" });
-  svg.append(sv("line", { class: "base", x1: 4, x2: W - 4, y1: H - mb + 6, y2: H - mb + 6 }));
+  svg.append(sv("line", { class: "eje", x1: 4, x2: W - 4, y1: H - mb + 6, y2: H - mb + 6 }));
   if (hay.length > 1) svg.append(sv("polyline", { class: `ln ${clase}`,
     points: valores.map((v, i) => (v == null ? null : `${x(i)},${y(v)}`)).filter(Boolean).join(" ") }));
   valores.forEach((v, i) => {
     if (v == null) {
-      svg.append(sv("text", { class: "eje", x: x(i), y: H - mb + 2, "text-anchor": "middle" }, "—"));
-      if (fechas) svg.append(sv("text", { class: "eje", x: x(i), y: H - 6, "text-anchor": "middle" }, fechas[i]));
+      svg.append(sv("text", { x: x(i), y: H - mb + 2, "text-anchor": "middle" }, "—"));
+      if (fechas) svg.append(sv("text", { x: x(i), y: H - 6, "text-anchor": "middle" }, fechas[i]));
       return;
     }
     if (i === prime) svg.append(sv("circle", { class: "anillo-prime", cx: x(i), cy: y(v), r: 8.5 }));
     svg.append(sv("circle", { class: `pt ${clase}`, cx: x(i), cy: y(v), r: 4 }, sv("title", {}, (cfg.textos || [])[i] || fmtV(v))));
-    svg.append(sv("text", { class: "eje valor-fin", x: x(i), y: y(v) - (i === prime ? 13 : 9), "text-anchor": "middle" }, fmtV(v)));
-    if (i === prime) svg.append(sv("text", { class: "eje prime-t", x: x(i), y: y(v) + 22, "text-anchor": "middle" }, "prime"));
-    if (fechas) svg.append(sv("text", { class: "eje", x: x(i), y: H - 6, "text-anchor": "middle" }, fechas[i]));
+    svg.append(sv("text", { class: "dato", x: x(i), y: y(v) - (i === prime ? 13 : 9), "text-anchor": "middle" }, fmtV(v)));
+    if (i === prime) svg.append(sv("text", { class: "prime-t", x: x(i), y: y(v) + 22, "text-anchor": "middle" }, "prime"));
+    if (fechas) svg.append(sv("text", { x: x(i), y: H - 6, "text-anchor": "middle" }, fechas[i]));
   });
-  return svg;
+  return h("div", { class: "graf" }, svg);
 }
 
-// --- siluetas de entreno (línea escalonada, sin ejes ni números) ---
+// --- siluetas de entreno: puerto de la Silueta del sistema de diseño (px reales, se redibuja al cambiar el ancho) ---
 
-const SIL_W = 300;                                   // ancho virtual; el SVG se estira al 100 %
 const NIVEL_ZONA = { Z1: 0.25, Z2: 0.45, Z3: 0.65, Z4: 0.82, Z5: 0.97 };
+const nivelZona = (z) => NIVEL_ZONA[z] ?? 0.45;
+const claseZona = (z) => `g${(z || "Z2").slice(1)}`;
+const minTxt = (m) => (m < 1 ? `${Math.round(m * 60)}″` : `${fmt(m, 1)}′`);
 
 /** Polilínea [[x,y],…] -> trazo con esquinas suaves (curva cuadrática por vértice, radio ≤ r y ≤ mitad de cada lado). */
 function trazoRedondo(pts, r) {
@@ -320,121 +315,186 @@ function trazoRedondo(pts, r) {
   return `${d} L${u[0].toFixed(2)},${u[1].toFixed(2)}`;
 }
 
+/** Vuelve a dibujar cuando cambia el ancho de `cont` (y no antes de que tenga ancho). Va en el siguiente cuadro para no encadenar avisos del observador. */
+function alAncho(cont, dibujar) {
+  let w0 = 0;
+  new ResizeObserver(() => { const w = cont.clientWidth; if (w && w !== w0) { w0 = w; requestAnimationFrame(() => dibujar(w)); } }).observe(cont);
+}
+
+/** Bloques que se repiten 3 veces o más (patrón de 1 a 3 tramos [[min, zona, opcional?]]) se juntan en un grupo. */
+function agrupar(tr) {
+  const igual = (a, b) => a[0] === b[0] && a[1] === b[1] && !!a[2] === !!b[2];
+  const out = [];
+  for (let i = 0; i < tr.length;) {
+    let mejor = null;
+    for (let p = 1; p <= 3; p++) {
+      let k = 1;
+      while (i + (k + 1) * p <= tr.length && tr.slice(i + k * p, i + (k + 1) * p).every((t, j) => igual(t, tr[i + j]))) k++;
+      if (k >= 3 && (!mejor || k * p > mejor.k * mejor.p)) mejor = { p, k };
+    }
+    if (mejor) { out.push({ i, n: mejor.p * mejor.k, ...mejor }); i += mejor.p * mejor.k; } else { out.push({ i, n: 1 }); i++; }
+  }
+  return out;
+}
+
+/** Área invisible más grande que la marca: dedo, mouse y teclado muestran el tooltip. */
+function capaTip(svg, tip, attrs, mostrar) {
+  const r = sv("rect", { ...attrs, class: "capa", tabindex: "0" });
+  for (const ev of ["pointerenter", "pointerdown", "focus"]) r.addEventListener(ev, mostrar);
+  for (const ev of ["pointerleave", "blur"]) r.addEventListener(ev, tip.ocultar);
+  svg.append(r);
+  return r;
+}
+
 /**
- * Silueta de la FC en el tiempo.
- * tramos: [{d: duración, n: nivel 0–1, n2?: nivel final (rampa), clase?: "g1".."g5", opcional?: bool, texto?: string}]
- * Sin `clase` va en tinta del tema (catálogo); con `clase` cada tramo lleva el color de su zona (sesión) y
- * un toque/hover muestra `texto`. opts: { alto, etiqueta }.
+ * Silueta de una sesión. tramos: [[minutos, zona, opcional?]]. opts: { alto, rachas:[{min, zona, lpm:[a,b], opcional}]
+ * (de ahí salen los lpm; sin lpm no hay renglón), conCal/conEnf (la sesión ya trae su calentamiento/enfriamiento: la
+ * rampa dura 1 min y sin etiqueta), conTip (false = sin tooltip, p. ej. dentro de una fila que se abre al tocar) }.
+ * Una zona: etiqueta grande («20 min Z2 / 138–150 lpm»). Varias: solo minutos con guía de color; las repeticiones
+ * (3 o más) se juntan en un corchete «10 × 1′ Z5 + 1′ Z1».
  */
 function silueta(tramos, opts = {}) {
-  const H = opts.alto || 40, pad = 4, W = SIL_W;
-  const color = !!tramos.some((t) => t.clase);
-  // sesión a color: calentamiento y enfriamiento de `rampa` minutos (subida desde zona 0 y bajada al final)
-  // si la sesión ya trae su calentamiento/enfriamiento, la rampa es cortita (1') y sin etiqueta
-  const Ri = color ? (opts.conCal ? 1 : 5) : 0, Rf = color ? (opts.conEnf ? 1 : 5) : 0;
-  const total = tramos.reduce((a, t) => a + t.d, 0) + Ri + Rf || 1;
-  const y = (n) => H - pad - n * (H - 2 * pad);
-  const cont = h("div", { class: "silueta", style: `height:${H}px` });
-  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, preserveAspectRatio: "none", role: "img",
-    "aria-label": opts.etiqueta || "Forma de la sesión" });
-  const xr = (Ri / total) * W, xf = (Rf / total) * W;
-  let x = xr;
-  const caja = tramos.map((t) => { const x0 = x; x += (t.d / total) * W; return { t, x0, x1: x }; });
-  if (!color) {
-    const pts = [];
-    for (const { t, x0, x1 } of caja) { pts.push([x0, y(t.n)], [x1, y(t.n2 ?? t.n)]); }
-    svg.append(sv("path", { d: trazoRedondo(pts, 5), class: "sil-ln" }));
-  } else {
-    // cada tramo es horizontal; el color cambia a media altura de cada salto vertical. Las rampas van en color de Z0.
-    const piso = y(0.1), pri = caja[0], ult = caja[caja.length - 1];
-    svg.append(sv("path", { d: `M0,${piso} L${xr},${y(pri.t.n)}`, class: "sil-ln g0" }),
-      sv("path", { d: `M${ult.x1},${y(ult.t.n)} L${ult.x1 + xf},${piso}`, class: "sil-ln g0" }));
-    caja.forEach(({ t, x0, x1 }, i) => {
-      const yy = y(t.n), ant = caja[i - 1], sig = caja[i + 1];
-      const pts = [];
-      if (ant) pts.push([x0, (y(ant.t.n) + yy) / 2]);
-      pts.push([x0, yy], [x1, yy]);
-      if (sig) pts.push([x1, (yy + y(sig.t.n)) / 2]);
-      svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `sil-ln ${t.clase}${t.opcional ? " opc" : ""}` }));
+  const alto = opts.alto || 44, pad = 4;
+  const Ri = opts.conCal ? 1 : 5, Rf = opts.conEnf ? 1 : 5;
+  const total = tramos.reduce((a, t) => a + t[0], 0) + Ri + Rf;
+  const una = tramos.length === 1, grupos = agrupar(tramos);
+  const lpm = {};
+  for (const r of opts.rachas || []) if (r.lpm && !lpm[r.zona]) lpm[r.zona] = `${r.lpm[0]}–${r.lpm[1]}`;
+  const resumen = tramos.map(([m, z]) => `${fmt(m, 1)} min ${z}`).join(", ");
+  const etiqueta = opts.etiqueta || `Silueta de la sesión: ${opts.conCal ? "" : "5 min de calentamiento, "}${resumen}${opts.conEnf ? "" : " y 5 min de enfriamiento"}`;
+  const cont = h("div", { class: "slt-w", style: `min-height:${alto}px` });
+  if (!tramos.length) return cont;
+  alAncho(cont, (W) => {
+    const caja = h("div", { class: "slt" });
+    cont.replaceChildren(caja);
+    const x = (m) => (m / total) * W, y = (n) => alto - pad - n * (alto - 2 * pad);
+    const svg = sv("svg", { width: W, height: alto, viewBox: `0 0 ${W} ${alto}`, role: "img", "aria-label": etiqueta });
+    caja.append(svg);
+    let t0 = Ri;
+    const pos = tramos.map((t) => { const p = { t, a: t0, b: t0 + t[0] }; t0 += t[0]; return p; });
+    const piso = y(0.1), pri = pos[0], ult = pos[pos.length - 1];
+    svg.append(sv("path", { d: `M0,${piso} L${x(Ri)},${y(nivelZona(pri.t[1]))}`, class: "slt-ln g0" }),
+      sv("path", { d: `M${x(ult.b)},${y(nivelZona(ult.t[1]))} L${W},${piso}`, class: "slt-ln g0" }));
+    pos.forEach(({ t, a, b }, i) => {
+      const yy = y(nivelZona(t[1])), ant = pos[i - 1], sig = pos[i + 1], pts = [];
+      if (ant) pts.push([x(a), (y(nivelZona(ant.t[1])) + yy) / 2]);
+      pts.push([x(a), yy], [x(b), yy]);
+      if (sig) pts.push([x(b), (yy + y(nivelZona(sig.t[1]))) / 2]);
+      svg.append(sv("path", { d: trazoRedondo(pts, 4), class: `slt-ln ${claseZona(t[1])}${t[2] ? " opc" : ""}` }));
     });
-    if (opts.rachas) etiquetasSilueta(cont, opts.rachas, opts.conCal ? 0 : Ri, opts.conEnf ? 0 : Rf, Ri, total);
-    const tip = tooltipEn(cont);
-    for (const { t, x0, x1 } of caja) {
-      if (!t.texto) continue;
-      const r = sv("rect", { x: x0, y: 0, width: Math.max(x1 - x0, 1), height: H, class: "sil-capa", tabindex: "0", "aria-label": t.texto });
-      const mostrar = () => tip.mostrar(t.texto, ((x0 + x1) / 2 / W) * cont.clientWidth, y(t.n));
-      r.addEventListener("pointerenter", mostrar);
-      r.addEventListener("pointerdown", mostrar);
-      r.addEventListener("focus", mostrar);
-      r.addEventListener("pointerleave", tip.ocultar);
-      r.addEventListener("blur", tip.ocultar);
-      svg.append(r);
+
+    // etiquetas: rampas y etiqueta grande (fijas), corchetes de repeticiones y minutos sueltos con guía de color
+    const items = [];
+    if (!opts.conCal) items.push({ c: x(Ri / 2), top: `${fmt(Ri, 0)} min`, sub: "calentar", fija: true });
+    if (una) {
+      const [m, z, opc] = tramos[0];
+      items.push({ c: x(Ri + m / 2), top: `${fmt(m, 1)} min ${z}`, fija: true,
+        sub: [lpm[z] ? `${lpm[z]} lpm` : null, opc ? "opcional" : null].filter(Boolean).join(" · ") });
+    } else {
+      for (const g of grupos) {
+        const a = pos[g.i].a, b = pos[g.i + g.n - 1].b;
+        if (g.n === 1) {
+          const [m, z] = tramos[g.i];
+          items.push({ c: x((a + b) / 2), top: minTxt(m), guia: claseZona(z), yy: y(nivelZona(z)), xa: x(a) + 2, xb: x(b) - 2 });
+        } else {
+          const patron = tramos.slice(g.i, g.i + g.p).map(([m, z]) => `${minTxt(m)} ${z}`).join(" + ");
+          items.push({ c: x((a + b) / 2), top: `${g.k} × ${patron}`, corto: `${g.k} ×`, grupo: [x(a), x(b)] });
+        }
+      }
     }
-  }
-  cont.prepend(svg);
+    if (!opts.conEnf) items.push({ c: W - x(Rf / 2), top: `${fmt(Rf, 0)} min`, sub: "enfriar", fija: true });
+
+    const niveles = [];
+    let techo = 0;
+    const ocupa = (k, a, b) => (niveles[k] = niveles[k] || []).push([a, b]);
+    const libre = (k, a, b) => !(niveles[k] || []).some(([p, q]) => a < q + 4 && b + 4 > p);
+    const els = items.map((it) => {
+      const el = h("span", { class: `slt-etq${it.fija ? " fija" : ""}${it.guia ? " min" : ""}`, "aria-hidden": "true" },
+        h("b", {}, it.top), it.sub ? h("small", {}, it.sub) : null);
+      caja.append(el);
+      return el;
+    });
+    // primero lo fijo, después los corchetes y al final los minutos sueltos
+    const rango = (it) => (it.fija ? 0 : it.grupo ? 1 : 2);
+    const orden = items.map((it, i) => i).sort((p, q) => rango(items[p]) - rango(items[q]));
+    for (const i of orden) {
+      const it = items[i], el = els[i];
+      let w = el.offsetWidth, hh = el.offsetHeight, izq = Math.min(Math.max(it.c - w / 2, 0), Math.max(W - w, 0));
+      // corchete sin lugar para el texto completo: solo «10 ×» (el color dice las zonas y el tooltip el detalle)
+      if (it.grupo && !(libre(0, izq, izq + w) && libre(1, izq, izq + w))) {
+        el.firstChild.textContent = it.corto;
+        w = el.offsetWidth; izq = Math.min(Math.max(it.c - w / 2, 0), Math.max(W - w, 0));
+      }
+      el.style.left = `${izq}px`;
+      if (it.fija) {
+        el.style.bottom = "calc(100% + 2px)";
+        for (const k of una ? [0] : [0, 1]) ocupa(k, izq, izq + w);
+        techo = Math.max(techo, hh + 2);
+      } else if (it.grupo) {
+        const [a, b] = it.grupo;
+        caja.append(h("span", { class: "slt-corchete", style: `left:${a + 1}px;width:${Math.max(b - a - 2, 2)}px` }));
+        el.style.bottom = "calc(100% + 9px)";
+        for (const k of [0, 1]) ocupa(k, Math.min(izq, a), Math.max(izq + w, b));
+        techo = Math.max(techo, hh + 9);
+      } else {
+        // la guía puede ir en cualquier punto de su tramo, pero no cruza etiquetas de niveles de abajo
+        const xs = [];
+        for (let d = 0; d <= Math.max(it.c - it.xa, it.xb - it.c); d += 2) xs.push(it.c - d, it.c + d);
+        let hallado = null;
+        for (let k = 0; k < 5 && !hallado; k++) {
+          for (const gx of xs) {
+            if (gx < it.xa || gx > it.xb) continue;
+            const iz = Math.min(Math.max(gx - w / 2, 0), Math.max(W - w, 0));
+            let ok = libre(k, iz, iz + w);
+            for (let j = 0; ok && j < k; j++) ok = libre(j, gx - 1, gx + 1);
+            if (ok) { hallado = { k, gx, iz }; break; }
+          }
+        }
+        if (!hallado) { el.remove(); continue; }   // no cabe: el tooltip del tramo lo dice
+        const { k, gx, iz } = hallado;
+        ocupa(k, iz, iz + w);
+        const L = 6 + k * 14;
+        el.style.left = `${iz}px`;
+        el.style.bottom = `calc(100% + ${L}px)`;
+        caja.append(h("span", { class: `slt-guia ${it.guia}`, style: `left:${gx}px;top:${-L}px;height:${L + it.yy}px`, "aria-hidden": "true" }));
+        techo = Math.max(techo, L + hh);
+      }
+    }
+    caja.style.marginTop = `${techo + 4}px`;
+
+    if (opts.conTip === false) return;
+    const tip = tooltipEn(caja);
+    pos.forEach(({ t: [m, z, opc], a, b }) => {
+      const texto = `${minTxt(m)} · ${z}${opc ? " (opcional)" : ""}${lpm[z] ? `\n${lpm[z]} lpm` : ""}`;
+      capaTip(svg, tip, { x: x(a), y: 0, width: Math.max(x(b) - x(a), 1), height: alto, "aria-label": texto.replace("\n", " · ") },
+        () => tip.mostrar(texto, x((a + b) / 2), y(nivelZona(z)) + 2));
+    });
+  });
   return cont;
 }
 
-/**
- * Arriba de la silueta. Sesión de una sola zona: "5 min / calentar", "20 min Z2 / 138–150 lpm", "5 min / enfriar".
- * Con más de una zona (compacta): solo los minutos ("3′") con una línea del color del tramo que llega hasta él; si dos
- * se tocarían, la línea de una se alarga y su número sube. La zona la dice el color (leyenda abajo, en app.js).
- * `Ri`/`Rf`: minutos de la rampa de inicio/fin que se escriben (0 = sin etiqueta); `x0` = minutos antes del 1er tramo.
- */
-function etiquetasSilueta(cont, rachas, Ri, Rf, x0, total) {
-  const compacta = rachas.length > 1;
-  const H = parseFloat(cont.style.height) || 40, pad = 4;
-  let t = x0;
-  const items = Ri ? [{ c: Ri / 2 / total, top: `${fmt(Ri, 0)} min`, sub: "calentar", rampa: true }] : [];
-  for (const r of rachas) {
-    const z = r.zona;
-    items.push(compacta
-      ? { c: (t + r.min / 2) / total, top: `${fmt(r.min, 0)}′`, guia: `g${z.slice(1)}`,
-        y: H - pad - (NIVEL_ZONA[z] ?? 0.45) * (H - 2 * pad) }
-      : { c: (t + r.min / 2) / total, top: `${fmt(r.min, 0)} min ${z}`,
-        sub: [r.lpm ? `${r.lpm[0]}–${r.lpm[1]} lpm` : null, r.opcional ? "opcional" : null].filter(Boolean).join(" · ") });
-    t += r.min;
-  }
-  if (Rf) items.push({ c: (total - Rf / 2) / total, top: `${fmt(Rf, 0)} min`, sub: "enfriar", rampa: true });
-  const els = items.map((e) => h("span", { class: `sil-etq${e.rampa ? " rampa" : ""}${e.guia ? " min" : ""}`, "aria-hidden": "true" },
-    h("b", {}, e.top), e.sub ? h("small", {}, e.sub) : null));
-  const guias = items.map((e) => (e.guia ? h("span", { class: `sil-guia ${e.guia}`, "aria-hidden": "true" }) : null));
-  cont.append(...els, ...guias.filter(Boolean));
-  const colocar = () => {
-    const W = cont.clientWidth;
-    if (!W) return;
-    const niveles = [];          // por nivel, los intervalos [izq, der] ya ocupados
-    let alto = 0;
-    els.forEach((el, i) => {
-      const w = el.offsetWidth, hh = el.offsetHeight, it = items[i];
-      const izq = Math.min(Math.max(it.c * W - w / 2, 0), W - w);
-      el.style.left = `${izq}px`;
-      if (!it.guia) {            // rampas y etiquetas grandes: pegadas a la silueta; en las compactas apartan 2 niveles
-        for (const k of compacta && it.rampa ? [0, 1] : [0]) (niveles[k] = niveles[k] || []).push([izq, izq + w]);
-        el.style.bottom = "100%";
-        alto = Math.max(alto, hh);
-        return;
-      }
-      let k = 0;
-      while ((niveles[k] || []).some(([a, b]) => izq < b + 3 && izq + w + 3 > a)) k++;
-      (niveles[k] = niveles[k] || []).push([izq, izq + w]);
-      const L = 6 + k * 14;
-      el.style.bottom = `calc(100% + ${L}px)`;
-      Object.assign(guias[i].style, { left: `${it.c * W}px`, top: `${-L}px`, height: `${L + it.y}px` });
-      alto = Math.max(alto, L + hh);
-    });
-    cont.style.marginTop = `${alto + 4}px`;
-  };
-  new ResizeObserver(colocar).observe(cont);
+/** Catálogo de tipos: forma [[d, n] | [d, n1, n2]] (niveles 0–1) -> silueta en tinta, sin zonas, etiquetas ni tooltip. */
+function siluetaForma(forma, alto = 48, etiqueta) {
+  const pad = 4, total = forma.reduce((a, f) => a + f[0], 0) || 1;
+  const cont = h("div", { class: "slt-w", style: `min-height:${alto}px` });
+  alAncho(cont, (W) => {
+    const caja = h("div", { class: "slt", style: "margin-top:6px" });
+    cont.replaceChildren(caja);
+    const y = (n) => alto - pad - n * (alto - 2 * pad);
+    const svg = sv("svg", { width: W, height: alto, viewBox: `0 0 ${W} ${alto}`, role: "img", "aria-label": etiqueta || "Forma de la sesión" });
+    const pts = [];
+    let x0 = 0;
+    for (const [d, n, n2] of forma) {
+      const x1 = x0 + (d / total) * W;
+      pts.push([x0, y(n)], [x1, y(n2 === undefined ? n : n2)]);
+      x0 = x1;
+    }
+    svg.append(sv("path", { d: trazoRedondo(pts, 5), class: "slt-ln tinta" }));
+    caja.append(svg);
+  });
+  return cont;
 }
 
-/** Catálogo: forma del tipo [[d, n] | [d, n1, n2]] -> silueta sin color. */
-const siluetaForma = (forma, alto = 48, etiqueta) =>
-  silueta(forma.map(([d, n, n2]) => ({ d, n, n2: n2 === undefined ? undefined : n2 })), { alto, etiqueta });
-
-/** Sesión: [[minutos, zona, opcional?]] -> silueta con el color Garmin de cada zona. */
+/** Sesión: [[minutos, zona, opcional?]] -> silueta con el color Garmin de cada zona. `rampas`: la sesión (con_calentamiento…). */
 const siluetaSesion = (sil, alto = 40, conTip = true, rachas = null, rampas = {}) =>
-  silueta(sil.map(([m, z, opc]) => ({ d: m, n: NIVEL_ZONA[z] ?? 0.45, clase: `g${(z || "Z2").slice(1)}`, opcional: !!opc,
-    texto: conTip ? `${m}' · ${z}${opc ? " (opcional)" : ""}` : undefined })),
-  { alto, rachas, conCal: rampas.con_calentamiento, conEnf: rampas.con_enfriamiento, etiqueta: `Silueta de la sesión: 5 min de calentamiento, ${(rachas || sil.map(([m, z]) => ({ min: m, zona: z })))
-    .map((r) => `${r.min} min ${r.zona}`).join(", ")} y 5 min de enfriamiento` });
+  silueta(sil, { alto, conTip, rachas: rachas || [], conCal: !!rampas.con_calentamiento, conEnf: !!rampas.con_enfriamiento });

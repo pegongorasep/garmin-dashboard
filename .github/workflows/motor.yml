@@ -92,6 +92,10 @@ jobs:
       - uses: actions/configure-pages@v5
         if: steps.decidir.outputs.publicar == 'true'
 
+      - name: Quitar el catálogo de diseño (solo para Pedro; no se publica en las Pages de amigos)
+        if: steps.decidir.outputs.publicar == 'true'
+        run: rm -f motor/site/catalogo.html
+
       - uses: actions/upload-pages-artifact@v3
         if: steps.decidir.outputs.publicar == 'true'
         with:

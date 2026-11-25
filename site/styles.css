@@ -134,15 +134,16 @@ th:first-child, td:first-child { text-align: left; }
 .toggle button { flex: 1; font: inherit; font-size: 13px; padding: 7px 4px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-2); cursor: pointer; }
 .toggle button[aria-pressed="true"] { background: var(--ink); color: var(--page); font-weight: 600; }
 .chart-wrap { width: 100%; min-height: 40px; }
-.chart { position: relative; width: 100%; }
-.chart svg { display: block; touch-action: pan-y; overflow: visible; }
-.chart .tip { bottom: auto; transform: translate(-50%, -100%); }
-.grid { stroke: var(--grid); stroke-width: 1; }
-.base { stroke: var(--axis); stroke-width: 1; }
-.eje { fill: var(--muted); font-size: 11px; }
+.graf, .slt { position: relative; width: 100%; }
+.graf svg, .slt svg { display: block; touch-action: pan-y; overflow: visible; }
+.graf .tip, .slt .tip { bottom: auto; transform: translate(-50%, -100%); }
+.tip b { display: block; font-weight: 600; }
+.tip small { display: block; opacity: .85; }
+.graf .rej { stroke: var(--grid); stroke-width: 1; }
+.graf .eje { stroke: var(--axis); stroke-width: 1; }
+.graf text { fill: var(--muted); font-size: 11px; }
 .ref { stroke: var(--ink-2); stroke-width: 1; }
-.ref-t { fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
-.eje.ast { font-size: 14px; font-weight: 700; fill: var(--ink-2); }
+.graf text.ref-t { fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .ln { fill: none; stroke: var(--serie-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .pt { fill: var(--serie-1); stroke: var(--surface); stroke-width: 2; }
 .banda { fill: var(--serie-1); fill-opacity: .28; }
@@ -250,7 +251,7 @@ details.recup .senales { margin-top: 6px; }
 .calidad { margin: 6px 0 4px; }
 .estructura { margin: 0 0 2px; font-weight: 600; }
 
-.eje.valor-fin { fill: var(--ink); font-weight: 650; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.graf text.dato { fill: var(--ink); font-weight: 650; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .inbody { margin: 12px 0 4px; font-weight: 600; font-size: 13px; display: flex; flex-wrap: nowrap; gap: 0 6px; align-items: center; white-space: nowrap; }
 .inbody.v { margin-top: 0; white-space: normal; }
 .inbody .sep { color: var(--muted); }
@@ -263,7 +264,7 @@ details.recup .senales { margin-top: 6px; }
 /* v3.2: segunda serie (s2) y raya vertical en lineChart */
 .ln.s2 { stroke: var(--serie-2); } .pt.s2, .pt-d.s2 { fill: var(--serie-2); }
 .vert { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: .55; }
-.vert-t { fill: var(--ink-2); }
+.graf text.vert-t { fill: var(--ink-2); }
 .leyenda i.sw.s1 { background: var(--serie-1); } .leyenda i.sw.s2 { background: var(--serie-2); }
 .leyenda i.sw.azul { background: var(--cat-1); } .leyenda i.sw.aqua { background: var(--cat-2); } .leyenda i.sw.violeta { background: var(--cat-3); } .leyenda i.sw.amarillo { background: var(--cat-4); }
 /* con varias categorías, la letra lleva una raya de su color; el texto sigue en tinta */
@@ -331,7 +332,7 @@ details.recup .senales { margin-top: 6px; }
 /* v4.1 F5: composición estilo InBody */
 .ln.neutro { stroke: var(--ink-2); } .pt.neutro { fill: var(--ink-2); }
 .anillo-prime { fill: none; stroke: var(--ink); stroke-width: 1.5; }
-.eje.prime-t { fill: var(--ink); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.graf text.prime-t { fill: var(--ink); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
 .ib h3 { font-size: 13px; color: var(--ink-2); font-weight: 600; margin: 0 0 6px; }
 .ib-grupo { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--grid); }
 .ib > h2 + .ib-grupo { margin-top: 6px; padding-top: 0; border-top: 0; }
@@ -364,16 +365,13 @@ details.recup .senales { margin-top: 6px; }
 .ib-hoja .tabla-scroll.ancha table { table-layout: auto; }
 @media (max-width: 480px) { .ib-hoja .tabla-scroll th, .ib-hoja .tabla-scroll td { font-size: 11px; padding-inline: 2px; } }
 
-/* v4.2: siluetas de entreno */
-.silueta { position: relative; width: 100%; margin: 6px 0 2px; }
-.silueta svg { display: block; overflow: visible; touch-action: pan-y; }
-.sil-ln { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.sil-ln.g0 { stroke: var(--g0); } .sil-ln.g1 { stroke: var(--g1); } .sil-ln.g2 { stroke: var(--g2); } .sil-ln.g3 { stroke: var(--g3); }
-.sil-ln.g4 { stroke: var(--g4); } .sil-ln.g5 { stroke: var(--g5); }
-.sil-ln.opc { stroke-dasharray: 4 3; }
-.sil-capa { fill: transparent; cursor: default; }
-.sil-capa:focus-visible { outline: 2px solid var(--focus); }
-.silueta .tip { bottom: auto; transform: translate(-50%, -100%); }
+/* v4.2: siluetas de entreno (clases del sistema: slt, slt-ln, slt-etq, slt-guia, slt-corchete) */
+.slt { margin-bottom: 2px; }
+.slt-ln { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.slt-ln.tinta { stroke: var(--ink-2); }
+.slt-ln.g0 { stroke: var(--g0); } .slt-ln.g1 { stroke: var(--g1); } .slt-ln.g2 { stroke: var(--g2); } .slt-ln.g3 { stroke: var(--g3); }
+.slt-ln.g4 { stroke: var(--g4); } .slt-ln.g5 { stroke: var(--g5); }
+.slt-ln.opc { stroke-dasharray: 4 3; }
 .bloque-sil { margin: 8px 0 4px; }
 .bloque-sil .leyenda { margin-top: 2px; gap: 4px 12px; font-size: 12px; }
 .bloque-sil .leyenda i { width: 10px; height: 10px; border-radius: 50%; }
@@ -411,8 +409,8 @@ details.ses.carrera-det > summary .ico-svg { color: var(--ink); }
 .meta-ref { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .leyenda .ico-svg { margin-right: 4px; margin-left: -2px; }
 .leyenda i.raya-disc { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed var(--ink); vertical-align: 3px; }
-.chart .ico-sem { color: var(--ink-2); pointer-events: none; }
-.chart .ico-n { font-size: 10px; font-weight: 600; fill: var(--ink-2); }
+.graf .ico-sem { color: var(--ink-2); pointer-events: none; }
+.graf .ico-n { font-size: 10px; font-weight: 600; fill: var(--ink-2); }
 .titulo-sil { margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .zbar-wrap.con-etiquetas .zbar { height: 26px; }
 .zbar > div { position: relative; overflow: hidden; }
@@ -435,15 +433,15 @@ details.card.plegable > summary h2 { margin: 0; }
 details.card.plegable[open] > summary { margin-bottom: 8px; }
 details.card.plegable:not([open]) { align-self: start; }
 .card.carrera-hoy { align-self: start; }   /* alto según su contenido, no el de Tus corridas */
-.sil-etq { position: absolute; bottom: 100%; left: 0; white-space: nowrap; text-align: center; line-height: 1.25; pointer-events: none; }
-.sil-etq b { display: block; font-size: 12.5px; font-weight: 650; color: var(--ink); }
-.sil-etq small { display: block; font-size: 11px; color: var(--ink-2); }
-.sil-etq.rampa b { font-weight: 600; color: var(--ink-2); }
-.silueta.apretada .sil-etq b { font-size: 11.5px; }
-.sil-etq.min b { font-size: 11.5px; font-weight: 650; }
-.sil-guia { position: absolute; width: 0; border-left: 1.5px solid var(--muted); pointer-events: none; opacity: .9; }
-.sil-guia.g1 { border-color: var(--g1); } .sil-guia.g2 { border-color: var(--g2); } .sil-guia.g3 { border-color: var(--g3); }
-.sil-guia.g4 { border-color: var(--g4); } .sil-guia.g5 { border-color: var(--g5); }
+.slt-etq { position: absolute; white-space: nowrap; text-align: center; line-height: 1.25; pointer-events: none; }
+.slt-etq b { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.slt-etq small { display: block; font-size: 11px; color: var(--ink-2); }
+.slt-etq.fija b { color: var(--ink-2); }
+.slt-etq.min b { font-size: 11.5px; }
+.slt-guia { position: absolute; width: 0; border-left: 1.5px solid var(--muted); pointer-events: none; }
+.slt-guia.g1 { border-color: var(--g1); } .slt-guia.g2 { border-color: var(--g2); } .slt-guia.g3 { border-color: var(--g3); }
+.slt-guia.g4 { border-color: var(--g4); } .slt-guia.g5 { border-color: var(--g5); }
+.slt-corchete { position: absolute; bottom: calc(100% + 2px); height: 5px; border: 1.5px solid var(--axis); border-bottom: 0; border-radius: 3px 3px 0 0; pointer-events: none; }
 .ley-sil { margin-top: 4px; gap: 4px 12px; font-size: 12px; }
 .ley-sil i { width: 10px; height: 10px; border-radius: 50%; }
 .ley-sil i.g1 { background: var(--g1); } .ley-sil i.g2 { background: var(--g2); } .ley-sil i.g3 { background: var(--g3); }

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<script>
+/* Tema antes de pintar: el mismo que guarda la app (localStorage "tema"), oscuro por defecto. */
+(function () {
+  var t = "dark";
+  try { var g = localStorage.getItem("tema"); if (g === "light" || g === "dark") t = g; } catch (e) {}
+  document.documentElement.setAttribute("data-theme", t);
+  document.querySelector('meta[name="color-scheme"]').setAttribute("content", t);
+})();
+</script>
+<title>Sistema de diseño · Ahí la Llevas</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="componentes.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 400 14px/20px var(--font-sans); padding-inline: 16px; padding-block: 8px 48px; }
+  main { max-width: 720px; margin-inline: auto; display: grid; gap: var(--space-24); }
+  .cat-top { display: flex; align-items: center; gap: var(--space-8); max-width: 720px; margin-inline: auto; padding-block: var(--space-8); }
+  .cat-top h1 { flex: 1; margin: 0; font: 600 19px/24px var(--font-sans); }
+  h2.grupo { margin: var(--space-16) 0 0; font: 600 11px/14px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .comp { display: grid; gap: var(--space-8); min-width: 0; }
+  .comp > h3 { margin: 0; font: 600 15px/20px var(--font-sans); }
+  .comp > h3 code { margin-left: var(--space-8); font: 400 12px/16px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+  .comp > .que { margin: 0; color: var(--ink-2); font-size: 12.5px; line-height: 17px; }
+  .muestra { display: grid; gap: var(--space-12); min-width: 0; align-content: start; }
+  p { margin: 0; }
+</style>
+</head>
+<body>
+<div class="cat-top" id="cat-top"></div>
+<main id="catalogo" aria-live="polite"></main>
+
+<script src="base.js"></script>
+<script src="iconos.js"></script>
+<script src="charts.js"></script>
+<script src="componentes.js"></script>
+<script>
+/* Catálogo: cada componente de componentes.js con datos de ejemplo. Aquí no hay lógica: solo se llaman las mismas
+   funciones que usa la app (DS.*). Los textos y números son inventados. */
+
+// --- tema claro / oscuro (data-theme en <html>, igual que la app) ---
+function ponerTema(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  document.querySelector('meta[name="color-scheme"]').setAttribute("content", t);
+  try { localStorage.setItem("tema", t); } catch (e) { /* sin almacenamiento: vale solo esta visita */ }
+  pintarTop();
+}
+function pintarTop() {
+  const claro = document.documentElement.getAttribute("data-theme") === "light";
+  document.getElementById("cat-top").replaceChildren(
+    h("h1", {}, "Sistema de diseño"),
+    DS.botonIco(claro ? "luna" : "sol", `Cambiar a tema ${claro ? "oscuro" : "claro"}`, { onclick: () => ponerTema(claro ? "dark" : "light") }));
+}
+pintarTop();
+
+// --- datos de ejemplo ---
+const LPM = { Z1: [112, 137], Z2: [138, 150], Z3: [151, 163], Z4: [164, 176], Z5: [177, 190] };
+const NOMBRE_ZONA = { Z1: "Z1 muy suave", Z2: "Z2 base", Z3: "Z3 tempo", Z4: "Z4 umbral", Z5: "Z5 máximo" };
+const rep = (k, ...bloque) => Array.from({ length: k }, () => bloque).flat();
+/** Rachas con lpm por zona, como las manda Python: una por tramo. */
+const rachasDe = (tramos) => tramos.map(([min, zona, opc]) => ({ min, zona, lpm: LPM[zona], opcional: !!opc }));
+const leyendaZonas = (tramos) => DS.leyenda(["Z1", "Z2", "Z3", "Z4", "Z5"].filter((z) => tramos.some((t) => t[1] === z))
+  .map((z) => [`var(--g${z.slice(1)})`, NOMBRE_ZONA[z]]));
+const fechaIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const semana = (i, desde = new Date(2026, 8, 7)) => { const f = new Date(desde); f.setDate(f.getDate() + 7 * i); return f; };
+
+// --- armado por grupos ---
+const GRUPOS = { "Marca": [], "Contenedores": [], "Controles": [], "Navegación": [], "Datos": [], "Gráficas": [] };
+/** Una sección del catálogo: grupo, nombre, función de DS, qué es y los ejemplos. */
+function def(grupo, nombre, fn, que, ...ejemplos) {
+  GRUPOS[grupo].push(h("section", { class: "comp", id: `c-${fn.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}` },
+    h("h3", {}, nombre, h("code", {}, fn)), h("p", { class: "que" }, que), h("div", { class: "muestra" }, ...ejemplos)));
+}
+
+// Marca
+def("Marca", "Marca", "DS.marca()", "Logo de 5 barras con los colores de zona y el nombre.", DS.marca());
+def("Marca", "Cargando", "DS.cargando()", "El logo se arma mientras llegan los datos.", DS.cargando("Armando tu semana…"));
+def("Marca", "Error de carga", "DS.errorCarga()", "Cuando data.json no llega.",
+  DS.errorCarga({ texto: "Revisa tu conexión y vuelve a intentar. Si sigue igual, puede que tu repo no haya subido datos hoy.", detalle: "data.json: 404" }));
+
+// Contenedores
+def("Contenedores", "Tarjeta", "DS.tarjeta()", "Contenedor base con título.",
+  DS.tarjeta({ titulo: "Tu semana" }, h("p", { class: "mu" }, "Todo lo demás se arma dentro de tarjetas.")),
+  DS.tarjeta({ titulo: "Carrera de hoy", clase: "carrera" }, h("p", { class: "mu" }, "Con raya de color a la izquierda.")));
+def("Contenedores", "Aviso", "DS.aviso()", "Aviso con fondo: atención, bien o problema.",
+  DS.aviso({ clase: "warn", titulo: "Duerme un poco más", texto: "Tu recuperación viene baja hace 3 días." }),
+  DS.aviso({ clase: "ok", texto: "Plan al día." }), DS.aviso({ clase: "bad", titulo: "No se pudo guardar", texto: "Intenta otra vez." }));
+def("Contenedores", "Confirmación", "DS.confirmacion()", "Antes de una acción que borra o pierde datos.",
+  DS.confirmacion({ titulo: "¿Rehacer el plan desde la semana 7?", texto: "Las sesiones de esas semanas que editaste a mano se pierden:",
+    lista: ["Semana 7 · Z2 #2 (30 min)", "Semana 8 · Intervalos"], nota: "Puedes deshacerlo desde el historial.", confirmar: "Sí, rehacer" }));
+def("Contenedores", "Pie", "DS.pie()", "Aviso médico, fuente de datos y privacidad.", DS.pie());
+def("Contenedores", "Banner de cambio", "DS.bannerCambio()", "Alguien más cambió tu plan: ver o deshacer.",
+  DS.bannerCambio({ quien: "Pedro", texto: "cambió tu semana 7", cuando: "hace 2 h" }),
+  DS.bannerCambio({ quien: "Tu IA", texto: "agregó la carrera «10K Polanco» y ajustó 3 semanas" }));
+def("Contenedores", "Fila de historial", "DS.filaHistorial()", "Un cambio del plan: quién, cuándo, qué y Deshacer.",
+  DS.tarjeta({}, DS.filaHistorial([
+    { quien: "Pedro", cuando: "hoy 10:42", origen: "COACH", texto: "Cambió la sesión Z2 #2 de la semana 7 a 30 min.", nuevo: true },
+    { quien: "Tú", cuando: "ayer 21:05", origen: "WEB", texto: "Agregaste la carrera 10K Polanco (10 ene 2027)." },
+    { quien: "Tu IA", cuando: "20 nov", origen: "IA", texto: "Repitió la semana 5.", deshecho: true }])));
+def("Contenedores", "Estado vacío", "DS.estadoVacio()", "Cuando todavía no hay datos.",
+  DS.tarjeta({}, DS.estadoVacio({ icono: "correr", titulo: "Todavía no hay corridas", texto: "Cuando el reloj suba tu primera corrida, aquí vas a ver tu ritmo y tus zonas." })),
+  DS.tarjeta({}, DS.estadoVacio({ icono: "plan", titulo: "No tienes plan todavía", texto: "Elige tu nivel y tus días y armamos tus semanas.", accion: { texto: "Armar mi plan", href: "#" } })));
+def("Contenedores", "Formulario", "DS.formulario()", "Grupos de campos con su título y botones.",
+  DS.formulario({
+    secciones: [
+      { leyenda: "Tu carrera", hijos: [DS.campo({ etiqueta: "Nombre", valor: "10K Polanco" }),
+        DS.filaCampos(DS.campo({ etiqueta: "Fecha", tipo: "date", valor: "2027-01-10" }), DS.campo({ etiqueta: "Distancia", opciones: ["10 km", "5 km", "21 km"], valor: "10 km" }))] },
+      { leyenda: "Objetivo", opciones: true, hijos: [DS.opciones({ tipo: "radio", nombre: "obj", items: [
+        { texto: "Terminarla", nota: "El plan cuida que llegues entero.", marcado: true }, { texto: "Un tiempo", nota: "Agrega sesiones de calidad." }] })] }],
+    botones: [DS.boton("Agregar carrera", { tipo: "submit" }), DS.boton("Cancelar", { variante: "sec", href: "#" })] }));
+
+// Controles
+def("Controles", "Botón", "DS.boton()", "Uno solo principal por pantalla. Peligro solo para borrar, y siempre con confirmación.",
+  h("div", { class: "botones" }, DS.boton("Guardar"), DS.boton("Cancelar", { variante: "sec" }), DS.boton("Ver historial", { variante: "texto" })),
+  h("div", { class: "botones" }, DS.boton("Borrar mi cuenta", { variante: "peligro" }), DS.boton("Guardar", { deshabilitado: true }), DS.boton("Guardando…", { cargando: true })),
+  h("div", { class: "botones" }, DS.boton("Editar", { variante: "sec", ico: "editar" }), DS.boton("Deshacer", { variante: "sec", chico: true, ico: "deshacer" }),
+    DS.botonIco("ayuda", "Ayuda"), DS.botonIco("sol", "Cambiar a tema claro"), DS.botonIco("menu", "Menú"), DS.botonIco("cerrar", "Cerrar")));
+def("Controles", "Campo", "DS.campo()", "Texto, número, fecha, lista, ayuda, error y deshabilitado.",
+  DS.campo({ etiqueta: "Título de la página", valor: "Mi entreno", attrs: { maxlength: 60 } }),
+  DS.campo({ etiqueta: "FC máxima", opcional: "opcional", tipo: "number", corto: true, ayuda: "Si la dejas vacía se usa 220 − edad y tu reloj la corrige solo.", attrs: { placeholder: "185", inputmode: "numeric" } }),
+  DS.campo({ etiqueta: "Nivel", opciones: ["Principiante", "Intermedio", "Avanzado"], valor: "Intermedio" }),
+  DS.campo({ etiqueta: "Fecha de inicio (un lunes)", tipo: "date", valor: "2026-11-26", error: "Tiene que ser lunes: el 26 de noviembre es jueves." }),
+  DS.campo({ etiqueta: "Correo", tipo: "email", valor: "pedro@ejemplo.com", deshabilitado: true, ayuda: "Para cambiarlo, escríbele a Pedro." }));
+def("Controles", "Casilla y opción", "DS.opciones()", "Casillas, opciones de radio y deshabilitada.",
+  DS.opciones({ titulo: "¿Qué otras actividades haces?", pista: "(máximo 4)", items: [
+    { texto: "Fuerza", marcado: true }, { texto: "CrossFit", nota: "Cuenta como intensa: no pone la larga al día siguiente.", marcado: true },
+    { texto: "Natación", nota: "Ya elegiste 4.", deshabilitado: true }] }),
+  DS.opciones({ titulo: "Sensor de pulso", tipo: "radio", nombre: "sensor", items: [{ texto: "Banda de pecho", marcado: true }, { texto: "Muñeca" }] }));
+def("Controles", "Chip", "DS.chip()", "Mayúsculas cortas: HOY, NUEVO, EN TU PLAN y neutras.",
+  h("p", {}, DS.chip("HOY"), " ", DS.chip("EN TU PLAN", "suave"), " ", DS.chip("NUEVO", "suave")),
+  h("p", {}, DS.chip("CARRERA", "neutro"), " ", DS.chip("OPCIONAL", "neutro"), " ", DS.chip("SUAVE", "borde")),
+  h("p", { class: "b-t" }, DS.chip("HOY"), "Z2 #2 · 30 min"));
+def("Controles", "Copiar", "DS.copiar()", "Texto que se copia con un toque, antes y después.",
+  DS.copiar({ etiqueta: "Tu código para vincular el repo", texto: "AHI-7K2Q-94MD" }),
+  DS.copiar({ texto: "https://ahilallevas.com/invitacion/9f3c2a1e8b7d4c6f", copiado: true }));
+def("Controles", "Estado", "DS.estado() · DS.insignia()", "Insignia redonda con símbolo y texto: el color nunca va solo.",
+  DS.estado("ok", "✓", "Hecha"), DS.estado("warn", "!", "Incompleta"), DS.estado("bad", "✕", "No se pudo guardar"), DS.estado("nd", "—", "Pendiente"));
+
+// Navegación
+def("Navegación", "Encabezado", "DS.encabezado()", "Logo, actualizado hace…, ayuda, tema y menú; con aviso de coach.",
+  DS.encabezado({ actualizado: "Actualizado hace 2 h", conMenu: true }),
+  DS.encabezado({ actualizado: h("span", {}, "Actualizado hace 3 días · ", h("a", { href: "#" }, "Jalar datos de Garmin")), tema: "claro" }),
+  DS.avisoCoach("Ana"));
+def("Navegación", "Menú", "DS.menu()", "El desplegable del ☰: secciones, coach, admin y salir.",
+  DS.menu({ quien: "pedro@ejemplo.com", items: [
+    { texto: "Ajustes", icono: "editar", href: "#" }, { texto: "Historial", icono: "deshacer", href: "#", actual: true },
+    { texto: "InBody", icono: "progreso", href: "#" }, { texto: "Coach", icono: "rayo", href: "#" },
+    { texto: "Privacidad", icono: "check", href: "#" }, { texto: "Sistema de diseño", icono: "hoy", href: "/diseno" },
+    { separador: true }, { texto: "Salir", icono: "flecha" }] }));
+def("Navegación", "Pasos", "DS.pasos()", "Avance del onboarding: hechos, actual y pendientes.",
+  DS.tarjeta({}, DS.pasos({ pasos: ["Cuenta", "Tu repo", "Llave de Garmin", "Tu plan"], actual: 2, texto: "Paso 3 de 4 · unos 5 min" })));
+def("Navegación", "Pestañas (segmento)", "DS.segmento()", "Pestañas secundarias dentro de una tarjeta, o un grupo de opciones.",
+  DS.tarjeta({ titulo: "Tus corridas" }, DS.segmento({ etiqueta: "Vista", activo: "corridas", opciones: [{ id: "corridas", texto: "Corridas" }, { id: "km", texto: "Km" }, { id: "cuerpo", texto: "Cuerpo" }] })),
+  DS.segmento({ etiqueta: "Periodo", modo: "grupo", activo: "8", opciones: [{ id: "4", texto: "4 sem" }, { id: "8", texto: "8 sem" }, { id: "12", texto: "12 sem" }] }));
+def("Navegación", "Desplegable", "DS.desplegable()", "Abrir más detalle: fila con flecha y liga «Ver pasos».",
+  DS.tarjeta({ titulo: "Semanas del plan" },
+    DS.desplegable({ titulo: "Semana 7", sub: "24 nov – 30 nov", abierto: true }, h("p", { class: "mu" }, "Z2 #1 · 30 min · Z2 #2 · 30 min · Larga · 45 min")),
+    DS.desplegable({ titulo: "Semana 8", sub: "1 dic – 7 dic" }, h("p", { class: "mu" }, "…"))),
+  DS.tarjeta({}, h("p", { class: "b-t" }, DS.chip("HOY"), "Z2 #2 · 30 min"),
+    DS.desplegable({ titulo: "Ver pasos", liga: true }, h("p", { class: "mu" }, "5 min calentar · 20 min Z2 138–150 lpm · 5 min enfriar"))));
+
+// Datos
+def("Datos", "Señales", "DS.senales()", "Las señales de recuperación con su estado.",
+  DS.tarjeta({}, DS.senales({ estado: { clase: "ok", simbolo: "✓", titulo: "Recuperación: verde", texto: "ver señales" }, senales: [
+    { clase: "ok", simbolo: "✓", nombre: "HRV", texto: "52 ms, dentro de tu rango base (45–60)." },
+    { clase: "warn", simbolo: "!", nombre: "FC en reposo", texto: "58 lpm, 4 arriba de tu promedio de 7 días." },
+    { clase: "ok", simbolo: "✓", nombre: "Sueño", texto: "7 h 20 min, arriba de tu mínimo de 6 h 30." },
+    { clase: "nd", simbolo: "—", nombre: "Body Battery", texto: "Sin dato de hoy." }], nota: "Ayer: CrossFit, esfuerzo 3.4" })));
+def("Datos", "Tabla", "DS.tabla()", "Tabla con scroll lateral, números alineados y zona con ícono.",
+  DS.tarjeta({ titulo: "Mediciones" }, DS.tabla({ etiqueta: "Mediciones InBody",
+    columnas: [{ texto: "Fecha" }, { texto: "Peso", num: true }, { texto: "% grasa", num: true }, { texto: "MME", num: true }, { texto: "Punt.", num: true }, { texto: "Zona" }],
+    filas: [{ destacada: true, celdas: ["3 nov 26 ★ prime", "78.4", "17.9", "36.2", "81", { t: "normal", clase: "z-ok" }] },
+      { celdas: ["6 oct 26", "79.1", "19.0", "35.8", "79", { t: "alto", clase: "z-alto" }] },
+      { celdas: ["1 sep 26", "80.0", "20.2", "35.5", "—", { t: "alto", clase: "z-alto" }] }] }),
+  h("p", { class: "nota" }, "— = sin dato. ★ = tu mejor medición.")));
+def("Datos", "Ranking", "DS.ranking()", "Mejores marcas y carreras con su detalle.",
+  DS.tarjeta({ titulo: "Marcas y carreras" }, DS.ranking({
+    marcas: [{ icono: "medalla", nombre: "5 km", valor: "31:12", fecha: "8 nov 2026", nueva: true, etiqueta: "5 km: 31:12, 8 nov 2026, nueva" },
+      { icono: "medalla", nombre: "10 km", valor: "1:05:40", fecha: "14 sep 2026" },
+      { icono: "correr", nombre: "Más larga", valor: "12.30 km", fecha: "1:22:05 · 2 ago 2026" },
+      { icono: "rayo", nombre: "1 km", valor: "5:48", fecha: "20 oct 2026" }],
+    carreras: [{ fecha: "8 nov 2026", resumen: "5.02 km · 31:12", abierta: true,
+      filas: [["Ritmo promedio", "6:13 /km"], ["FC promedio / máxima", "164 / 181 lpm"], ["Contra tu carrera anterior", "1:05 más rápido"]] },
+    { fecha: "14 sep 2026", resumen: "10.01 km · 1:05:40", filas: [["Ritmo promedio", "6:33 /km"]] }] })));
+def("Datos", "Hoja InBody", "DS.hojaInBody()", "Barras con su rango normal, valor y puntuación.",
+  DS.tarjeta({ titulo: "Composición corporal · 3 nov 26" }, DS.hojaInBody({
+    franja: [{ texto: "Bajo", pct: 30 }, { texto: "Normal", pct: 35, normal: true }, { texto: "Alto", pct: 35 }],
+    filas: [
+      { nombre: "Peso", unidad: "kg", zona: "normal", textoZona: "✓ normal", aria: "Peso: 78.4 kg, 108 % del valor estándar, zona normal", normal: [30, 35], barra: 52, valor: "78.4", ticks: [[0, "55"], [50, "100"], [100, "205"]] },
+      { nombre: "Masa grasa", unidad: "kg", zona: "alto", textoZona: "▲ alto", aria: "Masa grasa: 14.0 kg, 140 % del valor estándar, zona alto", normal: [30, 35], barra: 86, dentro: true, valor: "14.0", ticks: [[0, "40"], [50, "160"], [100, "520"]] }],
+    puntuacion: { valor: 81, delta: "▲ 2" }, visceral: { valor: 7, rango: "1–9", clase: "ok", simbolo: "✓", texto: "Dentro del rango" } })));
+const silHoy = [[25, "Z2"]], silInt = [[8, "Z2"], ...rep(4, [3, "Z4"], [2, "Z2"])];
+def("Datos", "Fila de sesión", "DS.filaSesion()", "Sesión del plan: cerrada, de hoy y abierta con Editar.",
+  DS.tarjeta({ clase: "filas" },
+    DS.filaSesion({ nombre: "Z2 #1", minutos: 30, estado: { clase: "ok", simbolo: "✓", texto: "Hecha" }, silueta: DS.silueta([[30, "Z2"]], { alto: 30, conTip: false }) }),
+    DS.filaSesion({ nombre: "Z2 #2", minutos: 25, hoy: true, abierta: true, estado: { clase: "nd", simbolo: "—", texto: "Pendiente" },
+      silueta: DS.silueta(silHoy, { alto: 30, conTip: false, rachas: rachasDe(silHoy) }),
+      cuerpo: [h("p", { class: "nota" }, "Trote: arranca suave; camina si pasas el techo."),
+        DS.desplegable({ titulo: "Versión suave (20 min)", liga: true }, h("p", { class: "nota" }, "Lo mismo, 5 minutos menos de Z2.")),
+        h("div", { class: "fs-acc" }, DS.boton("Editar", { variante: "sec", chico: true, ico: "editar" }))] }),
+    DS.filaSesion({ nombre: "Intervalos", minutos: 40, estado: { clase: "warn", simbolo: "!", texto: "Incompleta" }, silueta: DS.silueta(silInt, { alto: 30, conTip: false, rachas: rachasDe(silInt) }) })));
+def("Datos", "Barra trote y caminata", "DS.barraTroteCaminata()", "Minutos trotando contra caminando en una corrida.",
+  DS.tarjeta({ titulo: "Trote y caminata" }, DS.barraTroteCaminata({ trote: 22, caminata: 8, nota: "6 caminatas · patrón ≈ 3:40 / 1:20 · ritmo trotando 7:42 /km a 146 lpm" })));
+
+// Gráficas
+const una = [[20, "Z2"]];
+const piramide = [[1, "Z4"], [1, "Z2"], [2, "Z4"], [1, "Z2"], [3, "Z4"], [2, "Z2"], [2, "Z4"], [1, "Z2"], [1, "Z4"], [4, "Z2"]];
+const muchos = [[8, "Z2"], ...rep(10, [1, "Z5"], [1, "Z1"]), [3, "Z2"], ...rep(4, [3, "Z4"], [2, "Z2"]), [6, "Z2", true]];
+def("Gráficas", "Silueta · una zona", "DS.silueta()", "Una sola zona: etiquetas completas con minutos, zona y lpm.",
+  DS.tarjeta({ titulo: "Silueta · una zona" }, DS.silueta(una, { rachas: rachasDe(una) })));
+def("Gráficas", "Silueta · pirámide", "DS.silueta()", "Varios tramos distintos: solo los minutos, con una guía del color del tramo. Si dos etiquetas chocan, una sube de nivel.",
+  DS.tarjeta({ titulo: "Silueta · pirámide" }, DS.silueta(piramide, { rachas: rachasDe(piramide) }), leyendaZonas(piramide)));
+def("Gráficas", "Silueta · muchos intervalos", "DS.silueta()", "Las repeticiones se juntan en un corchete: «10 × 1′ Z5 + 1′ Z1». Toca un tramo para ver sus lpm. Punteado = opcional.",
+  DS.tarjeta({ titulo: "Silueta · muchos intervalos" }, DS.silueta(muchos, { rachas: rachasDe(muchos) }), leyendaZonas(muchos)));
+const trote = [22, 24, 26, 20, 28, 30, 32, 34], camina = [10, 9, 8, 10, 7, 6, 6, 5];
+def("Gráficas", "Barras apiladas · trote y caminata", "DS.graficaBarras()", "Minutos de trote y de caminata por semana, con la meta del plan en cada barra.",
+  DS.tarjeta({ titulo: "Trote y caminata por semana" }, DS.leyenda([["var(--serie-1)", "Trote"], ["var(--caminata)", "Caminata"]]),
+    DS.graficaBarras({ alto: 170, clases: ["s1", "walk"], etiquetaFinal: "39 min", etiqueta: "Minutos de trote y caminata por semana",
+      semanas: trote.map((t, i) => ({ inicio: fechaIso(semana(i, new Date(2026, 9, 5))), valores: [t, camina[i]], meta: 36 + i })),
+      texto: (s) => `Semana del ${fmt(parseFecha(s.inicio).getDate(), 0)} ${MESES[parseFecha(s.inicio).getMonth()]}\nTrote ${s.valores[0]} min\nCaminata ${s.valores[1]} min\nMeta ${s.meta} min` })));
+const fc = [58, 57, 57, 56, null, 55, 55, 54, 54, 53, 54, 52];
+def("Gráficas", "Línea con cruz", "DS.graficaLinea()", "Tendencia con el último punto marcado. Toca o recorre con las flechas para ver cada semana; el hueco es una semana sin dato.",
+  DS.tarjeta({ titulo: "FC en reposo" }, DS.graficaLinea({ alto: 160, etiqueta: "FC en reposo por semana", etiquetaFinal: "52",
+    serie: fc.map((y, i) => ({ fecha: fechaIso(semana(i)), y })), fmtY: (v) => fmt(v, 0),
+    texto: (p) => `Semana del ${fmt(parseFecha(p.fecha).getDate(), 0)} ${MESES[parseFecha(p.fecha).getMonth()]}\n${p.y} lpm` })));
+
+const raiz = document.getElementById("catalogo");
+for (const [grupo, secciones] of Object.entries(GRUPOS)) raiz.append(h("h2", { class: "grupo" }, grupo), ...secciones);
+</script>
+</body>
+</html>

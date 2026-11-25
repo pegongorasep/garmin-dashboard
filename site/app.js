@@ -1,35 +1,11 @@
 // Dashboard: solo pinta lo que recibe de data.json (la lógica vive en dashboard/build.py).
 const VISTAS = ["hoy", "plan", "progreso", "ayuda"];   // Progreso tiene dos subvistas: Corridas (#progreso) y Cuerpo (#progreso/cuerpo)
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const DIAS_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 let datos = null;
 // Lo que cada vista vuelve a dibujar cuando ya tiene ancho (gráficas) o cambia el tamaño; lo llena su render.
 const PINTAR = { hoy: [], plan: [], progreso: [], cuerpo: [] };   // `cuerpo` = subvista Cuerpo de Progreso
 
-// --- utilidades ---
-
-function h(tag, attrs, ...hijos) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v === null || v === undefined || v === false) continue;
-    if (k === "class") el.className = v;
-    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
-    else el.setAttribute(k, v === true ? "" : v);
-  }
-  for (const hijo of hijos.flat()) {
-    if (hijo === null || hijo === undefined || hijo === false) continue;
-    el.append(hijo.nodeType ? hijo : document.createTextNode(String(hijo)));
-  }
-  return el;
-}
-
-const fmt = (n, d = 1) => (n === null || n === undefined ? "—" : Number(n).toLocaleString("es-MX", { maximumFractionDigits: d }));
-
-function parseFecha(iso) {
-  // "YYYY-MM-DD" como fecha local, sin saltos por zona horaria
-  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
+// --- utilidades (h, fmt, parseFecha y MESES viven en base.js) ---
 
 function fechaCorta(iso) {
   const f = parseFecha(iso);

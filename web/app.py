@@ -20,8 +20,10 @@ from .permisos import puede_ver
 log = logging.getLogger("web")
 SITE = ROOT / "site"
 # Archivos del sitio que se sirven tal cual. `data.json` NO está aquí a propósito: sale de /data.json, por usuario.
-ESTATICOS_SITE = {"app.js": "text/javascript", "charts.js": "text/javascript", "iconos.js": "text/javascript",
-                  "vistas.js": "text/javascript", "styles.css": "text/css", "tokens.css": "text/css"}
+# `catalogo.html` tampoco está aquí: solo sale por /diseno, para el admin.
+ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "charts.js": "text/javascript",
+                  "iconos.js": "text/javascript", "componentes.js": "text/javascript", "vistas.js": "text/javascript",
+                  "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css"}
 FUENTES = {"Lexend-latin.woff2"}
 PIE_SITIO = ('<footer class="pie-web"><p>Esto no es consejo médico: si algo duele, para. · Datos de Garmin · '
              '<a href="/privacidad">Aviso de privacidad</a></p></footer>')
@@ -180,6 +182,13 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             return RedirectResponse("/bienvenida", 303)
         html = (SITE / "index.html").read_text().replace("</main>", PIE_SITIO + "</main>", 1)
         return HTMLResponse(html)
+
+    @app.get("/diseno")
+    def diseno(usuario=Depends(actual)):
+        """Catálogo del sistema de diseño: solo el admin; a los demás (y sin sesión) un 404 como si no existiera."""
+        if usuario is None or not usuario.es_admin:
+            raise HTTPException(404)
+        return FileResponse(SITE / "catalogo.html", media_type="text/html")
 
     def data_de(db, usuario, atleta_id: int) -> Response:
         if not puede_ver(db, usuario, atleta_id):

@@ -1,0 +1,70 @@
+{# Macros con el mismo HTML que site/componentes.js (clases de site/componentes.css). Todavía no las usan las páginas.
+   Uso: {% from "componentes.html" import boton, campo, aviso, tarjeta, pasos, confirmacion, pie %} #}
+
+{# Botón o liga con aspecto de botón. variante: "", "sec", "texto" o "peligro"; chico: bool; href: si viene, es <a>. #}
+{% macro boton(texto, variante="", chico=False, href=None, tipo="button", deshabilitado=False, nombre=None, valor=None) -%}
+{%- set clase = "boton" ~ (" " ~ variante if variante else "") ~ (" chico" if chico else "") -%}
+{%- if href -%}
+<a class="{{ clase }}" href="{{ href }}">{{ texto }}</a>
+{%- else -%}
+<button class="{{ clase }}" type="{{ tipo }}"{% if nombre %} name="{{ nombre }}"{% endif %}{% if valor is not none %} value="{{ valor }}"{% endif %}{% if deshabilitado %} disabled{% endif %}>{{ texto }}</button>
+{%- endif -%}
+{%- endmacro %}
+
+{# Campo con etiqueta. opcional: texto chico entre paréntesis; ayuda y error: textos; corto: ancho de número. #}
+{% macro campo(etiqueta, nombre, tipo="text", valor="", opcional=None, ayuda=None, error=None, corto=False, deshabilitado=False, placeholder=None, requerido=False) -%}
+<label class="campo{% if error %} error{% endif %}{% if corto %} corto{% endif %}">
+  <span class="campo-t">{{ etiqueta }}{% if opcional %} <small>({{ opcional }})</small>{% endif %}</span>
+  <input type="{{ tipo }}" name="{{ nombre }}" value="{{ valor if valor is not none else '' }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if requerido %} required{% endif %}{% if deshabilitado %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="err-{{ nombre }}"{% endif %}>
+  {%- if error %}
+  <span class="error-t" id="err-{{ nombre }}" role="alert"><span class="badge bad">✕</span>{{ error }}</span>
+  {%- endif %}
+  {%- if ayuda %}
+  <span class="ayuda">{{ ayuda }}</span>
+  {%- endif %}
+</label>
+{%- endmacro %}
+
+{# Aviso con fondo. clase: "warn", "ok" o "bad". El cuerpo va en el bloque {% call aviso("warn", "Título") %}…{% endcall %}. #}
+{% macro aviso(clase="warn", titulo=None) -%}
+<div class="aviso-fondo {{ clase }}" role="status">
+  {%- if titulo %}<div class="b-t">{{ titulo }}</div>{% endif %}
+  {{ caller() if caller else "" }}
+</div>
+{%- endmacro %}
+
+{# Tarjeta con título opcional; el contenido va en {% call tarjeta("Título") %}…{% endcall %}. #}
+{% macro tarjeta(titulo=None, clase="") -%}
+<section class="card{% if clase %} {{ clase }}{% endif %}">
+  {%- if titulo %}<h3 class="card-t">{{ titulo }}</h3>{% endif %}
+  {{ caller() if caller else "" }}
+</section>
+{%- endmacro %}
+
+{# Avance del onboarding. nombres: lista; actual: número del paso actual (desde 1); texto: línea de abajo. #}
+{% macro pasos(nombres, actual, texto=None) -%}
+<ol class="pasos" aria-label="Avance">
+  {%- for nombre in nombres %}
+  <li{% if loop.index < actual %} class="hecho"{% elif loop.index == actual %} class="actual" aria-current="step"{% endif %}>{{ nombre }}</li>
+  {%- endfor %}
+</ol>
+{%- if texto %}
+<p class="pasos-t">{{ texto }}</p>
+{%- endif %}
+{%- endmacro %}
+
+{# Confirmación antes de borrar o perder datos. El cuerpo (texto, lista, botones) va en el bloque {% call %}. #}
+{% macro confirmacion(titulo, id="cf") -%}
+<div class="confirmacion" role="alertdialog" aria-labelledby="{{ id }}">
+  <p class="cf-t" id="{{ id }}"><span class="badge bad">!</span>{{ titulo }}</p>
+  {{ caller() if caller else "" }}
+</div>
+{%- endmacro %}
+
+{# Pie de página: aviso médico, fuente de datos y privacidad. #}
+{% macro pie() -%}
+<footer class="pie">
+  <p>Esto no es consejo médico: si algo duele, para.</p>
+  <p>Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p>
+</footer>
+{%- endmacro %}
