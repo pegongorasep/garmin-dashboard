@@ -499,7 +499,6 @@ function tarjetaTusCorridas(d, s, ancha) {
 
 // --- cómo vas mejorando ---
 
-const MEJ = {};
 const mesAnio = (iso) => { const f = parseFecha(iso); return `${f.getDate()} ${MESES[f.getMonth()]} ${f.getFullYear()}`; };
 
 /** Cambio respecto a la medición anterior: ▼/▲ con 1 decimal; verde si es bueno, tinta neutra si no (sin rojo). */
@@ -519,54 +518,27 @@ function leyendaIconos(semanas, base) {
   return ley;
 }
 
+/** Tarjeta "Cómo vas mejorando": cuadritos con lo ya calculado en Python (ritmo a FC ref, deriva y, si hay, la prueba).
+ *  Verde = mejora, ámbar = empeora; siempre con flecha y texto. */
 function tarjetaMejora(d) {
   const mj = (d.progreso || {}).mejora;
-  if (!mj) return null;
-  const hayMin = (mj.semanas || []).some((s) => (s.minutos || 0) > 0);
-  const ritmo = mj.modo === "ritmo";
-  const hayPct = ritmo ? (mj.ritmo || []).length > 0 : (mj.corridas || []).some((c) => c.pct_trote != null);
-  MEJ.min = h("div", { class: "chart-wrap" });
-  MEJ.pct = h("div", { class: "chart-wrap" });
-  const graficas = hayMin || hayPct
-    ? h("div", { class: "mini2" },
-      h("div", {}, h("h3", {}, "Minutos por semana"), MEJ.min, leyenda([["raya", "Plan"]])),
-      h("div", {}, h("h3", {}, ritmo ? "Ritmo en Z2" : "% trote por corrida"), MEJ.pct))
-    : null;
-  PINTAR.progreso.push(dibujarMejora);
+  if (!mj || !mj.ritmo) return null;
+  const cuadro = (titulo, valor, sub, clase) => h("div", { class: "num" }, h("div", { class: "nota" }, titulo),
+    h("div", { class: "num-v" }, valor ?? "—"), h("div", { class: `num-d${clase ? " " + clase : ""}` }, sub));
+  const r = mj.ritmo, v = mj.deriva, p = mj.prueba;
+  const cuadros = [cuadro(`Ritmo a ${r.fc_ref} lpm`, r.valor,
+    r.valor == null ? r.motivo : r.cambio ? `${r.cambio}${r.mejora == null ? "" : r.mejora ? " · mejor" : " · más lento"}` : r.motivo,
+    r.mejora == null ? "" : r.mejora ? "bien" : "mal")];
+  if (r.valor != null && r.cambio) cuadros[0].append(h("div", { class: "num-d" }, r.motivo));
+  cuadros.push(cuadro("Deriva cardiaca", v.valor,
+    v.valor == null ? v.motivo : `${v.ok ? "✓ cumple" : "⚠ pasó de 5 %"} · ${fechaCorta(v.fecha)}`, v.valor == null ? "" : v.ok ? "bien" : "mal"));
+  if (p) cuadros.push(cuadro(`Prueba · ${p.nombre}`, p.valor, p.cambio, p.mejor == null ? "" : p.mejor ? "bien" : "mal"));
   return h("div", { class: "card ancha" }, h("h2", {}, "Cómo vas mejorando"),
-    h("p", { class: "frase-mej" }, mj.frase), graficas);
+    h("div", { class: "numeros mejora", role: "group", "aria-label": "Cómo vas mejorando" }, cuadros));
 }
 
 /** " · 2× Corrida · 1× CrossFit" a partir de los entrenos de la semana (para el globito y lectores de pantalla). */
 const textoEntrenos = (entrenos) => (entrenos || []).map((e) => ` · ${e.n}× ${e.nombre}`).join("");
-
-function dibujarMejora() {
-  if (!MEJ.min || !datos) return;
-  const mj = (datos.progreso || {}).mejora;
-  if (!mj) return;
-  const dibujar = (cont, fn) => { const w = cont.clientWidth; if (w) cont.replaceChildren(fn(w)); };
-  const semanas = mj.semanas || [];
-  const ult = semanas[semanas.length - 1];
-  dibujar(MEJ.min, (ancho) => barChart({
-    ancho, alto: 100, clases: ["s1"], etiqueta: "Minutos por semana, últimas 8 semanas, con raya del plan",
-    semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.minutos || 0], meta: s.plan_min || 0, s })),
-    etiquetaFinal: ult ? `${fmt(ult.minutos, 0)}'` : null,
-    texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""}`,
-  }));
-  if (mj.modo === "ritmo") {
-    const rp = (mj.ritmo || []).map((c) => ({ fecha: c.fecha, y: c.ritmo_s }));
-    dibujar(MEJ.pct, (ancho) => rp.length
-      ? lineChart({ ancho, alto: 100, serie: rp, marcadores: true, invertir: true, fmtY: mmss, etiqueta: "Ritmo en Z2 por corrida, arriba es más rápido",
-        etiquetaFinal: `${mmss(rp[rp.length - 1].y)}/km`, texto: (p) => `${fechaLarga(p.fecha)} · ${mmss(p.y)} /km en Z2` })
-      : h("p", { class: "vacio" }, "Aún no hay corridas en Z2."));
-    return;
-  }
-  const pts = (mj.corridas || []).filter((c) => c.pct_trote != null).map((c) => ({ fecha: c.fecha, y: c.pct_trote }));
-  dibujar(MEJ.pct, (ancho) => pts.length
-    ? lineChart({ ancho, alto: 100, serie: pts, marcadores: true, fmtY: (v) => fmt(v, 0), etiqueta: "Porcentaje del tiempo trotando por corrida",
-      etiquetaFinal: `${fmt(pts[pts.length - 1].y, 0)} %`, texto: (p) => `${fechaLarga(p.fecha)} · ${fmt(p.y, 0)} % trotando` })
-    : h("p", { class: "vacio" }, "Aún no hay corridas con trote y caminata."));
-}
 
 function pintarSemana(d) {
   const sems = semanasHoy(d), s = sems[semIdx];

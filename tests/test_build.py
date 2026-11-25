@@ -341,9 +341,9 @@ def test_otras_del_dia_toma_esfuerzo_maximo_y_suma_minutos():
 
 def test_mejora_y_composicion_en_el_json(salida):
     mj = salida["progreso"]["mejora"]
-    assert set(mj) == {"frase", "modo", "semanas", "corridas", "otras"} and len(mj["semanas"]) == 8
-    assert mj["semanas"][-1]["inicio"] == "2026-11-02" and mj["semanas"][-1]["minutos"] == 30
-    assert [c["pct_trote"] for c in mj["corridas"]] == [66.7, 66.7]
+    assert set(mj) == {"modo", "ritmo", "deriva", "prueba"}
+    assert mj["ritmo"]["valor"] == "6:43 /km" and mj["ritmo"]["n"] == 1
+    assert mj["deriva"]["valor"] is None and "cumpla" in mj["deriva"]["motivo"] and mj["prueba"] is None
     assert salida["composicion"] is None                      # el fixture no trae inbody
 
 
@@ -455,12 +455,13 @@ def test_mejora_por_ritmo_sin_caminatas():
     out = build.build(data, plan, {**CONFIG_CORREDOR, "plan_start": "2026-11-09"}, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
     mj = out["progreso"]["mejora"]
     assert mj["modo"] == "ritmo"
-    assert "; a " in mj["frase"] and mj["frase"].endswith("a 142 lpm: 6:48 → 6:23 /km.")
-    assert [r["ritmo_s"] for r in mj["ritmo"]] == [408, 408, 383, 383]    # 400 y 375 s/km a 145 lpm, llevados a 142
+    r = mj["ritmo"]   # 400 y 375 s/km a 145 lpm, llevados a 142: 408 y 383; el plan empieza el 9 nov (semanas 1–2 = 383)
+    assert (r["fc_ref"], r["n"], r["actual_s"], r["inicio_s"], r["dif_s"]) == (142, 4, 396, 383, 13)
+    assert r["valor"] == "6:36 /km" and r["cambio"] == "▲ 13 s vs inicio" and r["mejora"] is False
 
 
 def test_mejora_con_caminatas_sigue_en_trote(salida):
-    assert salida["progreso"]["mejora"]["modo"] == "trote" and "ritmo" not in salida["progreso"]["mejora"]
+    assert salida["progreso"]["mejora"]["modo"] == "trote" and "actual_s" in salida["progreso"]["mejora"]["ritmo"]
 
 
 def test_sesion_de_calidad_en_el_json():
@@ -610,17 +611,11 @@ def test_mejora_otras_e_intensidad_por_semana():
                           _act(31, "2026-11-03", "strength_training", hora="07:00:00"), _act(32, "2026-11-03", "hiit", hora="19:30:00"),
                           _act(33, "2026-10-13", "hiit"), _act(34, "2026-10-14", "hiit")]
     out = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
-    mj = out["progreso"]["mejora"]
-    assert len(mj["otras"]) == 8 and mj["otras"][-1]["semana"] == "2026-11-02"
-    assert mj["otras"][-1]["conteos"] == {"crossfit": 4}   # 2 del fixture + 3 nuevas - 1 a menos de 3 h; las corridas no cuentan
-    assert mj["frase"].endswith(" · CrossFit 0.5 por semana (antes 0.0).")
     # entrenos de la semana (Progreso › Corridas): uno por tipo con su cuenta, primero corridas, luego CrossFit
     ent = out["progreso"]["semanas"][-1]["entrenos"]
     corridas = sum(1 for a in data["activities"] if build.m.classify(a, CONFIG_FIXTURE) == "run" and a["startTimeLocal"] >= "2026-11-02")
     assert ent[-1] == {"icono": "rayo", "nombre": "CrossFit", "n": 4}
     assert sum(e["n"] for e in ent[:-1]) == corridas and all(e["icono"] in ("correr", "medalla") for e in ent[:-1])
-    sin = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
-    assert "CrossFit" not in sin["progreso"]["mejora"]["frase"]   # sin sesiones en las 8 semanas anteriores, la frase no la menciona
     # 80/20: misma cuenta que la barra de Detalles; porcentajes Z1–Z2 / Z3 / Z4–Z5, Z0 fuera
     semana = out["semanas_hoy"][out["semana_hoy_idx"]]["intensidad"]
     assert semana == {**out["detalles"]["distribucion"]}
@@ -783,3 +778,18 @@ def test_prueba_5k_usa_la_mejor_marca_antes_del_plan_y_no_pide_techo():
     p = out["hoy"]["tarjeta"]["prueba"]
     assert p["tipo"] == "5k" and p["valor"] == 1500 and p["base"] == {"fuente": "mejor_5k", "fecha": "2026-05-03", "valor": 1560}
     assert p["dif"] == -60.0 and p["mejor"] is True
+
+
+def test_mejora_sin_corridas_da_motivos():
+    out = build.build(VACIO, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_FIXTURE, AHORA)
+    mj = out["progreso"]["mejora"]
+    assert mj["ritmo"]["valor"] is None and "Z2" in mj["ritmo"]["motivo"] and mj["ritmo"]["cambio"] is None
+    assert mj["deriva"]["valor"] is None and "cumpla" in mj["deriva"]["motivo"] and mj["prueba"] is None
+    assert validar.problemas(out) == []
+
+
+def test_texto_prueba():
+    t = build.texto_prueba({"tipo": "fc_fija", "valor": 450, "base": {"fuente": "inicio", "valor": 462}, "dif": -12, "mejor": True})
+    assert t["valor"] == "7:30 /km" and t["cambio"] == "▼ 12 s/km vs el inicio, mejor" and t["mejor"] is True
+    t = build.texto_prueba({"tipo": "5k", "valor": 1500, "base": None, "dif": None, "mejor": None})
+    assert t["valor"] == "25:00" and "Sin base" in t["cambio"]

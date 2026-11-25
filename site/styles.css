@@ -270,9 +270,9 @@ details.recup .badge { width: 18px; height: 18px; font-size: 11px; }
 details.recup .senales { margin-top: 6px; }
 
 /* v3.2: selector de semana, calendario y mejora */
-:root { --bien-ink: #0b7a35; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bien-ink: #4cc47a; } }
-:root[data-theme="dark"] { --bien-ink: #4cc47a; }
+:root { --bien-ink: #0b7a35; --mal-ink: #8a5300; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bien-ink: #4cc47a; --mal-ink: #f0b43c; } }
+:root[data-theme="dark"] { --bien-ink: #4cc47a; --mal-ink: #f0b43c; }
 
 .selector { margin-top: 12px; }
 .selector-fila { display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -304,9 +304,6 @@ details.recup .senales { margin-top: 6px; }
 .calidad { margin: 6px 0 4px; }
 .estructura { margin: 0 0 2px; font-weight: 600; }
 
-.frase-mej { font-size: 17px; font-weight: 650; line-height: 1.3; margin: 0 0 8px; }
-.mini2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px 18px; margin-block: 8px; }
-.mini2 h3 { font-size: 13px; color: var(--ink-2); font-weight: 600; margin: 0; }
 .eje.valor-fin { fill: var(--ink); font-weight: 650; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .inbody { margin: 12px 0 4px; font-weight: 600; font-size: 13px; display: flex; flex-wrap: nowrap; gap: 0 6px; align-items: center; white-space: nowrap; }
 .inbody.v { margin-top: 0; white-space: normal; }
@@ -358,6 +355,9 @@ details.recup .senales { margin-top: 6px; }
 .num-u { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .num-d { font-size: 12px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .num-d.bien { color: var(--bien-ink); }
+.num-d.mal { color: var(--mal-ink); font-weight: 600; }
+.numeros.mejora { margin-top: 8px; }
+@media (min-width: 700px) { .numeros.mejora { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 700px) { .numeros { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 .marcas { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
