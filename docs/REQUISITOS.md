@@ -348,3 +348,39 @@ Solo en la computadora de Pedro. **No** va al workflow, ni a la plantilla, ni a 
 
 ### 12.4 No cambia
 - La página, `data.json` y la Personal API siguen igual. Los IDs de Garmin de `data/reloj.json` nunca salen al sitio.
+
+## 13. v4.5: Progreso sin repetir, km por semana, ayuda personalizada (2026-11-25) — APROBADO por Pedro
+
+### 13.1 Km por semana
+- La tarjeta Corridas de Progreso gana una pestaña **Km** (junto a Volumen, Ritmo, % trote): barras de km por
+  semana (lun–dom; trote + caminata), con globito y vista de tabla como las demás. Sin raya de plan (el plan va en
+  minutos). Respeta el selector de 4 / 8 / 12 semanas.
+
+### 13.2 "Cómo vas mejorando" en cuadritos
+- Se quitan sus dos gráficas (minutos por semana y % trote / ritmo en Z2): ya están en la tarjeta Corridas.
+- Se quita la frase; en su lugar, cuadritos con el estilo de los de arriba:
+  - **Ritmo a {fc_ref} lpm**: el promedio de las últimas 4 corridas válidas y la diferencia contra el inicio
+    (semanas 1–2 del plan): "▼ 29 s vs inicio". Verde si mejora (menos segundos), ámbar si empeora. Sin datos → "—"
+    y una línea de por qué.
+  - **Deriva cardiaca**: la última corrida que cumplió (valor, fecha, ✓ si < 5 %). Sin ninguna → "—" y "aún no hay
+    una corrida que cumpla (40'+ casi toda en Z2)".
+  - **Prueba** (solo cuando ya hay resultado de la prueba de la última semana): valor y comparación (lo mismo que
+    "Plan terminado").
+- Los 4 cuadritos de arriba (corridas, minutos, km, % trote por semana) no cambian.
+
+### 13.3 Marcas y carreras en una tarjeta
+- Una sola tarjeta **"Marcas y carreras"**: arriba, siempre, las mejores marcas (como hoy); abajo, solo si hay
+  carreras, la lista de carreras con su detalle plegable (km por km, zonas, comparación) como hoy.
+
+### 13.4 Página de ayuda (reemplaza "Cómo funciona")
+- Se quita "Cómo funciona" de la pestaña Plan.
+- Un ícono **?** junto al botón de tema abre una página aparte de ayuda (`#ayuda`; no es pestaña de abajo; se
+  vuelve con atrás o tocando una pestaña).
+- El contenido se arma en Python **con la config de cada persona** y el JS solo lo pinta: semáforo y sus umbrales;
+  sus sesiones con sus nombres reales y cuántas por semana (nada de "tus 3 corridas" fijo); caminatas, picos de Z3,
+  variada o calidad **solo si su plan las tiene**; solo **su** tipo de prueba; cómo se mide la mejora (ritmo a FC
+  ref, deriva, esfuerzo); zonas con sus lpm. Sin links a documentos del repo de Pedro.
+
+### 13.5 No cambia
+- Carga semanal: se queda comparando contra la semana completa anterior (Pedro, 2026-11-25).
+- Hoy, la barra 80/20 y la gráfica de Intensidad por semana.
