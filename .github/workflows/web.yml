@@ -57,6 +57,7 @@ jobs:
           gcloud run deploy "${SERVICIO}" \
             --project "${{ vars.GCP_PROYECTO }}" --region "${REGION}" --image "${IMAGEN}" \
             --min-instances 0 --max-instances 1 --memory 512Mi \
+            --service-account "servidor-web@${{ vars.GCP_PROYECTO }}.iam.gserviceaccount.com" \
             --allow-unauthenticated \
             --set-secrets "SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,RESEND_API_KEY=RESEND_API_KEY:latest" \
             --set-env-vars "BASE_URL=https://ahilallevas.com,ADMIN_CORREO=${{ vars.ADMIN_CORREO }}"
@@ -69,5 +70,6 @@ jobs:
             --project "${{ vars.GCP_PROYECTO }}" --region "${REGION}" --image "${IMAGEN}" \
             --command python --args "-m,web.cli,--help" \
             --memory 512Mi --max-retries 0 \
+            --service-account "servidor-web@${{ vars.GCP_PROYECTO }}.iam.gserviceaccount.com" \
             --set-secrets "SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
             --set-env-vars "BASE_URL=https://ahilallevas.com"
