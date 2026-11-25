@@ -621,10 +621,12 @@ def test_imagen_no_contiene_archivos_personales():
     if not ok:
         pytest.skip("el daemon de docker no está corriendo")
     subprocess.run(["docker", "build", "-q", "-t", "ahi-prueba", str(ROOT)], check=True, timeout=900)
+    malos = ("/app/.env", "/app/config.yaml", "/app/data", "/app/plan/plan.json", "/app/plan/inbody.json",
+             "/app/site/data.json")
     r = subprocess.run(["docker", "run", "--rm", "--entrypoint", "sh", "ahi-prueba", "-c",
-                        "ls -a /app /app/plan /app/site; ls /app/data /app/config.yaml 2>&1"], capture_output=True, text=True)
-    for malo in (".env", "config.yaml", "plan.json", "inbody.json", "data.json"):
-        assert malo not in r.stdout.replace("No such file or directory", ""), malo
+                        "for f in " + " ".join(malos) + "; do [ -e $f ] && echo $f; done; true"],
+                       capture_output=True, text=True, check=True)
+    assert r.stdout.split() == [], r.stdout
 
 
 def test_subir_py_escribe_el_codigo_en_el_resumen_y_no_en_el_log(tmp_path, monkeypatch, capsys):
