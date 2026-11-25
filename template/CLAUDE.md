@@ -23,6 +23,13 @@ El código (el "motor") NO vive aquí: está en `pegongorasep/garmin-dashboard`,
 - Si **no existe `config.yaml`**, ofrece correr `/setup` (configuración inicial paso a paso).
 - Para cambiar el plan o las actividades: `/ajustar`. Para la revisión semanal: `/revision`.
 
+## Si la página dejó de actualizarse
+
+Mira el último run: `gh run list -L 3` y `gh run view <id> --log-failed`. Si dice "Garmin rechazó la key" (o "mi key
+expiró"), la key venció: que cree otra en https://connect.garmin.com/app/settings/personalApiToken (**Create Key**,
+la expiración más larga, copiarla) y la guarde con `! gh secret set PERSONAL_API_KEY`. Luego `gh workflow run
+deploy.yml` y `gh run watch`. Si es otro error, explícalo en palabras simples.
+
 ## Reglas de seguridad (siempre)
 
 1. **La key de Garmin nunca va en el chat.** La persona la escribe ella misma con `! gh secret set PERSONAL_API_KEY`

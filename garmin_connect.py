@@ -31,6 +31,11 @@ def get_access_token() -> str:
     resp = requests.post(
         TOKEN_URL, headers={"Authorization": f"ApiKey {os.environ['PERSONAL_API_KEY']}"}
     )
+    if resp.status_code in (400, 401, 403):
+        # Mensaje para quien lee el log del workflow (casi siempre: la key expiró o se borró).
+        sys.exit(f"ERROR: Garmin rechazó la key ({resp.status_code}). Probablemente expiró: crea una nueva en "
+                 "https://connect.garmin.com/app/settings/personalApiToken y guárdala con "
+                 "`gh secret set PERSONAL_API_KEY`.")
     resp.raise_for_status()
     return resp.text.strip()
 

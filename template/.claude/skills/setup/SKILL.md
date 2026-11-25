@@ -9,9 +9,11 @@ Habla en español, claro y corto, sin jerga. Una o dos preguntas a la vez. **Nun
 en el chat ni leas `.env`.** Si algo falla, explica qué pasó y qué hacer, sin culpar.
 
 ## 1. Requisitos
-- `gh auth status`. Si falla, pide que la persona escriba `! gh auth login`.
-- `python3 --version` (3.10 o más). Si falta, ayúdale a instalarlo.
-- Que el repo exista en GitHub: `gh repo view --json nameWithOwner,visibility`. Debe ser **público** (Pages gratis).
+- `gh auth status`. Si falla, pide que la persona escriba `! gh auth login` (GitHub.com → HTTPS → navegador).
+- `python3 --version` (3.10 o más). Si falta, instálalo (Mac: `brew install python@3.12`; Windows:
+  `winget install Python.Python.3.12`). En Windows usa `.venv\Scripts\python` donde aquí dice `.venv/bin/python`.
+- Que el repo exista en GitHub: `gh repo view --json nameWithOwner,visibility`. Debe ser **público** (Pages gratis);
+  si es privado, `gh repo edit --visibility public --accept-visibility-change-consequences` (pregunta antes).
 
 ## 2. Nivel
 Pregunta: cuánto tiempo lleva corriendo y cuántas veces por semana; cuántos minutos corre seguidos sin caminar;
@@ -48,8 +50,15 @@ llenas `plan/inbody.json` con el formato de `plan/inbody.json` del motor, `.moto
 - Muestra un resumen de las **primeras 4 semanas** (minutos por sesión) y pide aprobación. Ajusta si no le gusta.
 
 ## 6. La key de Garmin
-Dile: "En Garmin Connect saca tu *Personal API key*. Luego escribe aquí `! gh secret set PERSONAL_API_KEY` y pégala
-cuando te la pida. **No la pegues en el chat.**" Espera a que confirme.
+Dale estos pasos, uno por uno, y espera a que confirme:
+1. "Entra a Garmin Connect en la web (con tu cuenta) y abre https://connect.garmin.com/app/settings/personalApiToken"
+2. "Toca **Create Key**, acepta los términos y elige **la expiración más larga** que te deje."
+3. "Toca **Create** y copia la key (solo se muestra una vez). **No la pegues en el chat.** Toca **Done**."
+4. "Ahora escribe aquí `! gh secret set PERSONAL_API_KEY` y, cuando te pida el valor, pega la key y da Enter."
+
+Revisa con `gh secret list` que aparezca `PERSONAL_API_KEY` (sin valor: GitHub no lo muestra). Pregunta qué
+expiración eligió y dile: "Cuando expire, la página deja de actualizarse; crea otra igual y dime 'mi key expiró'."
+Si pegó la key en el chat, dile que la borre en esa misma página de Garmin y cree otra.
 
 ## 7. Publicar
 0. Ajusta los 3 `cron` de `.github/workflows/deploy.yml` (están en UTC) para que caigan ~7:00, 13:00 y 19:00 en

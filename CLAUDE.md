@@ -49,3 +49,6 @@ Los amigos reciben cada cambio sin tocar nada.
 `template/` es lo que recibe cada amigo (`CLAUDE.md`, skills `/setup` `/ajustar` `/revision`, `config.example.yaml`,
 workflows). Su `CLAUDE.md` y `.claude/skills/` los copia `motor.yml` desde `stable` en cada publicación: cambiar
 instrucciones aquí las actualiza en todos los repos.
+
+Los amigos nuevos crean su repo desde `pegongorasep/garmin-dashboard-template` (Actions apagado ahí). Si cambió
+`template/`, después de mover `stable` corre `scripts/sync_template.sh` para dejar la plantilla igual.
