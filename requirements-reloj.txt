@@ -1,0 +1,2 @@
+# Solo para reloj.py en la Mac de Pedro (no lo instala el workflow)
+garminconnect==0.3.20

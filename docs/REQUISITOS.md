@@ -312,3 +312,39 @@ sigue: es la suma de zonas bajas, no un tramo.
 
 ### 11.7 No cambia
 - La barra 80/20 de Hoy se queda como está.
+
+## 12. v4.4: mandar las sesiones al reloj (solo Pedro) (2026-11-25) — APROBADO por Pedro
+
+Solo en la computadora de Pedro. **No** va al workflow, ni a la plantilla, ni a los amigos.
+
+### 12.1 Cómo entra a Garmin
+- La Personal API oficial solo lee. Escribir entrenamientos usa las APIs internas de Garmin Connect con la librería
+  no oficial `garminconnect` (ya en `.venv`, 0.3.20). Puede romperse si Garmin cambia algo: entonces avisa y no reintenta.
+- Login **una sola vez** en la Terminal de la Mac (no dentro de Claude: el `!` no deja escribir): correo, contraseña
+  y código MFA si lo pide. La contraseña **no se guarda**; solo los tokens de sesión en `~/.garminconnect`
+  (fuera del repo). Si caducan, vuelve a pedir el login.
+- No se instala un MCP de terceros: un script propio hace solo lo que necesitamos y la contraseña no pasa por código ajeno.
+
+### 12.2 Qué manda
+- Las sesiones **de la semana actual del plan** (cuenta `semanas_repetidas`; `--semana N` para otra), solo la
+  versión normal (no la suave). Incluye la prueba de la semana 12.
+- Cada sesión es un entrenamiento de **correr** en la biblioteca de Garmin (sin día en el calendario) y se envía
+  al reloj. Nombre: `S3 · Z2 #1 · 20'`. En el reloj: Entrenamiento › Entrenamientos.
+- Cada paso del plan = un paso por **tiempo** (sus minutos) con objetivo **zona de FC del reloj** (Z2 → zona 2).
+  La nota del paso va como nota del paso. Sin calentar/enfriar extra (igual que el plan).
+- Pasos de caminata (novato) = paso de recuperación en zona 1.
+
+### 12.3 Cuándo y cómo
+- A mano: Pedro le dice a Claude "manda la semana al reloj" (o `/reloj`), o lo ofrece la revisión semanal.
+- Antes de subir, **borra solo los que mandó antes** (guarda sus IDs en `data/reloj.json`, que no se publica);
+  nunca toca entrenamientos que Pedro hizo a mano. Si un borrado falla, sigue y avisa.
+- Si alguno de los que mandó antes **sigue pendiente** (esa sesión del plan no está hecha según el dashboard),
+  pregunta antes de borrarlo: "Z2 #2 de la semana 3 sigue pendiente, ¿la borro?". Los ya hechos se borran sin preguntar.
+- Limpieza inicial (2026-11-25, ya hecha): se borraron los 29 entrenamientos viejos de Runna. Quedó "Benchmark Run",
+  de un plan de Garmin Coach que ya no existe (Garmin no deja borrarlo: "ATP plan id"); no estorba. Borrar todo no
+  es parte del script.
+- Muestra qué va a mandar y pide confirmación; al final dice qué quedó en el reloj.
+- Si Garmin rechaza la sesión (tokens vencidos), dice cómo volver a hacer el login.
+
+### 12.4 No cambia
+- La página, `data.json` y la Personal API siguen igual. Los IDs de Garmin de `data/reloj.json` nunca salen al sitio.
