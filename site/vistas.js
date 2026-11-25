@@ -652,8 +652,8 @@ function pintarEncabezado() {
   if (u.titulo) document.title = `Garmin · ${u.titulo}`;
   const act = h("span", { id: "actualizado", "aria-live": "polite" });
   const enc = DS.encabezado({ nombre: u.titulo || "Mi entreno", tema: temaActual() === "light" ? "claro" : "oscuro", conAyuda: !!(datos && (datos.ayuda || []).length),
-    conMenu: items.length > 0, menuAbierto, actualizado: [act, u.acciones_url ? [" · ", h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener",
-      title: "En GitHub toca «Run workflow»; en 1–2 min recarga esta página" }, "Jalar datos de Garmin ↗")] : null],
+    conMenu: items.length > 0, menuAbierto, actualizado: [act, ...(u.acciones_url ? [" · ", h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener",
+      title: "En GitHub toca «Run workflow»; en 1–2 min recarga esta página" }, "Jalar datos de Garmin ↗")] : [])],
     onAyuda: () => { location.hash = "#ayuda"; }, onTema: cambiarTema, onMenu: () => ponerMenu(!menuAbierto) });
   $("encabezado").replaceChildren(enc);
   if (!items.length) ponerMenu(false, false);
