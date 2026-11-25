@@ -16,6 +16,7 @@ Otras personas usan `template/` (su propio repo chiquito) y reciben este código
 - Construir el sitio: `.venv/bin/python dashboard/build.py` (opciones: `--day AAAA-MM-DD`, `--out ruta`).
   Con `GARMIN_USER_DIR=<carpeta>` usa los archivos personales de otra persona (config.yaml, plan/, data/).
 - Plan: `.venv/bin/python plan/gen_plan.py [--config …] [--out …]`. Validar privacidad: `.venv/bin/python dashboard/validar.py`.
+- Reloj (solo Pedro): `.venv/bin/python reloj.py semana` simula; `--si` manda la semana del plan al reloj. Login una vez en la Terminal (`reloj.py login`); en Claude, `/reloj`.
 - En local: `./run_local.sh` (baja datos, construye y sirve en http://localhost:8000).
 - Deploy: push a `main` y `gh workflow run deploy.yml`; seguirlo con `gh run watch`.
 - Antes de un push: `git pull --rebase`.
