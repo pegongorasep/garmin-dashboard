@@ -313,7 +313,7 @@ sigue: es la suma de zonas bajas, no un tramo.
 ### 11.7 No cambia
 - La barra 80/20 de Hoy se queda como está.
 
-## 12. v4.4: mandar las sesiones al reloj (solo Pedro) (2026-11-25) — APROBADO por Pedro; construido, falta probar en el reloj
+## 12. v4.4: mandar las sesiones al reloj (solo Pedro) (2026-11-25) — APROBADO, probado en el reloj (Forerunner 165); pendiente: sesiones con repeticiones
 
 Solo en la computadora de Pedro. **No** va al workflow, ni a la plantilla, ni a los amigos.
 

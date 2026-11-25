@@ -14,7 +14,8 @@ Solo en este repo (motor de Pedro); no es de la plantilla. Nunca leas `~/.garmin
    conserva, con el texto que imprime el script.
 4. Con su "sí", corre lo mismo con `--si`, más `--borrar-pendientes` o `--conservar-pendientes` según lo que eligió
    (si no hay pendientes no hace falta). Nunca uses `--si` sin su confirmación.
-5. Dile qué quedó: "En tu reloj: Entrenamiento › Entrenamientos".
+5. Dile qué quedó y que **sincronice el reloj** (abrir Garmin Connect con el reloj cerca): Garmin los deja en cola y
+   el reloj los baja al sincronizar. En el reloj: START › Correr › menú › Entrenamiento › Entrenamientos.
 
 Si dice que no hay sesión de Garmin (o caducó): pídele que corra en la Terminal de la Mac (no con `!` dentro de Claude,
 porque pide contraseña): `cd ~/Desktop/garmin && .venv/bin/python reloj.py login`. Si Garmin falla de otra forma,
