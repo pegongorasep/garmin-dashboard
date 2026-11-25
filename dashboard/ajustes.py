@@ -94,6 +94,46 @@ def _categorias(brutas: list) -> list:
 
 
 PRUEBAS_TIPOS = ("fc_fija", "trote_continuo", "5k")
+ESCALERA = ["3/1", "5/1", "8/1", "12/1", "continuo"]   # trote/caminata (minutos de trote por 1' de caminata) hasta correr continuo
+SENSORES = ("banda", "muñeca")
+EVENTOS_TIPOS = ("viaje", "enfermedad", "lesion")
+
+
+def _metas(brutas: list) -> list:
+    """Metas con fecha [{id, tipo: "carrera", fecha, distancia_km, nombre}], por fecha. Sin metas = base aeróbica (lo de hoy)."""
+    out = []
+    for i, x in enumerate(brutas):
+        if (x.get("tipo") or "carrera") != "carrera":
+            raise ConfigError(f"corrida.metas: la meta {i + 1} debe ser de tipo `carrera`")
+        km = x.get("distancia_km")
+        try:
+            km = float(km) if km not in (None, "") else None
+        except (TypeError, ValueError):
+            raise ConfigError(f"corrida.metas: la distancia de la meta {i + 1} no es un número") from None
+        if km is not None and not 0 < km <= 400:
+            raise ConfigError(f"corrida.metas: la distancia de la meta {i + 1} debe estar entre 0 y 400 km")
+        out.append({"id": str(x.get("id") or f"m{i + 1}"), "tipo": "carrera", "fecha": _fecha(_requerido(x, "fecha", "corrida.metas"), "corrida.metas"),
+                    "distancia_km": km, "nombre": str(x.get("nombre") or "Carrera")[:60]})
+    return sorted(out, key=lambda x: x["fecha"])
+
+
+def _eventos(brutos: list) -> list:
+    """Eventos [{id, tipo, desde, hasta, correr}]: viaje (con fechas; `correr` dice si podrás correr) y enfermedad o
+    lesión (`hasta` vacío = sigue vigente)."""
+    out = []
+    for i, x in enumerate(brutos):
+        tipo = x.get("tipo")
+        if tipo not in EVENTOS_TIPOS:
+            raise ConfigError(f"corrida.eventos: tipo '{tipo}' no válido; usa: {', '.join(EVENTOS_TIPOS)}")
+        desde = _fecha(_requerido(x, "desde", "corrida.eventos"), "corrida.eventos")
+        hasta = _fecha(x["hasta"], "corrida.eventos") if x.get("hasta") else None
+        if tipo == "viaje" and hasta is None:
+            raise ConfigError("corrida.eventos: un viaje necesita fecha de regreso")
+        if hasta and hasta < desde:
+            raise ConfigError("corrida.eventos: la fecha final es anterior a la inicial")
+        out.append({"id": str(x.get("id") or f"e{i + 1}"), "tipo": tipo, "desde": desde, "hasta": hasta,
+                    "correr": bool(x.get("correr", False)) if tipo == "viaje" else False})
+    return sorted(out, key=lambda x: (x["desde"], x["id"]))
 
 
 def _pruebas(brutas: list) -> list:
@@ -163,6 +203,16 @@ def normalizar_config(crudo: dict) -> dict:
     # `actividades.semana` (v4.1 y antes) se tolera y se ignora: ya no se asume ninguna semana típica.
     pierna = sorted(_dia(d, "actividades.dias_pierna") for d in act.get("dias_pierna") or [])
 
+    sensor = perfil.get("sensor") or "banda"
+    if sensor not in SENSORES:
+        raise ConfigError(f"perfil.sensor '{sensor}' no válido; usa: {', '.join(SENSORES)}")
+    escalon = corrida.get("escalon")
+    if escalon is not None and escalon not in ESCALERA:
+        raise ConfigError(f"corrida.escalon '{escalon}' no válido; usa: {', '.join(ESCALERA)}")
+    metas = _metas(corrida.get("metas") or [])
+    eventos = _eventos(corrida.get("eventos") or [])
+    caminatas = bool(corrida.get("caminatas", False)) if escalon is None else escalon != "continuo"
+
     umbrales = {**defaults["umbrales"], **(cfg.get("umbrales") or {})}
     desde = perfil.get("fc_max_correa_desde")
     return {
@@ -174,10 +224,12 @@ def normalizar_config(crudo: dict) -> dict:
         "timezone": tz, "edad": edad,
         "max_hr": max_hr, "max_hr_floor": perfil.get("fc_max_piso", max_hr),
         "fc_max_correa_desde": _fecha(desde, "perfil.fc_max_correa_desde") if desde else None,
-        "carreras": sorted({_fecha(f, "corrida.carreras") for f in corrida.get("carreras") or []}),
+        "carreras": sorted({_fecha(f, "corrida.carreras") for f in corrida.get("carreras") or []} | {m["fecha"] for m in metas}),
+        "sensor": sensor, "escalon": escalon, "escalera": list(ESCALERA), "metas": metas, "eventos": eventos,
+        "pausas": sorted({_fecha(p, "pausas") for p in cfg.get("pausas") or []}),   # solo la web (salen de `eventos` y de hoy)
         "plan_start": inicio, "semanas_repetidas": list(corrida.get("semanas_repetidas") or []),
         "nivel": nivel, "intensidad": intensidad, "calidad_tipos": tipos_cal,
-        "caminatas": bool(corrida.get("caminatas", False)), "variada": variada,
+        "caminatas": caminatas, "variada": variada,
         "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base, "pruebas": pruebas,
         "categorias": categorias, "dias_pierna": pierna,
         "inbody": bool(cfg.get("inbody", True)),

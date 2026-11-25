@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 import gen_plan
 from ajustes import (CALIDAD_TIPOS, INTENSIDADES, NIVELES, ConfigError, categorias_por_defecto, normalizar_config)
 
-from . import importar, tubo
+from . import cambios, importar, tubo
 from .modelos import Ajustes, Cambio, Consentimiento, Usuario
 from .privacidad import VERSION_AVISO
 
@@ -219,12 +219,10 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                           proximo_lunes=proximo_lunes().isoformat(), zonas=ZONAS, categorias=categorias_por_defecto(),
                           dias=DIAS, niveles=NIVELES, intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS,
                           valores=dict(form.multi_items()) if hasattr(form, "multi_items") else dict(form))
-        importar.guardar_ajustes(db, usuario.id, crudo)
-        importar.guardar_plan(db, usuario.id, nuevo_plan)
         usuario.sensor = "muñeca" if form.get("sensor") == "muñeca" else "banda"
-        db.add(Cambio(atleta_id=usuario.id, autor_id=usuario.id, via="sistema", visto=True,
-                      descripcion="Plan creado en el onboarding", antes=None, despues={"config": crudo}))
-        db.commit()
+        crudo["perfil"]["sensor"] = usuario.sensor
+        cambios.aplicar_cambio(db, usuario, usuario, "sistema", "Plan creado en el onboarding",
+                               {"ajustes": crudo, "plan": nuevo_plan})
         return RedirectResponse("/", 303)
 
     @app.get("/api/estado")

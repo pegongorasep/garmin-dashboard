@@ -1,7 +1,7 @@
 """Rutas y arranque de la web. `crear_app()` arma la app (las pruebas le pasan su propia base y su propio correo)."""
 import logging
 import secrets
-from datetime import timedelta
+from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from ajustes import ConfigError
 
-from . import ROOT, auth, calculo, correo, onboarding, tubo
+from . import ROOT, ajustes_web, auth, calculo, correo, onboarding, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -28,13 +28,14 @@ CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 
        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
 
-def crear_app(settings: Settings | None = None, motor=None, enviar=None) -> FastAPI:
+def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=None) -> FastAPI:
     settings = settings or desde_entorno()
     motor = motor or crear_motor(settings.database_url)
     sesiones = crear_sesiones(motor)
     enviar = enviar or correo.enviar
     app = FastAPI(title="Ahí la Llevas", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings, app.state.motor, app.state.sesiones, app.state.enviar = settings, motor, sesiones, enviar
+    app.state.reloj = reloj or (lambda: datetime.now(timezone.utc))   # las pruebas lo cambian para fijar «hoy»
     plantillas = Jinja2Templates(directory=str(WEB / "plantillas"))
     app.mount("/estaticos", StaticFiles(directory=str(WEB / "estaticos")), name="estaticos")
 
@@ -164,6 +165,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None) -> Fast
 
     tubo.montar(app, get_db, settings)
     onboarding.montar(app, get_db, actual, render, formulario, settings)
+    ajustes_web.montar(app, get_db, actual, render, formulario, settings)
 
     # --- dashboard por usuario ---
 
@@ -182,7 +184,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None) -> Fast
             raise HTTPException(404)   # 404 y no 403: no confirma que exista
         atleta = db.get(Usuario, atleta_id)
         try:
-            return JSONResponse(calculo.calcular(db, atleta))
+            return JSONResponse(calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None)))
         except calculo.SinConfig:
             raise HTTPException(404)
         except ConfigError as e:

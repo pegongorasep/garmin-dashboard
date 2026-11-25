@@ -30,3 +30,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, .btn:focus-vi
 .pie { max-width: 760px; margin: 24px auto 0; padding-block: 16px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--grid); }
 .pie a, .caja a { color: var(--ink-2); }
 .muted { color: var(--muted); }
+
+/* v5 F3/F4: ajustes, historial, cuerpo y plan vivo */
+.nav-web { display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 12px; font-size: 0.9rem; }
+.error-campo { display: block; color: var(--bad-ink, var(--ink)); margin-top: 4px; font-weight: 600; }
+.historial { list-style: none; padding: 0; margin: 12px 0; }
+.historial li { border: 1px solid var(--grid); border-radius: 12px; padding: 10px 14px; margin: 10px 0; background: var(--surface); }
+.historial li.nuevo { border-color: var(--ink-2); }
+.historial li.deshecho { opacity: .65; }
+.historial p { margin: 4px 0; }
+form.en-linea { display: inline-block; margin: 0 6px 0 0; }
+fieldset { border: 1px solid var(--grid); border-radius: 10px; margin: 12px 0; }
+.filas-pasos { width: 100%; border-collapse: collapse; }
+.filas-pasos th, .filas-pasos td { padding: 4px; text-align: left; }
+.filas-pasos input[type=number] { width: 5.5em; }
+details summary { cursor: pointer; margin: 6px 0; }

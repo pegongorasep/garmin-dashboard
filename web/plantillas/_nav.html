@@ -1,0 +1,7 @@
+<nav class="nav-web" aria-label="Secciones">
+  <a href="/">← Dashboard</a>
+  <a href="{{ pref }}/ajustes">Ajustes</a>
+  <a href="{{ pref }}/cuerpo">Cuerpo</a>
+  <a href="{{ pref }}/historial">Historial</a>
+</nav>
+{% if pref %}<p class="aviso">Estás editando a <strong>{{ atleta.apodo or atleta.correo }}</strong> como su coach.</p>{% endif %}

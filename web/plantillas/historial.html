@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Historial · Ahí la Llevas{% endblock %}
+{% block clase %}ancha{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1>Historial de cambios</h1>
+{% if ok == "deshecho" %}<p class="ok" role="status">Listo: volvió a como estaba.</p>{% endif %}
+{% if ok == "visto" %}<p class="ok" role="status">Avisos marcados como vistos.</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if hay_nuevos %}
+<form method="post" action="{{ pref }}/historial/visto"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <button class="btn sec" type="submit">Marcar todo como visto</button></form>
+{% endif %}
+{% if not filas %}<p class="muted">Todavía no hay cambios.</p>{% endif %}
+<ul class="historial">
+{% for f in filas %}
+  <li class="{{ 'nuevo' if not f.c.visto }}{{ ' deshecho' if f.c.deshecho_por }}">
+    <p><strong>{{ f.quien }}</strong> · {{ f.cuando }} · <span class="muted">{{ {'web': 'web', 'ia': 'IA', 'coach': 'coach', 'sistema': 'sistema'}[f.via] }}</span></p>
+    <p>{{ f.c.descripcion }}{% if f.c.deshecho_por %} <em class="muted">(deshecho)</em>{% endif %}</p>
+    {% if f.puede %}
+    <form method="post" action="{{ pref }}/historial/{{ f.c.id }}/deshacer"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn sec" type="submit">Deshacer</button></form>
+    {% endif %}
+  </li>
+{% endfor %}
+</ul>
+{% endblock %}

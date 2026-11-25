@@ -77,9 +77,16 @@ def pasos_con_picos(minutos: int) -> list:
     return [paso(antes, nota=NOTA_Z2), pico(), paso(3, "Z2"), pico(), paso(minutos - antes - 5)]
 
 
-def pasos_caminatas(minutos: int, bloque: int) -> list:
+def trote_de(bloque: int, escalon=None) -> int:
+    """Minutos de trote por 1' de caminata: los del `escalon` de la persona ("8/1" -> 8) o, sin escalón, los del bloque."""
+    if escalon and escalon != "continuo":
+        return int(escalon.split("/")[0])
+    return TROTE_POR_BLOQUE[min(max(bloque, 1), 3) - 1]
+
+
+def pasos_caminatas(minutos: int, bloque: int, escalon=None) -> list:
     """Repeticiones de trote/caminata (1' de caminata); la última se ajusta para sumar `minutos`."""
-    t = TROTE_POR_BLOQUE[min(max(bloque, 1), 3) - 1]
+    t = trote_de(bloque, escalon)
     n, resto = divmod(minutos, t + 1)
     pasos = [{"kind": "repeat", "times": n, "steps": [paso(t), paso(1, "Z1", kind="walk")]}] if n else []
     if resto >= 2:
@@ -89,9 +96,9 @@ def pasos_caminatas(minutos: int, bloque: int) -> list:
     return pasos
 
 
-def pasos_z2(minutos: int, larga: bool, caminatas: bool, bloque: int) -> list:
+def pasos_z2(minutos: int, larga: bool, caminatas: bool, bloque: int, escalon=None) -> list:
     if caminatas:
-        return pasos_caminatas(minutos, bloque)
+        return pasos_caminatas(minutos, bloque, escalon)
     return [paso(minutos, nota=NOTA_LARGA if larga else NOTA_Z2)]
 
 
@@ -101,9 +108,9 @@ def sesion(id_, tipo, nombre, minutos, pasos, **extra):
             "easy": {"name": "Suave", "minutes": s, "steps": [paso(s)]}}
 
 
-def con_suave_caminatas(s: dict, caminatas: bool, bloque: int) -> dict:
+def con_suave_caminatas(s: dict, caminatas: bool, bloque: int, escalon=None) -> dict:
     if caminatas:
-        s["easy"]["steps"] = pasos_caminatas(s["easy"]["minutes"], bloque)
+        s["easy"]["steps"] = pasos_caminatas(s["easy"]["minutes"], bloque, escalon)
         s["nota"] = NOTA_CAMINATAS
     return s
 
@@ -278,10 +285,10 @@ def pasos_variada(tipo: str, minutos: int, caminatas: bool, z3: bool) -> list:
     return pasos
 
 
-def sesion_variada(tipo: str, minutos: int, caminatas: bool, z3: bool, bloque: int) -> dict:
+def sesion_variada(tipo: str, minutos: int, caminatas: bool, z3: bool, bloque: int, escalon=None) -> dict:
     pasos = pasos_variada(tipo, minutos, caminatas, z3)
     s = sesion("z2b", "variada", f"Variada · {POR_ID[tipo]['nombre']}", minutos, pasos, variada_tipo=tipo)
-    return con_suave_caminatas(s, caminatas, bloque)
+    return con_suave_caminatas(s, caminatas, bloque, escalon)
 
 
 # --- prueba de la última semana ---
@@ -321,12 +328,13 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
     larga = escala(DELTA_LARGA, b["larga"], REF_LARGA, bloque, pos)
     caminatas, intensidad = cfg["caminatas"], cfg["intensidad"]
     variada = cfg.get("variada", False)
+    escalon = cfg.get("escalon")   # None = el que toca por bloque (3 -> 5 -> 8)
     nb = bloque + 1
     picos = intensidad == "z2_poca_z3" and not caminatas and bloque >= 1 and not descarga and not variada
 
     def z2(id_, nombre, minutos, con_picos=False):
-        pasos = pasos_con_picos(minutos) if con_picos else pasos_z2(minutos, False, caminatas, nb)
-        return con_suave_caminatas(sesion(id_, "z2", nombre, minutos, pasos), caminatas, nb)
+        pasos = pasos_con_picos(minutos) if con_picos else pasos_z2(minutos, False, caminatas, nb, escalon)
+        return con_suave_caminatas(sesion(id_, "z2", nombre, minutos, pasos), caminatas, nb, escalon)
 
     sesiones = [z2("z2a", "Z2 #1", z2a, picos)]
     focus = f"Larga {larga}'" if not descarga else "Descarga"
@@ -342,7 +350,7 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
             vecinos = {tipos[(n_carga - 1) % len(tipos)], tipos[(n_carga + 1) % len(tipos)]}
             tipo = next(t for t in (tipos[(n_carga + j) % len(tipos)] for j in range(1, len(tipos)))
                         if t not in vecinos and t != "piramide")
-        sesiones.append(sesion_variada(tipo, z2b, caminatas, intensidad == "z2_poca_z3", nb))
+        sesiones.append(sesion_variada(tipo, z2b, caminatas, intensidad == "z2_poca_z3", nb, escalon))
         focus += f" · variada: {POR_ID[tipo]['nombre']}"
     else:
         sesiones.append(z2("z2b", "Z2 #2", z2b))
@@ -351,11 +359,11 @@ def semana(n: int, cfg: dict, n_carga: int) -> dict:
         focus = "Descarga · prueba" if descarga else focus.replace(f"Larga {larga}'", "Prueba")
     else:
         sesiones.append(con_suave_caminatas(
-            sesion("larga", "larga", "Larga", larga, pasos_z2(larga, True, caminatas, nb)), caminatas, nb))
+            sesion("larga", "larga", "Larga", larga, pasos_z2(larga, True, caminatas, nb, escalon)), caminatas, nb, escalon))
     if picos:
         focus += " · picos Z3 opcionales"
     if caminatas:
-        focus += f" · trote {TROTE_POR_BLOQUE[nb - 1]}'/camina 1'"
+        focus += f" · trote {trote_de(nb, escalon)}'/camina 1'"
     return {"n": n, "block": bloque + 1, "kind": "descarga" if descarga else "carga", "focus": focus,
             "sessions": sesiones}
 

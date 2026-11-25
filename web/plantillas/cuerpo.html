@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Cuerpo · Ahí la Llevas{% endblock %}
+{% block clase %}ancha{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1>Mediciones InBody</h1>
+{% if ok == "1" %}<p class="ok" role="status">Guardado ✔.</p>{% endif %}
+{% if ok == "borrada" %}<p class="ok" role="status">Medición borrada.</p>{% endif %}
+{% if not inbody_activo %}<p class="aviso">InBody está apagado en tus <a href="{{ pref }}/ajustes">ajustes</a>: las mediciones se guardan, pero el dashboard no las muestra.</p>{% endif %}
+<p><a class="btn" href="{{ pref }}/cuerpo/nuevo">Agregar medición</a></p>
+{% if not meds %}<p class="muted">Todavía no hay mediciones.</p>{% endif %}
+<ul class="historial">
+{% for x in meds %}
+  <li>
+    <p><strong>{{ x.fecha }}</strong>{% if x.peso_kg is defined %} · {{ x.peso_kg }} kg{% endif %}{% if x.pgc is defined %} · {{ x.pgc }} % de grasa{% endif %}{% if x.mme_kg is defined %} · músculo {{ x.mme_kg }} kg{% endif %}</p>
+    {% if not completas(x) %}<p class="muted">Falta % de grasa o músculo: todavía no sale en el dashboard.</p>{% endif %}
+    <p><a class="btn sec" href="{{ pref }}/cuerpo/{{ x.fecha }}/editar">Editar</a>
+    <form class="en-linea" method="post" action="{{ pref }}/cuerpo/{{ x.fecha }}/borrar"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn sec" type="submit">Borrar</button></form></p>
+  </li>
+{% endfor %}
+</ul>
+{% endblock %}

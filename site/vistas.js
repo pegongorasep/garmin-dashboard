@@ -663,6 +663,10 @@ function pintarEncabezado() {
   // Aviso de repo atrasado (lo decide Python: ui.repo_estado = {texto, ligas}); no existe en GitHub Pages.
   const re = $("repo-estado"), est = u.repo_estado;
   re.hidden = !est;
+  // Avisos de cambios del coach o de tu IA (data.avisos, solo en la web): ver y deshacer en el historial.
+  const av = $("avisos-web"), lista = (datos && datos.avisos) || [];
+  av.hidden = !lista.length;
+  av.replaceChildren(...lista.map((a) => h("p", {}, a.texto, " · ", h("a", { href: a.url }, "Ver y deshacer"))));
   re.replaceChildren(...(est ? [h("p", {}, est.texto), h("p", {}, ...(est.ligas || []).map((l) => h("a", { href: l.url, target: "_blank", rel: "noopener" }, l.texto)))] : []));
 }
 

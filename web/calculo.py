@@ -12,12 +12,14 @@ import build
 import validar
 from ajustes import normalizar_config
 
-from . import datos, tubo
+from . import cambios, datos, plan_vivo, tubo
 from .modelos import Ajustes, CacheData, DatoGarmin, InBody, Plan, Usuario, ahora
 
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
-MENU = [{"texto": "Privacidad", "url": "/privacidad"}, {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; crece con cada fase
+MENU = [{"texto": "Ajustes", "url": "/ajustes"}, {"texto": "Cuerpo", "url": "/cuerpo"},
+        {"texto": "Historial", "url": "/historial"}, {"texto": "Privacidad", "url": "/privacidad"},
+        {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; crece con cada fase
 
 
 class SinConfig(Exception):
@@ -37,6 +39,8 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None) -> dict:
     if aj is None:
         raise SinConfig()
     crudo = {**aj.config, "modo": "web", "menu": MENU if menu is None else menu}
+    if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
+        crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
         crudo["acciones_url"] = acciones_url(usuario)
     return normalizar_config(crudo)
@@ -44,6 +48,8 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None) -> dict:
 
 def inbody_de(db: Session, usuario_id: int, crudo: dict) -> dict | None:
     filas = list(db.scalars(select(InBody).where(InBody.usuario_id == usuario_id).order_by(InBody.fecha)))
+    # el motor necesita peso, músculo y % de grasa: una medición que solo trae el peso se guarda pero aún no se muestra
+    filas = [f for f in filas if all(f.valores.get(k) is not None for k in ("peso_kg", "mme_kg", "pgc"))]
     if not filas:
         return None
     # `prime` (la mejor medición) puede guardarse en los ajustes crudos; si no, el motor toma la de menor % de grasa
@@ -68,7 +74,7 @@ def huella(db: Session, usuario: Usuario, hoy_local: str) -> str:
                            .where(DatoGarmin.usuario_id == usuario.id)).one()
     aj, pl = db.get(Ajustes, usuario.id), db.get(Plan, usuario.id)
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
-    partes = [hoy_local, n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
+    partes = [hoy_local, json.dumps(MENU), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
               usuario.repo, usuario.sensor]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
@@ -97,6 +103,9 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None) -
     base = _calcular_cacheado(db, usuario, ahora_utc)
     ahora_naive = ahora_utc or ahora()
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive)}}
+    avisos = cambios.avisos_de(db, usuario.id)   # también fuera de la caché: se van al marcarlos vistos
+    if avisos:
+        salida["avisos"] = avisos
     problemas = validar.problemas(salida)
     if problemas:
         log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)
@@ -114,7 +123,9 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
     if cache and cache.huella == h and ahora() - cache.calculado < timedelta(minutes=MINUTOS_CACHE):
         return cache.contenido
     crudo = db.get(Ajustes, usuario.id).config
-    salida = build.build(datos_de(db, usuario, crudo), plan_de(db, usuario), cfg, local)
+    cfg = plan_vivo.con_pausas(cfg, local.date())
+    plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
+    salida = build.build(datos_de(db, usuario, crudo), plan, cfg, local)
     problemas = validar.problemas(salida)
     if problemas:
         log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)

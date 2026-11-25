@@ -164,7 +164,8 @@ def convert_session(s: dict, zonas: list) -> dict:
 
 
 def convert_week(w: dict, zonas: list) -> dict:
-    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "focus": w["focus"],
+    extra = {"evento": w["evento"]} if w.get("evento") else {}   # semana que un viaje o una carrera cambió (solo la web)
+    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "focus": w["focus"], **extra,
             "sessions": [convert_session(s, zonas) for s in w["sessions"]]}
 
 
@@ -197,7 +198,7 @@ def week_runs(week_start: date, hasta: date, data: dict, config: dict) -> list:
 
 def week_assignment(day: date, data: dict, config: dict, plan: dict, hasta=None):
     """(semana del plan, asignación de sus sesiones) para la semana que contiene `day`; (None, []) si no hay."""
-    n = m.week_index(day, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []), config.get("plan_semanas", 12))
+    n = m.semana_del_plan(day, config)
     semana = next((w for w in plan["weeks"] if w["n"] == n), None)
     if semana is None:
         return None, []
@@ -227,7 +228,7 @@ def build_week(hoy: date, data: dict, config: dict, estado: list, plan: dict) ->
                      "tipo": day_type(d, hoy, acts, config), "luz": luz})
     filas = _semana_corridas(ini, hoy, acts, data["details"], config)
     previas = _semana_corridas(ini - timedelta(days=7), ini - timedelta(days=1), acts, data["details"], config)
-    n = m.week_index(hoy, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []), config.get("plan_semanas", 12))
+    n = m.semana_del_plan(hoy, config)
     semana = next((w for w in plan["weeks"] if w["n"] == n), None)
     r = resumen_corridas(filas)
     return {"dias": dias, "sesiones_total": len(estado),
@@ -362,7 +363,7 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
     fin = ini + timedelta(days=6)
     hasta = min(fin, hoy)
     repetidas = config.get("semanas_repetidas", [])
-    n = m.week_index(ini, date.fromisoformat(config["plan_start"]), repetidas, config.get("plan_semanas", 12))
+    n = m.semana_del_plan(ini, config)
     semana, estado = week_assignment(ini, data, config, plan, hasta=hasta)
     pasada = fin < hoy
     sesiones = [{**e, "estado": "no_hecha" if pasada and e["estado"] == "pendiente" else e["estado"],
@@ -394,10 +395,19 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
             "intensidad": intensidad_semana(data["activities"], ini)}
 
 
+def _total_semanas(config: dict, plan: dict) -> int:
+    """Semanas del calendario del plan: las del plan + repetidas + pausas (viaje sin correr, enfermedad)."""
+    inicio = date.fromisoformat(config["plan_start"])
+    n = len(plan["weeks"]) + len(config.get("semanas_repetidas", []))
+    for i in sorted({(date.fromisoformat(p) - inicio).days // 7 for p in config.get("pausas", [])}):
+        if 0 <= i <= n:
+            n += 1
+    return n
+
+
 def ultima_semana(config: dict, plan: dict) -> date:
     """Lunes de la última semana del plan (cuenta las semanas repetidas)."""
-    total = len(plan["weeks"]) + len(config.get("semanas_repetidas", []))
-    return monday(date.fromisoformat(config["plan_start"])) + timedelta(weeks=total - 1)
+    return monday(date.fromisoformat(config["plan_start"])) + timedelta(weeks=_total_semanas(config, plan) - 1)
 
 
 def plan_terminado(hoy: date, config: dict, plan: dict) -> bool:
@@ -480,7 +490,7 @@ def resumen_semana_pasada(hoy: date, data: dict, config: dict, plan: dict):
 def build_semanas(hoy: date, data: dict, config: dict, plan: dict):
     """(semanas_hoy, índice de la semana de hoy): las del plan (con repetidas) y, si hoy cae fuera, la de hoy."""
     inicio = monday(date.fromisoformat(config["plan_start"]))
-    total = len(plan["weeks"]) + len(config.get("semanas_repetidas", []))
+    total = _total_semanas(config, plan)
     inicios = {inicio + timedelta(weeks=i) for i in range(total)} | {monday(hoy)}
     inicios = sorted(inicios)
     # Antes de que empiece el plan se muestra la semana 1 como vista previa.
@@ -549,7 +559,7 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
     for i in range(11, -1, -1):
         ini = monday(hoy) - timedelta(weeks=i)
         fs = [f for f in filas if ini <= date.fromisoformat(f["fecha"]) < ini + timedelta(days=7)]
-        n = m.week_index(ini, inicio_plan, config.get("semanas_repetidas", []), config.get("plan_semanas", 12))
+        n = m.semana_del_plan(ini, config)
         semana = next((w for w in plan["weeks"] if w["n"] == n), None)
         out.append({"inicio": ini.isoformat(), "minutos": r1(sum(f["minutos"] for f in fs)),
                     "km": r1(sum(f["km"] for f in fs)),
@@ -636,7 +646,9 @@ def build_mejora(hoy: date, filas: list, zonas: list, data=None, config=None, pl
                          cambio="= igual que al inicio" if dif == 0 else f"{'▲' if dif > 0 else '▼'} {abs(dif)} s vs inicio")
     der = next((f for f in reversed(filas) if f["deriva_pct"] is not None), None)
     deriva = {"valor": None, "fecha": None, "ok": None, "motivo": None}
-    if der is None:
+    if config.get("sensor") == "muñeca":
+        deriva["motivo"] = "La deriva necesita banda de pecho: con pulso de muñeca no se mide"
+    elif der is None:
         deriva["motivo"] = "Aún no hay una corrida que cumpla (40' o más, casi toda en Z2)"
     else:
         deriva.update(valor=f"{der['deriva_pct']:.1f} %", fecha=der["fecha"], ok=der["deriva_ok"],
@@ -765,6 +777,16 @@ def build_ui(config: dict, plan: dict) -> dict:
     }
 
 
+def eventos_plan(config: dict) -> dict:
+    """`plan.eventos` (viajes, enfermedades, carreras con fecha) para el calendario del Plan. Sin eventos ni metas la
+    clave no existe (así el data.json de quien no los usa queda idéntico)."""
+    out = [{"tipo": e["tipo"], "desde": e["desde"], "hasta": e["hasta"], "correr": e["correr"]}
+           for e in config.get("eventos") or []]
+    out += [{"tipo": "carrera", "desde": x["fecha"], "hasta": x["fecha"], "nombre": x["nombre"],
+             "distancia_km": x["distancia_km"]} for x in config.get("metas") or []]
+    return {"eventos": sorted(out, key=lambda e: e["desde"])} if out else {}
+
+
 def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     # La FC máx viene del reloj; config["max_hr"] es solo respaldo si Garmin no la da.
     reloj = m.watch_max_hr(data["hr_zones"])
@@ -803,7 +825,11 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         tarjeta = {**tarjeta, "tipo": "plan_terminado", "texto": "Plan terminado", "version": None, "sesion_id": None,
                    "prueba": prueba_resultado(data, config, plan),
                    "siguiente": ("Ve a Ajustes para el siguiente bloque" if config.get("modo") == "web"
-                                 else "Corre /ajustar para el siguiente bloque")}
+                                 else "Corre /ajustar para el siguiente bloque"),
+                   **({"siguiente_url": "/plan#siguiente"} if config.get("modo") == "web" else {})}
+    elif m.en_pausa(hoy, config):   # semana de viaje sin correr o de enfermedad: el plan espera
+        tarjeta = {**tarjeta, "tipo": "pausa", "texto": "Esta semana el plan está en pausa (viaje o recuperación)",
+                   "version": None, "sesion_id": None}
     ayer_dato = m.ayer_duro(hoy, data["activities"], data["details"], config)
     tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None
 
@@ -827,6 +853,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "semana": build_week(hoy, data, config, estado, plan),
         "semanas_hoy": semanas_hoy, "semana_hoy_idx": semana_hoy_idx,
         "plan": {"inicio": plan["start"], "semana_actual": n, "semanas_repetidas": repetidas,
+                 **eventos_plan(config),
                  "semanas": [convert_week(w, zonas) for w in plan["weeks"]],
                  "estado_sesiones": [{**e, "minutos": r1(e["minutos"]),
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},

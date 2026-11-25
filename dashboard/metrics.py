@@ -333,17 +333,42 @@ def motivo(sigs: dict, config=None, ayer=None):
     return texto
 
 
-def week_index(day: date, plan_start: date, repetidas=(), total: int = 12):
-    """Semana del plan (1–`total`) que toca en `day`, o None si está fuera.
-
-    `repetidas`: números de semana del plan que se repitieron (una semana puede
-    aparecer más de una vez). Cada repetición empuja el resto una semana.
-    """
+def secuencia_semanas(plan_start: date, repetidas=(), total: int = 12, pausas=()) -> list:
+    """Semanas del calendario desde `plan_start`: el número de semana del plan que toca en cada una (o None si esa
+    semana está en pausa). `repetidas` repite semanas del plan; `pausas` son lunes (AAAA-MM-DD) que no gastan semana
+    del plan (viaje sin correr, enfermedad): el plan se reanuda donde iba."""
     secuencia = []
     for n in range(1, total + 1):
         secuencia += [n] * (1 + list(repetidas).count(n))
+    for i in sorted({(date.fromisoformat(str(p)) - plan_start).days // 7 for p in pausas}):
+        if 0 <= i <= len(secuencia):
+            secuencia.insert(i, None)
+    return secuencia
+
+
+def week_index(day: date, plan_start: date, repetidas=(), total: int = 12, pausas=()):
+    """Semana del plan (1–`total`) que toca en `day`, o None si está fuera (o en pausa).
+
+    `repetidas`: números de semana del plan que se repitieron (una semana puede
+    aparecer más de una vez). Cada repetición empuja el resto una semana. `pausas`: ver `secuencia_semanas`.
+    """
+    secuencia = secuencia_semanas(plan_start, repetidas, total, pausas)
     i = (day - plan_start).days // 7
     return secuencia[i] if 0 <= i < len(secuencia) else None
+
+
+def semana_del_plan(day: date, config: dict):
+    """`week_index` con lo que dice la config (inicio, semanas repetidas, total y pausas)."""
+    return week_index(day, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []),
+                      config.get("plan_semanas", 12), config.get("pausas", []))
+
+
+def en_pausa(day: date, config: dict) -> bool:
+    """Hoy cae en una semana de pausa del plan (viaje sin correr o enfermedad)."""
+    inicio = date.fromisoformat(config["plan_start"])
+    i = (day - inicio).days // 7
+    sec = secuencia_semanas(inicio, config.get("semanas_repetidas", []), config.get("plan_semanas", 12), config.get("pausas", []))
+    return 0 <= i < len(sec) and sec[i] is None
 
 
 def es_fin_de_semana(fecha) -> bool:
@@ -714,7 +739,8 @@ def run_rows(activities: list, details: dict, config: dict) -> list:
                 "km": (a.get("distance") or 0) / 1000, "fc_prom": a.get("averageHR"),
                 "pct_z1z2": (zm["Z1"] + zm["Z2"]) / total * 100 if total else None,
                 "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": es_carrera(a, config), **rw}
-        d = deriva_de(a, details, zonas)
+        # con pulso de muñeca la deriva no es confiable (pide banda de pecho): no se calcula
+        d = {"pct": None, "ok": None} if config.get("sensor") == "muñeca" else deriva_de(a, details, zonas)
         filas.append({**fila, "ritmo_ref_s": ritmo_fc_ref(fila, zonas), "deriva_pct": d["pct"], "deriva_ok": d["ok"]})
     return filas
 

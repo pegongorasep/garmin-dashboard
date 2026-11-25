@@ -22,8 +22,7 @@ OBJETIVO_ZONA_FC = {"workoutTargetTypeId": 4, "workoutTargetTypeKey": "heart.rat
 
 def semana_actual(hoy: date, config: dict, plan: dict):
     """Semana del plan (cuenta `semanas_repetidas`) que toca hoy, o None si no hay."""
-    n = m.week_index(hoy, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []),
-                     config.get("plan_semanas", 12))
+    n = m.semana_del_plan(hoy, config)
     return n if n is not None and any(w["n"] == n for w in plan["weeks"]) else None
 
 
