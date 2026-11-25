@@ -183,8 +183,19 @@ function tarjetaDoceSemanas(d) {
     h("h3", { style: "margin-top:12px" }, `Semana ${w.n} · bloque ${w.block} · ${w.kind}`),
     h("p", { class: "nota" }, w.focus || ""),
     ...(w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id))),
-    ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, `Semanas repetidas: ${plan.semanas_repetidas.join(", ")}.`)] : []));
+    ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, `Semanas repetidas: ${plan.semanas_repetidas.join(", ")}.`)] : []),
+    ...listaEventos(plan.eventos));
   return c;
+}
+
+const NOMBRE_EVENTO = { viaje: "Viaje", enfermedad: "Enfermedad", lesion: "Lesión", carrera: "Carrera" };
+
+/** Viajes, enfermedades y carreras con fecha (plan.eventos, solo en la web); nada si no hay. */
+function listaEventos(eventos) {
+  if (!(eventos || []).length) return [];
+  return [h("h3", { style: "margin-top:12px" }, "Eventos"),
+    ...eventos.map((e) => h("p", { class: "nota" },
+      `${NOMBRE_EVENTO[e.tipo] || e.tipo}${e.nombre ? ` «${e.nombre}»` : ""} · ${e.desde}${e.hasta && e.hasta !== e.desde ? ` al ${e.hasta}` : e.hasta ? "" : " · sigue"}${e.distancia_km ? ` · ${e.distancia_km} km` : ""}`))];
 }
 
 /** Contexto del periodo elegido: corridas al aire libre dentro del periodo y el dominio del eje x. */

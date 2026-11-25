@@ -158,7 +158,7 @@ def test_post_sin_csrf_es_403(web_ctx):
 def test_sin_sesion_va_a_entrar(web_ctx):
     listo(web_ctx)
     cl = web_ctx.cliente()
-    for url in ("/ajustes", "/historial", "/cuerpo", "/cuerpo/nuevo"):
+    for url in ("/ajustes", "/historial", "/cuerpo", "/cuerpo/nuevo", "/plan"):
         assert cl.get(url).headers["location"] == "/entrar"
 
 
@@ -296,7 +296,7 @@ def test_inbody_de_otro_usuario_404(web_ctx):
 def test_el_menu_de_la_web_trae_las_nuevas_paginas(web_ctx):
     _, cl = listo(web_ctx)
     urls = [i["url"] for i in cl.get("/data.json").json()["ui"]["menu"]]
-    assert urls == ["/ajustes", "/cuerpo", "/historial", "/privacidad", "/salir"]
+    assert urls == ["/ajustes", "/plan", "/cuerpo", "/historial", "/privacidad", "/salir"]
 
 
 def test_ajustes_de_pedro_sin_tocar_no_cambian_nada(web_ctx):

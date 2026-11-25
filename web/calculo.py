@@ -17,7 +17,7 @@ from .modelos import Ajustes, CacheData, DatoGarmin, InBody, Plan, Usuario, ahor
 
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
-MENU = [{"texto": "Ajustes", "url": "/ajustes"}, {"texto": "Cuerpo", "url": "/cuerpo"},
+MENU = [{"texto": "Ajustes", "url": "/ajustes"}, {"texto": "Plan vivo", "url": "/plan"}, {"texto": "Cuerpo", "url": "/cuerpo"},
         {"texto": "Historial", "url": "/historial"}, {"texto": "Privacidad", "url": "/privacidad"},
         {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; crece con cada fase
 

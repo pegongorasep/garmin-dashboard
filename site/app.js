@@ -199,7 +199,7 @@ function textoBanner(d) {
   if (t.tipo === "otra") return prox ? `Hoy: ${t.categoria} ✓ · próxima corrida: ${prox}` : `Hoy: ${t.categoria} ✓`;
   if (t.tipo === "sesion") { const sig = nombreSesion(est, t.sesion_id); return sig ? `Próxima corrida: ${sig}` : null; }
   if (t.tipo === "hecha_hoy") return prox ? `Corrida de hoy hecha · próxima: ${prox}` : "Corrida de hoy hecha";
-  if (t.tipo === "sin_plan" || t.tipo === "primera_sync") return t.texto;
+  if (t.tipo === "sin_plan" || t.tipo === "primera_sync" || t.tipo === "pausa") return t.texto;
   if (t.tipo === "completa") return "Semana completa: hiciste las 3";
   if (t.tipo === "plan_terminado") return null;   // lo dice su propia tarjeta
   return null;
@@ -245,7 +245,8 @@ function tarjetaPlanTerminado(d) {
         p.mejor == null ? `Igual que ${donde} (${valorPrueba(p.tipo, p.base.valor)})` : `${mag} ${p.mejor ? mejor : peor} que ${donde} (${valorPrueba(p.tipo, p.base.valor)})`));
     } else if (!p.base) c.append(h("p", { class: "nota" }, "Sin base para comparar: la próxima prueba se comparará con esta."));
   }
-  c.append(h("p", {}, t.siguiente || "Corre /ajustar para el siguiente bloque"));
+  c.append(h("p", {}, t.siguiente || "Corre /ajustar para el siguiente bloque",
+    t.siguiente_url ? [" · ", h("a", { href: t.siguiente_url }, "Armar siguiente bloque")] : null));
   return c;
 }
 

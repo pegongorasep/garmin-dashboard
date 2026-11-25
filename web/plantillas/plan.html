@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block titulo %}Plan vivo · Ahí la Llevas{% endblock %}
+{% block clase %}ancha{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1>Plan vivo</h1>
+{% if ok == "1" %}<p class="ok" role="status">Listo ✔. Si te equivocas, deshazlo en el <a href="{{ pref }}/historial">historial</a>.</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<p class="muted">Hoy es {{ hoy }}{% if n %} · semana {{ n }} de tu plan{% endif %}. Los cambios se ven al instante en el dashboard.</p>
+
+{% if terminado %}
+<section class="tarjeta" id="siguiente">
+  <h2>Tu plan terminó</h2>
+  {% if prueba and prueba.valor is not none %}<p>Tu prueba quedó guardada para compararla con la del siguiente bloque.</p>{% endif %}
+  <p>El siguiente bloque usa tus mismos ajustes y empieza el lunes {{ inicio_siguiente }}.</p>
+  <form method="post" action="{{ pref }}/plan/siguiente-bloque"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn" type="submit">Armar siguiente bloque</button></form>
+</section>
+{% endif %}
+
+<section class="tarjeta">
+  <h2>Eventos y carreras</h2>
+  {% set hay = cfg.eventos or cfg.metas %}
+  {% if not hay %}<p class="muted">No hay eventos ni carreras con fecha. Sin ellos tu plan es base aeróbica, como siempre.</p>{% endif %}
+  <ul class="historial">
+  {% for e in cfg.eventos %}
+    <li><p><strong>{{ {'viaje': 'Viaje', 'enfermedad': 'Enfermedad', 'lesion': 'Lesión'}[e.tipo] }}</strong>
+      · {{ e.desde }}{% if e.hasta %} al {{ e.hasta }}{% else %} · sigue{% endif %}
+      {% if e.tipo == 'viaje' %}· {{ 'semana ligera (2 Z2 cortas)' if e.correr else 'sin correr: el plan espera' }}{% else %}· el plan espera{% endif %}</p>
+      {% if not e.hasta %}<form class="en-linea" method="post" action="{{ pref }}/plan/evento/{{ e.id }}/cerrar"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn" type="submit">Ya estoy bien</button></form>{% endif %}
+      <form class="en-linea" method="post" action="{{ pref }}/plan/evento/{{ e.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn sec" type="submit">Quitar</button></form></li>
+  {% endfor %}
+  {% for x in cfg.metas %}
+    <li><p><strong>Carrera «{{ x.nombre }}»</strong> · {{ x.fecha }}{% if x.distancia_km %} · {{ x.distancia_km }} km{% endif %}</p>
+      <form class="en-linea" method="post" action="{{ pref }}/plan/meta/{{ x.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn sec" type="submit">Quitar</button></form></li>
+  {% endfor %}
+  </ul>
+  <p class="muted">Cuando termina un evento, el plan se reanuda en la semana donde iba (equivale a repetirla).</p>
+</section>
+
+<section class="tarjeta">
+  <h2>Voy de viaje</h2>
+  <form method="post" action="{{ pref }}/plan/viaje">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="campo"><span>Salgo el</span><input type="date" name="desde" required></label>
+    <label class="campo"><span>Regreso el</span><input type="date" name="hasta" required></label>
+    <fieldset class="campo"><legend><strong>¿Podrás correr?</strong></legend>
+      <label class="check"><input type="radio" name="correr" value="si"><span>Sí: esa semana serán 2 Z2 cortas</span></label>
+      <label class="check"><input type="radio" name="correr" value="no" checked><span>No: el plan espera y sigo al volver</span></label></fieldset>
+    <button class="btn" type="submit">Agregar viaje</button>
+  </form>
+</section>
+
+<section class="tarjeta">
+  <h2>Estoy enfermo o lastimado</h2>
+  <form method="post" action="{{ pref }}/plan/enfermedad">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="campo"><span>¿Qué pasó?</span><select name="tipo"><option value="enfermedad">Enfermedad</option><option value="lesion">Lesión</option></select></label>
+    <label class="campo"><span>Desde</span><input type="date" name="desde" value="{{ hoy }}"></label>
+    <p class="muted">Las sesiones de esas semanas quedan en pausa. Si algo duele, para; esto no es consejo médico. Cuando estés bien, toca «Ya estoy bien» arriba y el plan sigue donde iba.</p>
+    <button class="btn" type="submit">Pausar mi plan</button>
+  </form>
+</section>
+
+<section class="tarjeta">
+  <h2>Agregar carrera</h2>
+  <form method="post" action="{{ pref }}/plan/carrera">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="campo"><span>Nombre</span><input type="text" name="nombre" maxlength="60" placeholder="10K de enero"></label>
+    <label class="campo"><span>Fecha</span><input type="date" name="fecha" required></label>
+    <label class="campo"><span>Distancia (km, opcional)</span><input type="text" inputmode="decimal" name="distancia_km"></label>
+    <p class="muted">La semana de la carrera serán 2 Z2 cortas al 60 % más la carrera, y la semana anterior baja la carga.</p>
+    <button class="btn" type="submit">Agregar carrera</button>
+  </form>
+</section>
+
+<section class="tarjeta">
+  <h2>Repetir esta semana</h2>
+  <p>{% if n %}Si no te sentiste listo, repite la semana {{ n }}: el resto del plan se recorre una semana.{% else %}Hoy no hay una semana del plan para repetir.{% endif %}</p>
+  {% if n %}<form method="post" action="{{ pref }}/plan/repetir"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn" type="submit">Repetir la semana {{ n }}</button></form>{% endif %}
+</section>
+
+{% if esc %}
+<section class="tarjeta">
+  <h2>Escalera de trote y caminata</h2>
+  <p>Escalón actual: <strong>{{ esc_nombre or esc }}</strong>.</p>
+  {% if sugerido %}<p class="ok">Llevas dos semanas completas sin días rojos: ya puedes subir a {{ nombre_escalon[sugerido] }}. Es solo una sugerencia.</p>{% endif %}
+  {% if esc_siguiente %}
+  <form method="post" action="{{ pref }}/plan/escalon/subir"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <p class="muted">Subir a {{ nombre_escalon[esc_siguiente] }} rehace tu plan desde la semana de hoy.</p>
+    <button class="btn sec" type="submit">Subir escalón</button></form>
+  {% else %}<p class="muted">Ya estás en el último escalón.</p>{% endif %}
+</section>
+{% endif %}
+
+<section class="tarjeta">
+  <h2>Sesiones del plan</h2>
+  <p class="muted">Edita los pasos de una sesión (trote, caminata, zona, repeticiones). Solo Z2, Larga y variadas.</p>
+  {% for w in plan.weeks %}
+  <details {{ 'open' if w.n == n }}><summary>Semana {{ w.n }} · {{ w.focus }}</summary>
+    <ul>{% for s in w.sessions %}
+      <li>{{ s.name }} · {{ s.minutes }}'{% if s.tipo in editables %} · <a href="{{ pref }}/plan/sesion/{{ w.n }}/{{ s.id }}">Editar</a>{% endif %}</li>
+    {% endfor %}</ul></details>
+  {% endfor %}
+</section>
+{% endblock %}
