@@ -116,3 +116,9 @@ def test_orden_de_scripts_del_sitio():
 def test_el_motor_no_publica_el_catalogo_a_los_amigos():
     wf = (ROOT / ".github" / "workflows" / "motor.yml").read_text()
     assert wf.index("rm -f motor/site/catalogo.html") < wf.index("actions/upload-pages-artifact")
+
+
+def test_filas_de_botones_y_textos_largos_no_desbordan():
+    cuerpo = dict(reglas(CSS))
+    assert "flex-wrap: wrap" in cuerpo[".botones"] and "flex-wrap: wrap" in cuerpo[".banner-cambio .bc-acc"]
+    assert "overflow-wrap: anywhere" in cuerpo[".error-carga .ec-t, .error-carga .ec-x, .confirmacion p, .confirmacion li, .vacio .vc-t, .vacio .vc-x"]

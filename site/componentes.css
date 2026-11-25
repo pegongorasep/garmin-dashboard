@@ -332,7 +332,7 @@
 .banner-cambio { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-6) var(--space-10); padding: 10px 12px; border-radius: var(--radius-inner); background: var(--accent-bg); font-size: 13px; }
 .banner-cambio .bc-t { flex: 1 1 14em; min-width: 0; }
 .banner-cambio .bc-t b { font-weight: 600; }
-.banner-cambio .bc-acc { display: flex; gap: var(--space-4); margin-left: auto; }
+.banner-cambio .bc-acc { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-left: auto; }
 .banner-cambio .boton { min-height: 36px; }
 
 /* FilaHistorial */
@@ -405,3 +405,5 @@
 .graf text.ico-n { font-size: 10px; font-weight: 600; fill: var(--ink-2); }
 .slt-w { width: 100%; min-width: 0; }
 .slt-ln.tinta { stroke: var(--ink-2); }
+.error-carga .ec-t, .error-carga .ec-x, .confirmacion p, .confirmacion li, .vacio .vc-t, .vacio .vc-x { overflow-wrap: anywhere; }
+.botones, .bc-acc { min-width: 0; max-width: 100%; }
