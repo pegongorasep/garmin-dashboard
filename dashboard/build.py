@@ -751,6 +751,7 @@ def build_ui(config: dict, plan: dict) -> dict:
         "acciones_url": f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None,
         "textos": {
             "semana": ". ".join(partes) + ".",
+            "descarga": "Las semanas de descarga (línea punteada) bajan la carga" + ("." if config["caminatas"] else ": todo continuo en Z2."),
             "incluye": f"Incluye {lista_es([c['nombre'] for c in cats] + ['corridas'])}.",
             "fcmax_vacia": (f"Aún no hay clases de {nombre} medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva."
                             if nombre else "Aún no hay sesiones intensas medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva.")

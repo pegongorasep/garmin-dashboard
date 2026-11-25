@@ -179,7 +179,7 @@ function tarjetaDoceSemanas(d) {
   }
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,
-    h("p", { class: "nota", style: "margin-top:10px" }, "Las semanas de descarga (línea punteada) son todo continuo en Z2. Toca una semana para ver sus sesiones."),
+    h("p", { class: "nota", style: "margin-top:10px" }, `${ui().textos.descarga || "Las semanas de descarga (línea punteada) bajan la carga."} Toca una semana para ver sus sesiones.`),
     h("h3", { style: "margin-top:12px" }, `Semana ${w.n} · bloque ${w.block} · ${w.kind}`),
     h("p", { class: "nota" }, w.focus || ""),
     ...(w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id))),
@@ -595,6 +595,7 @@ function tarjetaCarga(det) {
   const c = bloqueCarga(det);
   DET.carga = { sub: h("p", { class: "nota" }), chart: h("div", { class: "chart-wrap" }), extra: h("div", {}) };
   c.append(h("h3", { style: "margin-top:14px" }, "Últimas 12 semanas"), DET.carga.sub, DET.carga.chart, DET.carga.extra);
+  c.classList.add("ancha");
   return c;
 }
 

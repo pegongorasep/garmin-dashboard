@@ -500,31 +500,10 @@ def test_today_card_proxima_id():
 
 # --- v3.2 F2: mejora y composición corporal ---
 
-def c_mej(fecha, minutos, pct=None):
-    return {"fecha": fecha, "minutos": minutos, "pct_trote": pct}
-
-
 HOY = date(2026, 11, 14)   # lunes de esa semana: 9 nov; ventanas 12 oct–8 nov y 14 sep–11 oct
 
 
-def test_mejora_frase_con_datos():
-    filas = [c_mej("2026-09-20", 34, 66), c_mej("2026-10-01", 34, 66),
-             c_mej("2026-10-14", 50, 70), c_mej("2026-10-21", 54, 72), c_mej("2026-10-31", 50, 70),
-             c_mej("2026-11-05", 54, 72), c_mej("2026-11-09", 99, 99)]   # la de esta semana no cuenta
-    assert m.mejora_frase(filas, HOY) == (
-        "Últimas 4 semanas: 1.0 corridas y 52 min por semana (antes 0.5 y 17); trote 71 % (antes 66 %).")
 
-
-def test_mejora_frase_sin_datos():
-    assert m.mejora_frase([], HOY) == "Aún no hay corridas suficientes para comparar."
-    assert m.mejora_frase([c_mej("2026-11-12", 38, 71)], HOY) == "Aún no hay corridas suficientes para comparar."
-
-
-def test_mejora_frase_con_la_mitad_vacia():
-    solo_ahora = [c_mej("2026-10-20", 40, 60), c_mej("2026-10-27", 40)]
-    assert m.mejora_frase(solo_ahora, HOY) == "Últimas 4 semanas: 0.5 corridas y 20 min por semana; trote 60 %."
-    solo_antes = [c_mej("2026-09-20", 40, 60)]
-    assert m.mejora_frase(solo_antes, HOY) == "Últimas 4 semanas: sin corridas (antes 0.2 y 10 min por semana)."
 
 
 INBODY = {"prime": "2024-05-25", "mediciones": [
@@ -748,20 +727,6 @@ def test_run_check_variada_suma_su_z3_planeado_a_la_tolerancia():
 
 # --- v4.2 F6: otros entrenos y 80/20 ---
 
-def test_conteos_otras_y_frase():
-    acts = [act(1, "2026-10-14"), act(2, "2026-10-21"), act(3, "2026-10-22"), act(4, "2026-11-04", "running"),
-            act(5, "2026-11-05"), act(6, "2026-11-10", "strength_training"), act(7, "2026-11-11"), act(8, "2026-11-12")]
-    c = m.conteos_otras(acts, CFG, date(2026, 10, 12), date(2026, 11, 9))
-    assert c == {"crossfit": 4}                       # la corrida no cuenta; el 10 nov queda fuera
-    assert m.frase_otras([{"nombre": "CrossFit", "ahora": 3.25, "antes": 2.5}]) == " · CrossFit 3.2 por semana (antes 2.5)"
-    assert m.frase_otras([{"nombre": "A", "ahora": 0, "antes": 0}]) == ""
-    tres = [{"nombre": n, "ahora": a, "antes": 1} for n, a in (("A", 1), ("B", 3), ("C", 2))]
-    assert m.frase_otras(tres) == " · B 3.0 por semana (antes 1.0) · C 2.0 por semana (antes 1.0)"   # máximo 2, las de más sesiones
-    filas = [c_mej("2026-09-20", 34, 66), c_mej("2026-10-14", 50, 70)]
-    assert m.mejora_frase(filas, HOY, "trote", [{"nombre": "CrossFit", "ahora": 3.2, "antes": 2.5}]).endswith(
-        "(antes 66 %) · CrossFit 3.2 por semana (antes 2.5).")
-    assert "CrossFit" not in m.mejora_frase(filas, HOY, "trote", [])
-
 
 # --- v4.3 F1: serie de FC y minutos por zona ---
 
@@ -846,14 +811,6 @@ def test_detalle_vigente():
     assert not m.detalle_vigente({"rpe": None}, False, reciente=True)            # reciente sin RPE: Pedro puede ponerlo
     assert m.detalle_vigente({**completa, "rpe": None}, True, reciente=False)
 
-
-def test_mejora_frase_con_ritmo_a_fc_ref():
-    def c(f, r):
-        return {"fecha": f, "minutos": 40, "pct_trote": None, "ritmo_ref_s": r}
-    filas = [c("2026-09-20", 468), c("2026-10-14", 455), c("2026-10-21", 455)]
-    assert m.mejora_frase(filas, HOY, "ritmo", fc_ref=144).endswith("; a 144 lpm: 7:48 → 7:35 /km.")
-    solo_ahora = [c("2026-09-20", None), c("2026-10-14", 455)]
-    assert "sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo" in m.mejora_frase(solo_ahora, HOY, "ritmo", fc_ref=144)
 
 
 # --- v4.3 F3: deriva cardiaca ---

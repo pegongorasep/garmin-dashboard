@@ -781,48 +781,7 @@ def sin_repetidas(activities: list, config: dict, horas: float = 3) -> list:
     return out
 
 
-def conteos_otras(activities: list, config: dict, ini: date, fin: date) -> dict:
-    """{id de categoría: número de sesiones} de las actividades no-corrida con ini <= fecha < fin (solo las que hubo).
-    Dos de la misma categoría a menos de 3 h cuentan como una (sin_repetidas)."""
-    out = {}
-    for a in sin_repetidas(activities, config):
-        c = classify(a, config)
-        if c and c != "run" and ini <= day_of(a) < fin:
-            out[c] = out.get(c, 0) + 1
-    return out
 
-
-def frase_otras(otras: list) -> str:
-    """" · CrossFit 3.2 por semana (antes 2.5)" para hasta 2 categorías con sesiones (las de más sesiones ahora).
-    `otras`: [{"nombre", "ahora", "antes"}] con sesiones por semana."""
-    con = [o for o in otras if o["ahora"] > 0 or o["antes"] > 0]
-    con = sorted(con, key=lambda o: -o["ahora"])[:2]
-    return "".join(f" · {o['nombre']} {o['ahora']:.1f} por semana (antes {o['antes']:.1f})" for o in con)
-
-
-def mejora_frase(filas: list, hoy: date, modo: str = "trote", otras=None, fc_ref=None) -> str:
-    """Compara las últimas 4 semanas calendario completas contra las 4 anteriores (filas = run_rows).
-
-    Agrega el ritmo a la FC de referencia ("a 144 lpm: 7:48 → 7:35 /km") y, en modo "trote" (con caminatas), el % trote."""
-    lunes = hoy - timedelta(days=hoy.weekday())
-    ahora = _grupo_mejora(filas, lunes - timedelta(weeks=4), lunes, 4)
-    antes = _grupo_mejora(filas, lunes - timedelta(weeks=8), lunes - timedelta(weeks=4), 4)
-    if not ahora and not antes:
-        return "Aún no hay corridas suficientes para comparar."
-    if not ahora:
-        return f"Últimas 4 semanas: sin corridas (antes {antes['corridas']:.1f} y {antes['minutos']:.0f} min por semana)."
-    texto = f"Últimas 4 semanas: {ahora['corridas']:.1f} corridas y {ahora['minutos']:.0f} min por semana"
-    if antes:
-        texto += f" (antes {antes['corridas']:.1f} y {antes['minutos']:.0f})"
-    if modo == "trote" and ahora["pct_trote"] is not None:
-        texto += f"; trote {ahora['pct_trote']:.0f} %"
-        if antes and antes["pct_trote"] is not None:
-            texto += f" (antes {antes['pct_trote']:.0f} %)"
-    rit = frase_ritmo(ahora["ritmo_ref"], antes["ritmo_ref"] if antes else None, fc_ref or "FC ref",
-                      "en las últimas 4 semanas", "en las 4 semanas anteriores")
-    if rit and (ahora["ritmo_ref"] or antes):
-        texto += f"; {rit}"
-    return texto + (frase_otras(otras) if otras else "") + "."
 
 
 # --- prueba al terminar el plan ---
