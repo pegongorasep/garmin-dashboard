@@ -129,11 +129,13 @@ def plan_efectivo(plan: dict, cfg: dict) -> dict:
     carrera = {}       # n -> meta
     previa = set()     # n de la semana anterior a una carrera
     ligera = set()     # n de semanas de viaje con correr
+    tipo = {w["n"]: w["kind"] for w in plan["weeks"]}
     for meta in cfg["metas"]:
         i = (lunes(date.fromisoformat(meta["fecha"])) - inicio).days // 7
         if 0 <= i < len(sec) and sec[i] is not None:
             carrera[sec[i]] = meta
-            if i > 0 and sec[i - 1] is not None:
+            # Sin dos descargas seguidas: si la de antes de la previa ya fue de descarga, la previa queda normal
+            if i > 0 and sec[i - 1] is not None and not (i > 1 and tipo.get(sec[i - 2]) == "descarga"):
                 previa.add(sec[i - 1])
     for e in cfg["eventos"]:
         if e["tipo"] == "viaje" and e["correr"]:

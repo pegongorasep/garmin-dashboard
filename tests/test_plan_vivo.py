@@ -142,15 +142,25 @@ def test_carrera_semana_de_carrera_y_descarga_previa():
     cfg, base = cfg_de(c), plan_base()
     assert fecha in cfg["carreras"]   # el dashboard la reconoce
     p = plan_vivo.plan_efectivo(base, cfg)
-    assert semanas_distintas(base, p) == [5, 6]
+    assert semanas_distintas(base, p) == [6]
     carrera, previa = p["weeks"][5], p["weeks"][4]
     assert carrera["evento"] == "carrera" and "10K de prueba" in carrera["focus"] and carrera["kind"] == "descarga"
     z2 = base["weeks"][5]["sessions"][0]["minutes"]
     assert [s["minutes"] for s in carrera["sessions"]] == [max(10, gen_plan.redondea5(z2 * 0.6))] * 2
-    assert previa["evento"] == "descarga_carrera" and previa["kind"] == "descarga"
-    assert [s["minutes"] for s in previa["sessions"]] == [s["easy"]["minutes"] for s in base["weeks"][4]["sessions"]]
+    # la semana 4 ya es de descarga: la 5 queda normal (sin dos descargas seguidas)
+    assert base["weeks"][3]["kind"] == "descarga" and previa == base["weeks"][4]
     gen_plan.verificar(p, cfg)
-    assert p["weeks"][:4] == base["weeks"][:4] and p["weeks"][6:] == base["weeks"][6:]
+
+
+def test_carrera_descarga_previa_si_la_semana_anterior_fue_de_carga():
+    fecha = fecha_semana(7, 5)   # carrera en la 7: la 6 es la previa y la 5 fue de carga
+    cfg, base = cfg_de(plan_vivo.agregar_carrera(CONFIG, fecha, 10, "10K")), plan_base()
+    p = plan_vivo.plan_efectivo(base, cfg)
+    assert semanas_distintas(base, p) == [6, 7]
+    previa = p["weeks"][5]
+    assert previa["evento"] == "descarga_carrera" and previa["kind"] == "descarga"
+    assert [s["minutes"] for s in previa["sessions"]] == [s["easy"]["minutes"] for s in base["weeks"][5]["sessions"]]
+    gen_plan.verificar(p, cfg)
 
 
 def test_carrera_despues_del_plan_solo_se_guarda_y_se_ve():
