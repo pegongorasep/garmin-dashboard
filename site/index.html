@@ -24,7 +24,10 @@
 <header class="top">
   <div class="top-fila">
     <h1 id="titulo">Mi entreno</h1>
+    <div class="top-btns">
+    <button type="button" id="ayuda-btn" class="tema-btn" aria-label="Ayuda" hidden><span aria-hidden="true">?</span></button>
     <button type="button" id="tema-btn" class="tema-btn" aria-label="Cambiar a tema claro"><span aria-hidden="true">☀</span></button>
+    </div>
   </div>
   <p class="muted"><span id="actualizado" aria-live="polite">Cargando…</span><span id="acciones" hidden> ·
     <a id="acciones-link" href="#" target="_blank" rel="noopener"
@@ -35,6 +38,7 @@
   <section id="vista-hoy" class="vista" hidden></section>
   <section id="vista-plan" class="vista" hidden></section>
   <section id="vista-progreso" class="vista" hidden></section>
+  <section id="vista-ayuda" class="vista" hidden></section>
 </main>
 
 <nav class="tabs" aria-label="Secciones">

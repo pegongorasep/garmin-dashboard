@@ -73,7 +73,8 @@ body {
 }
 .top { padding-block: calc(14px + env(safe-area-inset-top, 0px)) 4px; }
 .top-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.tema-btn { flex: none; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer; }
+.top-btns { display: flex; gap: 2px; margin-right: -8px; }
+.tema-btn { flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer; }
 .tema-btn:hover { background: var(--surface); color: var(--ink); }
 .tema-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 h1 { font-size: 20px; margin: 0; font-weight: 650; }
@@ -516,3 +517,10 @@ details.ses > summary .ley-sil { margin-left: 20px; }
 .plan-fin .grande { margin: 0; }
 .plan-fin .estado { margin: 6px 0; }
 .sub-carreras { margin: 16px 0 4px; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.volver { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-weight: 600; padding: 10px 4px; margin-bottom: 4px; cursor: pointer; min-height: 44px; }
+.volver:hover { color: var(--ink); }
+.volver:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ayuda-titulo { font-size: 22px; margin: 0 0 12px; }
+.ayuda-bloque p { margin: 0 0 8px; }
+.volver { justify-self: start; }
+.ayuda-titulo { text-align: left; }

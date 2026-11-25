@@ -793,3 +793,9 @@ def test_texto_prueba():
     assert t["valor"] == "7:30 /km" and t["cambio"] == "▼ 12 s/km vs el inicio, mejor" and t["mejor"] is True
     t = build.texto_prueba({"tipo": "5k", "valor": 1500, "base": None, "dif": None, "mejor": None})
     assert t["valor"] == "25:00" and "Sin base" in t["cambio"]
+
+
+def test_ayuda_en_el_json_y_en_la_lista_blanca(salida):
+    assert [b["titulo"] for b in salida["ayuda"]][:2] == ["El semáforo de cada mañana", "Tus sesiones"]
+    assert all(set(b) == {"titulo", "parrafos", "lista"} for b in salida["ayuda"])
+    assert validar.problemas(salida) == []

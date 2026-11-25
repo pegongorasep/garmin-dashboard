@@ -349,7 +349,7 @@ Solo en la computadora de Pedro. **No** va al workflow, ni a la plantilla, ni a 
 ### 12.4 No cambia
 - La página, `data.json` y la Personal API siguen igual. Los IDs de Garmin de `data/reloj.json` nunca salen al sitio.
 
-## 13. v4.5: Progreso sin repetir, km por semana, ayuda personalizada (2026-11-25) — APROBADO por Pedro
+## 13. v4.5: Progreso sin repetir, km por semana, ayuda personalizada (2026-11-25) — construido, falta publicar
 
 ### 13.1 Km por semana
 - La tarjeta Corridas de Progreso gana una pestaña **Km** (junto a Volumen, Ritmo, % trote): barras de km por

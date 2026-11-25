@@ -1,6 +1,5 @@
 // Vistas Plan y Progreso (Corridas · Cuerpo), más el arranque.
 const $ = (id) => document.getElementById(id);
-const REPO_DOCS = "https://github.com/pegongorasep/garmin-dashboard/blob/main/docs/";
 
 function fechaLarga(iso) {
   const f = parseFecha(iso);
@@ -155,8 +154,7 @@ function renderPlan(d) {
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
-    det.distribucion ? zonaBar(det.distribucion) : null,
-    tarjetaComoFunciona(d)].filter(Boolean));
+    det.distribucion ? zonaBar(det.distribucion) : null].filter(Boolean));
 }
 
 function tarjetaDoceSemanas(d) {
@@ -578,39 +576,18 @@ function tarjetaFcMax(d) {
         h("tbody", {}, zonas.map((z) => h("tr", {}, h("td", {}, h("span", { class: "zchip" }, h("i", { style: `background:var(--${z.zona.toLowerCase()})`, "aria-hidden": "true" }), z.zona)), h("td", {}, `${z.piso}–${z.techo}`)))))) : h("p", { class: "vacio" }, "Sin zonas calculadas."));
 }
 
-function tarjetaComoFunciona(d) {
-  const u = (d.detalles || {}).umbrales || {};
-  const li = (...t) => h("li", {}, ...t);
-  return h("details", { class: "card ancha plegable" }, h("summary", {}, h("h2", {}, "Cómo funciona")),
-    h("p", {}, "Cada mañana se revisan 3 señales; el semáforo decide la sesión de hoy."),
-    h("ul", { class: "reglas" },
-      li(h("strong", {}, "HRV: "), "fuera si anoche quedó por debajo de tu rango base. Si el reloj la marca “baja”, el semáforo va directo a rojo."),
-      li(h("strong", {}, "FC en reposo: "), `fuera si supera el promedio de 7 días + ${fmt(u.rhr_tolerance_bpm, 0)} lpm.`),
-      li(h("strong", {}, "Sueño: "), `fuera si dormiste menos de ${fmt(u.sleep_min_hours, 1)} h.`),
-      li(h("strong", {}, "Esfuerzo de ayer: "), `no mueve el semáforo; se muestra como dato. Si hay una señal fuera después de un día con esfuerzo de ${fmt(u.esfuerzo_duro ?? 8, 0)} o más, el motivo lo dice.`)),
-    h("ul", { class: "reglas" },
-      li(badge("ok", "✓", "verde"), " Verde: ninguna señal fuera → sesión normal."),
-      li(badge("warn", "!", "amarillo"), " Amarillo: una señal fuera → versión suave."),
-      li(badge("bad", "✕", "rojo"), " Rojo: dos o más señales fuera, o HRV baja → descanso o caminata ligera. Dos días rojos seguidos: repetir la semana."),
-      li(badge("nd", "—", "sin datos"), " Sin datos: HRV, FC en reposo y sueño sin dato de anoche → sesión normal; decides por cómo te sientes.")),
-    h("p", { class: "nota" }, "Una señal sin dato no cuenta como fuera."),
-    h("h3", { style: "margin-top:12px" }, "Tus 3 corridas"),
-    h("ul", { class: "reglas" },
-      li(ui().textos.semana || "Cada semana: tus sesiones del plan; la Larga va sábado o domingo."),
-      li(h("strong", {}, "Asignación automática: "), "una corrida de sábado o domingo que dure al menos el ", fmt((u.done_ratio ?? 0.7) * 100, 0), " % de la Larga cuenta como Larga; las demás llenan Z2 #1 y Z2 #2 en orden. Si haces más, las sobrantes no se asignan."),
-      li(h("strong", {}, "Hecha / incompleta: "), "hecha si duró al menos el ", fmt((u.done_ratio ?? 0.7) * 100, 0), " % de lo planeado (o de la versión suave si ese día era amarillo o rojo, y entonces sale “ajustada”); si duró menos, incompleta."),
-      li(h("strong", {}, "¿Lo hice bien?: "), `los minutos sobre el techo de Z2 (zonas 3 a 5) deben ser ${fmt(u.ceiling_tolerance_min ?? 2, 0)}' o menos; en la Z2 #1 con picos opcionales de Z3 se permiten 2' más. Además, plan vs real por zona: para cada zona del plan (Z2 o más), los minutos que hiciste en esa zona o más contra los planeados; con el ${fmt((u.done_ratio ?? 0.7) * 100, 0)} % se cumple (la FC tarda en subir).`),
-      li(h("strong", {}, "Tiempo: "), "es tiempo de reloj, caminatas incluidas. Trote y caminata vienen de los tramos que detecta Garmin; el ritmo trotando no cuenta la caminata.")),
-    h("p", { class: "nota" }, "Las zonas usan Karvonen (% de la reserva de FC)."),
-    h("h3", { style: "margin-top:12px" }, "La prueba de la última semana"),
-    h("p", {}, "En la última semana del plan la Larga se cambia por una prueba para medir tu mejora: 30 min a FC fija (la mitad de Z2, en ruta plana, con alerta en el reloj; cuentan los km), trote continuo en Z2 si hacías caminatas (cuenta el % de trote) o 5 km a tope si haces calidad (cuenta el tiempo). Se compara con el inicio del plan y, después, con tu prueba anterior. Al terminar el plan, Hoy muestra el resultado y te dice que corras /ajustar para el siguiente bloque."),
-    h("h3", { style: "margin-top:12px" }, "Cómo medimos tu mejora"),
-    h("ul", { class: "reglas" },
-      li(h("strong", {}, "Ritmo a FC de referencia: "), `llevamos el ritmo de cada corrida al aire libre a ${(d.progreso || {}).fc_ref ?? "la mitad de Z2"} lpm (la mitad de tu Z2): ritmo × FC que llevaste ÷ FC de referencia. Es tu eficiencia aeróbica: si mejoras, a la misma FC vas más rápido. Solo cuentan corridas cuyo trote cayó en Z2; no carreras ni caminadora. El calor y el cansancio suben la FC, así que mira la tendencia (la línea de 4 corridas), no una corrida suelta.`),
-      li(h("strong", {}, "Deriva cardiaca: "), "en corridas de 40 min o más, casi sin caminar, a ritmo parejo (cada km a ±15 % del ritmo mediano, después de los primeros 10 min) y con al menos 80 % del trote en Z2 (una carrera a tope no cuenta), comparamos velocidad ÷ FC de la primera mitad contra la segunda, sin los primeros 10 min. Menos de 5 % de caída es buena base aeróbica; más, aún te falta base."),
-      li(h("strong", {}, "Esfuerzo: "), "calculado con tu FC, de 1 a 10 (Z2 = 3, Z3 = 5.5, Z4 = 7.5, Z5 = 9.5): el promedio de la mitad más dura de la sesión, así que los descansos no lo bajan. Carga = esfuerzo × minutos; la fuerza con la FC baja da poca carga. El RPE que pones en el reloj se guarda aparte, junto al esfuerzo.")),
-    h("p", {}, h("a", { href: `${REPO_DOCS}REQUISITOS.md`, target: "_blank", rel: "noopener" }, "Requisitos"), " · ",
-      h("a", { href: `${REPO_DOCS}PLAN_ENTRENAMIENTO.md`, target: "_blank", rel: "noopener" }, "Plan de entrenamiento")));
+// --- ayuda (#ayuda): bloques ya armados en Python con la config de cada persona ---
+
+let rutaPrevia = "#hoy";   // a dónde regresa «← Volver»
+
+function renderAyuda(d) {
+  const bloques = d.ayuda || [];
+  const volver = h("button", { type: "button", class: "volver", onclick: () => { location.hash = rutaPrevia; } }, "← Volver");
+  const tarjeta = (b) => h("div", { class: "card ancha ayuda-bloque" }, h("h2", {}, b.titulo),
+    ...(b.parrafos || []).map((p) => h("p", {}, p)),
+    (b.lista || []).length ? h("ul", { class: "reglas" }, b.lista.map((i) => h("li", {}, i.t ? h("strong", {}, `${i.t}: `) : null, i.x))) : null);
+  $("vista-ayuda").replaceChildren(volver, h("h2", { class: "ayuda-titulo" }, "Ayuda"),
+    ...(bloques.length ? bloques.map(tarjeta) : [h("p", { class: "vacio" }, "Aún no hay ayuda disponible.")]));
 }
 
 function tarjetaCarga(det) {
@@ -665,6 +642,7 @@ const REDIBUJAR = {
   hoy: () => PINTAR.hoy.forEach((f) => f()),
   plan: () => PINTAR.plan.forEach((f) => f()),
   progreso: () => PINTAR[subProgreso === "cuerpo" ? "cuerpo" : "progreso"].forEach((f) => f()),
+  ayuda: () => {},
 };
 let vistaActual = null;
 
@@ -690,6 +668,7 @@ function mostrarVista() {
   const [nombre, sub] = (ALIAS_RUTA[ruta] || ruta).split("/");
   const v = VISTAS.includes(nombre) ? nombre : "hoy";
   subProgreso = v === "progreso" && sub === "cuerpo" ? "cuerpo" : "corridas";
+  if (v !== "ayuda") rutaPrevia = `#${ruta || "hoy"}`;
   vistaActual = v;
   for (const id of VISTAS) $(`vista-${id}`).hidden = id !== v;
   for (const a of document.querySelectorAll(".tabs a")) {
@@ -720,6 +699,7 @@ function aviso(id, msg) {
 async function iniciar() {
   pintarBotonTema();
   $("tema-btn").addEventListener("click", cambiarTema);
+  $("ayuda-btn").addEventListener("click", () => { location.hash = "#ayuda"; });
   leerSemanaInicial();
   window.addEventListener("hashchange", mostrarVista);
   let resizeT;
@@ -737,7 +717,8 @@ async function iniciar() {
   pintarEncabezado();
   actualizarEncabezado();
   setInterval(actualizarEncabezado, 60000);
-  const vistas = { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso };
+  $("ayuda-btn").hidden = !(datos.ayuda || []).length;
+  const vistas = { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
   for (const [id, fn] of Object.entries(vistas)) {
     try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, "No se pudo mostrar esta sección con los datos actuales."); }
   }

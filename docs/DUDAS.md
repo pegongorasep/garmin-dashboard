@@ -224,3 +224,13 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **F3 `data/reloj.json`** guarda además `lunes` (lunes de la semana en que se mandó, para saber qué estaba hecho aunque la semana del plan se repita) y `semana_n` en cada enviado (para no subir de nuevo una sesión pendiente que se conserva). Estado `incompleta` cuenta como pendiente.
 - **F3 dispositivo.** `get_primary_training_device()` trae `deviceId: null` en la cuenta de Pedro, así que se usa `get_device_last_used()["userDeviceId"]` (el que sincronizó último).
 - **F3 no se probó `--si`** (escribe en Garmin): lo prueba Opus con Pedro. La salida real de la simulación (semana 3, 24 nov): sube `S3 · Z2 #1 · 20'` (20' Z2), `S3 · Z2 #2 · 25'` (25' Z2) y `S3 · Larga · 50'` (50' Z2); nada que borrar.
+
+## v4.5
+
+- **F1 Km.** `progreso.semanas[].km` ya existía (lo usa el globito de Volumen): la pestaña Km solo es JS, sin cambio en `build.py`.
+- **F2 claves nuevas.** `progreso.mejora` ahora es `{modo, ritmo, deriva, prueba}` con los textos ya armados (valor, cambio, motivo). Se quitaron `frase`, `semanas`, `corridas`, `otras` y la lista `ritmo` de `mejora` (nadie más las leía). `m.mejora_frase`, `m.conteos_otras` y `m.frase_otras` quedaron sin uso en el sitio pero se dejaron en `metrics.py` con sus pruebas (borrarlas es opcional). El ritmo "de inicio" es el promedio de corridas válidas de las semanas 1–2 del plan (mismo criterio que la base de la prueba); sin ellas el cuadrito muestra el ritmo actual sin comparación y lo dice.
+- **F2 ámbar.** Se agregó el token `--mal-ink` (ámbar oscuro en claro, ámbar claro en oscuro) para el texto de "empeora"; el ▲/▼ y las palabras "más lento"/"pasó de 5 %" siempre acompañan al color.
+- **F2 deriva.** El cuadrito muestra la última corrida con deriva calculada (ya cumple las reglas de validez); ✓ si < 5 %, ⚠ si no.
+- **F3.** La tarjeta "Marcas y carreras" es `ancha`; el ancla `#prog-carreras` (para "Ver todo en Progreso › Carreras" desde Hoy) quedó en el bloque de carreras.
+- **F4 ayuda.** Vive en `dashboard/ayuda.py` (lógica pura) y sale como `ayuda: [{titulo, parrafos, lista: [{t, x}]}]`. `ayuda` es clave de primer nivel y está en la lista blanca de `validar.py`; si falta en un data.json viejo, el botón **?** no aparece. «← Volver» regresa a la pestaña desde donde se abrió. Se asumió: con `variada: true` el generador no pone picos de Z3, así que la ayuda no los menciona.
+- **F4 pendiente.** La nota fija de la tarjeta de 12 semanas en Plan ("Las semanas de descarga son todo continuo en Z2") no es cierta con caminatas; no es parte de la ayuda y no se tocó.

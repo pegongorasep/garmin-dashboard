@@ -1,5 +1,5 @@
 // Dashboard: solo pinta lo que recibe de data.json (la lógica vive en dashboard/build.py).
-const VISTAS = ["hoy", "plan", "progreso"];   // Progreso tiene dos subvistas: Corridas (#progreso) y Cuerpo (#progreso/cuerpo)
+const VISTAS = ["hoy", "plan", "progreso", "ayuda"];   // Progreso tiene dos subvistas: Corridas (#progreso) y Cuerpo (#progreso/cuerpo)
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const DIAS_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 let datos = null;
