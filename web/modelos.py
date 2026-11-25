@@ -144,3 +144,19 @@ class CacheData(Base):
     contenido: Mapped[dict] = mapped_column(sa.JSON)
     calculado: Mapped[datetime] = mapped_column(default=ahora)
     huella: Mapped[str] = mapped_column(sa.String(64))
+
+
+class VinculoPendiente(Base):
+    """Repo privado que dice ser de un usuario y aún no lo probó: se vincula al escribir el código de 6 dígitos que
+    solo se ve en el resumen de la corrida de ese repo. El código no se guarda: solo su hash (y un nonce para poder
+    mostrarlo de nuevo mientras vive el pendiente)."""
+    __tablename__ = "vinculos_pendientes"
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), primary_key=True)
+    repo: Mapped[str] = mapped_column(sa.String(200))
+    repo_id: Mapped[int] = mapped_column(sa.BigInteger)
+    owner_id: Mapped[int | None] = mapped_column(sa.BigInteger)
+    nonce: Mapped[str] = mapped_column(sa.String(64))
+    codigo_hash: Mapped[str] = mapped_column(sa.String(64))
+    creado: Mapped[datetime] = mapped_column(default=ahora)
+    expira: Mapped[datetime] = mapped_column()
+    intentos: Mapped[int] = mapped_column(default=0)

@@ -4,7 +4,7 @@ import sys
 
 from sqlalchemy import select
 
-from . import auth, importar
+from . import auth, importar, tubo
 from .config import desde_entorno
 from .db import crear_motor, crear_sesiones
 from .modelos import Usuario
@@ -22,6 +22,10 @@ def main(argv=None, settings=None, motor=None) -> int:
     p.add_argument("correo")
     p.add_argument("carpeta")
     p.add_argument("--repo-id", default="importar", help="id numérico del repo de GitHub (la sal de los ids de actividad)")
+    p = sub.add_parser("vincular", help="liga a mano la cuenta con su repo (repos públicos, como el de Pedro)")
+    p.add_argument("correo")
+    p.add_argument("repo", help="owner/nombre")
+    p.add_argument("repo_id", type=int, help="id numérico del repo (GITHUB_REPOSITORY_ID)")
     args = ap.parse_args(argv)
 
     settings = settings or desde_entorno()
@@ -39,6 +43,15 @@ def main(argv=None, settings=None, motor=None) -> int:
                 u.github_owner = args.github_owner
                 db.commit()
             print(f"Admin listo: {u.correo}")
+        elif args.cmd == "vincular":
+            u = auth.buscar_por_correo(db, args.correo)
+            if u is None or args.repo.count("/") != 1:
+                print("Cuenta o repo no válidos (usa owner/nombre)", file=sys.stderr)
+                return 1
+            tubo.vincular(db, u, args.repo, args.repo_id, None, f"Repo vinculado a mano: {args.repo}")
+            u.github_owner = u.github_owner or args.repo.split("/")[0]
+            db.commit()
+            print(f"Vinculado: {u.correo} -> {args.repo} ({args.repo_id})")
         else:
             u = auth.buscar_por_correo(db, args.correo)
             if u is None:

@@ -34,6 +34,27 @@ def _avisa(texto: str) -> None:
     print(f"[ahi-la-llevas] {texto}", file=sys.stderr)
 
 
+_codigo_escrito = set()
+
+
+def _resumen_codigo(r) -> None:
+    """Si la web respondió 403 con un código de vinculación, lo escribe en el resumen de la corrida
+    ($GITHUB_STEP_SUMMARY): solo lo ven quienes tienen acceso al repo privado. No va al log común."""
+    try:
+        codigo = str(r.json().get("codigo") or "")
+    except Exception:   # noqa: BLE001
+        return
+    ruta = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not (re.fullmatch(r"[0-9]{6}", codigo) and ruta) or codigo in _codigo_escrito:
+        return
+    _codigo_escrito.add(codigo)
+    with open(ruta, "a") as f:
+        f.write(f"## Ahí la Llevas\n\n**Tu código para Ahí la Llevas: {codigo}** (vence en 1 h)\n\n"
+                "Escríbelo en la página de bienvenida de Ahí la Llevas para vincular este repo. "
+                "Esta corrida no guardó datos: después de vincular, corre «Run workflow» otra vez.\n")
+    _avisa("la web pidió vincular este repo: el código está en el resumen de la corrida (Summary)")
+
+
 def token_oidc(entorno=os.environ, http=requests) -> str:
     """Token OIDC de GitHub Actions con `audience` = la web."""
     url, token = entorno.get("ACTIONS_ID_TOKEN_REQUEST_URL"), entorno.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
@@ -66,6 +87,7 @@ def instrucciones(http=requests, dormir=time.sleep) -> str:
         r = _pedir("/api/tubo/instrucciones", b"{}", {"Authorization": f"Bearer {token_oidc(http=http)}",
                                                       "Content-Type": "application/json"}, http, dormir)
         if r.status_code != 200:
+            _resumen_codigo(r)
             _avisa(f"la web no vinculó este repo (HTTP {r.status_code}); todo sigue como siempre")
             return ""
         d = r.json()
@@ -98,6 +120,7 @@ def subir(data_dir: Path, entorno=os.environ, http=requests, dormir=time.sleep) 
             publicar = bool(r.json().get("publicar_pages", True))
             print(f"[ahi-la-llevas] datos subidos ({len(cuerpo) / 1024:.0f} KB); publicar Pages: {publicar}")
             return publicar
+        _resumen_codigo(r)
         _avisa(f"la web no aceptó el paquete (HTTP {r.status_code}); todo sigue como siempre")
     except Exception as e:   # noqa: BLE001
         _avisa(f"no se pudo subir a la web ({type(e).__name__}); todo sigue como siempre")

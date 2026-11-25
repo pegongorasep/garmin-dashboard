@@ -22,6 +22,7 @@ class Settings:
     # URL de las llaves públicas de GitHub Actions (se cambia solo en pruebas)
     jwks_url: str = "https://token.actions.githubusercontent.com/.well-known/jwks"
     plantilla_repo: str = "garmin-prueba"   # repo plantilla de GitHub; la definitiva se crea en F8
+    nombre_repo_sugerido: str = "ahilallevas-datos"   # nombre que se propone para la copia de cada persona
     extra: dict = field(default_factory=dict)
 
     def __post_init__(self):

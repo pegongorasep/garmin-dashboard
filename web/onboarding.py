@@ -1,5 +1,6 @@
 """Onboarding (/bienvenida): aviso y consentimiento -> usuario de GitHub -> copia, key y Actions -> espera de datos ->
 preguntas del plan. El avance sale de la base (se puede salir y volver al paso donde iba)."""
+import hmac
 import re
 from datetime import date, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -29,7 +30,8 @@ def estado(db: Session, u: Usuario) -> dict:
     return {"consentimiento": db.scalar(select(Consentimiento.id).where(
                 Consentimiento.usuario_id == u.id, Consentimiento.version_aviso == VERSION_AVISO).limit(1)) is not None,
             "owner": bool(u.github_owner), "vinculado": bool(u.repo_id),
-            "datos": tubo.tuvo_subida_ok(db, u.id), "ajustes": db.get(Ajustes, u.id) is not None}
+            "datos": tubo.tuvo_subida_ok(db, u.id), "ajustes": db.get(Ajustes, u.id) is not None,
+            "pendiente": tubo.pendiente_vigente(db, u.id) is not None}
 
 
 def paso_maximo(e: dict) -> int:
@@ -49,7 +51,7 @@ def paso_inicial(e: dict) -> int:
         return 2
     if e["datos"]:
         return 7
-    return 6 if e["vinculado"] else 3
+    return 6 if (e["vinculado"] or e["pendiente"]) else 3
 
 
 def proximo_lunes(hoy: date | None = None) -> date:
@@ -57,11 +59,13 @@ def proximo_lunes(hoy: date | None = None) -> date:
     return hoy + timedelta(days=(7 - hoy.weekday()) % 7 or 7)
 
 
-def liga_repo(u: Usuario, plantilla: str) -> dict:
+def liga_repo(u: Usuario, settings, pendiente=None) -> dict:
+    """Ligas del paso a paso. El nombre del repo es el sugerido hasta que haya uno real (vinculado o pendiente)."""
     owner = u.github_owner or ""
-    repo = u.repo or f"{owner}/{plantilla}"
+    repo = u.repo or (pendiente.repo if pendiente and pendiente.repo else f"{owner}/{settings.nombre_repo_sugerido}")
     return {"repo": repo,
-            "copia": f"https://github.com/new?template_owner=pegongorasep&template_name={plantilla}&visibility=private",
+            "copia": (f"https://github.com/new?template_owner=pegongorasep&template_name={settings.plantilla_repo}"
+                      f"&name={settings.nombre_repo_sugerido}&visibility=private"),
             "secreto": f"https://github.com/{repo}/settings/secrets/actions/new",
             "actions": f"https://github.com/{repo}/actions",
             "key": KEY_GARMIN_URL}
@@ -124,7 +128,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             pedido = paso_inicial(e)
         paso = max(1, min(pedido, paso_maximo(e)))
         return render(request, "bienvenida.html", paso=paso, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
-                      liga=liga_repo(usuario, settings.plantilla_repo), proximo_lunes=proximo_lunes().isoformat(),
+                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), proximo_lunes=proximo_lunes().isoformat(),
                       zonas=ZONAS, categorias=categorias_por_defecto(), dias=DIAS, niveles=NIVELES,
                       intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS, error=None, valores={})
 
@@ -158,12 +162,44 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             error = "Ese usuario de GitHub ya está ligado a otra cuenta."
         if error:
             return render(request, "bienvenida.html", status=400, paso=2, pasos=PASOS, e=e, u=usuario,
-                          version=VERSION_AVISO, liga=liga_repo(usuario, settings.plantilla_repo), error=error,
+                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error,
                           proximo_lunes="", zonas=[], categorias=[], dias=[], niveles=[], intensidades=[],
                           tipos_calidad=[], valores={})
         usuario.github_owner = owner
         db.commit()
         return RedirectResponse("/bienvenida?paso=3", 303)
+
+    @app.post("/bienvenida/codigo")
+    async def codigo(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        """La persona escribe el código que vio en el resumen de la corrida de su repo privado: prueba que lo controla."""
+        form = await formulario(request)
+        if usuario is None:
+            return RedirectResponse("/entrar", 303)
+        if usuario.repo_id:
+            return RedirectResponse("/bienvenida?paso=6", 303)
+        p = tubo.pendiente_vigente(db, usuario.id)
+        error = None
+        if p is None:
+            error = "No hay un código vigente. Corre «Run workflow» en tu repo para generar uno nuevo."
+        else:
+            p.intentos += 1
+            intento = "".join(ch for ch in str(form.get("codigo", "")) if ch.isdigit())
+            if hmac.compare_digest(tubo.hash_codigo(intento), p.codigo_hash):
+                tubo.vincular(db, usuario, p.repo, p.repo_id, p.owner_id, f"Repo vinculado con código: {p.repo}")
+                db.delete(p)
+                db.commit()
+                return RedirectResponse("/bienvenida?paso=6", 303)
+            if p.intentos >= tubo.MAX_INTENTOS:
+                db.delete(p)
+                error = "Demasiados intentos. Corre «Run workflow» otra vez en tu repo para generar un código nuevo."
+            else:
+                error = f"Ese código no coincide ({tubo.MAX_INTENTOS - p.intentos} intentos más)."
+            db.commit()
+        e = estado(db, usuario)
+        return render(request, "bienvenida.html", status=400, paso=6, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
+                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error,
+                      proximo_lunes="", zonas=[], categorias=[], dias=[], niveles=[], intensidades=[],
+                      tipos_calidad=[], valores={})
 
     @app.post("/bienvenida/plan")
     async def plan(request: Request, usuario=Depends(actual), db=Depends(get_db)):
@@ -179,7 +215,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             nuevo_plan = gen_plan.generar(cfg)
         except (ConfigError, ValueError) as ex:
             return render(request, "bienvenida.html", status=400, paso=7, pasos=PASOS, e=e, u=usuario,
-                          version=VERSION_AVISO, liga=liga_repo(usuario, settings.plantilla_repo), error=str(ex),
+                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=str(ex),
                           proximo_lunes=proximo_lunes().isoformat(), zonas=ZONAS, categorias=categorias_por_defecto(),
                           dias=DIAS, niveles=NIVELES, intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS,
                           valores=dict(form.multi_items()) if hasattr(form, "multi_items") else dict(form))

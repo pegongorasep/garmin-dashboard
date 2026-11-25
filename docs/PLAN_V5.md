@@ -168,10 +168,15 @@ Objetivo: que la web pueda llamar al motor con datos en memoria, y que el repo s
      firma RS256, `iss`, `aud == OIDC_AUDIENCE`, `exp`, y que `job_workflow_ref` empiece con
      `pegongorasep/garmin-dashboard/.github/workflows/motor.yml@` y termine en `refs/tags/stable` o
      `refs/heads/main`.
-   - Usuario = el que tenga `repo_id == claim repository_id`. Si ninguno: si hay un usuario sin repo con
-     `github_owner` == claim `repository_owner` (sin distinguir mayúsculas) **y** que ya aceptó el aviso, se
-     **vincula** (guarda owner_id, repo, repo_id) y se registra un `cambio` de sistema. Si no, 403 "repo no
-     vinculado" (el workflow sigue con Pages como hoy).
+   - Usuario = el que tenga `repo_id == claim repository_id`. Si ninguno, **coincidir el owner NO basta** (un invitado
+     podría escribir el usuario de GitHub de otra persona): token con `repository_visibility` distinto de `private` →
+     nunca se vincula solo (solo `python -m web.cli vincular <correo> <owner/repo> <repo_id>`, que registra un `cambio`
+     de sistema; así se vincula Pedro, cuyo repo es público). Repo privado y un único usuario con consentimiento y
+     `github_owner` igual (sin mayúsculas) → se genera un **código de 6 dígitos** (se guarda su hash con el repo candidato,
+     vence en 1 h; mientras viva se reutiliza el mismo pendiente) y la respuesta 403 de `instrucciones` y `subida` trae
+     `{"codigo": "123456"}`; esa subida **no se guarda**. `subir.py` escribe el código en `$GITHUB_STEP_SUMMARY` (solo lo ven
+     quienes tienen acceso al repo privado). Se vincula cuando la persona escribe el código en el paso 6 del onboarding.
+     Sin consentimiento o sin usuario único: 403 sin código (el workflow sigue con Pages como hoy).
    - `POST /api/tubo/instrucciones` → `{"vinculado": bool, "historial_desde": fecha|null, "dias_actividades":
      int}`. `historial_desde` se manda en la primera corrida (365 días atrás) o cuando la web lo pidió; se limpia
      al recibir esa subida.
@@ -194,14 +199,17 @@ Objetivo: que la web pueda llamar al motor con datos en memoria, y que el repo s
    1. Aviso de privacidad simplificado + liga al integral + casilla de **consentimiento expreso** para datos
       sensibles (se guarda versión y fecha). Sin esto no se vincula nada.
    2. "¿Cuál es tu usuario de GitHub?" (si no tiene: liga para crear cuenta gratis, con la explicación de para qué).
-   3. Botón **"Crear mi copia en GitHub"** → `https://github.com/new?template_owner=pegongorasep&template_name=<plantilla>&visibility=private`
+   3. Botón **"Crear mi copia en GitHub"** → `https://github.com/new?template_owner=pegongorasep&template_name=<plantilla>&name=ahilallevas-datos&visibility=private`
       (la plantilla nueva se crea en F8; mientras, Opus usa `garmin-prueba`).
    4. "Pon tu key de Garmin en tu repo": liga a `connect.garmin.com/app/settings/personalApiToken` y liga directa
       a `https://github.com/<owner>/<repo>/settings/secrets/actions/new`, con el nombre `PERSONAL_API_KEY` en un
       botón de copiar (JS de una línea; el JS no ve la key). Texto claro: "tu key se queda en tu GitHub; aquí no
       la pedimos nunca".
    5. "Actívalo": liga a `https://github.com/<owner>/<repo>/actions` (activar) y a "Run workflow".
-   6. Espera: la página consulta `/api/estado` cada 10 s y muestra "Ya llegaron tus datos ✔" al vincularse y
+   6. Vincular: "Abre la última corrida de tu repo (liga) y escribe el código" (`POST /bienvenida/codigo` con CSRF;
+      máximo 5 intentos por pendiente, luego se invalida y la siguiente corrida genera otro; `hmac.compare_digest`). Al
+      coincidir guarda repo, repo_id y owner_id y registra el `cambio`; la página ofrece "Run workflow" (la corrida del
+      código no guardó datos). Después espera: la página consulta `/api/estado` cada 10 s y muestra "Ya llegaron tus datos ✔" al vincularse y
       recibir la primera subida.
    7. Preguntas del plan (las mismas que `/setup`: nivel, intensidad, calidad, caminatas, actividades y días de
       pierna, fecha de inicio = próximo lunes por defecto, sensor banda/muñeca, zona horaria por defecto

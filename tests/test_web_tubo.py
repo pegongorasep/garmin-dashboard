@@ -37,7 +37,7 @@ def jwks_falso():
 def token(web_ctx, llave=LLAVE, **extra):
     claims = {"iss": ISS, "aud": web_ctx.settings.oidc_audience, "exp": int(time.time()) + 600,
               "repository": "amigo/garmin-prueba", "repository_id": "777", "repository_owner": "Amigo",
-              "repository_owner_id": "5", "job_workflow_ref": WORKFLOW, **extra}
+              "repository_owner_id": "5", "repository_visibility": "private", "job_workflow_ref": WORKFLOW, **extra}
     return jwt.encode({k: v for k, v in claims.items() if v is not None}, llave, algorithm="RS256", headers={"kid": "k1"})
 
 
@@ -96,7 +96,7 @@ def subir(cl, tok, pq, comprimir=True):
     ({}, OTRA_LLAVE, 401),
 ])
 def test_verificacion_del_token(ctx, extra, llave, codigo):
-    usuario_amigo(ctx)
+    usuario_amigo(ctx, repo_id=777)
     r = ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx, llave, **extra)))
     assert r.status_code == codigo, r.text
 
@@ -109,35 +109,138 @@ def test_sin_token_o_con_basura_es_401(ctx):
 
 
 def test_token_sin_alg_none(ctx):
-    usuario_amigo(ctx)
+    usuario_amigo(ctx, repo_id=777)
     falso = jwt.encode({"iss": ISS, "aud": ctx.settings.oidc_audience, "exp": int(time.time()) + 60}, None, algorithm="none")
     assert ctx.cliente().post("/api/tubo/instrucciones", headers=auth(falso)).status_code == 401
 
 
 # --- vinculación ---
 
-def test_vincula_por_owner_con_consentimiento(ctx):
+def codigo_de_respuesta(r):
+    assert r.status_code == 403 and r.json()["error"] == "repo no vinculado"
+    return r.json().get("codigo")
+
+
+def escribir_codigo(cl, codigo):
+    return cl.post("/bienvenida/codigo", data={"csrf": csrf_de(cl.get("/bienvenida?paso=6").text), "codigo": codigo})
+
+
+def test_coincidir_el_owner_no_vincula_hay_que_probar_el_codigo(ctx):
     uid = usuario_amigo(ctx, owner="AMIGO")   # sin distinguir mayúsculas
-    r = ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx)))
-    assert r.status_code == 200 and r.json()["vinculado"] is True
+    cl = ctx.cliente()
+    r = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx)))
+    codigo = codigo_de_respuesta(r)
+    assert re.fullmatch(r"[0-9]{6}", codigo)
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert u.repo_id is None and db.query(Cambio).count() == 0   # todavía nada vinculado
+        p = db.query(tubo.VinculoPendiente).one()
+        assert (p.repo, p.repo_id, p.owner_id) == ("amigo/garmin-prueba", 777, 5)
+        assert p.codigo_hash == tubo.hash_codigo(codigo) and codigo not in str(p.__dict__)   # solo el hash
+    # la subida que genera el código no se guarda; reutiliza el mismo pendiente y el mismo código
+    r = subir(cl, token(ctx), paquete_chico())
+    assert codigo_de_respuesta(r) == codigo
+    with ctx.sesiones() as db:
+        assert db.query(DatoGarmin).count() == 0 and db.query(Subida).count() == 0 and db.query(tubo.VinculoPendiente).count() == 1
+    # la persona entra a la web y escribe el código
+    crear_sesion = entrar(ctx, ctx.cliente(), "amigo@x.com")
+    assert escribir_codigo(crear_sesion, codigo).status_code == 303
     with ctx.sesiones() as db:
         u = db.get(Usuario, uid)
         assert (u.repo, u.repo_id, u.github_owner_id) == ("amigo/garmin-prueba", 777, 5)
         c = db.query(Cambio).filter_by(atleta_id=uid).one()
         assert c.via == "sistema" and "amigo/garmin-prueba" in c.descripcion
+        assert db.query(tubo.VinculoPendiente).count() == 0
+    # ya vinculado, la siguiente subida sí se guarda, y el paso 6 ofrece "Run workflow"
+    assert subir(cl, token(ctx), paquete_chico()).status_code == 200
+    assert "Run workflow en mi repo" in crear_sesion.get("/bienvenida?paso=6").text
 
 
-def test_no_vincula_sin_consentimiento_ni_owner_equivocado(ctx):
+def test_un_invitado_que_reclama_el_owner_de_otro_no_vincula_sin_el_codigo(ctx):
+    victima = usuario_amigo(ctx, owner="pegongorasep")   # el invitado escribió el owner de la víctima
+    cl = ctx.cliente()
+    codigo = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(
+        ctx, repository_owner="pegongorasep", repository="pegongorasep/su-repo"))))
+    # el código solo está en el resumen del repo de la víctima: el invitado no lo tiene y adivina
+    cl2 = entrar(ctx, ctx.cliente(), "amigo@x.com")
+    malo = "000000" if codigo != "000000" else "111111"
+    r = escribir_codigo(cl2, malo)
+    assert r.status_code == 400 and "no coincide" in r.text
+    with ctx.sesiones() as db:
+        assert db.get(Usuario, victima).repo_id is None
+    assert subir(cl, token(ctx, repository_owner="pegongorasep"), paquete_chico()).status_code == 403
+    with ctx.sesiones() as db:
+        assert db.query(DatoGarmin).count() == 0
+
+
+def test_repo_publico_o_sin_dato_de_visibilidad_nunca_se_vincula_solo(ctx):
+    uid = usuario_amigo(ctx)
+    cl = ctx.cliente()
+    for vis in ("public", "internal", None):
+        r = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_visibility=vis)))
+        assert r.status_code == 403 and "codigo" not in r.json()
+    with ctx.sesiones() as db:
+        assert db.get(Usuario, uid).repo_id is None and db.query(tubo.VinculoPendiente).count() == 0
+
+
+def test_codigo_vencido_equivocado_y_limite_de_intentos(ctx):
+    uid = usuario_amigo(ctx)
+    cl = ctx.cliente()
+    web = entrar(ctx, ctx.cliente(), "amigo@x.com")
+    codigo = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))))
+    malo = "000000" if codigo != "000000" else "111111"
+    # equivocado, 4 veces: sigue vigente; con el correcto vincula (comparación sin espacios)
+    for restantes in (4, 3, 2, 1):
+        r = escribir_codigo(web, malo)
+        assert r.status_code == 400 and f"({restantes} intentos más)" in r.text
+    # el quinto intento equivocado invalida el pendiente
+    r = escribir_codigo(web, malo)
+    assert r.status_code == 400 and "Demasiados intentos" in r.text
+    with ctx.sesiones() as db:
+        assert db.query(tubo.VinculoPendiente).count() == 0
+    assert "No hay un código vigente" in escribir_codigo(web, codigo).text   # ni el correcto sirve ya
+    # la siguiente corrida genera otro (distinto, con otro nonce)
+    nuevo = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))))
+    with ctx.sesiones() as db:
+        assert db.query(tubo.VinculoPendiente).one().intentos == 0
+    # vencido: no vincula y la siguiente corrida genera otro
+    with ctx.sesiones() as db:
+        db.query(tubo.VinculoPendiente).one().expira = ahora() - timedelta(seconds=1)
+        db.commit()
+    assert "No hay un código vigente" in escribir_codigo(web, nuevo).text
+    with ctx.sesiones() as db:
+        assert db.get(Usuario, uid).repo_id is None
+    otro = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))))
+    assert re.fullmatch(r"[0-9]{6}", otro)
+    assert escribir_codigo(web, " " + otro[:3] + " " + otro[3:]).status_code == 303   # con espacios también
+
+
+def test_sin_consentimiento_o_owner_equivocado_no_hay_ni_codigo(ctx):
     usuario_amigo(ctx, consentimiento=False)
     cl = ctx.cliente()
-    r = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx)))
-    assert r.status_code == 403 and r.json()["error"] == "repo no vinculado"
+    assert "codigo" not in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
     with ctx.sesiones() as db:
-        assert db.query(Usuario).one().repo_id is None
         db.add(Consentimiento(usuario_id=1, version_aviso="2026-12"))
         db.commit()
-    assert cl.post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_owner="otro"))).status_code == 403
-    assert cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).status_code == 200
+    assert "codigo" not in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_owner="otro"))).json()
+    assert "codigo" in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
+
+
+def test_cli_vincular(ctx, capsys):
+    from web import cli
+    uid = crear_usuario(ctx, "pedro@x.com")
+    args = dict(settings=ctx.settings, motor=ctx.motor)
+    assert cli.main(["vincular", "nadie@x.com", "a/b", "5"], **args) == 1
+    assert cli.main(["vincular", "pedro@x.com", "sin-diagonal", "5"], **args) == 1
+    assert cli.main(["vincular", "pedro@x.com", "pegongorasep/garmin-dashboard", "123"], **args) == 0
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert (u.repo, u.repo_id, u.github_owner) == ("pegongorasep/garmin-dashboard", 123, "pegongorasep")
+        c = db.query(Cambio).one()
+        assert c.via == "sistema" and "a mano" in c.descripcion
+    # su repo es público: con repo_id ya vinculado el token público sí sube
+    r = ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_visibility="public", repository_id="123")))
+    assert r.status_code == 200
 
 
 def test_un_repo_ya_vinculado_a_otro_usuario_no_se_roba(ctx):
@@ -308,19 +411,27 @@ def test_onboarding_completo(ctx):
     assert r.status_code == 303
     p3 = cl.get("/bienvenida?paso=3").text
     assert "template_owner=pegongorasep" in p3 and "template_name=garmin-prueba" in p3 and "visibility=private" in p3
+    assert "&amp;name=ahilallevas-datos" in p3 and "Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual" in p3
     p4 = cl.get("/bienvenida?paso=4").text
-    assert "https://github.com/Yo-Mismo/garmin-prueba/settings/secrets/actions/new" in p4 and "PERSONAL_API_KEY" in p4
+    assert "https://github.com/Yo-Mismo/ahilallevas-datos/settings/secrets/actions/new" in p4 and "PERSONAL_API_KEY" in p4
     assert "no la pedimos nunca" in p4 and 'type="password"' not in p4 and "<input" not in p4   # ningún campo para la key
-    assert "https://github.com/Yo-Mismo/garmin-prueba/actions" in cl.get("/bienvenida?paso=5").text
+    assert "https://github.com/Yo-Mismo/ahilallevas-datos/actions" in cl.get("/bienvenida?paso=5").text
     # todavía no hay datos: el paso 7 no se abre
-    assert "Esperando tus datos" in cl.get("/bienvenida?paso=7").text
+    assert "Comprueba que ese repo es tuyo" in cl.get("/bienvenida?paso=7").text
     assert cl.get("/api/estado").json() == {"vinculado": False, "repo": None, "datos": False, "ultima_subida": None,
                                             "consentimiento": True, "plan": False}
     # el repo sube su primer paquete (esto vincula)
-    tok = token(ctx, repository_owner="yo-mismo", repository="Yo-Mismo/garmin-prueba")
+    tok = token(ctx, repository_owner="yo-mismo", repository="Yo-Mismo/ahilallevas-datos")
+    r = subir(ctx.cliente(), tok, paquete_chico())
+    codigo = codigo_de_respuesta(r)   # primera corrida: no guarda, da el código
+    assert cl.get("/api/estado").json()["vinculado"] is False
+    p6 = cl.get("/bienvenida").text   # con código pendiente cae en el paso 6
+    assert "Comprueba que ese repo es tuyo" in p6 and "https://github.com/Yo-Mismo/ahilallevas-datos/actions" in p6
+    assert escribir_codigo(cl, codigo).status_code == 303
+    assert "Run workflow en mi repo" in cl.get("/bienvenida?paso=6").text
     assert subir(ctx.cliente(), tok, paquete_chico()).status_code == 200
     e = cl.get("/api/estado").json()
-    assert e["vinculado"] and e["datos"] and e["repo"] == "Yo-Mismo/garmin-prueba" and e["ultima_subida"].endswith("Z")
+    assert e["vinculado"] and e["datos"] and e["repo"] == "Yo-Mismo/ahilallevas-datos" and e["ultima_subida"].endswith("Z")
     p7 = cl.get("/bienvenida").text   # sin paso: salta al 7
     assert "Crear mi plan" in p7
     # preguntas
@@ -514,3 +625,24 @@ def test_imagen_no_contiene_archivos_personales():
                         "ls -a /app /app/plan /app/site; ls /app/data /app/config.yaml 2>&1"], capture_output=True, text=True)
     for malo in (".env", "config.yaml", "plan.json", "inbody.json", "data.json"):
         assert malo not in r.stdout.replace("No such file or directory", ""), malo
+
+
+def test_subir_py_escribe_el_codigo_en_el_resumen_y_no_en_el_log(tmp_path, monkeypatch, capsys):
+    resumen = tmp_path / "resumen.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(resumen))
+    sub._codigo_escrito.clear()
+    (tmp_path / "meta.json").write_text('{"pulled_at": "2026-11-01"}')
+    http = HttpFalso(lambda url, **kw: RespuestaFalsa(403, {"error": "repo no vinculado", "codigo": "123456"}),
+                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) is True
+    assert sub.instrucciones(http, lambda s: None) == ""
+    t = resumen.read_text()
+    assert "Tu código para Ahí la Llevas: 123456" in t and "vence en 1 h" in t and t.count("123456") == 1
+    assert "123456" not in capsys.readouterr().err
+    # un "código" con otra forma no se escribe
+    sub._codigo_escrito.clear()
+    resumen.write_text("")
+    http = HttpFalso(lambda url, **kw: RespuestaFalsa(403, {"codigo": "abc<script>"}),
+                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    sub.subir(tmp_path, ENTORNO, http, lambda s: None)
+    assert resumen.read_text() == ""

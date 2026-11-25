@@ -51,6 +51,7 @@ nunca sale de ahí. Es gratis.</p>
 <p>Se crea una copia <strong>privada</strong> del programa que baja tus datos de Garmin. Deja el nombre que te sugiere GitHub.</p>
 <p><a class="btn" href="{{ liga.copia }}" target="_blank" rel="noopener">Crear mi copia en GitHub</a></p>
 <p class="muted">En GitHub toca «Create repository from template». Luego regresa aquí.</p>
+<p class="aviso">Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual.</p>
 <p><a class="btn sec" href="/bienvenida?paso=4">Ya la creé</a></p>
 
 {% elif paso == 4 %}
@@ -60,7 +61,7 @@ nunca sale de ahí. Es gratis.</p>
   <li>Entra a <a href="{{ liga.key }}" target="_blank" rel="noopener">tu página de Garmin Connect</a>, toca
   <em>Create Key</em> y elige la expiración más larga. Copia la key (solo se muestra una vez).</li>
   <li>Abre <a href="{{ liga.secreto }}" target="_blank" rel="noopener">el formulario de secretos de tu repo</a>
-  ({{ liga.repo }}). En <em>Name</em> escribe:
+  ({{ liga.repo }}; si le pusiste otro nombre, abre tu repo en GitHub y sigue igual). En <em>Name</em> escribe:
     <div class="copiable"><code id="nombre-secreto">PERSONAL_API_KEY</code>
     <button class="btn sec" type="button" id="copiar">Copiar nombre</button></div>
   </li>
@@ -81,16 +82,34 @@ document.getElementById("copiar").addEventListener("click", function () {
   <li>Elige el flujo <em>Deploy</em> a la izquierda y toca <em>Run workflow</em> (el botón verde).</li>
 </ol>
 <p class="muted">Corre solo 3 veces al día; este primer disparo manual trae tu historial.</p>
+<p class="aviso">Si le pusiste otro nombre a tu repo, abre tu repo en GitHub y sigue igual.</p>
 <p><a class="btn sec" href="/bienvenida?paso=4">Atrás</a> <a class="btn" href="/bienvenida?paso=6">Ya lo corrí</a></p>
 
 {% elif paso == 6 %}
-<h2>Esperando tus datos…</h2>
+{% if not u.repo_id %}
+<h2>Comprueba que ese repo es tuyo</h2>
+<ol>
+  <li>Abre <a href="{{ liga.actions }}" target="_blank" rel="noopener">la última corrida de tu repo</a> (pestaña Actions).
+  Si no hay ninguna, toca <em>Run workflow</em> en el flujo <em>Deploy</em> y espera un par de minutos.</li>
+  <li>Entra a esa corrida: abajo, en <em>Summary</em>, dice «Tu código para Ahí la Llevas». Solo lo ven quienes tienen acceso a tu repo privado.</li>
+  <li>Escribe aquí el código de 6 dígitos:</li>
+</ol>
+<form method="post" action="/bienvenida/codigo">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label class="campo"><span>Código</span>
+    <input type="text" name="codigo" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" required></label>
+  <button class="btn" type="submit">Vincular mi repo</button>
+</form>
+<p class="muted">El código vence en 1 hora y tienes 5 intentos; si falla, corre «Run workflow» otra vez para uno nuevo.</p>
+<p><a class="btn sec" href="/bienvenida?paso=5">Atrás</a></p>
+{% else %}
+<h2>Repo vinculado ✔ — ahora tus datos</h2>
+<p>La corrida que generó el código no guarda datos. Corre el flujo una vez más:</p>
+<p><a class="btn" href="{{ liga.actions }}" target="_blank" rel="noopener">Run workflow en mi repo</a></p>
 <p id="espera" class="aviso" role="status" aria-live="polite">Todavía no llegan. Tarda uno o dos minutos después de «Run workflow».</p>
 <p id="listo" class="ok" role="status" hidden>Ya llegaron tus datos ✔</p>
 <p><a class="btn" id="siguiente" href="/bienvenida?paso=7" hidden>Armar mi plan</a></p>
-<p class="muted">Si pasan 5 minutos, revisa en la pestaña Actions de <a href="{{ liga.actions }}" target="_blank" rel="noopener">tu repo</a>
-que el flujo no haya fallado (casi siempre es la key: que esté bien pegada y con el nombre <code>PERSONAL_API_KEY</code>).</p>
-<p><a class="btn sec" href="/bienvenida?paso=5">Atrás</a></p>
+<p class="muted">Si pasan 5 minutos, revisa que el flujo no haya fallado (casi siempre es la key: bien pegada y con el nombre <code>PERSONAL_API_KEY</code>).</p>
 <script>
 (function () {
   function revisar() {
@@ -105,6 +124,7 @@ que el flujo no haya fallado (casi siempre es la key: que esté bien pegada y co
   revisar();
 })();
 </script>
+{% endif %}
 
 {% elif paso == 7 %}
 <h2>Tu plan</h2>

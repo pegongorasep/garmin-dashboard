@@ -4,8 +4,11 @@ Verificación: firma RS256 con el JWKS de GitHub (caché 1 h), `iss`, `aud` (= O
 llamado sea `motor.yml` del repo de Pedro en `stable` o `main`. El usuario es el dueño del `repository_id`; si ninguno,
 se vincula un usuario sin repo con ese `repository_owner` que ya aceptó el aviso."""
 import gzip
+import hashlib
+import hmac
 import json
 import logging
+import secrets
 import time
 import zlib
 from datetime import timedelta
@@ -20,7 +23,7 @@ from sqlalchemy.orm import Session
 import paquete as paquete_mod
 
 from . import datos
-from .modelos import Cambio, Consentimiento, Subida, Usuario, ahora
+from .modelos import Cambio, Consentimiento, Subida, Usuario, VinculoPendiente, ahora
 
 log = logging.getLogger("web.tubo")
 ISSUER = "https://token.actions.githubusercontent.com"
@@ -34,9 +37,9 @@ JWKS_SEGUNDOS = 3600
 
 
 class TuboError(Exception):
-    def __init__(self, status: int, mensaje: str):
+    def __init__(self, status: int, mensaje: str, extra: dict | None = None):
         super().__init__(mensaje)
-        self.status, self.mensaje = status, mensaje
+        self.status, self.mensaje, self.extra = status, mensaje, extra or {}
 
 
 def jwks_de_github(url: str) -> dict:
@@ -72,8 +75,45 @@ def verificar_token(token: str, settings, jwks: dict) -> dict:
     return claims
 
 
-def usuario_del_token(db: Session, claims: dict) -> Usuario:
-    """Dueño del repo del token; lo vincula si hace falta (y registra un cambio de sistema). TuboError 403 si no."""
+MINUTOS_CODIGO = 60
+MAX_INTENTOS = 5
+
+
+def codigo_de(secret_key: str, nonce: str) -> str:
+    """Código de 6 dígitos derivado del nonce (así se puede mostrar otra vez sin guardarlo)."""
+    d = hmac.new(secret_key.encode(), f"codigo:{nonce}".encode(), hashlib.sha256).digest()
+    return f"{int.from_bytes(d[:8], 'big') % 1_000_000:06d}"
+
+
+def hash_codigo(codigo: str) -> str:
+    return hashlib.sha256(codigo.encode()).hexdigest()
+
+
+def vincular(db: Session, u: Usuario, repo: str, repo_id: int, owner_id, descripcion: str) -> None:
+    """Deja al usuario ligado a ese repo y registra el cambio de sistema. No hace commit."""
+    u.repo, u.repo_id = repo, repo_id
+    try:
+        u.github_owner_id = int(owner_id)
+    except (TypeError, ValueError):
+        pass
+    db.add(Cambio(atleta_id=u.id, autor_id=None, via="sistema", visto=True, descripcion=descripcion,
+                  antes=None, despues={"repo": repo, "repo_id": repo_id}))
+
+
+def pendiente_vigente(db: Session, usuario_id: int) -> VinculoPendiente | None:
+    p = db.get(VinculoPendiente, usuario_id)
+    if p and (p.expira < ahora() or p.intentos >= MAX_INTENTOS):
+        db.delete(p)
+        db.commit()
+        return None
+    return p
+
+
+def usuario_del_token(db: Session, claims: dict, secret_key: str = "") -> Usuario:
+    """Dueño del repo del token. Un repo nuevo NO se vincula por coincidir el owner (cualquiera podría escribir el
+    usuario de otra persona): se genera un código de 6 dígitos que solo se ve en el resumen de la corrida del repo
+    privado, y la persona lo escribe en la web (ver `onboarding`). Repos no privados no se vinculan solos
+    (`web.cli vincular`). TuboError 403 si no hay usuario; trae `codigo` cuando hay uno pendiente."""
     try:
         repo_id = int(claims["repository_id"])
     except (TypeError, ValueError):
@@ -81,6 +121,8 @@ def usuario_del_token(db: Session, claims: dict) -> Usuario:
     u = db.scalar(select(Usuario).where(Usuario.repo_id == repo_id, Usuario.borrado.is_(None)))
     if u:
         return u
+    if claims.get("repository_visibility") != "private":
+        raise TuboError(403, "repo no vinculado")   # público o sin dato: solo con `web.cli vincular`
     owner = str(claims["repository_owner"]).lower()
     candidatos = [c for c in db.scalars(select(Usuario).where(Usuario.repo_id.is_(None), Usuario.borrado.is_(None)))
                   if (c.github_owner or "").lower() == owner]
@@ -89,15 +131,26 @@ def usuario_del_token(db: Session, claims: dict) -> Usuario:
     u = candidatos[0]
     if db.scalar(select(Consentimiento.id).where(Consentimiento.usuario_id == u.id)) is None:
         raise TuboError(403, "repo no vinculado")   # sin consentimiento expreso no se vincula nada
-    u.repo, u.repo_id = claims.get("repository"), repo_id
+    p = pendiente_vigente(db, u.id)
+    if p is None or p.repo_id != repo_id:
+        nonce = secrets.token_hex(16)
+        codigo = codigo_de(secret_key, nonce)
+        if p:
+            db.delete(p)
+            db.flush()
+        p = VinculoPendiente(usuario_id=u.id, repo=str(claims.get("repository") or ""), repo_id=repo_id,
+                             owner_id=_entero(claims.get("repository_owner_id")), nonce=nonce,
+                             codigo_hash=hash_codigo(codigo), expira=ahora() + timedelta(minutes=MINUTOS_CODIGO))
+        db.add(p)
+        db.commit()
+    raise TuboError(403, "repo no vinculado", {"codigo": codigo_de(secret_key, p.nonce), "vence_en_min": MINUTOS_CODIGO})
+
+
+def _entero(v):
     try:
-        u.github_owner_id = int(claims.get("repository_owner_id"))
+        return int(v)
     except (TypeError, ValueError):
-        pass
-    db.add(Cambio(atleta_id=u.id, autor_id=None, via="sistema", visto=True,
-                  descripcion=f"Repo vinculado: {u.repo}", antes=None, despues={"repo": u.repo, "repo_id": repo_id}))
-    db.commit()
-    return u
+        return None
 
 
 def tuvo_subida_ok(db: Session, usuario_id: int) -> bool:
@@ -144,10 +197,10 @@ def montar(app, get_db, settings) -> None:
         except Exception:   # JWKS inalcanzable u otro fallo: no se adivina
             log.exception("no se pudo verificar el token")
             raise TuboError(503, "no se pudo verificar el token") from None
-        return usuario_del_token(db, claims)
+        return usuario_del_token(db, claims, settings.secret_key)
 
     def error(e: TuboError):
-        return JSONResponse({"error": e.mensaje}, status_code=e.status)
+        return JSONResponse({"error": e.mensaje, **e.extra}, status_code=e.status)
 
     @app.post("/api/tubo/instrucciones")
     def instrucciones(request: Request, db=Depends(get_db)):
