@@ -241,11 +241,22 @@ function graficaVolumen(d, ancho) {
       [fechaLarga(s.inicio), fmt(s.minutos, 0), s.plan_min ?? "—", fmt(s.km), fmt(s.min_trote, 0), fmt(s.min_camina, 0)]), "Ver semanas como tabla"));
 }
 
+function graficaKm(d, ancho) {
+  const semanas = ((d.progreso || {}).semanas || []).slice(-periodo);
+  if (!semanas.some((s) => (s.km || 0) > 0)) return h("p", { class: "vacio" }, "Sin corridas en este periodo.");
+  return h("div", {}, h("p", { class: "nota" }, "Kilómetros por semana (lun–dom), trote y caminata."),
+    barChart({ ancho, semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.km || 0], s })), clases: ["s1"],
+      etiqueta: "Kilómetros por semana",
+      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.km)} km` }),
+    tablaDatos(["Semana", "Km"], semanas.slice().reverse().map((s) => [fechaLarga(s.inicio), fmt(s.km)]), "Ver semanas como tabla"));
+}
+
 function tarjetaCorridasProgreso(d) {
   const prog = d.progreso || {};
   const hayCaminatas = ((prog.numeros || {}).caminatas || {})[String(periodo)];
   const hayDeriva = (prog.corridas || []).some((r) => r.deriva_pct != null);
   const vistas = [{ etiqueta: "Volumen", pintar: (a) => graficaVolumen(d, a) },
+    { etiqueta: "Km", pintar: (a) => graficaKm(d, a) },
     { etiqueta: "Ritmo", pintar: (a) => graficaCorridas(d, a, "ritmo") },
     ...(hayDeriva ? [{ etiqueta: "Deriva", pintar: (a) => graficaCorridas(d, a, "deriva") }] : []),
     ...(hayCaminatas ? [{ etiqueta: "% trote", pintar: (a) => graficaCorridas(d, a, "pct") }] : [])];
