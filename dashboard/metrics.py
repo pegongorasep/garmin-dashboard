@@ -100,6 +100,11 @@ def serie_de_detalle(d: dict, paso: int = 5) -> list:
     return out
 
 
+def id_de(a: dict):
+    """Id de una actividad: el `id` opaco del paquete (web) o el `activityId` de Garmin (datos locales)."""
+    return a.get("id") or a.get("activityId")
+
+
 def detalle_vigente(entrada, es_corrida: bool, es_carrera: bool = False, reciente: bool = False) -> bool:
     """¿Se reusa lo ya guardado de una actividad? Sí si ya existe y, en corridas, trae tramos y serie (y en carreras
     el ritmo por km). Sin RPE solo se vuelve a pedir en los últimos 7 días (`reciente`): Pedro puede ponerlo después."""
@@ -137,7 +142,7 @@ def minutos_zona_serie(serie: list, zonas: list, max_hueco: int = 10) -> dict:
 def zona_minutos(activity: dict, details: dict, zonas: list):
     """Minutos en Z0..Z5 de una actividad: de la serie de FC si existe; si no, de las zonas del reloj
     (`hrTimeInZone_*`, con Z0 = duración − suma). None si no hay ni uno ni otro. Fuente del esfuerzo, la carga y el plan vs real."""
-    serie = (details.get(str(activity.get("activityId"))) or {}).get("serie")
+    serie = (details.get(str(id_de(activity))) or {}).get("serie")
     if serie:
         return minutos_zona_serie(serie, zonas)
     if activity.get("hrTimeInZone_1") is None:
@@ -308,7 +313,7 @@ def ayer_duro(day: date, activities: list, details: dict, config: dict):
         return None
     a, c = max(cands, key=lambda x: esfuerzo_de(x[0], details, config) or 0)
     return {"categoria": nombres[c], "esfuerzo": esfuerzo_de(a, details, config),
-            "rpe": (details.get(str(a["activityId"])) or {}).get("rpe")}
+            "rpe": (details.get(str(id_de(a))) or {}).get("rpe")}
 
 
 MOTIVOS = {"hrv": "HRV baja", "rhr": "FC en reposo alta", "sueno": "Dormiste poco"}
@@ -463,7 +468,7 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
 
 def _tramos(activity: dict, details: dict) -> list:
     """Tramos RWD_* de details (con FC) o, si no hay, de splitSummaries de la lista (sin FC)."""
-    guardados = (details.get(str(activity["activityId"])) or {}).get("splits")
+    guardados = (details.get(str(id_de(activity))) or {}).get("splits")
     if guardados:
         return guardados
     return [{"tipo": t.get("splitType"), "seg": t.get("duration"), "m": t.get("distance"),
@@ -573,7 +578,7 @@ SUGERENCIAS = {"repetir": "Considera repetir la semana (con /ajustar)", "pesada"
 def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, config: dict):
     """Sugerencia por reglas conservadoras del resumen de la semana pasada: {"tipo", "texto"} o None. En orden:
     pocas sesiones hechas (con plan) o muchos días rojos → repetir; carga muy por encima de la anterior → semana pesada;
-    todo hecho y sin rojos → seguir el plan. Solo sugiere: repetir la semana sigue siendo con /ajustar."""
+    todo hecho y sin rojos → seguir el plan. Solo sugiere: repetir la semana sigue siendo con /ajustar (o desde Ajustes en la web)."""
     pocas = total is not None and hechas < config.get("resumen_min_sesiones", 2)
     if pocas or dias_rojos >= config.get("resumen_dias_rojos", 2):
         tipo = "repetir"
@@ -583,7 +588,10 @@ def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, con
         tipo = "sigue"
     else:
         return None
-    return {"tipo": tipo, "texto": SUGERENCIAS[tipo]}
+    texto = SUGERENCIAS[tipo]
+    if config.get("modo") == "web":
+        texto = texto.replace("(con /ajustar)", "(desde Ajustes)")
+    return {"tipo": tipo, "texto": texto}
 
 
 def rolling_mean(valores: list, ventana: int = 7, minimo: int = 3) -> list:
@@ -688,7 +696,7 @@ def deriva(serie: list, fila: dict, zonas=None) -> dict:
 def deriva_de(activity: dict, details: dict, zonas=None) -> dict:
     """deriva() de una actividad, con su serie guardada y el % de trote de sus tramos."""
     rw = run_walk(activity, details) or {}
-    return deriva((details.get(str(activity.get("activityId"))) or {}).get("serie") or [],
+    return deriva((details.get(str(id_de(activity))) or {}).get("serie") or [],
                   {"minutos": (activity.get("duration") or 0) / 60, "pct_trote": rw.get("pct_trote")}, zonas)
 
 
@@ -852,7 +860,8 @@ def es_carrera(activity: dict, config: dict) -> bool:
         return False
     if (activity.get("eventType") or {}).get("typeKey") == "race":
         return True
-    if _NOMBRE_CARRERA.search(_sin_acentos(activity.get("activityName") or "")):
+    if activity.get("es_carrera") or (   # el paquete de la web trae `es_carrera` calculado y no el nombre
+            "es_carrera" not in activity and _NOMBRE_CARRERA.search(_sin_acentos(activity.get("activityName") or ""))):
         return True
     return activity["startTimeLocal"][:10] in config.get("carreras", [])
 
@@ -884,7 +893,7 @@ def stats_carrera(activity: dict, details: dict, config: dict) -> dict:
     km = (activity.get("distance") or 0) / 1000
     seg = activity.get("duration") or 0
     zm = zone_minutes(activity)
-    det = details.get(str(activity.get("activityId"))) or {}
+    det = details.get(str(id_de(activity))) or {}
     rapido = activity.get("fastestSplit_1000")
     out = {"fecha": day_of(activity).isoformat(), "distancia_km": round(km, 2), "tiempo_s": round(seg),
            "ritmo_s": round(seg / km) if km else None,

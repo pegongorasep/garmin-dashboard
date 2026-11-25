@@ -24,8 +24,9 @@ def load(path: Path, default=None):
     return json.loads(path.read_text()) if path.exists() else default
 
 
-def load_data() -> dict:
-    d = USER_DIR / "data"
+def load_data(user_dir=None) -> dict:
+    user_dir = Path(user_dir) if user_dir else USER_DIR
+    d = user_dir / "data"
     daily = load(d / "daily.json", {})
     return {
         "daily_summaries": daily.get("daily_summaries", []),
@@ -36,12 +37,12 @@ def load_data() -> dict:
         "hr_zones": load(d / "hr_zones.json", []),
         "meta": load(d / "meta.json", {}),
         "historial": load(d / "historial_corridas.json"),
-        "inbody": load(USER_DIR / "plan" / "inbody.json"),
+        "inbody": load(user_dir / "plan" / "inbody.json"),
     }
 
 
-def load_plan() -> dict:
-    plan = USER_DIR / "plan" / "plan.json"
+def load_plan(user_dir=None) -> dict:
+    plan = (Path(user_dir) if user_dir else USER_DIR) / "plan" / "plan.json"
     return load(plan if plan.exists() else ROOT / "plan" / "plan.example.json")
 
 
@@ -278,7 +279,7 @@ def last_run(data: dict, config: dict, plan: dict):
 
 def registro_esfuerzo(a: dict, details: dict, config: dict) -> dict:
     """Esfuerzo calculado con la FC y el RPE manual (si lo hay) de una actividad: se publican los dos."""
-    return {"esfuerzo": m.esfuerzo_de(a, details, config), "rpe": (details.get(str(a["activityId"])) or {}).get("rpe")}
+    return {"esfuerzo": m.esfuerzo_de(a, details, config), "rpe": (details.get(str(m.id_de(a))) or {}).get("rpe")}
 
 
 def datos_serie(a: dict, data: dict, config: dict) -> dict:
@@ -327,7 +328,7 @@ def otras_del_dia(d: date, data: dict, config: dict) -> list:
         if not acts:
             continue
         esf = [e for a in acts if (e := m.esfuerzo_de(a, data["details"], config)) is not None]
-        rpes = [r for a in acts if (r := (data["details"].get(str(a["activityId"])) or {}).get("rpe")) is not None]
+        rpes = [r for a in acts if (r := (data["details"].get(str(m.id_de(a))) or {}).get("rpe")) is not None]
         out.append({"cat": c["id"], "icono": c.get("icono", "punto"), "esfuerzo": max(esf) if esf else None,
                     "rpe": max(rpes) if rpes else None, "minutos": r1(sum(a["duration"] for a in acts) / 60)})
     return out
@@ -430,9 +431,9 @@ def prueba_resultado(data: dict, config: dict, plan: dict):
     a = next(a for a in data["activities"] if m.classify(a, config) == "run"
              and m.day_of(a).isoformat() == e["fecha"] and a["duration"] / 60 == e["minutos"])
     fila = m.run_rows([a], data["details"], config)[0]
-    serie = (data["details"].get(str(a["activityId"])) or {}).get("serie") or []
+    serie = (data["details"].get(str(m.id_de(a))) or {}).get("serie") or []
     medido = m.valor_prueba(ses["prueba"], serie, fila["pct_trote"])
-    km = (data["details"].get(str(a["activityId"])) or {}).get("ritmos_km") or []
+    km = (data["details"].get(str(m.id_de(a))) or {}).get("ritmos_km") or []
     if medido is None and ses["prueba"] == "5k" and len(km) >= 5:   # sin serie, el ritmo por km de una carrera sirve
         medido = {"valor": sum(km[:5]), "km": 5.0}
     previas = [p for p in config.get("pruebas", []) if p["tipo"] == ses["prueba"] and p["fecha"] < e["fecha"]]
@@ -743,12 +744,14 @@ def build_ui(config: dict, plan: dict) -> dict:
                       + " (sábado o domingo)")
     if config["dias_pierna"]:
         partes.append("Día de pierna: " + lista_es([DIAS_LARGO[d] for d in config["dias_pierna"]]))
-    repo = os.environ.get("GITHUB_REPOSITORY")
+    repo = os.environ.get("GITHUB_REPOSITORY") if config.get("modo") != "web" else None   # en la web la liga la pone quien llama
+    acciones = config.get("acciones_url") or (f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None)
     return {
         "titulo": config["titulo"],
         "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase", "icono")} for c in cats],
         "nombre_intensa": nombre,
-        "acciones_url": f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None,
+        "acciones_url": acciones,
+        "menu": [{"texto": i["texto"], "url": i["url"]} for i in config.get("menu") or []],   # solo en la web: [{texto, url relativa}]
         "textos": {
             "semana": ". ".join(partes) + ".",
             "descarga": "Las semanas de descarga (línea punteada) bajan la carga" + ("." if config["caminatas"] else ": todo continuo en Z2."),
@@ -756,7 +759,8 @@ def build_ui(config: dict, plan: dict) -> dict:
             "fcmax_vacia": (f"Aún no hay clases de {nombre} medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva."
                             if nombre else "Aún no hay sesiones intensas medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva.")
             if config["fc_max_correa_desde"] else
-            "Sin fecha de correa en la configuración: la FC máx sale del reloj. Si usas correa en tus sesiones intensas, agrega la fecha (fc_max_correa_desde) en config.yaml.",
+            "Sin fecha de correa en la configuración: la FC máx sale del reloj. Si usas correa en tus sesiones intensas, agrega la fecha (fc_max_correa_desde) en "
+            + ("Ajustes." if config.get("modo") == "web" else "config.yaml."),
         },
     }
 
@@ -798,7 +802,8 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     elif plan_terminado(hoy, config, plan):   # pasó la última semana: resultado de la prueba y a pedir el siguiente bloque
         tarjeta = {**tarjeta, "tipo": "plan_terminado", "texto": "Plan terminado", "version": None, "sesion_id": None,
                    "prueba": prueba_resultado(data, config, plan),
-                   "siguiente": "Corre /ajustar para el siguiente bloque"}
+                   "siguiente": ("Ve a Ajustes para el siguiente bloque" if config.get("modo") == "web"
+                                 else "Corre /ajustar para el siguiente bloque")}
     ayer_dato = m.ayer_duro(hoy, data["activities"], data["details"], config)
     tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None
 

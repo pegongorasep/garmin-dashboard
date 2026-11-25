@@ -110,15 +110,25 @@ def _pruebas(brutas: list) -> list:
     return sorted(out, key=lambda x: x["fecha"])
 
 
-def cargar_config(user_dir=None) -> dict:
-    """Config plana lista para build/metrics/garmin_connect. Truena con ConfigError si falta algo."""
-    user_dir = Path(user_dir) if user_dir else USER_DIR
-    ruta = user_dir if user_dir.is_file() else user_dir / "config.yaml"   # acepta el archivo o su carpeta
+def leer_config_yaml(ruta) -> dict:
+    """config.yaml crudo (sin validar ni completar). `ruta` puede ser el archivo o su carpeta.
+    Es el mismo formato que la web guarda en la tabla `ajustes`."""
+    ruta = Path(ruta) if ruta else USER_DIR
+    ruta = ruta if ruta.is_file() else ruta / "config.yaml"   # acepta el archivo o su carpeta
     if not ruta.exists():
         raise ConfigError(f"No existe {ruta}. Corre /setup en Claude Code para crearlo "
                           "(o copia config.example.yaml como config.yaml).")
+    return _leer_yaml(ruta)
+
+
+def normalizar_config(crudo: dict) -> dict:
+    """Config plana lista para build/metrics/garmin_connect a partir del dict crudo. Truena con ConfigError.
+    Clave opcional `modo` ("pages" por defecto, "web" en la web): la pone quien llama, no se escribe en config.yaml."""
     defaults = _leer_yaml(Path(__file__).parent / "defaults.yaml")
-    cfg = _leer_yaml(ruta)
+    cfg = crudo or {}
+    modo = cfg.get("modo") or "pages"
+    if modo not in ("pages", "web"):
+        raise ConfigError(f"modo '{modo}' no válido; usa: pages, web")
     perfil, corrida = cfg.get("perfil") or {}, cfg.get("corrida") or {}
     act = cfg.get("actividades") or {}
 
@@ -156,6 +166,7 @@ def cargar_config(user_dir=None) -> dict:
     umbrales = {**defaults["umbrales"], **(cfg.get("umbrales") or {})}
     desde = perfil.get("fc_max_correa_desde")
     return {
+        "modo": modo,
         **umbrales,
         "titulo": perfil.get("titulo") or "Mi entreno",
         "timezone": tz, "edad": edad,
@@ -170,3 +181,15 @@ def cargar_config(user_dir=None) -> dict:
         "inbody": bool(cfg.get("inbody", True)),
         "tipos_con_detalle": umbrales["run_types"] + [t for c in categorias for t in c["tipos"]],
     }
+
+
+def cargar_config(user_dir=None) -> dict:
+    """Config plana lista para build/metrics/garmin_connect. Truena con ConfigError si falta algo."""
+    return normalizar_config(leer_config_yaml(user_dir))
+
+
+def config_por_defecto() -> dict:
+    """Config con solo valores por defecto, para quien no tiene config.yaml (repos nuevos que solo son tubo de datos:
+    garmin_connect.py solo necesita los tipos de actividad)."""
+    return normalizar_config({"perfil": {"zona_horaria": "America/Merida", "fc_max": 190},
+                              "corrida": {"inicio": "2026-01-05"}})

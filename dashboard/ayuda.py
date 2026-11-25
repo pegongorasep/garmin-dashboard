@@ -120,7 +120,8 @@ def _prueba(c: dict, plan: dict, fc_ref: int):
     return {"titulo": "La prueba de la última semana", "parrafos": [
         f"En la última semana de tu plan (la {semanas[-1]['n']}) una sesión se cambia por una prueba para medir tu mejora: {como.format(fc_ref=fc_ref)}",
         "Se compara con " + ("tu prueba anterior" if previa else PRUEBA_BASE[tipo] + " y, después, con tu prueba anterior")
-        + ". Al terminar el plan, Hoy muestra el resultado y te dice que corras /ajustar para el siguiente bloque."], "lista": []}
+        + ". Al terminar el plan, Hoy muestra el resultado y te dice que "
+        + ("vayas a Ajustes" if c.get("modo") == "web" else "corras /ajustar") + " para el siguiente bloque."], "lista": []}
 
 
 def _mejora(c: dict, fc_ref: int) -> dict:

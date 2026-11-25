@@ -3,6 +3,7 @@
 Auth: POST con 'Authorization: ApiKey <key>' devuelve un JWT en texto plano
 (vive 24h, sin refresh); el resto de llamadas usan 'Authorization: Bearer <jwt>'.
 """
+import argparse
 import json
 import os
 import sys
@@ -14,7 +15,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent / "dashboard"))
 import metrics  # noqa: E402
-from ajustes import USER_DIR, cargar_config  # noqa: E402
+from ajustes import USER_DIR, ConfigError, cargar_config, config_por_defecto  # noqa: E402
 
 load_dotenv(USER_DIR / ".env")
 load_dotenv(Path(__file__).parent / ".env")
@@ -22,7 +23,12 @@ load_dotenv(Path(__file__).parent / ".env")
 BASE_URL = "https://personal.connectapi.garmin.com"
 TOKEN_URL = f"{BASE_URL}/personalapitoken-service/personal-api/personal-api-key/token"
 DATA_DIR = USER_DIR / "data"
-CONFIG = cargar_config()
+try:
+    CONFIG = cargar_config()
+except ConfigError:
+    if (USER_DIR / "config.yaml").exists():   # existe pero está mal: que truene como siempre
+        raise
+    CONFIG = config_por_defecto()   # repo nuevo que solo es tubo de datos: no hay config.yaml
 RUN_TYPES = CONFIG["run_types"]
 CROSSFIT_TYPES = [t for t in CONFIG["tipos_con_detalle"] if t not in RUN_TYPES]
 
@@ -95,21 +101,21 @@ def pull_activities(c: Client, since: date) -> list:
     return [a for a in activities if a["startTimeLocal"][:10] >= since.isoformat()]
 
 
-def pull_historial(c: Client) -> list:
-    """Todas las corridas de la cuenta (sin límite de fecha), solo con lo necesario para las mejores marcas.
-    Sin nombres, IDs ni GPS. Pagina la lista de actividades hasta el final."""
+def pull_historial(c: Client, desde: str | None = None) -> list:
+    """Corridas de la cuenta (todas, o las de `desde` AAAA-MM-DD en adelante), solo con lo necesario para las mejores
+    marcas. Sin nombres, IDs ni GPS. Pagina la lista de actividades hasta el final (o hasta pasar de `desde`)."""
     corridas, start, page = [], 0, 100
     while True:
         batch = c.get("/activitylist-service/activities/search/activities", {"start": start, "limit": page}) or []
         for a in batch:
             tipo = (a.get("activityType") or {}).get("typeKey")
-            if tipo not in RUN_TYPES:
+            if tipo not in RUN_TYPES or (desde and a["startTimeLocal"][:10] < desde):
                 continue
             corridas.append({"startTimeLocal": a["startTimeLocal"], "activityType": {"typeKey": tipo},
                              "distance": a.get("distance"), "duration": a.get("duration"),
                              "eventType": {"typeKey": (a.get("eventType") or {}).get("typeKey")},
                              **{k: v for k, v in a.items() if k.startswith("fastestSplit_")}})
-        if len(batch) < page:
+        if len(batch) < page or (desde and batch and batch[-1]["startTimeLocal"][:10] < desde):
             return corridas
         start += page
 
@@ -166,17 +172,25 @@ def pull_activity_details(c: Client, activities: list) -> dict:
     return out
 
 
-def main() -> None:
-    health_weeks = int(sys.argv[1]) if len(sys.argv) > 1 else 16
-    activity_days = int(sys.argv[2]) if len(sys.argv) > 2 else 120
+def main(argv=None, cliente=None) -> None:
+    ap = argparse.ArgumentParser(description="Baja los datos de Garmin a data/")
+    ap.add_argument("semanas_salud", nargs="?", type=int, default=16, help="semanas de salud (por defecto 16)")
+    ap.add_argument("dias_posicional", nargs="?", type=int, help="días de actividades (igual que --dias-actividades)")
+    ap.add_argument("--dias-actividades", type=int, help="días de actividades (por defecto 120)")
+    ap.add_argument("--historial-desde", metavar="AAAA-MM-DD", help="solo las corridas del historial desde esta fecha")
+    args = ap.parse_args(argv)
+    health_weeks = args.semanas_salud
+    activity_days = args.dias_actividades or args.dias_posicional or 120
+    if args.historial_desde:
+        date.fromisoformat(args.historial_desde)   # falla claro si no es fecha
 
     today = date.today()
-    c = Client(get_access_token())
+    c = cliente or Client(get_access_token())
     DATA_DIR.mkdir(exist_ok=True)
 
     activities = pull_activities(c, today - timedelta(days=activity_days))
     details = pull_activity_details(c, activities)
-    historial = pull_historial(c)
+    historial = pull_historial(c, args.historial_desde)
     (DATA_DIR / "historial_corridas.json").write_text(json.dumps(historial, indent=1))
     datasets = {
         "daily": pull_daily(c, today - timedelta(weeks=health_weeks), today),
