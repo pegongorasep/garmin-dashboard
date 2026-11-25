@@ -54,9 +54,12 @@ Dale estos pasos, uno por uno, y espera a que confirme:
 1. "Entra a Garmin Connect en la web (con tu cuenta) y abre https://connect.garmin.com/app/settings/personalApiToken"
 2. "Toca **Create Key**, acepta los términos y elige **la expiración más larga** que te deje."
 3. "Toca **Create** y copia la key (solo se muestra una vez). **No la pegues en el chat.** Toca **Done**."
-4. "Ahora escribe aquí `! gh secret set PERSONAL_API_KEY` y, cuando te pida el valor, pega la key y da Enter."
+4. Con la key todavía copiada: "Escribe aquí `! pbpaste | gh secret set PERSONAL_API_KEY` y da Enter" (Mac). En
+   Windows: `! powershell -c "Get-Clipboard | gh secret set PERSONAL_API_KEY"`. Nunca `! gh secret set` solo: el `!`
+   no deja escribir y guardaría la key vacía.
 
-Revisa con `gh secret list` que aparezca `PERSONAL_API_KEY` (sin valor: GitHub no lo muestra). Pregunta qué
+Revisa con `gh secret list` que aparezca `PERSONAL_API_KEY` (sin valor: GitHub no lo muestra). La prueba real es la
+primera publicación (paso 7): si dice "Garmin rechazó la key", la key se copió mal; que la copie otra vez y repita. Pregunta qué
 expiración eligió y dile: "Cuando expire, la página deja de actualizarse; crea otra igual y dime 'mi key expiró'."
 Si pegó la key en el chat, dile que la borre en esa misma página de Garmin y cree otra.
 

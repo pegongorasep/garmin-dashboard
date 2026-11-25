@@ -27,14 +27,15 @@ El código (el "motor") NO vive aquí: está en `pegongorasep/garmin-dashboard`,
 
 Mira el último run: `gh run list -L 3` y `gh run view <id> --log-failed`. Si dice "Garmin rechazó la key" (o "mi key
 expiró"), la key venció: que cree otra en https://connect.garmin.com/app/settings/personalApiToken (**Create Key**,
-la expiración más larga, copiarla) y la guarde con `! gh secret set PERSONAL_API_KEY`. Luego `gh workflow run
+la expiración más larga, copiarla) y la guarde desde el portapapeles (ver regla 1 de seguridad). Luego `gh workflow run
 deploy.yml` y `gh run watch`. Si es otro error, explícalo en palabras simples.
 
 ## Reglas de seguridad (siempre)
 
-1. **La key de Garmin nunca va en el chat.** La persona la escribe ella misma con `! gh secret set PERSONAL_API_KEY`
-   (el `!` ejecuta el comando en su terminal y GitHub se la pide ahí). Si la pega en la conversación, dile que la
-   cambie en Garmin Connect.
+1. **La key de Garmin nunca va en el chat.** La persona la copia y la guarda desde el portapapeles:
+   `! pbpaste | gh secret set PERSONAL_API_KEY` en Mac, `! powershell -c "Get-Clipboard | gh secret set PERSONAL_API_KEY"`
+   en Windows (el `!` no deja escribir: un `gh secret set` solo guardaría la key vacía). Si la pega en la
+   conversación, dile que la borre en Garmin Connect y cree otra.
 2. **Nunca leas, imprimas ni copies `.env`** (si existe).
 3. **No publiques GPS, IDs de Garmin ni nombres de actividades.** El sitio solo muestra números agregados; no
    agregues campos nuevos al `data.json`.
