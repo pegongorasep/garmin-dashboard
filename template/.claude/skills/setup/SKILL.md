@@ -53,13 +53,19 @@ llenas `plan/inbody.json` con el formato de `plan/inbody.json` del motor, `.moto
 Dale estos pasos, uno por uno, y espera a que confirme:
 1. "Entra a Garmin Connect en la web (con tu cuenta) y abre https://connect.garmin.com/app/settings/personalApiToken"
 2. "Toca **Create Key**, acepta los términos y elige **la expiración más larga** que te deje."
-3. "Toca **Create** y copia la key (solo se muestra una vez). **No la pegues en el chat.** Toca **Done**."
-4. Con la key todavía copiada: "Escribe aquí `! pbpaste | gh secret set PERSONAL_API_KEY` y da Enter" (Mac). En
-   Windows: `! powershell -c "Get-Clipboard | gh secret set PERSONAL_API_KEY"`. Nunca `! gh secret set` solo: el `!`
-   no deja escribir y guardaría la key vacía.
+3. "Toca **Create**, toca el botón de copiar la key (solo se muestra una vez) y **no copies nada más** hasta que
+   te diga. **No la pegues en el chat.** Escríbeme *listo*."
+4. Cuando diga *listo*, **tú** corres el comando (la persona no escribe nada): lee el portapapeles y lo manda directo a
+   GitHub, sin mostrarlo. Primero revisa que parezca una key (solo el código de salida, sin imprimirla):
+   - Mac: `pbpaste | grep -qE '^GCDC_' && pbpaste | gh secret set PERSONAL_API_KEY`
+   - Windows (PowerShell): `$k = Get-Clipboard; if ($k -like 'GCDC_*') { $k | gh secret set PERSONAL_API_KEY }`
+   Si no empieza con `GCDC_`, lo copiado no es la key: pídele que la copie otra vez en Garmin (si ya cerró la
+   ventana, que cree otra). Nunca imprimas el portapapeles ni le pidas que escriba `! gh secret set` (el `!` no deja
+   escribir y guardaría la key vacía).
 
 Revisa con `gh secret list` que aparezca `PERSONAL_API_KEY` (sin valor: GitHub no lo muestra). La prueba real es la
-primera publicación (paso 7): si dice "Garmin rechazó la key", la key se copió mal; que la copie otra vez y repita. Pregunta qué
+primera publicación (paso 7): si dice "Garmin rechazó la key", la key se copió mal; que la copie otra vez y repita.
+Dile que ya puede copiar otras cosas. Pregunta qué
 expiración eligió y dile: "Cuando expire, la página deja de actualizarse; crea otra igual y dime 'mi key expiró'."
 Si pegó la key en el chat, dile que la borre en esa misma página de Garmin y cree otra.
 

@@ -13,8 +13,8 @@ tu nivel. Se actualiza sola 3 veces al día. No necesitas saber programar: Claud
    > https://github.com/pegongorasep/garmin-dashboard-template
 
 Claude instala lo que falte, crea tu repo, te pregunta cómo entrenas, arma tu plan y publica tu página. Solo dos
-cosas las haces tú: entrar a GitHub en el navegador cuando te lo pida y copiar tu key de Garmin; Claude te da un
-comando que la guarda desde lo que copiaste (nunca la pegues en el chat).
+cosas las haces tú: entrar a GitHub en el navegador cuando te lo pida y copiar tu key de Garmin y escribir *listo*:
+Claude la guarda desde lo que copiaste (nunca la pegues en el chat).
 
 Tu página queda en `https://tu-usuario.github.io/mi-entreno/`. Después: `/ajustar` para cambiar tu plan o tus
 actividades, y `/revision` cada semana para revisar cómo vas.
