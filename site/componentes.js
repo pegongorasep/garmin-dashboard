@@ -67,6 +67,9 @@ const DS = (() => {
       onEntendido ? h("div", { class: "aviso-acc" }, boton(T("sitio.aviso.entendido"), { variante: "texto", chico: true, onclick: onEntendido })) : null);
 
   /** Aviso del coach (cuando ves a otra persona). Recibe el nombre. */
+  /** Línea discreta «Hay una versión nueva · Actualizar» (fija arriba; el real lo arma actualizar.js con el mismo marcado). */
+  const avisoVersion = ({ alPulsar = () => {}, estatico = false } = {}) => h("div", { class: "aviso-version" + (estatico ? " estatico" : ""), role: "status" },
+    h("span", {}, T("sitio.version_nueva"), " · "), h("button", { type: "button", class: "boton texto chico", onclick: alPulsar }, T("sitio.version_actualizar")));
   const avisoCoach = (nombre) => h("p", { class: "coach-aviso" }, insignia("warn", "!"), h("span", {}, T("sitio.ds.viendo"), h("b", {}, nombre), T("sitio.ds.como_coach")));
 
   /** Confirmación antes de borrar o perder datos. Recibe { titulo, texto, lista:[], nota, confirmar, cancelar, onConfirmar, onCancelar }. */
@@ -471,7 +474,7 @@ const DS = (() => {
   const graficaBarras = (cfg) => conAncho((ancho) => barChart({ ...cfg, ancho }));
 
   return {
-    ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoCoach, confirmacion, bannerCambio, filaHistorial,
+    ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,

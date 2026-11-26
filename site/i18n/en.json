@@ -534,6 +534,8 @@
 "sitio.ver_detalle": "See details",
 "sitio.ver_pasos": "See steps",
 "sitio.ver_tabla": "View as table",
+"sitio.version_actualizar": "Update",
+"sitio.version_nueva": "A new version is available",
 "sitio.version_suave": "Easy version ({min} min)",
 "sitio.vol.camina": "Walk",
 "sitio.vol.cols": "Week,Min,Plan,Km,Jog,Walk",

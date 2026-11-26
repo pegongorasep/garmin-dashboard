@@ -27,7 +27,7 @@ SITE = ROOT / "site"
 # Archivos del sitio que se sirven tal cual. `data.json` NO está aquí a propósito: sale de /data.json, por usuario.
 # `catalogo.html` tampoco está aquí: solo sale por /diseno, para el admin.
 ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "charts.js": "text/javascript",
-                  "iconos.js": "text/javascript", "componentes.js": "text/javascript", "vistas.js": "text/javascript",
+                  "iconos.js": "text/javascript", "componentes.js": "text/javascript", "actualizar.js": "text/javascript", "vistas.js": "text/javascript",
                   "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css",
                   "sw.js": "text/javascript", "manifest.webmanifest": "application/manifest+json",
                   "icono-192.png": "image/png", "icono-512.png": "image/png", "icono-maskable-512.png": "image/png",
@@ -37,7 +37,7 @@ def pie_sitio(idioma: str) -> str:
     """Pie y registro del service worker que la web agrega al sitio, en el idioma de quien lo ve."""
     return (f'<footer class="pie"><p>{i18n.t("pie.consejo", idioma)}</p>'
             f'<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p></footer>'
-            '<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});</script>')
+            f'<script src="/actualizar.js" data-texto="{i18n.t("sitio.version_nueva", idioma)}" data-accion="{i18n.t("sitio.version_actualizar", idioma)}"></script>')
 
 
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "

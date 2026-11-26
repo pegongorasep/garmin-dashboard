@@ -26,7 +26,7 @@
 {% block contenido %}{% endblock %}
 </main>
 <div class="caja {% block clase_pie %}{% endblock %}">{{ pie(t) }}</div>
-<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});</script>
+<script src="/actualizar.js" data-texto="{{ t('sitio.version_nueva') }}" data-accion="{{ t('sitio.version_actualizar') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

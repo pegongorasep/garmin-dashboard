@@ -1,13 +1,14 @@
 /* Service worker mínimo: guarda lo estático; data.json y los textos (i18n/*.json) primero de la red y, sin red, la última copia.
    Nunca toca POST ni /api, /oauth, /mcp, /admin, ni las páginas (llevan datos de la sesión). */
-const VERSION = "v32";
+const VERSION = "v33";
 const ESTATICOS = ["/tokens.css", "/componentes.css", "/styles.css", "/base.js", "/app.js", "/charts.js", "/iconos.js",
-  "/componentes.js", "/vistas.js", "/i18n/es.json", "/i18n/en.json", "/fuentes/Lexend-latin.woff2", "/icono-192.png", "/icono-512.png"];
+  "/componentes.js", "/actualizar.js", "/vistas.js", "/i18n/es.json", "/i18n/en.json", "/fuentes/Lexend-latin.woff2", "/icono-192.png", "/icono-512.png"];
 const PROHIBIDO = /^\/(api|oauth|mcp|admin)(\/|$)/;
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => Promise.allSettled(ESTATICOS.map((u) => c.add(u)))).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then((c) => Promise.allSettled(ESTATICOS.map((u) => c.add(u)))).then(() => { /* sin skipWaiting: la versión nueva espera a que la persona toque «Actualizar» */ }));
 });
+self.addEventListener("message", (e) => { if (e.data === "SKIP_WAITING") self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });

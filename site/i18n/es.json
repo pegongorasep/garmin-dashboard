@@ -534,6 +534,8 @@
 "sitio.ver_detalle": "Ver detalle",
 "sitio.ver_pasos": "Ver pasos",
 "sitio.ver_tabla": "Ver como tabla",
+"sitio.version_actualizar": "Actualizar",
+"sitio.version_nueva": "Hay una versión nueva",
 "sitio.version_suave": "Versión suave ({min} min)",
 "sitio.vol.camina": "Caminata",
 "sitio.vol.cols": "Semana,Min,Plan,Km,Trote,Caminata",
