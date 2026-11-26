@@ -142,7 +142,8 @@ def test_carrera_en_domingo_marca_la_semana_como_carrera():
     from dashboard import build
     c = plan_vivo.agregar_carrera(CONFIG, fecha_semana(6, 6), 10, "Mi 10K")
     p = plan_vivo.plan_efectivo(plan_base(), cfg_de(c))
-    assert build.convert_week(p["weeks"][5], [])["etiqueta"] == "carrera"
+    assert build.convert_week(p["weeks"][5], [])["etiqueta"] == "descarga"
+    assert build.marca_semana(p["weeks"][5], None, {}) == "carrera"
 
 def semanas_distintas(a, b):
     return [x["n"] for x, y in zip(a["weeks"], b["weeks"]) if x != y]

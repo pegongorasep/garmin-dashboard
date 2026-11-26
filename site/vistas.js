@@ -179,12 +179,24 @@ function tarjetaDoceSemanas(d) {
     if (!del.length) continue;
     linea.append(h("div", { class: "bloque" }, h("div", { class: "nota" }, T("sitio.plan.bloque", { n: bloque })),
       h("div", { class: "semanas" }, del.map((x) =>
-        h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""}`,
+        h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""} ${x.marca === "carrera" ? "carrera" : ""}`,
           "aria-pressed": x.n === planSel ? "true" : "false",
-          "aria-label": T("sitio.plan.aria", { n: x.n, e: etiquetaSemana(x), act: x.n === actual ? T("sitio.plan.act_aria") : "" }),
+          "aria-label": T("sitio.plan.aria", { n: x.n, e: etiquetaSemana(x), act: (x.n === actual ? T("sitio.plan.act_aria") : "") + (x.progreso ? T("sitio.plan.prog_aria", { h: x.progreso.hechas, t: x.progreso.total }) : "") }),
           onclick: () => { planSel = x.n; c.replaceWith(tarjetaDoceSemanas(d)); } },
-          h("strong", {}, x.n), h("span", { class: "con-ico" }, x.etiqueta === "carrera" ? DS.ico("medalla") : x.etiqueta === "viaje" ? DS.ico("avion") : null, etiquetaSemana(x)), x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null)))));
+          x.marca ? h("span", { class: "sem-ev", title: T(`sitio.plan.et_${x.marca}`) }, DS.ico(ICONO_MARCA[x.marca])) : null,
+          x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null,
+          h("strong", {}, x.n), h("span", {}, tipoSemana(x.etiqueta || x.kind)),
+          h("span", { class: "sem-prog" }, x.progreso ? `${x.progreso.hechas}/${x.progreso.total}` : "—"),
+          h("span", { class: `sem-barra ${x.progreso && x.progreso.total && x.progreso.hechas >= x.progreso.total ? "completa" : ""}`, "aria-hidden": "true" },
+            h("i", { style: `width:${x.progreso && x.progreso.total ? Math.round(100 * x.progreso.hechas / x.progreso.total) : 0}%` })))))));
   }
+  const ley = (...n) => h("span", {}, ...n);
+  linea.append(h("div", { class: "leyenda" },
+    ley(h("i", { class: "sw-carga", "aria-hidden": "true" }), T("sitio.plan.ley_carga")),
+    ley(h("i", { class: "sw-desc", "aria-hidden": "true" }), T("sitio.plan.ley_desc")),
+    ley(h("i", { class: "sw-anillo", "aria-hidden": "true" }), T("sitio.plan.ley_anillo")),
+    ...Object.keys(ICONO_MARCA).map((k) => ley(DS.ico(ICONO_MARCA[k]), T(`sitio.plan.et_${k}`))),
+    ley(T("sitio.plan.ley_prog"))));
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,
     h("p", { class: "nota" }, T("sitio.plan.nota", { d: ui().textos.descarga || T("sitio.plan.descarga_nota") })),
@@ -200,8 +212,9 @@ function tarjetaDoceSemanas(d) {
 
 const nombreEvento = (t) => (["viaje", "enfermedad", "lesion", "carrera"].includes(t) ? T(`sitio.ev.${t}`) : t);
 const tipoSemana = (k) => (k === "descarga" || k === "carga" ? T(`sitio.plan.${k}`) : k);
-/** `etiqueta` es un id (carrera, viaje, descarga, carga): el texto sale del catálogo. */
-const etiquetaSemana = (x) => { const e = x.etiqueta || x.kind; return e === "carrera" || e === "viaje" ? T(`sitio.plan.et_${e}`) : tipoSemana(e); };
+/** `etiqueta` es carga o descarga; `marca` (carrera, viaje, enfermedad, prueba) pone el ícono de la esquina: los textos salen del catálogo. */
+const etiquetaSemana = (x) => tipoSemana(x.etiqueta || x.kind) + (x.marca ? `, ${T(`sitio.plan.et_${x.marca}`)}` : "");
+const ICONO_MARCA = { carrera: "medalla", viaje: "avion", enfermedad: "termometro", prueba: "cronometro" };
 
 /** Viajes, enfermedades y carreras con fecha (plan.eventos, solo en la web); nada si no hay. */
 function listaEventos(eventos) {

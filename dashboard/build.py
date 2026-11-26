@@ -171,10 +171,48 @@ def convert_session(s: dict, zonas: list) -> dict:
 
 def convert_week(w: dict, zonas: list) -> dict:
     extra = {"evento": w["evento"]} if w.get("evento") else {}   # semana que un viaje o una carrera cambió (solo la web)
-    etiqueta = {"carrera": "carrera", "viaje": "viaje", "viaje_igual": "viaje"}.get(w.get("evento")) or (
-        "descarga" if w["kind"] == "descarga" else "carga")   # lo que dice la cuadrícula de 12 semanas
-    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "etiqueta": etiqueta, "focus": plan_i18n.focus(w["focus"]), **extra,
+    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "etiqueta": w["kind"] if w["kind"] == "descarga" else "carga",
+            "focus": plan_i18n.focus(w["focus"]), **extra,
             "sessions": [convert_session(s, zonas) for s in w["sessions"]]}
+
+
+MARCAS_SEMANA = ("carrera", "viaje", "enfermedad", "prueba")   # por prioridad: la primera que aplica es el ícono de la esquina
+
+
+def marca_semana(w: dict, ini: date | None, config: dict):
+    """Evento de una semana del plan para el ícono del cuadrito (carrera, viaje, enfermedad, prueba) o None. Sale de
+    las fechas de `config` (metas, eventos) contra la semana `ini` (lunes), de `w["evento"]` (plan vivo) y de una sesión de prueba."""
+    hay = {"carrera" if w.get("evento") == "carrera" else "", "viaje" if w.get("evento") in ("viaje", "viaje_igual") else "",
+           "prueba" if any(s.get("tipo") == "prueba" for s in w["sessions"]) else ""}
+    if ini is not None:
+        fin = ini + timedelta(days=6)
+        cae = lambda desde, hasta: date.fromisoformat(str(desde)) <= fin and date.fromisoformat(str(hasta or desde)) >= ini
+        hay |= {"carrera" for x in config.get("metas") or [] if cae(x["fecha"], x["fecha"])}
+        hay |= {e["tipo"] if e["tipo"] != "lesion" else "enfermedad" for e in config.get("eventos") or []
+                if e["tipo"] in ("viaje", "enfermedad", "lesion") and cae(e["desde"], e["hasta"])}
+    return next((x for x in MARCAS_SEMANA if x in hay), None)
+
+
+def semanas_plan(plan: dict, zonas: list, hoy: date, data: dict, config: dict) -> list:
+    """Las semanas del plan para el Plan: `etiqueta` (carga/descarga), `marca` (evento del ícono) y `progreso`
+    {hechas, total} de las pasadas y la actual (lo que dice estado_sesiones; las futuras no traen la clave)."""
+    inicio = date.fromisoformat(config["plan_start"])
+    sec = m.secuencia_semanas(inicio, config.get("semanas_repetidas", []), config.get("plan_semanas", 12), config.get("pausas", []))
+    lunes = {}
+    for i, n in enumerate(sec):
+        if n is not None and (n not in lunes or monday(inicio) + timedelta(weeks=i) <= monday(hoy)):
+            lunes[n] = monday(inicio) + timedelta(weeks=i)   # una semana repetida: la última que ya empezó
+    out = []
+    for w in plan["weeks"]:
+        ini, cw = lunes.get(w["n"]), convert_week(w, zonas)
+        marca = marca_semana(w, ini, config)
+        if marca:
+            cw["marca"] = marca
+        if ini is not None and ini <= monday(hoy):
+            _, estado = week_assignment(ini, data, config, plan, hasta=min(ini + timedelta(days=6), hoy))
+            cw["progreso"] = {"hechas": sum(1 for e in estado if e["estado"] == "hecha"), "total": len(w["sessions"])}
+        out.append(cw)
+    return out
 
 
 # --- bloques del JSON ---
@@ -999,7 +1037,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         **({"semana_libre": build_semana_libre(hoy, data, config)} if config.get("sin_plan") else {}),
         "plan": {"inicio": plan["start"], "semana_actual": n, "semanas_repetidas": repetidas,
                  **eventos_plan(config),
-                 "semanas": [convert_week(w, zonas) for w in plan["weeks"]],
+                 "semanas": semanas_plan(plan, zonas, hoy, data, config),
                  "estado_sesiones": [{**e, "minutos": r1(e["minutos"]),
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
         "carreras": build_carreras(hoy, data, config),

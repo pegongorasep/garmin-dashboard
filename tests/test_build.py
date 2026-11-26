@@ -890,3 +890,25 @@ def test_pulso_en_detalle_sin_datos_del_dispositivo(salida):
     txt = json.dumps(salida) if isinstance(salida, dict) else str(salida)
     for prohibido in ("serialNumber", "antplusDeviceType", "softwareVersion", "sku", "manufacturer", "metadataDTO"):
         assert prohibido not in txt
+
+
+def test_semanas_plan_progreso_y_marca(salida):
+    sem = salida["plan"]["semanas"]
+    assert sem[0]["progreso"] == {"hechas": 1, "total": 3}      # semana 1 (pasada): la corrida del 28/10
+    assert sem[1]["progreso"]["total"] == 3 and 0 <= sem[1]["progreso"]["hechas"] <= 3   # la actual
+    assert all("progreso" not in w for w in sem[2:])           # futuras: sin clave
+    assert all(w["etiqueta"] in ("carga", "descarga") for w in sem)
+    assert sem[0].get("marca") is None
+
+
+def test_marca_semana_por_fechas_y_prioridad():
+    w = {"sessions": [{"tipo": "z2"}]}
+    lun = date(2026, 11, 2)
+    cfg = {"metas": [], "eventos": [{"tipo": "enfermedad", "desde": "2026-11-05", "hasta": "2026-11-06"}]}
+    assert build.marca_semana(w, lun, cfg) == "enfermedad"
+    cfg["eventos"].append({"tipo": "viaje", "desde": "2026-11-01", "hasta": "2026-11-03"})
+    assert build.marca_semana(w, lun, cfg) == "viaje"
+    cfg["metas"].append({"fecha": "2026-11-08", "nombre": "x", "distancia_km": 5})
+    assert build.marca_semana(w, lun, cfg) == "carrera"
+    assert build.marca_semana({"sessions": [{"tipo": "prueba"}]}, lun, {}) == "prueba"
+    assert build.marca_semana(w, date(2026, 12, 7), cfg) is None

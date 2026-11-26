@@ -108,6 +108,8 @@ def("Contenedores", "Fila de historial", "DS.filaHistorial()", "Un cambio del pl
 def("Contenedores", "Estado vacío", "DS.estadoVacio()", "Cuando todavía no hay datos.",
   DS.tarjeta({}, DS.estadoVacio({ icono: "correr", titulo: "Todavía no hay corridas", texto: "Cuando el reloj suba tu primera corrida, aquí vas a ver tu ritmo y tus zonas." })),
   DS.tarjeta({}, DS.estadoVacio({ icono: "plan", titulo: "No tienes plan todavía", texto: "Elige tu nivel y tus días y armamos tus semanas.", accion: { texto: "Armar mi plan", href: "#" } })));
+def("Contenedores", "Íconos de evento del Plan", "DS.ico()", "Esquina de cada cuadrito de semana: carrera, viaje, enfermedad y prueba.",
+  DS.tarjeta({}, h("div", { class: "leyenda" }, ["medalla", "avion", "termometro", "cronometro"].map((n) => h("span", {}, DS.ico(n), n)))));
 def("Contenedores", "Formulario", "DS.formulario()", "Grupos de campos con su título y botones.",
   DS.formulario({
     secciones: [
