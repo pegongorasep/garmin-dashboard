@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso, tarjeta %}
+{% block titulo %}Conexiones · Ahí la Llevas{% endblock %}
+{% block clase %}ancha{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1 class="pag-t">Conexiones</h1>
+{% if ok == "revocada" %}{% call aviso("ok") %}Listo: esa IA ya no tiene acceso.{% endcall %}{% endif %}
+<p>Las IAs que conectaste pueden ver y cambiar tu plan; todo queda en tu <a href="/historial">historial</a> y se puede deshacer.
+<a href="/ayuda/conector">Cómo conectar Claude o ChatGPT</a>.</p>
+{% if lista %}
+{% for c in lista %}
+{% call tarjeta(c.nombre) %}
+<p>Conectada el {{ c.creado.strftime("%d/%m/%Y") }}{% if c.ultimo_uso %} · último uso {{ c.ultimo_uso.strftime("%d/%m/%Y") }}{% endif %}</p>
+<form method="post" action="/conexiones/{{ c.id }}/revocar"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="acciones">{{ boton("Revocar", "sec", tipo="submit") }}</div></form>
+{% endcall %}
+{% endfor %}
+{% else %}
+<p>Todavía no conectas ninguna IA.</p>
+{% endif %}
+{% endblock %}

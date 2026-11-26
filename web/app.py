@@ -175,6 +175,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     plan_web.montar(app, get_db, actual, render, formulario, settings)
     coach.montar(app, get_db, actual, render, formulario, settings)
     oauth.montar(app, get_db, actual, render, formulario, settings)
+    oauth.montar_conexiones(app, get_db, actual, render, formulario, settings)
     mcp_servidor.montar(app, settings)
 
     # --- dashboard por usuario ---

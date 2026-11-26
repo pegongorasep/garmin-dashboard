@@ -6,6 +6,7 @@
   {{ boton("Cuerpo", "texto", chico=True, href=pref ~ "/cuerpo") }}
   {% if not pref %}{{ boton("Coach", "texto", chico=True, href="/coach") }}{% endif %}
   {{ boton("Historial", "texto", chico=True, href=pref ~ "/historial") }}
+  {% if not pref %}{{ boton("Conexiones", "texto", chico=True, href="/conexiones") }}{% endif %}
   {% if not pref and atleta and atleta.es_admin %}{{ boton("Sistema de diseño", "texto", chico=True, href="/diseno") }}{% endif %}
 </nav>
 {% if pref %}{% call aviso("warn") %}Estás editando a <strong>{{ atleta.apodo or atleta.correo }}</strong> como su coach.{% endcall %}{% endif %}

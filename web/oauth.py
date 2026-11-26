@@ -254,3 +254,27 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             salida, _ = _tokens_nuevos(db, t, ahora(), client_id=cid, usuario_id=t.usuario_id, resource=t.resource)
             return json_(salida)
         return error_token("unsupported_grant_type", "grant_type no soportado.")
+
+
+def conexiones_de(db: Session, usuario_id: int) -> list[dict]:
+    """Las IAs conectadas a la cuenta (una fila por conexión), para /conexiones."""
+    filas = db.execute(select(TokenOAuth, ClienteOAuth.nombre).join(ClienteOAuth, ClienteOAuth.client_id == TokenOAuth.client_id)
+                       .where(TokenOAuth.usuario_id == usuario_id).order_by(TokenOAuth.creado.desc())).all()
+    return [{"id": t.id, "nombre": n, "creado": t.creado, "ultimo_uso": t.ultimo_uso} for t, n in filas]
+
+
+def montar_conexiones(app, get_db, actual, render, formulario, settings) -> None:
+    @app.get("/conexiones")
+    def conexiones(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+        return render(request, "conexiones.html", atleta=usuario, pref="", lista=conexiones_de(db, usuario.id),
+                      ok=request.query_params.get("ok"))
+
+    @app.post("/conexiones/{token_id}/revocar")
+    async def revocar_conexion(request: Request, token_id: int, usuario=Depends(actual), db: Session = Depends(get_db)):
+        await formulario(request)
+        revocar(db, token_id, usuario.id)
+        return RedirectResponse("/conexiones?ok=revocada", 303)
+
+    @app.get("/ayuda/conector")
+    def ayuda_conector(request: Request, usuario=Depends(actual)):
+        return render(request, "conector.html", atleta=usuario, pref="", url_mcp=settings.base_url.rstrip("/") + "/mcp")

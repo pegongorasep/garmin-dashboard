@@ -53,9 +53,9 @@ def test_lecturas_propias_sin_serie_y_descripciones_en_espanol(web_ctx):
     with web_ctx.cliente() as cl:
         tools = cuerpo(rpc(cl, tok, "tools/list"))["result"]["tools"]
         nombres = {t["name"] for t in tools}
-        assert nombres == {"resumen_hoy", "semana", "plan", "corridas_recientes", "progreso", "ver_ajustes", "historial", "mis_atletas"}
+        assert nombres == {"resumen_hoy", "semana", "plan", "corridas_recientes", "progreso", "ver_ajustes", "historial", "mis_atletas"} | {"cambiar_ajustes", "agregar_carrera", "agregar_evento", "editar_sesion", "repetir_semana", "subir_escalon", "registrar_inbody", "deshacer"}
         assert all("dolor" in t["description"] and "médico" in t["description"] for t in tools)
-        for n in nombres:
+        for n in nombres - {"cambiar_ajustes", "agregar_carrera", "agregar_evento", "editar_sesion", "repetir_semana", "subir_escalon", "registrar_inbody", "deshacer"}:
             err, txt = llamar(cl, tok, n)
             assert not err, (n, txt)
             assert '"serie"' not in txt
@@ -117,3 +117,83 @@ def test_liga_no_redirige_fuera_con_cookie_manipulada(web_ctx):
         r = cl.post(f"/entrar/liga/{t}", data={"csrf": csrf})
         assert r.status_code == 303, r.text
         assert r.headers["location"] == ("/oauth/autorizar?x=1" if cookie.startswith("/oauth/") else "/")
+
+
+def _vias(web_ctx, uid):
+    from web.modelos import Cambio
+    with web_ctx.sesiones() as db:
+        return [(c.via, c.autor_id) for c in db.query(Cambio).filter(Cambio.atleta_id == uid).all()]
+
+
+def test_escrituras_registran_via_ia_y_se_deshacen(web_ctx):
+    from web import cambios
+    from web.modelos import Ajustes
+    uid, _ = listo(web_ctx, "a@x.com")
+    tok = token_para(web_ctx, uid)
+    with web_ctx.cliente() as cl:
+        err, txt = llamar(cl, tok, "agregar_evento", tipo="viaje", desde="2026-12-01", hasta="2026-12-05")
+        assert not err, txt
+        r = json.loads(txt)
+        assert "deshacer" in r["para_deshacer"]
+        with web_ctx.sesiones() as db:
+            ev = db.get(Ajustes, uid).config["corrida"]["eventos"]
+            assert ev[-1]["modo"] == "igual"
+        err, txt = llamar(cl, tok, "agregar_evento", tipo="viaje", desde="2026-12-10", hasta="2026-12-12", modo="pausa")
+        assert not err, txt
+        err, txt = llamar(cl, tok, "agregar_carrera", fecha="2027-01-10", nombre="10K", distancia_km=10)
+        assert not err, txt
+        err, txt = llamar(cl, tok, "registrar_inbody", fecha="2026-11-20", peso_kg=80, mme_kg=35, pgc=20)
+        assert not err, txt
+        err, txt = llamar(cl, tok, "cambiar_ajustes", intensidad="calidad", calidad_tipos=["tempo_z3"])
+        assert not err, txt
+        err, txt = llamar(cl, tok, "repetir_semana")
+        assert not err, txt
+        err, txt = llamar(cl, tok, "agregar_evento", tipo="viaje", desde="2026-12-01", hasta=None)
+        assert err and "regreso" in txt
+        err, txt = llamar(cl, tok, "agregar_carrera", fecha="2020-01-01")
+        assert err
+        err, txt = llamar(cl, tok, "agregar_evento", tipo="viaje", desde="2026-12-20", hasta="2026-12-22")
+        cid = json.loads(txt)["cambio_id"]
+        err, txt = llamar(cl, tok, "deshacer", cambio_id=cid)
+        assert not err, txt
+    vias = _vias(web_ctx, uid)
+    assert vias and all(v == ("ia", uid) for v in vias)
+    with web_ctx.sesiones() as db:
+        ev = db.get(Ajustes, uid).config["corrida"]["eventos"]
+        assert not any(e["desde"] == "2026-12-20" for e in ev)
+
+
+def test_ia_de_otro_no_escribe_y_coach_si(web_ctx):
+    a, _ = listo(web_ctx, "a@x.com")
+    b, _ = listo(web_ctx, "b@x.com")
+    c, _ = listo(web_ctx, "c@x.com")
+    with web_ctx.sesiones() as db:
+        db.add(Coach(atleta_id=b, coach_id=c))
+        db.commit()
+    ta, tc = token_para(web_ctx, a), token_para(web_ctx, c)
+    with web_ctx.cliente() as cl:
+        err, txt = llamar(cl, ta, "agregar_carrera", fecha="2027-02-01", atleta=b)
+        assert err and "No tienes acceso" in txt
+        err, txt = llamar(cl, tc, "agregar_carrera", fecha="2027-02-01", atleta=b)
+        assert not err, txt
+        err, txt = llamar(cl, ta, "deshacer", cambio_id=json.loads(txt)["cambio_id"])
+        assert err
+    assert _vias(web_ctx, b) == [("ia", c)]
+
+
+def test_conexiones_lista_revoca_y_el_token_revocado_da_401(web_ctx):
+    from test_web_cuentas import csrf_de
+    uid, cl = listo(web_ctx, "a@x.com")
+    tok = token_para(web_ctx, uid)
+    with web_ctx.sesiones() as db:
+        from web.modelos import ClienteOAuth
+        db.add(ClienteOAuth(client_id="c", nombre="Claude", redirect_uris=["https://claude.ai/cb"]))
+        db.commit()
+        tid = db.query(TokenOAuth).one().id
+    r = cl.get("/conexiones")
+    assert r.status_code == 200 and "Claude" in r.text and "Revocar" in r.text
+    assert "/ayuda/conector" in r.text and "/mcp" in cl.get("/ayuda/conector").text
+    r = cl.post(f"/conexiones/{tid}/revocar", data={"csrf": csrf_de(r.text)})
+    assert r.status_code == 303
+    with web_ctx.cliente() as c2:
+        assert rpc(c2, tok, "tools/list").status_code == 401

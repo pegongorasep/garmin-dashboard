@@ -5,14 +5,20 @@ lista blanca: jamás `serie`); cada una acepta `atleta` y se revisa con `puede_v
 """
 import contextlib
 import contextvars
+import inspect
 import json
-from datetime import timezone
+from datetime import date, timezone
 
+from ajustes import ConfigError, normalizar_config
 from sqlalchemy import select
 
-from . import ajustes_web, calculo, cambios, oauth
+import build
+
+from . import ajustes_web as aw
+from . import calculo, cambios, oauth, plan_vivo
 from .modelos import Coach, Usuario
-from .permisos import puede_ver
+from .permisos import puede_editar, puede_ver
+from .plan_web import _fecha
 
 REGLAS = ("Reglas fijas: haz cambios conservadores (poco a poco, nunca saltos grandes); si la persona reporta dolor, "
           "dile que pare y descanse; esto no es consejo médico.")
@@ -81,7 +87,7 @@ def progreso(db, actor, atleta, ahora) -> dict:
 
 def ver_ajustes(db, actor, atleta, ahora) -> dict:
     a = resolver(db, actor, atleta)
-    crudo = ajustes_web.crudo_de(db, a)
+    crudo = aw.crudo_de(db, a)
     if crudo is None:
         raise Rechazo("Esa persona aún no tiene ajustes.")
     return {"ajustes": crudo}
@@ -114,6 +120,181 @@ LECTURAS = [
 ]
 
 
+# ---------- escrituras (F6c): mismas funciones que los botones, vía "ia" ----------
+
+class _Form(dict):
+    """Lo mínimo de un formulario para reutilizar `crudo_desde_form`."""
+    def getlist(self, k):
+        v = self.get(k, [])
+        return list(v) if isinstance(v, (list, tuple)) else [v]
+
+
+def _editable(db, actor, atleta) -> tuple[Usuario, dict, dict | None, date]:
+    a = resolver(db, actor, atleta)
+    if not puede_editar(db, actor, a.id):
+        raise Rechazo("Solo puedes ver a esa persona, no cambiarle el plan.")
+    crudo = aw.crudo_de(db, a)
+    if crudo is None:
+        raise Rechazo("Esa persona aún no tiene ajustes ni plan.")
+    return a, crudo, aw.plan_guardado(db, a), None
+
+
+def _guardar(db, actor, a, desc, paquete) -> dict:
+    try:
+        c = cambios.aplicar_cambio(db, a, actor, "ia", desc, paquete)
+    except cambios.SinPermiso:
+        raise Rechazo("No tienes permiso para cambiar a esa persona.")
+    return {"hecho": desc, "cambio_id": c.id,
+            "para_deshacer": f"Llama a la herramienta `deshacer` con cambio_id={c.id}" +
+                             ("" if cambios.puede_deshacer(c) else " (este cambio no se puede deshacer: avísale a la persona)")}
+
+
+def _hoy(ahora, crudo) -> date:
+    return aw.hoy_de(lambda: ahora.replace(tzinfo=timezone.utc), crudo)
+
+
+def cambiar_ajustes(db, actor, ahora, atleta, *, nivel: str | None = None, intensidad: str | None = None,
+                    caminatas: bool | None = None, variada: bool | None = None, semanas: int | None = None,
+                    z2_min: int | None = None, larga_min: int | None = None, calidad_tipos: list[str] | None = None) -> dict:
+    """Cambia ajustes de la persona; solo lo que pases. Si cambia el plan, se rehace desde la semana en curso."""
+    a, crudo, plan, _ = _editable(db, actor, atleta)
+    hoy = _hoy(ahora, crudo)
+    v = _Form(aw.valores_form(crudo, a))
+    for k, val in (("nivel", nivel), ("intensidad", intensidad), ("semanas", semanas), ("z2", z2_min), ("larga", larga_min),
+                   ("caminatas", caminatas), ("variada", variada), ("calidad", calidad_tipos)):
+        if val is not None:
+            v[k] = val
+    for k in ("caminatas", "variada", "inbody"):
+        v[k] = "on" if v.get(k) else ""
+    v["z2"], v["larga"], v["semanas"] = str(v["z2"]), str(v["larga"]), str(v["semanas"])
+    try:
+        nuevo = aw.crudo_desde_form(crudo, v)
+        txt = aw.diferencias(crudo, nuevo)
+        if not txt:
+            return {"hecho": "Sin cambios: ya estaba así."}
+        nuevo_plan, desde = None, None
+        if plan_vivo.cambia_plan(normalizar_config(crudo), normalizar_config(nuevo)):
+            nuevo_plan, desde = plan_vivo.construir_plan(nuevo, plan, hoy)
+    except (ConfigError, ValueError, KeyError) as ex:
+        raise Rechazo(str(ex)) from None
+    desc = "Ajustes (IA): cambió " + ", ".join(txt) + (f"; plan rehecho desde la semana {desde}" if nuevo_plan else "")
+    return _guardar(db, actor, a, desc, {"ajustes": nuevo, **({"plan": nuevo_plan} if nuevo_plan is not None else {})})
+
+
+def agregar_carrera(db, actor, ahora, atleta, *, fecha: str, nombre: str = "Carrera", distancia_km: float | None = None) -> dict:
+    """Agrega una carrera objetivo (fecha AAAA-MM-DD, hoy o después)."""
+    a, crudo, plan, _ = _editable(db, actor, atleta)
+    try:
+        f = _fecha(fecha, "fecha de la carrera")
+        if f < _hoy(ahora, crudo).isoformat():
+            raise ConfigError("fecha de la carrera: debe ser hoy o después")
+        nuevo = plan_vivo.agregar_carrera(crudo, f, str(distancia_km) if distancia_km else None, nombre.strip() or "Carrera")
+    except (ConfigError, ValueError) as ex:
+        raise Rechazo(str(ex)) from None
+    return _guardar(db, actor, a, f"Agregó la carrera «{nombre.strip() or 'Carrera'}» el {f} (IA)", {"ajustes": nuevo})
+
+
+def agregar_evento(db, actor, ahora, atleta, *, tipo: str, desde: str, hasta: str | None = None, modo: str | None = None) -> dict:
+    """Agrega un evento al plan: tipo `viaje`, `enfermedad` o `lesion`. Para viaje, `modo`: `pausa` (sin correr, el plan espera),
+    `menos` (semana ligera) o `igual` (sigue entrenando igual; es lo que se usa si la persona dice que va a seguir entrenando).
+    Enfermedad y lesión siempre pausan el plan; sin `hasta` queda abierto hasta que la persona esté bien."""
+    a, crudo, plan, _ = _editable(db, actor, atleta)
+    if tipo not in ("viaje", "enfermedad", "lesion"):
+        raise Rechazo("tipo: elige viaje, enfermedad o lesion.")
+    try:
+        d = _fecha(desde, "desde")
+        h = _fecha(hasta, "hasta") if hasta else None
+        if tipo == "viaje":
+            if not h:
+                raise ConfigError("Un viaje necesita fecha de regreso (`hasta`).")
+            modo = modo or "igual"
+            if modo not in ("pausa", "menos", "igual"):
+                raise ConfigError("modo: pausa, menos o igual.")
+        else:
+            modo = None
+        nuevo = plan_vivo.agregar_evento(crudo, tipo, d, h, modo=modo)
+    except (ConfigError, ValueError) as ex:
+        raise Rechazo(str(ex)) from None
+    return _guardar(db, actor, a, f"Agregó {tipo} desde {d}" + (f" hasta {h}" if h else "") + (f" (modo {modo})" if modo else "") + " (IA)",
+                    {"ajustes": nuevo})
+
+
+def editar_sesion(db, actor, ahora, atleta, *, semana: int, sesion_id: str, filas: list[dict], veces: dict[str, int] | None = None) -> dict:
+    """Reemplaza los pasos de una sesión Z2, larga o variada. Cada fila: {tipo: trote|caminata, min, zona: Z1..Z5, grupo: 0-4,
+    nota, opcional}. Las filas con el mismo `grupo` (1-4) se repiten `veces[grupo]` veces."""
+    a, crudo, plan, _ = _editable(db, actor, atleta)
+    try:
+        if not plan:
+            raise ConfigError("Esa persona aún no tiene plan.")
+        nuevo = plan_vivo.editar_sesion(plan, semana, sesion_id,
+                                        plan_vivo.pasos_de_filas(filas, {int(k): int(x) for k, x in (veces or {}).items()}))
+    except (ConfigError, ValueError, KeyError, TypeError) as ex:
+        raise Rechazo(str(ex) if not isinstance(ex, KeyError) else "Faltan datos.") from None
+    return _guardar(db, actor, a, f"Cambió la sesión {sesion_id} de la semana {semana} (IA)", {"plan": nuevo})
+
+
+def repetir_semana(db, actor, ahora, atleta) -> dict:
+    """Repite la semana del plan en curso (el plan se recorre una semana)."""
+    a, crudo, plan, _ = _editable(db, actor, atleta)
+    try:
+        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), _hoy(ahora, crudo))
+        n = build.m.semana_del_plan(_hoy(ahora, crudo), cfg)
+        if n is None:
+            raise ConfigError("Hoy no hay una semana de plan para repetir.")
+        nuevo = plan_vivo.repetir_semana(crudo, n)
+    except (ConfigError, ValueError) as ex:
+        raise Rechazo(str(ex)) from None
+    return _guardar(db, actor, a, f"Repitió la semana {n} (IA)", {"ajustes": nuevo})
+
+
+def subir_escalon(db, actor, ahora, atleta) -> dict:
+    """Sube al siguiente escalón de trote/caminata y rehace el plan. Hazlo solo si la persona lo pide o la semana salió fácil."""
+    a, crudo, plan, _ = _editable(db, actor, atleta)
+    hoy = _hoy(ahora, crudo)
+    try:
+        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+        plan = plan or {"start": cfg["plan_start"], "weeks": []}
+        nuevo = plan_vivo.subir_escalon(crudo, cfg, plan, hoy)
+        nuevo_plan, desde = plan_vivo.construir_plan(nuevo, plan, hoy)
+    except (ConfigError, ValueError) as ex:
+        raise Rechazo(str(ex)) from None
+    return _guardar(db, actor, a, f"Subió el escalón a {nuevo['corrida']['escalon']} (plan rehecho desde la semana {desde}) (IA)",
+                    {"ajustes": nuevo, "plan": nuevo_plan})
+
+
+def registrar_inbody(db, actor, ahora, atleta, *, fecha: str, peso_kg: float, mme_kg: float | None = None,
+                     pgc: float | None = None, grasa_kg: float | None = None) -> dict:
+    """Agrega o reemplaza la medición InBody de un día (peso, masa muscular esquelética, % de grasa)."""
+    a, crudo, plan, _ = _editable(db, actor, atleta)
+    campos = {"fecha": fecha, "peso_kg": peso_kg, "mme_kg": mme_kg, "pgc": pgc, "grasa_kg": grasa_kg}
+    form = {k: str(v) for k, v in campos.items() if v is not None}
+    meds = cambios.instantanea(db, a.id, ("inbody",))["inbody"]
+    try:
+        previa = next((x for x in meds if x["fecha"] == fecha), None)
+        med = aw.medicion_desde_form(form, previa)
+    except (ConfigError, ValueError) as ex:
+        raise Rechazo(str(ex)) from None
+    nuevas = sorted([x for x in meds if x["fecha"] != med["fecha"]] + [med], key=lambda x: x["fecha"])
+    return _guardar(db, actor, a, f"{'Editó' if previa else 'Agregó'} la medición InBody del {med['fecha']} (IA)", {"inbody": nuevas})
+
+
+def deshacer(db, actor, ahora, atleta, *, cambio_id: int) -> dict:
+    """Deshace un cambio (el `cambio_id` viene en la respuesta de cada escritura o en `historial`)."""
+    try:
+        nuevo = cambios.deshacer(db, actor, cambio_id, via="ia")
+    except cambios.SinPermiso:
+        raise Rechazo("No encontré ese cambio o no tienes permiso.") from None
+    except cambios.NoSeDeshace as ex:
+        raise Rechazo(str(ex)) from None
+    return {"hecho": "Deshizo el cambio.", "cambio_id": nuevo.id}
+
+
+ESCRITURAS = [("cambiar_ajustes", cambiar_ajustes), ("agregar_carrera", agregar_carrera), ("agregar_evento", agregar_evento),
+              ("editar_sesion", editar_sesion), ("repetir_semana", repetir_semana), ("subir_escalon", subir_escalon),
+              ("registrar_inbody", registrar_inbody), ("deshacer", deshacer)]
+
+
+
 def construir(app):
     """El MCPServer con las herramientas y la app ASGI con la verificación del token."""
     from mcp.server.mcpserver import MCPServer
@@ -132,8 +313,30 @@ def construir(app):
         herramienta.__name__ = nombre
         srv.add_tool(herramienta, name=nombre, description=f"{desc} `atleta` (opcional): id de otra persona a la que entrenas. {REGLAS}")
 
+    def registrar_escritura(nombre, fn):
+        params = list(inspect.signature(fn).parameters.values())[4:]   # tras db, actor, ahora, atleta
+        firma = inspect.Signature([inspect.Parameter("atleta", inspect.Parameter.KEYWORD_ONLY, default=None, annotation=int | None),
+                                   *params])
+
+        def herramienta(**kw):
+            actor_id = _ACTOR.get()
+            with app.state.sesiones() as db:
+                actor = db.get(Usuario, actor_id) if actor_id else None
+                if actor is None:
+                    raise Rechazo("Sin sesión.")
+                ahora = app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None)
+                return json.dumps(fn(db, actor, ahora, kw.pop("atleta", None), **kw), ensure_ascii=False, default=str)
+        herramienta.__signature__ = firma
+        herramienta.__annotations__ = {p.name: p.annotation for p in firma.parameters.values()}
+        herramienta.__name__ = nombre
+        doc = " ".join((fn.__doc__ or "").split())
+        srv.add_tool(herramienta, name=nombre, description=f"{doc} Devuelve qué cambió y cómo deshacerlo. `atleta` (opcional): "
+                     f"id de otra persona a la que entrenas. {REGLAS}")
+
     for n, f, d in LECTURAS:
         registrar(n, f, d)
+    for n, f in ESCRITURAS:
+        registrar_escritura(n, f)
     return srv
 
 

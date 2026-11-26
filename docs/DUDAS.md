@@ -305,3 +305,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Protección de Host/Origin del SDK activa: solo el host de `BASE_URL`, localhost, claude.ai y chatgpt.com.
 - Los errores de acceso son `ToolError` (si no, el SDK esconde el mensaje); mismo mensaje exista o no la persona.
 - Cookie `oauth_volver`: `oauth.volver_seguro` solo acepta una ruta que empiece con `/oauth/autorizar?` (sin `\`, CR ni LF); lo demás va a `/`. Ya era así, ahora tiene función propia y prueba.
+
+### v5 F6c (herramientas de escritura, /conexiones, guía)
+- `agregar_evento`: viaje sin `modo` usa "igual" (la persona dice que sigue entrenando); enfermedad/lesión siempre pausan. Un viaje sin `hasta` se rechaza.
+- `cambiar_ajustes` solo toca: nivel, intensidad, caminatas, variada, semanas, z2_min, larga_min, calidad_tipos (lo más simple y seguro; reutiliza la validación del formulario). Si cambia el plan, lo rehace desde la semana en curso sin pedir confirmación (queda deshacible en el historial).
+- `/conexiones` es solo de la cuenta propia (sin versión `/a/<id>`); revocar borra la fila del token, así que el acceso y el refresh dejan de servir.
+- Los cambios hechos por una IA quedan con `via="ia"` y `visto=False`, así aparecen como aviso nuevo en el historial.
