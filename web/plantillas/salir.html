@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton %}
-{% block titulo %}Salir · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("salir.titulo_pagina") }}{% endblock %}
 {% block contenido %}
-<h1 class="pag-t">Salir</h1>
+<h1 class="pag-t">{{ t("salir.titulo") }}</h1>
 <form class="pila" method="post" action="/salir">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="acciones">
-    {{ boton("Cerrar mi sesión", tipo="submit") }}
-    {{ boton("Cancelar", "sec", href="/") }}
+    {{ boton(t("salir.cerrar"), tipo="submit") }}
+    {{ boton(t("comun.cancelar"), "sec", href="/") }}
   </div>
 </form>
 {% endblock %}

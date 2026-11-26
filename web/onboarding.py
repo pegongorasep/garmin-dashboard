@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 import gen_plan
 from ajustes import (CALIDAD_TIPOS, INTENSIDADES, NIVELES, ConfigError, categorias_por_defecto, normalizar_config)
+from .errores import ErrorT, texto
 
 from . import cambios, importar, tubo
 from .modelos import Ajustes, Cambio, Consentimiento, Usuario
@@ -85,18 +86,18 @@ def crudo_desde_formulario(f) -> dict:
         try:
             n = int(v)
         except ValueError:
-            raise ConfigError(f"{nombre}: escribe un número entero") from None
+            raise ErrorT("err.entero", nombre="@" + nombre) from None
         if n <= 0:
-            raise ConfigError(f"{nombre}: debe ser mayor que cero")
+            raise ErrorT("err.mayor0", nombre="@" + nombre)
         return n
     zona = str(f.get("zona", "America/Merida")).strip()
     try:
         ZoneInfo(zona)
     except (ZoneInfoNotFoundError, ValueError):
-        raise ConfigError(f"Zona horaria '{zona}' no válida") from None
-    edad, fc_max = entero("edad", "Edad", True), entero("fc_max", "FC máxima", True)
+        raise ErrorT("err.zona_ob", zona=zona) from None
+    edad, fc_max = entero("edad", "ob.edad", True), entero("fc_max", "ob.fc_max", True)
     if edad is None and fc_max is None:
-        raise ConfigError("Escribe tu edad o tu FC máxima")
+        raise ErrorT("err.edad_o_fc")
     perfil = {"titulo": (str(f.get("titulo", "")).strip() or "Mi entreno")[:60], "zona_horaria": zona}
     if edad:
         perfil["edad"] = edad
@@ -106,7 +107,7 @@ def crudo_desde_formulario(f) -> dict:
     calidad = [t for t in f.getlist("calidad") if t in CALIDAD_TIPOS] if intensidad == "calidad" else []
     corrida = {"nivel": f.get("nivel", "intermedio"), "intensidad": intensidad, "calidad_tipos": calidad,
                "variada": True, "caminatas": f.get("caminatas") == "on", "inicio": str(f.get("inicio", "")),
-               "semanas": 12, "base_min": {"z2": entero("z2", "Minutos de la Z2"), "larga": entero("larga", "Minutos de la larga")}}
+               "semanas": 12, "base_min": {"z2": entero("z2", "ob.z2"), "larga": entero("larga", "ob.larga")}}
     elegidas = set(f.getlist("cats"))
     categorias = [c for c in categorias_por_defecto() if c["id"] in elegidas]
     actividades = {"dias_pierna": [d for d in f.getlist("pierna") if d in dict(DIAS)]}
@@ -155,16 +156,16 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return RedirectResponse("/entrar", 303)
         e = estado(db, usuario)
         if not e["consentimiento"]:
-            raise HTTPException(403, "Primero acepta el aviso de privacidad")
+            raise HTTPException(403, request.state.t("err.primero_aviso"))
         if usuario.repo_id:
             return RedirectResponse("/bienvenida?paso=3", 303)   # ya vinculado: el usuario de GitHub ya no se cambia aquí
         owner = str(form.get("usuario", "")).strip().lstrip("@")
         error = None
         if not RE_OWNER.match(owner):
-            error = "Escribe tu usuario de GitHub (letras, números y guiones)."
+            error = request.state.t("err.gh_usuario")
         elif db.scalar(select(Usuario.id).where(Usuario.id != usuario.id, Usuario.borrado.is_(None),
                                                  Usuario.github_owner.ilike(owner))):
-            error = "Ese usuario de GitHub ya está ligado a otra cuenta."
+            error = request.state.t("err.gh_ligado")
         if error:
             return render(request, "bienvenida.html", status=400, paso=2, pasos=PASOS, e=e, u=usuario,
                           version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error,
@@ -185,7 +186,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         p = tubo.pendiente_vigente(db, usuario.id)
         error = None
         if p is None:
-            error = "No hay un código vigente. Corre «Run workflow» en tu repo para generar uno nuevo."
+            error = request.state.t("err.cod_no_hay")
         else:
             p.intentos += 1
             intento = "".join(ch for ch in str(form.get("codigo", "")) if ch.isdigit())
@@ -196,9 +197,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                 return RedirectResponse("/bienvenida?paso=6", 303)
             if p.intentos >= tubo.MAX_INTENTOS:
                 db.delete(p)
-                error = "Demasiados intentos. Corre «Run workflow» otra vez en tu repo para generar un código nuevo."
+                error = request.state.t("err.cod_intentos")
             else:
-                error = f"Ese código no coincide ({tubo.MAX_INTENTOS - p.intentos} intentos más)."
+                error = request.state.t("err.cod_mal", n=tubo.MAX_INTENTOS - p.intentos)
             db.commit()
         e = estado(db, usuario)
         return render(request, "bienvenida.html", status=400, paso=6, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
@@ -213,14 +214,14 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return RedirectResponse("/entrar", 303)
         e = estado(db, usuario)
         if not (e["consentimiento"] and e["owner"] and e["datos"]) or e["ajustes"]:
-            raise HTTPException(403, "Todavía no puedes crear tu plan")
+            raise HTTPException(403, request.state.t("err.no_plan"))
         try:
             crudo = crudo_desde_formulario(form)
             cfg = normalizar_config(crudo)
             nuevo_plan = gen_plan.generar(cfg)
         except (ConfigError, ValueError) as ex:
             return render(request, "bienvenida.html", status=400, paso=7, pasos=PASOS, e=e, u=usuario,
-                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=str(ex),
+                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=texto(ex, request.state.t),
                           proximo_lunes=proximo_lunes().isoformat(), zonas=ZONAS, categorias=categorias_por_defecto(),
                           dias=DIAS, niveles=NIVELES, intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS,
                           valores=dict(form.multi_items()) if hasattr(form, "multi_items") else dict(form))

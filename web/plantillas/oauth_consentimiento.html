@@ -1,29 +1,29 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, aviso, tarjeta %}
-{% block titulo %}Conectar · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("oauth.titulo_pagina") }}{% endblock %}
 {% block contenido %}
 {% if error %}
-<h1 class="pag-t">No se pudo conectar</h1>
+<h1 class="pag-t">{{ t("oauth.no_pudo") }}</h1>
 {% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}
 {% elif entrar %}
-<h1 class="pag-t">Entra primero</h1>
-<p>Para conectar {{ cliente }} necesitas entrar a tu cuenta de Ahí la Llevas.</p>
-<div class="acciones">{{ boton("Entrar", href="/entrar") }}</div>
+<h1 class="pag-t">{{ t("oauth.entra") }}</h1>
+<p>{{ t("oauth.entra_texto", cliente=cliente) }}</p>
+<div class="acciones">{{ boton(t("entrar.titulo"), href="/entrar") }}</div>
 {% else %}
-<h1 class="pag-t">{{ cliente }} quiere ver y cambiar tu plan en Ahí la Llevas</h1>
-{% call tarjeta("Podrá") %}
+<h1 class="pag-t">{{ t("oauth.quiere", cliente=cliente) }}</h1>
+{% call tarjeta(t("oauth.podra")) %}
 <ul>
-  <li>Ver tu semana, tu plan, tus corridas y tu progreso.</li>
-  <li>Cambiar tus ajustes y tu plan (todo queda en tu historial y se puede deshacer).</li>
+  <li>{{ t("oauth.p1") }}</li>
+  <li>{{ t("oauth.p2") }}</li>
 </ul>
-<p>Nunca ve tu contraseña ni la key de Garmin. Puedes quitarle el acceso cuando quieras.</p>
+<p>{{ t("oauth.nunca") }}</p>
 {% endcall %}
 <form class="pila" method="post" action="/oauth/autorizar">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   {% for k, v in campos %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
   <div class="acciones">
-    {{ boton("Permitir", tipo="submit", nombre="decision", valor="permitir") }}
-    {{ boton("Cancelar", "sec", tipo="submit", nombre="decision", valor="negar") }}
+    {{ boton(t("oauth.permitir"), tipo="submit", nombre="decision", valor="permitir") }}
+    {{ boton(t("comun.cancelar"), "sec", tipo="submit", nombre="decision", valor="negar") }}
   </div>
 </form>
 {% endif %}

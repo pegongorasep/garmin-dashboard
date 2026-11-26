@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse, Response
 import build
 import gen_plan
 from ajustes import ConfigError, normalizar_config
+from .errores import ErrorT, texto
 
 from . import ajustes_web as aw
 from . import calculo, cambios, plan_vivo
@@ -24,7 +25,7 @@ def _fecha(valor, campo: str) -> str:
     try:
         return date.fromisoformat(str(valor).strip()).isoformat()
     except ValueError:
-        raise ConfigError(f"{campo}: escribe una fecha válida") from None
+        raise ErrorT("err.fecha_c", campo="@campo." + campo) from None
 
 
 def montar(app, get_db, actual, render, formulario, settings) -> None:
@@ -119,7 +120,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                 plan = aw.plan_guardado(db, atleta)
                 nuevo_crudo, nuevo_plan, descripcion = hacer(db, atleta, crudo, plan_vivo.con_pausas(cfg, hoy), plan, form, hoy)
             except (ConfigError, ValueError, KeyError) as ex:
-                return pagina(request, usuario, db, atleta_id, status=400, error=str(ex) if not isinstance(ex, KeyError) else "Faltan datos.")
+                return pagina(request, usuario, db, atleta_id, status=400, error=texto(ex, request.state.t) if not isinstance(ex, KeyError) else request.state.t("err.faltan"))
             paquete = {"ajustes": nuevo_crudo, **({"plan": nuevo_plan} if nuevo_plan is not None else {})}
             cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), descripcion, paquete)
             return RedirectResponse(volver(usuario, atleta), 303)
@@ -132,7 +133,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         desde, hasta = _fecha(f.get("desde"), "salida"), _fecha(f.get("hasta"), "regreso")
         modo = f.get("modo") or ("menos" if f.get("correr") == "si" else "pausa")
         if modo not in ("pausa", "menos", "igual"):
-            raise ConfigError("Elige cómo será el viaje.")
+            raise ErrorT("err.viaje")
         nuevo = plan_vivo.agregar_evento(crudo, "viaje", desde, hasta, modo=modo)
         return nuevo, None, (f"Agregó un viaje del {lindo(desde)} al {lindo(hasta)} "
                              f"({ {'menos': 'semana ligera: 2 Z2 cortas', 'igual': 'sigo entrenando igual', 'pausa': 'sin correr: el plan espera'}[modo] })")
@@ -140,15 +141,15 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def enfermo(db, atleta, crudo, cfg, plan, f, hoy):
         tipo = f.get("tipo", "enfermedad")
         if tipo not in TIPOS_EVENTO:
-            raise ConfigError("Elige enfermedad o lesión.")
+            raise ErrorT("err.enfermo")
         desde = _fecha(f.get("desde") or hoy.isoformat(), "desde")
         return (plan_vivo.agregar_evento(crudo, tipo, desde, None), None,
                 f"Marcó {TIPOS_EVENTO[tipo].lower()} desde el {lindo(desde)}: el plan espera")
 
     def carrera(db, atleta, crudo, cfg, plan, f, hoy):
-        fecha = _fecha(f.get("fecha"), "fecha de la carrera")
+        fecha = _fecha(f.get("fecha"), "fecha_carrera")
         if fecha < hoy.isoformat():
-            raise ConfigError("fecha de la carrera: debe ser hoy o después")
+            raise ErrorT("err.fecha_carrera")
         km = str(f.get("distancia_km", "")).strip().replace(",", ".")
         nombre = str(f.get("nombre", "")).strip() or "Carrera"
         nuevo = plan_vivo.agregar_carrera(crudo, fecha, km or None, nombre)
@@ -157,7 +158,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def repetir(db, atleta, crudo, cfg, plan, f, hoy):
         n = build.m.semana_del_plan(hoy, cfg)
         if n is None:
-            raise ConfigError("Hoy no hay una semana de plan para repetir.")
+            raise ErrorT("err.sin_semana")
         return plan_vivo.repetir_semana(crudo, n), None, f"Repitió la semana {n}"
 
     def subir(db, atleta, crudo, cfg, plan, f, hoy):
@@ -169,7 +170,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def bloque(db, atleta, crudo, cfg, plan, f, hoy):
         ctx = contexto(db, atleta, crudo, hoy)
         if not ctx["terminado"]:
-            raise ConfigError("Tu plan todavía no termina.")
+            raise ErrorT("err.no_termina")
         nuevo = plan_vivo.siguiente_bloque(crudo, cfg, plan, ctx["prueba"])
         nuevo_plan, _ = plan_vivo.construir_plan(nuevo, None, hoy)
         return nuevo, nuevo_plan, f"Armó el siguiente bloque: empieza el {lindo(nuevo['corrida']['inicio'])}"
@@ -192,7 +193,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             try:
                 nuevo = que(crudo, ident, hoy)
             except (ConfigError, ValueError) as ex:
-                return pagina(request, usuario, db, atleta_id, status=400, error=str(ex))
+                return pagina(request, usuario, db, atleta_id, status=400, error=texto(ex, request.state.t))
             cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), descripcion, {"ajustes": nuevo})
             return RedirectResponse(volver(usuario, atleta), 303)
         doble("post", f"/plan/{sufijo}", ruta)
@@ -224,7 +225,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             try:
                 filas, veces = plan_vivo.filas_de(s["steps"])
             except ConfigError as ex:
-                puede, filas, veces, error = False, [], {}, str(ex)
+                puede, filas, veces, error = False, [], {}, texto(ex, request.state.t)
         vacias = max(0, 4 - len(filas)) if puede else 0
         filas = filas + [{"tipo": "trote", "min": "", "zona": "Z2", "grupo": 0, "nota": "", "opcional": False}] * vacias
         return render(request, "sesion.html", status=status, atleta=atleta, pref=aw.prefijo(usuario, atleta), n=n, w=w, s=s,
@@ -256,7 +257,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         try:
             nuevo_plan = plan_vivo.editar_sesion(plan, n, sid, plan_vivo.pasos_de_filas(filas, veces))
         except (ConfigError, ValueError) as ex:
-            return editor(request, usuario, db, atleta_id, n, sid, status=400, filas=filas, veces=veces, error=str(ex))
+            return editor(request, usuario, db, atleta_id, n, sid, status=400, filas=filas, veces=veces, error=texto(ex, request.state.t))
         cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta),
                                f"Cambió la sesión «{s['name']}» de la semana {n}", {"plan": nuevo_plan})
         return RedirectResponse(volver(usuario, atleta), 303)

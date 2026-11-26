@@ -16,6 +16,7 @@ import gen_plan
 import build
 import metrics as m
 from ajustes import ESCALERA, ConfigError, normalizar_config
+from .errores import ErrorT
 
 # Claves de la config normalizada que, si cambian, obligan a rehacer el plan desde la semana de hoy.
 CLAVES_PLAN = ("nivel", "intensidad", "calidad_tipos", "caminatas", "variada", "plan_semanas", "base_min", "plan_start", "escalon")
@@ -195,7 +196,7 @@ def quitar_meta(crudo: dict, meta_id: str) -> dict:
     nuevo, c = _corrida(crudo)
     metas = normalizar_config(crudo)["metas"]   # con ids ya asignados
     if not any(x["id"] == meta_id for x in metas):
-        raise ConfigError("Esa carrera ya no existe.")
+        raise ErrorT("err.no_carrera")
     c["metas"] = [x for x in metas if x["id"] != meta_id]
     return _validado(nuevo)
 
@@ -213,7 +214,7 @@ def cambiar_modo_viaje(crudo: dict, evento_id: str, modo: str) -> dict:
     nuevo, c = _corrida(crudo)
     eventos = normalizar_config(crudo)["eventos"]
     if modo not in ("pausa", "menos", "igual") or not any(e["id"] == evento_id and e["tipo"] == "viaje" for e in eventos):
-        raise ConfigError("Ese viaje ya no existe.")
+        raise ErrorT("err.no_viaje")
     c["eventos"] = [{**e, "modo": modo} if e["id"] == evento_id else e for e in eventos]
     return _validado(nuevo)
 
@@ -223,7 +224,7 @@ def cerrar_evento(crudo: dict, evento_id: str, hasta: str) -> dict:
     nuevo, c = _corrida(crudo)
     eventos = normalizar_config(crudo)["eventos"]
     if not any(e["id"] == evento_id for e in eventos):
-        raise ConfigError("Ese evento ya no existe.")
+        raise ErrorT("err.no_evento")
     c["eventos"] = [{**e, "hasta": max(hasta, e["desde"])} if e["id"] == evento_id else e for e in eventos]
     return _validado(nuevo)
 
@@ -232,7 +233,7 @@ def quitar_evento(crudo: dict, evento_id: str) -> dict:
     nuevo, c = _corrida(crudo)
     eventos = normalizar_config(crudo)["eventos"]
     if not any(e["id"] == evento_id for e in eventos):
-        raise ConfigError("Ese evento ya no existe.")
+        raise ErrorT("err.no_evento")
     c["eventos"] = [e for e in eventos if e["id"] != evento_id]
     return _validado(nuevo)
 
@@ -266,7 +267,7 @@ def siguiente_escalon(actual: str | None) -> str | None:
 def subir_escalon(crudo: dict, cfg: dict, plan: dict, hoy: date) -> dict:
     sig = siguiente_escalon(escalon_actual(cfg, plan, hoy))
     if sig is None:
-        raise ConfigError("Ya estás en el último escalón (correr continuo).")
+        raise ErrorT("err.ultimo_escalon")
     nuevo, c = _corrida(crudo)
     c["escalon"] = sig
     return _validado(nuevo)
@@ -319,7 +320,7 @@ def filas_de(pasos: list) -> tuple[list[dict], dict]:
     for p in pasos:
         if p["kind"] == "repeat":
             if any(q["kind"] == "repeat" for q in p["steps"]):
-                raise ConfigError("Esta sesión tiene repeticiones dentro de repeticiones y no se puede editar aquí.")
+                raise ErrorT("err.rep_anidada")
             g = len(veces) + 1
             veces[g] = p["times"]
             filas += [fila(q, g) for q in p["steps"]]
@@ -336,13 +337,13 @@ def pasos_de_filas(filas: list[dict], veces: dict) -> list:
         try:
             minutos = int(f["min"])
         except (TypeError, ValueError):
-            raise ConfigError(f"Fila {i}: los minutos deben ser un número entero") from None
+            raise ErrorT("err.f_min_int", i=i) from None
         if not 1 <= minutos <= 240:
-            raise ConfigError(f"Fila {i}: los minutos deben estar entre 1 y 240")
+            raise ErrorT("err.f_min_rango", i=i)
         if f["zona"] not in ZONAS:
-            raise ConfigError(f"Fila {i}: la zona debe ser de Z1 a Z5")
+            raise ErrorT("err.f_zona", i=i)
         if f["tipo"] not in ("trote", "caminata"):
-            raise ConfigError(f"Fila {i}: el tipo debe ser trote o caminata")
+            raise ErrorT("err.f_tipo", i=i)
         paso = {"kind": "walk" if f["tipo"] == "caminata" else "run", "minutes": minutos, "zone": f["zona"],
                 "note": f.get("nota") or ""}
         if f.get("opcional"):
@@ -354,16 +355,16 @@ def pasos_de_filas(filas: list[dict], veces: dict) -> list:
             continue
         if g != actual:
             if g in vistos:
-                raise ConfigError(f"Fila {i}: las filas del grupo {g} deben ir juntas")
+                raise ErrorT("err.f_grupo", i=i, g=g)
             vistos.add(g)
             n = veces.get(g)
             if not isinstance(n, int) or not 2 <= n <= 30:
-                raise ConfigError(f"El grupo {g} debe repetirse entre 2 y 30 veces")
+                raise ErrorT("err.g_veces", g=g)
             pasos.append({"kind": "repeat", "times": n, "steps": []})
             actual = g
         pasos[-1]["steps"].append(paso)
     if not pasos:
-        raise ConfigError("La sesión necesita al menos un paso")
+        raise ErrorT("err.sin_pasos")
     return pasos
 
 
@@ -374,9 +375,9 @@ def editar_sesion(plan: dict, n: int, sesion_id: str, pasos: list) -> dict:
     w = next((x for x in nuevo["weeks"] if x["n"] == n), None)
     s = next((x for x in w["sessions"] if x["id"] == sesion_id), None) if w else None
     if s is None:
-        raise ConfigError("Esa sesión ya no existe.")
+        raise ErrorT("err.no_sesion")
     if s.get("tipo") not in TIPOS_EDITABLES:
-        raise ConfigError("Esta sesión (calidad o prueba) no se edita a mano.")
+        raise ErrorT("err.no_edita")
     s["steps"], s["minutes"] = pasos, gen_plan.suma(pasos)
     s.pop("variada_tipo", None)
     return nuevo

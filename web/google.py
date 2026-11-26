@@ -76,8 +76,8 @@ def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
             cache["datos"], cache["t"] = fetch(), time.time()
         return cache["datos"]
 
-    def rechazo(request, msg, status=400):
-        return render(request, "mensaje.html", status=status, titulo=request.state.t("google.no_entrar"), texto=msg)
+    def rechazo(request, clave, status=400):
+        return render(request, "mensaje.html", status=status, titulo=request.state.t("google.no_entrar"), texto=request.state.t(clave))
 
     @app.get("/entrar/google")
     def empezar(request: Request, inv: str = "", ligar: str = "", usuario=Depends(actual)):
@@ -106,12 +106,12 @@ def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
         except Exception:
             c = None
         if not c or not state or not secrets.compare_digest(str(c.get("s")), state) or error or not code:
-            return rechazo(request, "La sesión de Google venció o no es válida. Intenta de nuevo.")
+            return rechazo(request, "google.sesion")
         try:
             canje = getattr(app.state, "google_canje", None) or canje_http
             claims = verificar_id_token(canje(settings, code, c["v"]), settings, jwks(), c["n"])
         except (GoogleError, httpx.HTTPError, KeyError):
-            return rechazo(request, "No pudimos verificar tu cuenta de Google. Intenta de nuevo.")
+            return rechazo(request, "google.verificar")
         sub, correo = str(claims["sub"]), auth.normalizar_correo(claims["email"])
         existente = db.scalar(select(Usuario).where(Usuario.google_sub == sub, Usuario.borrado.is_(None)))
 
@@ -119,7 +119,7 @@ def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
             if usuario is None:
                 return RedirectResponse("/entrar", 303)
             if existente is not None and existente.id != usuario.id:
-                return rechazo(request, "Esa cuenta de Google ya está ligada a otra cuenta.")
+                return rechazo(request, "google.ligada_otra")
             usuario.google_sub = sub
             db.commit()
             resp = RedirectResponse("/privacidad/mis-datos", 303)
@@ -129,7 +129,7 @@ def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
         u = existente or auth.buscar_por_correo(db, correo)
         if u is not None and existente is None:
             if u.google_sub:   # esa cuenta ya tiene otra cuenta de Google
-                return rechazo(request, "Esa cuenta ya está ligada a otra cuenta de Google.")
+                return rechazo(request, "google.cuenta_otra")
             u.google_sub = sub
             db.commit()
         if u is None and c.get("i"):
@@ -138,7 +138,7 @@ def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
                 u.google_sub = sub
                 db.commit()
         if u is None:
-            return rechazo(request, "Necesitas una invitación para crear tu cuenta. Pídesela a Pedro.", 403)
+            return rechazo(request, "google.invitacion", 403)
 
         resp = RedirectResponse(oauth.destino_login(request.cookies.get(oauth.COOKIE_VOLVER, ""), onboarding.completo(db, u)), 303)
         poner_sesion(resp, auth.crear_sesion(db, u))

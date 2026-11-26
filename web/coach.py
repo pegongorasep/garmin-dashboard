@@ -47,7 +47,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return RedirectResponse("/entrar", 303)
         correo = str(form.get("correo", ""))
         if not auth.correo_valido(correo):
-            return pagina(request, usuario, db, status=400, error="Escribe un correo válido.")
+            return pagina(request, usuario, db, status=400, error=request.state.t("err.correo"))
         otro = auth.buscar_por_correo(db, correo)
         if otro is not None and otro.id != usuario.id and db.scalar(
                 select(Coach.id).where(Coach.atleta_id == usuario.id, Coach.coach_id == otro.id)) is None:

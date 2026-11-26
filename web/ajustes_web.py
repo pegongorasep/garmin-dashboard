@@ -14,6 +14,7 @@ from ajustes import (CALIDAD_TIPOS, ESCALERA, INTENSIDADES, NIVELES, SENSORES, C
 
 from . import cambios, plan_vivo
 from .modelos import Ajustes, Plan, Usuario
+from .errores import ErrorT, texto
 from .onboarding import DIAS, ZONAS
 from .permisos import puede_editar
 
@@ -82,9 +83,9 @@ def _entero(f, campo: str, nombre: str, vacio_ok: bool = False):
     try:
         n = int(v)
     except ValueError:
-        raise ConfigError(f"{nombre}: escribe un número entero") from None
+        raise ErrorT("err.entero", campo if campo in ("edad", "fc_max") else None, nombre="@campo." + nombre) from None
     if n <= 0:
-        raise ConfigError(f"{nombre}: debe ser mayor que cero")
+        raise ErrorT("err.mayor0", campo if campo in ("edad", "fc_max") else None, nombre="@campo." + nombre)
     return n
 
 
@@ -96,28 +97,28 @@ def crudo_desde_form(crudo: dict, f) -> dict:
     try:
         ZoneInfo(zona)
     except Exception:
-        raise ConfigError(f"zona horaria: '{zona}' no es una zona válida") from None
+        raise ErrorT("err.zona", "zona", zona=zona) from None
     perfil["titulo"] = (str(f.get("titulo", "")).strip() or "Mi entreno")[:60]
     perfil["zona_horaria"] = zona
     for campo, clave, nombre in (("edad", "edad", "edad"), ("fc_max", "fc_max", "fc_max")):
-        v = _entero(f, campo, nombre, vacio_ok=True)
+        v = _entero(f, campo, campo, vacio_ok=True)
         if v is None:
             perfil.pop(clave, None)
         else:
             perfil[clave] = v
     sensor = f.get("sensor", "banda")
     if sensor not in SENSORES:
-        raise ConfigError("sensor: elige banda o muñeca")
+        raise ErrorT("err.sensor", "sensor")
     perfil["sensor"] = sensor
     corrida["nivel"], corrida["intensidad"] = f.get("nivel", ""), f.get("intensidad", "")
     corrida["calidad_tipos"] = [t for t in f.getlist("calidad") if t in CALIDAD_TIPOS] if corrida["intensidad"] == "calidad" else []
     corrida["caminatas"], corrida["variada"] = f.get("caminatas") == "on", f.get("variada") == "on"
-    corrida["semanas"] = _entero(f, "semanas", "semanas del plan")
+    corrida["semanas"] = _entero(f, "semanas", "semanas")
     if not 4 <= corrida["semanas"] <= 52:
-        raise ConfigError("semanas del plan: entre 4 y 52")
+        raise ErrorT("err.semanas")
     corrida["inicio"] = str(f.get("inicio", "")).strip()
-    corrida["base_min"] = {**(corrida.get("base_min") or {}), "z2": _entero(f, "z2", "minutos de la Z2"),
-                           "larga": _entero(f, "larga", "minutos de la larga")}
+    corrida["base_min"] = {**(corrida.get("base_min") or {}), "z2": _entero(f, "z2", "z2"),
+                           "larga": _entero(f, "larga", "larga")}
     esc = str(f.get("escalon", "")).strip()
     if esc:
         corrida["escalon"] = esc
@@ -126,14 +127,14 @@ def crudo_desde_form(crudo: dict, f) -> dict:
     try:
         corrida["semanas_repetidas"] = [int(x) for x in str(f.get("repetidas", "")).replace(",", " ").split()]
     except ValueError:
-        raise ConfigError("semanas_repetidas: escribe números de semana separados por comas") from None
+        raise ErrorT("err.repetidas", "repetidas") from None
     corrida["carreras"] = [x for x in str(f.get("carreras", "")).replace(",", " ").split()]
     # actividades: categorías elegidas (conserva las personalizadas que ya había) y días de pierna
     elegidas = f.getlist("cats")
     previas = {c["id"]: c for c in (act.get("categorias") or [])}
     defecto = {c["id"]: c for c in categorias_por_defecto()}
     if not elegidas:
-        raise ConfigError("categorías: marca al menos una (si no haces otra actividad deja Fuerza)")
+        raise ErrorT("err.categorias", "cats")
     cats = [previas.get(i) or defecto[i] for i in elegidas if i in previas or i in defecto]
     if "categorias" in act or {c["id"] for c in cats} != set(defecto):
         act["categorias"] = cats
@@ -142,7 +143,7 @@ def crudo_desde_form(crudo: dict, f) -> dict:
     return nuevo
 
 
-def diferencias(viejo: dict, nuevo: dict) -> list[str]:
+def diferencias(viejo: dict, nuevo: dict) -> list[str]:  # etiquetas en español (para el historial y el MCP)
     a, b = normalizar_config(viejo), normalizar_config(nuevo)
     return [ETIQUETAS[k] for k in ETIQUETAS if a.get(k) != b.get(k)]
 
@@ -203,14 +204,16 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             if plan_vivo.cambia_plan(cfg_viejo, cfg_nuevo):
                 nuevo_plan, desde = plan_vivo.construir_plan(nuevo, plan_guardado(db, atleta), hoy)
         except (ConfigError, ValueError) as ex:
-            msg = str(ex)
-            campo = campo_del_error(msg)
+            msg = texto(ex, request.state.t)
+            campo = ex.campo if hasattr(ex, "clave") else campo_del_error(str(ex))
             extra = {"errores": {campo: msg}} if campo else {"error": msg}
             return render(request, "ajustes.html", status=400, **contexto_ajustes(db, atleta, usuario, crudo, valores, **extra))
         if nuevo_plan is not None and form.get("confirmo") != "1":
-            frase = ("rehace tu plan completo desde la semana 1" if desde == 1 else
-                     f"rehace tu plan desde la semana {desde}; las semanas ya pasadas no cambian")
-            return render(request, "ajustes_confirmar.html", atleta=atleta, pref=pref, frase=frase, cambios=cambios_txt,
+            tt = request.state.t
+            frase = tt("conf.frase_1") if desde == 1 else tt("conf.frase_n", desde=desde)
+            etiq = {v: k for k, v in ETIQUETAS.items()}
+            return render(request, "ajustes_confirmar.html", atleta=atleta, pref=pref, frase=frase,
+                          cambios=[tt("et." + etiq[c]) for c in cambios_txt],
                           pares=[(k, v) for k, v in form.multi_items() if k not in ("csrf", "confirmo")])
         desc = "Ajustes: cambió " + ", ".join(cambios_txt) + (f"; plan rehecho desde la semana {desde}" if nuevo_plan else "")
         paquete = {"ajustes": nuevo, **({"plan": nuevo_plan} if nuevo_plan else {})}
@@ -266,7 +269,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         except cambios.SinPermiso:
             raise HTTPException(404) from None
         except cambios.NoSeDeshace as ex:
-            return pantalla_historial(request, usuario, db, atleta_id, error=str(ex))
+            return pantalla_historial(request, usuario, db, atleta_id, error=texto(ex, request.state.t))
         return RedirectResponse(f"{pref}/historial?ok=deshecho", 303)
 
     @app.post("/historial/visto")
@@ -301,24 +304,24 @@ def medicion_desde_form(f, previa: dict | None = None) -> dict:
     try:
         d = date.fromisoformat(fecha)
     except ValueError:
-        raise ConfigError("fecha: escribe una fecha válida") from None
+        raise ErrorT("err.fecha") from None
     if d > date.today() + timedelta(days=366):
-        raise ConfigError("fecha: no puede ser tan en el futuro")
+        raise ErrorT("err.fecha_futuro")
     med = dict(previa or {})
     med["fecha"] = fecha
     for clave, nombre, obligatorio, lo, hi in CAMPOS_CUERPO:
         v = str(f.get(clave, "")).strip().replace(",", ".")
         if not v:
             if obligatorio:
-                raise ConfigError(f"{nombre}: es obligatorio")
+                raise ErrorT("err.obligatorio", nombre="@cm." + clave)
             med.pop(clave, None)
             continue
         try:
             n = float(v)
         except ValueError:
-            raise ConfigError(f"{nombre}: escribe un número") from None
+            raise ErrorT("err.numero", nombre="@cm." + clave) from None
         if not lo <= n <= hi:
-            raise ConfigError(f"{nombre}: debe estar entre {lo} y {hi}")
+            raise ErrorT("err.rango", nombre="@cm." + clave, lo=lo, hi=hi)
         med[clave] = int(n) if clave in ("grasa_visceral", "puntuacion", "altura_cm") and n == int(n) else n
     hora = str(f.get("hora", "")).strip()
     if hora:
@@ -370,9 +373,9 @@ def montar_cuerpo(app, get_db, actual, render, formulario) -> None:
         try:
             med = medicion_desde_form(form, previa)
             if med["fecha"] != fecha and any(x["fecha"] == med["fecha"] for x in meds):
-                raise ConfigError("fecha: ya hay una medición de ese día; edítala desde la lista")
+                raise ErrorT("err.fecha_dup")
         except ConfigError as ex:
-            return render(request, "cuerpo_form.html", status=400, med=dict(form.items()), editando=bool(fecha), orig=fecha, error=str(ex),
+            return render(request, "cuerpo_form.html", status=400, med=dict(form.items()), editando=bool(fecha), orig=fecha, error=texto(ex, request.state.t),
                           **ctx(db, usuario, atleta))
         nuevas = [x for x in meds if x["fecha"] != fecha] + [med]
         nuevas.sort(key=lambda x: x["fecha"])

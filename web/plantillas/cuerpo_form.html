@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, aviso %}
-{% block titulo %}Medición InBody · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("cform.titulo_pagina") }}{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">{{ 'Editar' if editando else 'Nueva' }} medición InBody</h1>
+<h1 class="pag-t">{{ t("cform.editar") if editando else t("cform.nueva") }}</h1>
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
-<p class="pag-s">Cópialos de tu hoja InBody. Lo único obligatorio es la fecha y el peso; para que salga en el dashboard hacen falta también el % de grasa y el músculo. ¿Tu IA lee la foto de la hoja? Pídele que lo capture con el conector.</p>
+<p class="pag-s">{{ t("cform.ayuda") }}</p>
 <form class="pila" method="post" action="{{ pref }}/cuerpo/{{ (orig ~ '/editar') if editando else 'nuevo' }}">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Fecha", "fecha", tipo="date", valor=med.get('fecha', ''), requerido=True) }}
-  {{ campo("Hora", "hora", valor=med.get('hora', ''), opcional="opcional", placeholder="08:34", extra={"maxlength": 5}) }}
+  {{ campo(t("cform.fecha"), "fecha", tipo="date", valor=med.get('fecha', ''), requerido=True) }}
+  {{ campo(t("cform.hora"), "hora", valor=med.get('hora', ''), opcional=t("comun.opcional"), placeholder="08:34", extra={"maxlength": 5}) }}
   {% for clave, nombre, obligatorio, lo, hi in campos %}
-  {{ campo(nombre ~ (' *' if obligatorio else ''), clave, valor=med.get(clave, ''), requerido=obligatorio, extra={"inputmode": "decimal"}) }}
+  {{ campo(t('cm.' ~ clave) ~ (' *' if obligatorio else ''), clave, valor=med.get(clave, ''), requerido=obligatorio, extra={"inputmode": "decimal"}) }}
   {% endfor %}
   <div class="acciones">
-    {{ boton("Guardar", tipo="submit") }}
-    {{ boton("Cancelar", "sec", href=pref ~ "/cuerpo") }}
+    {{ boton(t("comun.guardar"), tipo="submit") }}
+    {{ boton(t("comun.cancelar"), "sec", href=pref ~ "/cuerpo") }}
   </div>
 </form>
 {% endblock %}

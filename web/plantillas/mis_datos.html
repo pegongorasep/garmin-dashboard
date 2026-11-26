@@ -1,34 +1,32 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, aviso, tarjeta %}
-{% block titulo %}Mis datos · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("datos.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Mis datos</h1>
-<p>Tus derechos sobre tus datos, según el <a href="/privacidad">aviso de privacidad</a>.</p>
+<h1 class="pag-t">{{ t("datos.titulo") }}</h1>
+<p>{{ t("datos.intro")|safe }}</p>
 
 {% if settings.google_client_id %}
-{% call tarjeta("Cuenta de Google") %}
-{% if google_ligada %}<p>Tu cuenta de Google ya está ligada.</p>
-{% else %}<p>Si tu correo de Google es distinto al de tu cuenta, ligala aquí para entrar con un toque.</p>
-<div class="acciones">{{ boton("Ligar mi cuenta de Google", href="/entrar/google?ligar=1") }}</div>{% endif %}
+{% call tarjeta(t("datos.google")) %}
+{% if google_ligada %}<p>{{ t("datos.google_ligada") }}</p>
+{% else %}<p>{{ t("datos.google_ligar") }}</p>
+<div class="acciones">{{ boton(t("datos.google_boton"), href="/entrar/google?ligar=1") }}</div>{% endif %}
 {% endcall %}
 {% endif %}
 
-{% call tarjeta("Descargar mis datos") %}
-<p>Un ZIP con archivos JSON: tus ajustes, tu plan, InBody, los datos de Garmin guardados, el historial de cambios,
-tus consentimientos, los accesos de coach y tus conexiones de IA (solo nombre y fecha).</p>
-<div class="acciones">{{ boton("Descargar mis datos", href="/privacidad/mis-datos/descargar") }}</div>
+{% call tarjeta(t("datos.descargar_t")) %}
+<p>{{ t("datos.descargar_texto") }}</p>
+<div class="acciones">{{ boton(t("datos.descargar_t"), href="/privacidad/mis-datos/descargar") }}</div>
 {% endcall %}
 
-{% call tarjeta("Borrar mi cuenta") %}
+{% call tarjeta(t("datos.borrar_t")) %}
 {% if error %}{% call aviso("bad") %}{{ error }}{% endcall %}{% endif %}
-<p>Se borra todo lo tuyo de la web: ajustes, plan, datos, historial, accesos de coach, conexiones de IA y sesiones.
-No se puede deshacer. <strong>Tu repo de GitHub es tuyo: bórralo o quita la key si ya no lo usarás.</strong></p>
+<p>{{ t("datos.borrar_texto")|safe }}</p>
 <form class="pila" method="post" action="/privacidad/mis-datos/borrar">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Para confirmar, escribe " ~ palabra, "confirmar", requerido=True, extra={"autocomplete": "off"}) }}
-  <div class="acciones">{{ boton("Borrar mi cuenta", tipo="submit") }}</div>
+  {{ campo(t("datos.confirmar", palabra=palabra), "confirmar", requerido=True, extra={"autocomplete": "off"}) }}
+  <div class="acciones">{{ boton(t("datos.borrar_t"), tipo="submit") }}</div>
 </form>
 {% endcall %}
 {% endblock %}

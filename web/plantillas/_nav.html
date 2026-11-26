@@ -1,13 +1,13 @@
 {% from "componentes.html" import boton, aviso %}
-<nav class="acciones" aria-label="Secciones">
-  {{ boton("← Dashboard", "texto", chico=True, href="/") }}
-  {{ boton("Ajustes", "texto", chico=True, href=pref ~ "/ajustes") }}
-  {{ boton("Plan", "texto", chico=True, href=pref ~ "/plan") }}
-  {{ boton("Cuerpo", "texto", chico=True, href=pref ~ "/cuerpo") }}
-  {% if not pref %}{{ boton("Coach", "texto", chico=True, href="/coach") }}{% endif %}
-  {{ boton("Historial", "texto", chico=True, href=pref ~ "/historial") }}
-  {% if not pref %}{{ boton("Conexiones", "texto", chico=True, href="/conexiones") }}{% endif %}
-  {% if not pref %}{{ boton("Mis datos", "texto", chico=True, href="/privacidad/mis-datos") }}{% endif %}
-  {% if not pref and atleta and (atleta.es_admin or (settings.admin_correo and atleta.correo|lower == settings.admin_correo|lower)) %}{{ boton("Admin", "texto", chico=True, href="/admin") }}{{ boton("Sistema de diseño", "texto", chico=True, href="/diseno") }}{% endif %}
+<nav class="acciones" aria-label="{{ t('nav.secciones') }}">
+  {{ boton(t("nav.dashboard"), "texto", chico=True, href="/") }}
+  {{ boton(t("nav.ajustes"), "texto", chico=True, href=pref ~ "/ajustes") }}
+  {{ boton(t("nav.plan"), "texto", chico=True, href=pref ~ "/plan") }}
+  {{ boton(t("nav.cuerpo"), "texto", chico=True, href=pref ~ "/cuerpo") }}
+  {% if not pref %}{{ boton(t("nav.coach"), "texto", chico=True, href="/coach") }}{% endif %}
+  {{ boton(t("nav.historial"), "texto", chico=True, href=pref ~ "/historial") }}
+  {% if not pref %}{{ boton(t("nav.conexiones"), "texto", chico=True, href="/conexiones") }}{% endif %}
+  {% if not pref %}{{ boton(t("nav.mis_datos"), "texto", chico=True, href="/privacidad/mis-datos") }}{% endif %}
+  {% if not pref and atleta and (atleta.es_admin or (settings.admin_correo and atleta.correo|lower == settings.admin_correo|lower)) %}{{ boton(t("nav.admin"), "texto", chico=True, href="/admin") }}{{ boton(t("nav.diseno"), "texto", chico=True, href="/diseno") }}{% endif %}
 </nav>
-{% if pref %}{% call aviso("warn") %}Estás editando a <strong>{{ atleta.apodo or atleta.correo }}</strong> como su coach.{% endcall %}{% endif %}
+{% if pref %}{% call aviso("warn") %}{{ t("nav.editando", nombre=(atleta.apodo or atleta.correo)|e)|safe }}{% endcall %}{% endif %}

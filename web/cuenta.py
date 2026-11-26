@@ -93,7 +93,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return RedirectResponse("/entrar", 303)
         if str(form.get("confirmar", "")).strip() != PALABRA:
             return render(request, "mis_datos.html", status=400, atleta=usuario, pref="", palabra=PALABRA,
-                          error=f"Escribe {PALABRA} (en mayúsculas) para confirmar.")
+                          error=request.state.t("err.palabra", palabra=PALABRA))
         borrar_cuenta(db, usuario)
         resp = render(request, "cuenta_borrada.html")
         resp.delete_cookie(auth.COOKIE_SESION, path="/")

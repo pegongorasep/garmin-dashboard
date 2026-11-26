@@ -82,4 +82,4 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         form = await formulario(request)
         admin = admin_de(usuario)
         ok = revocar_invitacion(db, str(form.get("id", "")))
-        return pagina(request, db, admin, mensaje="Invitación revocada." if ok else "Esa invitación ya no está pendiente.")
+        return pagina(request, db, admin, mensaje=request.state.t("admin.revocada" if ok else "admin.no_pendiente"))

@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, aviso, tarjeta %}
-{% block titulo %}Cuerpo · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("cuerpo.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Mediciones InBody</h1>
-{% if ok == "1" %}{% call aviso("ok") %}Guardado ✔.{% endcall %}{% endif %}
-{% if ok == "borrada" %}{% call aviso("ok") %}Medición borrada.{% endcall %}{% endif %}
-{% if not inbody_activo %}{% call aviso("warn") %}InBody está apagado en tus <a href="{{ pref }}/ajustes">ajustes</a>: las mediciones se guardan, pero el dashboard no las muestra.{% endcall %}{% endif %}
-<div class="acciones">{{ boton("Agregar medición", href=pref ~ "/cuerpo/nuevo") }}</div>
-{% if not meds %}<p class="pag-s">Todavía no hay mediciones.</p>{% endif %}
+<h1 class="pag-t">{{ t("cuerpo.titulo") }}</h1>
+{% if ok == "1" %}{% call aviso("ok") %}{{ t("cuerpo.guardado") }}{% endcall %}{% endif %}
+{% if ok == "borrada" %}{% call aviso("ok") %}{{ t("cuerpo.borrada") }}{% endcall %}{% endif %}
+{% if not inbody_activo %}{% call aviso("warn") %}{{ t("cuerpo.apagado", liga=pref ~ "/ajustes")|safe }}{% endcall %}{% endif %}
+<div class="acciones">{{ boton(t("cuerpo.agregar"), href=pref ~ "/cuerpo/nuevo") }}</div>
+{% if not meds %}<p class="pag-s">{{ t("cuerpo.ninguna") }}</p>{% endif %}
 {% for x in meds %}
   {% call tarjeta() %}
-    <p><strong>{{ x.fecha }}</strong>{% if x.peso_kg is defined %} · {{ x.peso_kg }} kg{% endif %}{% if x.pgc is defined %} · {{ x.pgc }} % de grasa{% endif %}{% if x.mme_kg is defined %} · músculo {{ x.mme_kg }} kg{% endif %}</p>
-    {% if not completas(x) %}<p class="pag-s">Falta % de grasa o músculo: todavía no sale en el dashboard.</p>{% endif %}
+    <p><strong>{{ x.fecha }}</strong>{% if x.peso_kg is defined %} · {{ x.peso_kg }} kg{% endif %}{% if x.pgc is defined %} · {{ t("cuerpo.grasa", v=x.pgc) }}{% endif %}{% if x.mme_kg is defined %} · {{ t("cuerpo.musculo", v=x.mme_kg) }}{% endif %}</p>
+    {% if not completas(x) %}<p class="pag-s">{{ t("cuerpo.falta") }}</p>{% endif %}
     <div class="acciones">
-      {{ boton("Editar", "sec", chico=True, href=pref ~ "/cuerpo/" ~ x.fecha ~ "/editar") }}
+      {{ boton(t("comun.editar"), "sec", chico=True, href=pref ~ "/cuerpo/" ~ x.fecha ~ "/editar") }}
       <form method="post" action="{{ pref }}/cuerpo/{{ x.fecha }}/borrar"><input type="hidden" name="csrf" value="{{ csrf }}">
-        {{ boton("Borrar", "sec", chico=True, tipo="submit") }}</form>
+        {{ boton(t("comun.borrar"), "sec", chico=True, tipo="submit") }}</form>
     </div>
   {% endcall %}
 {% endfor %}

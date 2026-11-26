@@ -79,8 +79,8 @@
 {%- endmacro %}
 
 {# Avance del onboarding. nombres: lista; actual: número del paso actual (desde 1); texto: línea de abajo. #}
-{% macro pasos(nombres, actual, texto=None) -%}
-<ol class="pasos" aria-label="Avance">
+{% macro pasos(nombres, actual, texto=None, etiqueta="Avance") -%}
+<ol class="pasos" aria-label="{{ etiqueta }}">
   {%- for nombre in nombres %}
   <li{% if loop.index < actual %} class="hecho"{% elif loop.index == actual %} class="actual" aria-current="step"{% endif %}>{{ nombre }}</li>
   {%- endfor %}

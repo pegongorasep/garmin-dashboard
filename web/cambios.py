@@ -19,6 +19,10 @@ class SinPermiso(Exception):
 
 class NoSeDeshace(Exception):
     """El cambio ya se deshizo, es de otra persona o fue una creación (no hay un «antes» al que volver)."""
+    def __init__(self, clave: str):
+        import i18n
+        self.clave, self.vars = clave, {}
+        super().__init__(i18n.t(clave, "es"))
 
 
 def instantanea(db: Session, atleta_id: int, claves) -> dict:
@@ -90,9 +94,9 @@ def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None
     if c is None or not puede_editar(db, actor, c.atleta_id):
         raise SinPermiso()
     if c.deshecho_por is not None:
-        raise NoSeDeshace("Ese cambio ya se deshizo.")
+        raise NoSeDeshace("err.ya_deshecho")
     if not c.antes or any(v is None for v in c.antes.values()):
-        raise NoSeDeshace("Ese cambio creó algo desde cero: no hay un estado anterior al que volver.")
+        raise NoSeDeshace("err.creado")
     atleta = db.get(Usuario, c.atleta_id)
     nuevo = aplicar_cambio(db, atleta, actor, via or via_de(actor, atleta), f"Deshacer: {c.descripcion}", c.antes)
     c.deshecho_por, c.visto = nuevo.id, True

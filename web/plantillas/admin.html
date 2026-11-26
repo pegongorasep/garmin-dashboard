@@ -1,41 +1,41 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, aviso, tarjeta %}
-{% block titulo %}Admin · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("admin.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Admin</h1>
+<h1 class="pag-t">{{ t("admin.titulo") }}</h1>
 {% if mensaje %}{% call aviso("ok") %}{{ mensaje }}{% endcall %}{% endif %}
 
-{% call tarjeta("Invitaciones") %}
-{% if liga_nueva %}{% call aviso("ok") %}Liga nueva (cópiala ahora; no se vuelve a mostrar):<br><code>{{ liga_nueva }}</code>{% endcall %}{% endif %}
+{% call tarjeta(t("admin.invitaciones")) %}
+{% if liga_nueva %}{% call aviso("ok") %}{{ t("admin.liga_nueva") }}<br><code>{{ liga_nueva }}</code>{% endcall %}{% endif %}
 <form class="pila" method="post" action="/admin/invitar">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Nota (opcional)", "nota", extra={"maxlength": "200", "autocomplete": "off"}) }}
-  <div class="acciones">{{ boton("Crear invitación", tipo="submit") }}</div>
+  {{ campo(t("admin.nota"), "nota", extra={"maxlength": "200", "autocomplete": "off"}) }}
+  <div class="acciones">{{ boton(t("admin.crear"), tipo="submit") }}</div>
 </form>
 {% if invitaciones %}
-<h2>Pendientes</h2>
+<h2>{{ t("admin.pendientes") }}</h2>
 {% for i in invitaciones %}
 <form class="acciones" method="post" action="/admin/revocar">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="id" value="{{ i.id }}">
-  <span>{{ i.nota or "sin nota" }} · creada {{ i.creada }} · vence {{ i.expira }}</span>
-  {{ boton("Revocar", "texto", chico=True, tipo="submit") }}
+  <span>{{ t("admin.fila", nota=(i.nota or t("admin.sin_nota")), creada=i.creada, vence=i.expira) }}</span>
+  {{ boton(t("admin.revocar"), "texto", chico=True, tipo="submit") }}
 </form>
 {% endfor %}
-{% else %}<p>No hay invitaciones pendientes.</p>{% endif %}
+{% else %}<p>{{ t("admin.no_pend") }}</p>{% endif %}
 {% endcall %}
 
-{% call tarjeta("Personas") %}
-<p>«Atrasado» = su última subida tiene más de {{ dias }} días o su versión del motor no es la vigente.</p>
+{% call tarjeta(t("admin.personas")) %}
+<p>{{ t("admin.atrasado_nota", dias=dias) }}</p>
 <div style="overflow-x:auto"><table>
-  <thead><tr><th>Correo</th><th>Apodo</th><th>Repo</th><th>Última subida</th><th>Motor</th><th></th></tr></thead>
+  <thead><tr><th>{{ t("comun.correo") }}</th><th>{{ t("admin.apodo") }}</th><th>{{ t("admin.repo") }}</th><th>{{ t("admin.ultima") }}</th><th>{{ t("admin.motor") }}</th><th></th></tr></thead>
   <tbody>
   {% for u in usuarios %}
   <tr><td>{% if u.liga %}<a href="{{ u.liga }}">{{ u.correo }}</a>{% else %}{{ u.correo }}{% endif %}</td>
-    <td>{{ u.apodo or "—" }}</td><td>{{ u.repo or "—" }}</td><td>{{ u.ultima_subida or "sin subidas" }}</td>
-    <td>{{ u.motor or "—" }}</td><td>{% if u.atrasado %}<strong>atrasado</strong>{% endif %}</td></tr>
+    <td>{{ u.apodo or "—" }}</td><td>{{ u.repo or "—" }}</td><td>{{ u.ultima_subida or t("admin.sin_subidas") }}</td>
+    <td>{{ u.motor or "—" }}</td><td>{% if u.atrasado %}<strong>{{ t("admin.atrasado") }}</strong>{% endif %}</td></tr>
   {% endfor %}
   </tbody>
 </table></div>

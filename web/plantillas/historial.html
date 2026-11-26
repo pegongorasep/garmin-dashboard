@@ -1,25 +1,25 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, aviso, tarjeta %}
-{% block titulo %}Historial · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("hist.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Historial de cambios</h1>
-{% if ok == "deshecho" %}{% call aviso("ok") %}Listo: volvió a como estaba.{% endcall %}{% endif %}
-{% if ok == "visto" %}{% call aviso("ok") %}Avisos marcados como vistos.{% endcall %}{% endif %}
+<h1 class="pag-t">{{ t("hist.titulo") }}</h1>
+{% if ok == "deshecho" %}{% call aviso("ok") %}{{ t("hist.deshecho") }}{% endcall %}{% endif %}
+{% if ok == "visto" %}{% call aviso("ok") %}{{ t("hist.visto") }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% if hay_nuevos %}
 <form class="acciones" method="post" action="{{ pref }}/historial/visto"><input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ boton("Marcar todo como visto", "sec", tipo="submit") }}</form>
+  {{ boton(t("hist.marcar"), "sec", tipo="submit") }}</form>
 {% endif %}
-{% if not filas %}<p class="pag-s">Todavía no hay cambios.</p>{% endif %}
+{% if not filas %}<p class="pag-s">{{ t("hist.ninguno") }}</p>{% endif %}
 {% for f in filas %}
   {% call tarjeta(clase=("nuevo" if not f.c.visto else "") ~ (" deshecho" if f.c.deshecho_por else "")) %}
-    <p><strong>{{ f.quien }}</strong> · {{ f.cuando }} · <span class="pag-s">{{ {'web': 'web', 'ia': 'IA', 'coach': 'coach', 'sistema': 'sistema'}[f.via] }}</span></p>
-    <p>{{ f.c.descripcion }}{% if f.c.deshecho_por %} <em class="pag-s">(deshecho)</em>{% endif %}</p>
+    <p><strong>{{ f.quien }}</strong> · {{ f.cuando }} · <span class="pag-s">{{ t('hist.via_' ~ f.via) }}</span></p>
+    <p>{{ f.c.descripcion }}{% if f.c.deshecho_por %} <em class="pag-s">{{ t("hist.deshecho_marca") }}</em>{% endif %}</p>
     {% if f.puede %}
     <form class="acciones" method="post" action="{{ pref }}/historial/{{ f.c.id }}/deshacer"><input type="hidden" name="csrf" value="{{ csrf }}">
-      {{ boton("Deshacer", "sec", chico=True, tipo="submit") }}</form>
+      {{ boton(t("hist.deshacer"), "sec", chico=True, tipo="submit") }}</form>
     {% endif %}
   {% endcall %}
 {% endfor %}

@@ -43,3 +43,31 @@ def test_cookie_idioma_y_correo_en_ingles(web_ctx):
     assert r.status_code == 303 and "idioma=en" in r.headers["set-cookie"]
     assert "Send code" in c.get("/entrar").text
     assert c.post("/idioma", data={"csrf": csrf, "idioma": "xx"}).status_code == 400
+
+
+def test_paginas_de_la_web_en_ingles(web_ctx):
+    """Las páginas con sesión salen en inglés: sin textos del catálogo en español."""
+    from test_web_ajustes import listo
+    uid, c = listo(web_ctx)
+    c.cookies.set("idioma", "en")
+    rutas = ["/ajustes", "/plan/acciones", "/cuerpo", "/cuerpo/nuevo", "/historial", "/coach", "/conexiones", "/ayuda/conector",
+             "/privacidad", "/privacidad/mis-datos", "/salir"]
+    for ruta in rutas:
+        r = c.get(ruta)
+        assert r.status_code == 200, (ruta, r.status_code, r.headers.get('location'))
+        for es in ("Guardar", "Cancelar", "Todavía", "Quitar", "Historial", "Ajustes", "Aviso de privacidad de"):
+            assert es not in r.text, (ruta, es)
+
+
+def test_bienvenida_y_sesion_en_ingles(web_ctx):
+    from test_web_ajustes import listo
+    from web.modelos import Ajustes
+    uid, c = listo(web_ctx)
+    c.cookies.set("idioma", "en")
+    with web_ctx.sesiones() as db:
+        db.query(Ajustes).filter(Ajustes.usuario_id == uid).delete()
+        db.commit()
+    for paso in range(1, 8):
+        r = c.get(f"/bienvenida?paso={paso}")
+        assert r.status_code == 200, paso
+        assert "Todavía" not in r.text and "Continuar" not in r.text, paso

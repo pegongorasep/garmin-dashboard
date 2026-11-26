@@ -1,57 +1,57 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso %}
-{% block titulo %}Ajustes · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("aj.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Ajustes</h1>
-{% if ok == "1" %}{% call aviso("ok") %}Guardado ✔. Si te equivocas, deshazlo en el <a href="{{ pref }}/historial">historial</a>.{% endcall %}{% endif %}
-{% if ok == "sin" %}{% call aviso("warn") %}No cambiaste nada.{% endcall %}{% endif %}
+<h1 class="pag-t">{{ t("aj.titulo") }}</h1>
+{% if ok == "1" %}{% call aviso("ok") %}{{ t("aj.guardado", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
+{% if ok == "sin" %}{% call aviso("warn") %}{{ t("aj.sin") }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% set zs = [] %}{% for z in zonas %}{% set _ = zs.append((z, z)) %}{% endfor %}
-{% set ss = [] %}{% for s in sensores %}{% set _ = ss.append((s, 'Banda de pecho' if s == 'banda' else 'Muñeca')) %}{% endfor %}
+{% set ss = [] %}{% for s in sensores %}{% set _ = ss.append((s, t('aj.banda') if s == 'banda' else t('aj.muneca'))) %}{% endfor %}
 {% set ns = [] %}{% for n in niveles %}{% set _ = ns.append((n, n|capitalize)) %}{% endfor %}
-{% set es = [("", "Automático (sube con los bloques)")] %}{% for e in escalera %}{% set _ = es.append((e, e ~ (' (correr continuo)' if e == 'continuo' else ''))) %}{% endfor %}
-{% set ints = [("solo_z2", "Solo zona 2"), ("z2_poca_z3", "Zona 2 con unos picos opcionales de zona 3"), ("calidad", "Zona 2 y una sesión de calidad por semana")] %}
+{% set es = [("", t("aj.auto"))] %}{% for e in escalera %}{% set _ = es.append((e, e ~ (t('aj.continuo') if e == 'continuo' else ''))) %}{% endfor %}
+{% set ints = [("solo_z2", t("aj.i_solo")), ("z2_poca_z3", t("aj.i_poca")), ("calidad", t("aj.i_calidad"))] %}
 <form class="pila" method="post" action="{{ pref }}/ajustes">
   <input type="hidden" name="csrf" value="{{ csrf }}">
 
-  <h2 class="pag-h">Perfil</h2>
-  {{ campo("Título de la página", "titulo", valor=v.titulo, extra={"maxlength": 60}) }}
-  {{ seleccion("Zona horaria", "zona", zs, valor=v.zona, error=errores.get("zona")) }}
-  {{ campo("Edad", "edad", tipo="number", valor=v.edad, extra={"min": 10, "max": 99}, error=errores.get("edad")) }}
-  {{ campo("FC máxima", "fc_max", tipo="number", valor=v.fc_max, opcional="opcional", ayuda="Si la dejas vacía se usa 220 − edad y tu reloj la corrige solo.", extra={"min": 120, "max": 230}, error=errores.get("fc_max")) }}
-  {{ seleccion("Sensor de pulso", "sensor", ss, valor=v.sensor, ayuda="Con pulso de muñeca no se muestran las métricas que dependen de banda (la deriva cardiaca).", error=errores.get("sensor")) }}
+  <h2 class="pag-h">{{ t("aj.perfil") }}</h2>
+  {{ campo(t("aj.t_pagina"), "titulo", valor=v.titulo, extra={"maxlength": 60}) }}
+  {{ seleccion(t("aj.zona_h"), "zona", zs, valor=v.zona, error=errores.get("zona")) }}
+  {{ campo(t("aj.edad"), "edad", tipo="number", valor=v.edad, extra={"min": 10, "max": 99}, error=errores.get("edad")) }}
+  {{ campo(t("aj.fcmax"), "fc_max", tipo="number", valor=v.fc_max, opcional=t("comun.opcional"), ayuda=t("aj.fcmax_ayuda"), extra={"min": 120, "max": 230}, error=errores.get("fc_max")) }}
+  {{ seleccion(t("aj.sensor"), "sensor", ss, valor=v.sensor, ayuda=t("aj.sensor_ayuda"), error=errores.get("sensor")) }}
 
-  <h2 class="pag-h">Corrida</h2>
-  {{ seleccion("Nivel", "nivel", ns, valor=v.nivel, error=errores.get("nivel")) }}
-  {{ seleccion("Intensidad", "intensidad", ints, valor=v.intensidad, error=errores.get("intensidad")) }}
-  {% call opciones("Tipos de calidad", "(solo con intensidad «calidad»; si no eliges, rotan)", error=errores.get("calidad")) %}
-    {% for t in tipos_calidad %}{{ opcion("calidad", t, valor=t, marcado=t in v.calidad) }}{% endfor %}
+  <h2 class="pag-h">{{ t("aj.corrida") }}</h2>
+  {{ seleccion(t("aj.nivel"), "nivel", ns, valor=v.nivel, error=errores.get("nivel")) }}
+  {{ seleccion(t("aj.intensidad"), "intensidad", ints, valor=v.intensidad, error=errores.get("intensidad")) }}
+  {% call opciones(t("aj.tipos_cal"), t("aj.tipos_cal_n"), error=errores.get("calidad")) %}
+    {% for tq in tipos_calidad %}{{ opcion("calidad", tq, valor=tq, marcado=tq in v.calidad) }}{% endfor %}
   {% endcall %}
-  {{ opcion("caminatas", "Sesiones de trote y caminata", marcado=v.caminatas) }}
-  {{ seleccion("Escalón de trote/caminata", "escalon", es, valor=v.escalon or "", ayuda="Minutos de trote por 1' de caminata. También lo subes con un botón en «Plan vivo» (menú Plan).", error=errores.get("escalon")) }}
-  {{ opcion("variada", "Corrida variada (la segunda Z2 cambia de forma cada semana)", marcado=v.variada) }}
-  {{ campo("Semanas del plan", "semanas", tipo="number", valor=v.semanas, extra={"min": 4, "max": 52}, requerido=True) }}
-  {{ campo("Fecha de inicio (un lunes)", "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
-  {{ campo("Minutos de una corrida Z2 cómoda", "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
-  {{ campo("Minutos de tu corrida más larga", "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
-  {{ campo("Semanas repetidas", "repetidas", valor=v.repetidas, placeholder="3, 5", ayuda="Números de semana del plan, separados por comas. Más fácil: botón «Repetir esta semana» en Plan vivo.", error=errores.get("repetidas")) }}
-  {{ campo("Fechas de carreras ya hechas o por hacer", "carreras", valor=v.carreras, placeholder="2026-12-13", ayuda="AAAA-MM-DD separadas por comas. Para una carrera con fecha futura usa «Agregar carrera» en Plan vivo.", error=errores.get("carreras")) }}
+  {{ opcion("caminatas", t("aj.caminatas"), marcado=v.caminatas) }}
+  {{ seleccion(t("aj.escalon"), "escalon", es, valor=v.escalon or "", ayuda=t("aj.escalon_ayuda"), error=errores.get("escalon")) }}
+  {{ opcion("variada", t("aj.variada"), marcado=v.variada) }}
+  {{ campo(t("aj.semanas"), "semanas", tipo="number", valor=v.semanas, extra={"min": 4, "max": 52}, requerido=True) }}
+  {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
+  {{ campo(t("aj.z2"), "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
+  {{ campo(t("aj.larga"), "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
+  {{ campo(t("aj.repetidas"), "repetidas", valor=v.repetidas, placeholder="3, 5", ayuda=t("aj.rep_ayuda"), error=errores.get("repetidas")) }}
+  {{ campo(t("aj.carreras"), "carreras", valor=v.carreras, placeholder="2026-12-13", ayuda=t("aj.car_ayuda"), error=errores.get("carreras")) }}
 
-  <h2 class="pag-h">Actividades</h2>
-  {% call opciones("¿Qué otras actividades haces?", "(máximo 4)", error=errores.get("cats")) %}
-    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (" (intensa)" if c.intensa else ""), valor=c.id, marcado=c.id in v.cats) }}{% endfor %}
+  <h2 class="pag-h">{{ t("aj.actividades") }}</h2>
+  {% call opciones(t("aj.otras"), t("aj.max4"), error=errores.get("cats")) %}
+    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (t("aj.intensa") if c.intensa else ""), valor=c.id, marcado=c.id in v.cats) }}{% endfor %}
   {% endcall %}
-  {% call opciones("Días de pierna", "(para no poner la larga o la calidad al día siguiente)") %}
-    {% for clave, nombre in dias %}{{ opcion("pierna", nombre, valor=clave, marcado=clave in v.pierna) }}{% endfor %}
+  {% call opciones(t("aj.pierna"), t("aj.pierna_n")) %}
+    {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave, marcado=clave in v.pierna) }}{% endfor %}
   {% endcall %}
 
-  <h2 class="pag-h">Cuerpo</h2>
-  {{ opcion("inbody", 'Tengo mediciones InBody (captúralas en <a href="' ~ pref ~ '/cuerpo">Cuerpo</a>)', marcado=v.inbody, html=True) }}
+  <h2 class="pag-h">{{ t("aj.cuerpo") }}</h2>
+  {{ opcion("inbody", t("aj.inbody", liga=pref ~ "/cuerpo"), marcado=v.inbody, html=True) }}
 
-  <p class="pag-s">Si cambias nivel, intensidad, caminatas, semanas, inicio o minutos base, tu plan se rehace desde la semana de hoy (te avisamos antes de guardar; las semanas ya pasadas no cambian).</p>
-  <div class="acciones">{{ boton("Guardar", tipo="submit") }}</div>
+  <p class="pag-s">{{ t("aj.rehace") }}</p>
+  <div class="acciones">{{ boton(t("comun.guardar"), tipo="submit") }}</div>
 </form>
 {% if not pref %}
 <form class="pila" method="post" action="/idioma">

@@ -1,109 +1,109 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso, tarjeta %}
-{% block titulo %}Plan vivo · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("plan.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Plan vivo</h1>
-{% if ok == "1" %}{% call aviso("ok") %}Listo ✔. Si te equivocas, deshazlo en el <a href="{{ pref }}/historial">historial</a>.{% endcall %}{% endif %}
+<h1 class="pag-t">{{ t("plan.titulo") }}</h1>
+{% if ok == "1" %}{% call aviso("ok") %}{{ t("plan.ok", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
-<p class="pag-s">Hoy es {{ hoy }}{% if n %} · semana {{ n }} de tu plan{% endif %}. Los cambios se ven al instante en el dashboard.</p>
+<p class="pag-s">{{ t("plan.hoy", hoy=hoy, semana=(t("plan.semana_de", n=n) if n else "")) }}</p>
 
 {% if terminado %}
-<div id="siguiente">{% call tarjeta("Tu plan terminó") %}
-  {% if prueba and prueba.valor is not none %}<p>Tu prueba quedó guardada para compararla con la del siguiente bloque.</p>{% endif %}
-  <p>El siguiente bloque usa tus mismos ajustes y empieza el lunes {{ inicio_siguiente }}.</p>
+<div id="siguiente">{% call tarjeta(t("plan.terminó")) %}
+  {% if prueba and prueba.valor is not none %}<p>{{ t("plan.prueba") }}</p>{% endif %}
+  <p>{{ t("plan.siguiente", inicio=inicio_siguiente) }}</p>
   <form class="acciones" method="post" action="{{ pref }}/plan/siguiente-bloque"><input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ boton("Armar siguiente bloque", tipo="submit") }}</form>
+    {{ boton(t("plan.armar"), tipo="submit") }}</form>
 {% endcall %}</div>
 {% endif %}
 
-{% call tarjeta("Eventos y carreras") %}
+{% call tarjeta(t("plan.eventos")) %}
   {% set hay = cfg.eventos or cfg.metas %}
-  {% if not hay %}<p class="pag-s">No hay eventos ni carreras con fecha. Sin ellos tu plan es base aeróbica, como siempre.</p>{% endif %}
+  {% if not hay %}<p class="pag-s">{{ t("plan.sin_eventos") }}</p>{% endif %}
   {% for e in cfg.eventos %}
-    <p><strong>{{ {'viaje': 'Viaje', 'enfermedad': 'Enfermedad', 'lesion': 'Lesión'}[e.tipo] }}</strong>
-      · {{ e.desde }}{% if e.hasta %} al {{ e.hasta }}{% else %} · sigue{% endif %}
-      {% if e.tipo == 'viaje' %}· {{ {'menos': 'semana ligera (2 Z2 cortas)', 'igual': 'sigo entrenando igual', 'pausa': 'sin correr: el plan espera'}[e.modo] }}{% else %}· el plan espera{% endif %}</p>
+    <p><strong>{{ t('plan.ev_' ~ e.tipo) }}</strong>
+      · {{ e.desde }}{% if e.hasta %} {{ t("plan.al") }} {{ e.hasta }}{% else %} · {{ t("plan.sigue") }}{% endif %}
+      {% if e.tipo == 'viaje' %}· {{ t('plan.modo_' ~ e.modo) }}{% else %}· {{ t("plan.espera") }}{% endif %}</p>
     <div class="acciones">
       {% if not e.hasta %}<form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/cerrar"><input type="hidden" name="csrf" value="{{ csrf }}">
-        {{ boton("Ya estoy bien", chico=True, tipo="submit") }}</form>{% endif %}
+        {{ boton(t("plan.ya_bien"), chico=True, tipo="submit") }}</form>{% endif %}
       {% if e.tipo == 'viaje' and e.modo != 'igual' %}<form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/modo-igual"><input type="hidden" name="csrf" value="{{ csrf }}">
-        {{ boton("Cambiar a: sigo igual", "sec", chico=True, tipo="submit") }}</form>{% endif %}
+        {{ boton(t("plan.cambiar_igual"), "sec", chico=True, tipo="submit") }}</form>{% endif %}
       <form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
-        {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form>
+        {{ boton(t("comun.quitar"), "sec", chico=True, tipo="submit") }}</form>
     </div>
   {% endfor %}
   {% for x in cfg.metas %}
-    <p><strong>Carrera «{{ x.nombre }}»</strong> · {{ x.fecha }}{% if x.distancia_km %} · {{ x.distancia_km }} km{% endif %}</p>
+    <p><strong>{{ t("plan.carrera_n", nombre=x.nombre) }}</strong> · {{ x.fecha }}{% if x.distancia_km %} · {{ x.distancia_km }} km{% endif %}</p>
     <div class="acciones"><form method="post" action="{{ pref }}/plan/meta/{{ x.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
-      {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form></div>
+      {{ boton(t("comun.quitar"), "sec", chico=True, tipo="submit") }}</form></div>
   {% endfor %}
-  <p class="pag-s">Cuando termina un evento, el plan se reanuda en la semana donde iba (equivale a repetirla).</p>
+  <p class="pag-s">{{ t("plan.reanuda") }}</p>
 {% endcall %}
 
-<div id="viaje">{% call tarjeta("Voy de viaje") %}
+<div id="viaje">{% call tarjeta(t("plan.viaje_t")) %}
   <form class="pila" method="post" action="{{ pref }}/plan/viaje">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ campo("Salgo el", "desde", tipo="date", requerido=True) }}
-    {{ campo("Regreso el", "hasta", tipo="date", requerido=True) }}
-    {% call opciones("¿Cómo entrenarás?") %}
-      {{ opcion("modo", "No voy a correr: el plan espera y sigo al volver", valor="pausa", tipo="radio", marcado=True) }}
-      {{ opcion("modo", "Voy a correr menos: esa semana serán 2 Z2 cortas", valor="menos", tipo="radio") }}
-      {{ opcion("modo", "Sigo entrenando igual: el viaje solo se ve en el calendario", valor="igual", tipo="radio") }}
+    {{ campo(t("plan.salgo"), "desde", tipo="date", requerido=True) }}
+    {{ campo(t("plan.regreso"), "hasta", tipo="date", requerido=True) }}
+    {% call opciones(t("plan.como")) %}
+      {{ opcion("modo", t("plan.v_pausa"), valor="pausa", tipo="radio", marcado=True) }}
+      {{ opcion("modo", t("plan.v_menos"), valor="menos", tipo="radio") }}
+      {{ opcion("modo", t("plan.v_igual"), valor="igual", tipo="radio") }}
     {% endcall %}
-    <div class="acciones">{{ boton("Agregar viaje", tipo="submit") }}</div>
+    <div class="acciones">{{ boton(t("plan.agregar_viaje"), tipo="submit") }}</div>
   </form>
 {% endcall %}</div>
 
-<div id="enfermo">{% call tarjeta("Estoy enfermo o lastimado") %}
+<div id="enfermo">{% call tarjeta(t("plan.enfermo_t")) %}
   <form class="pila" method="post" action="{{ pref }}/plan/enfermedad">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ seleccion("¿Qué pasó?", "tipo", [("enfermedad", "Enfermedad"), ("lesion", "Lesión")]) }}
-    {{ campo("Desde", "desde", tipo="date", valor=hoy) }}
-    <p class="pag-s">Las sesiones de esas semanas quedan en pausa. Si algo duele, para; esto no es consejo médico. Cuando estés bien, toca «Ya estoy bien» arriba y el plan sigue donde iba.</p>
-    <div class="acciones">{{ boton("Pausar mi plan", tipo="submit") }}</div>
+    {{ seleccion(t("plan.que_paso"), "tipo", [("enfermedad", t("plan.ev_enfermedad")), ("lesion", t("plan.ev_lesion"))]) }}
+    {{ campo(t("plan.desde"), "desde", tipo="date", valor=hoy) }}
+    <p class="pag-s">{{ t("plan.enfermo_n") }}</p>
+    <div class="acciones">{{ boton(t("plan.pausar"), tipo="submit") }}</div>
   </form>
 {% endcall %}</div>
 
-<div id="carrera">{% call tarjeta("Agregar carrera") %}
+<div id="carrera">{% call tarjeta(t("plan.agregar_carrera")) %}
   <form class="pila" method="post" action="{{ pref }}/plan/carrera">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ campo("Nombre", "nombre", placeholder="10K de enero", extra={"maxlength": 60}) }}
-    {{ campo("Fecha", "fecha", tipo="date", requerido=True) }}
-    {{ campo("Distancia (km)", "distancia_km", opcional="opcional", extra={"inputmode": "decimal"}) }}
-    <p class="pag-s">La semana de la carrera serán 2 Z2 cortas al 60 % más la carrera, y la semana anterior baja la carga.</p>
-    <div class="acciones">{{ boton("Agregar carrera", tipo="submit") }}</div>
+    {{ campo(t("plan.nombre"), "nombre", placeholder="{{ t('plan.ph_carrera') }}", extra={"maxlength": 60}) }}
+    {{ campo(t("plan.fecha"), "fecha", tipo="date", requerido=True) }}
+    {{ campo(t("plan.distancia"), "distancia_km", opcional=t("comun.opcional"), extra={"inputmode": "decimal"}) }}
+    <p class="pag-s">{{ t("plan.carrera_n2") }}</p>
+    <div class="acciones">{{ boton(t("plan.agregar_carrera"), tipo="submit") }}</div>
   </form>
 {% endcall %}</div>
 
-{% call tarjeta("Repetir esta semana") %}
-  <p>{% if n %}Si no te sentiste listo, repite la semana {{ n }}: el resto del plan se recorre una semana.{% else %}Hoy no hay una semana del plan para repetir.{% endif %}</p>
+{% call tarjeta(t("plan.repetir_t")) %}
+  <p>{% if n %}{{ t("plan.rep_si", n=n) }}{% else %}{{ t("plan.rep_no") }}{% endif %}</p>
   {% if n %}<form class="acciones" method="post" action="{{ pref }}/plan/repetir"><input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ boton("Repetir la semana " ~ n, tipo="submit") }}</form>{% endif %}
+    {{ boton(t("plan.rep_boton", n=n), tipo="submit") }}</form>{% endif %}
 {% endcall %}
 
 {% if esc %}
-{% call tarjeta("Escalera de trote y caminata") %}
-  <p>Escalón actual: <strong>{{ esc_nombre or esc }}</strong>.</p>
-  {% if sugerido %}{% call aviso("ok") %}Llevas dos semanas completas sin días rojos: ya puedes subir a {{ nombre_escalon[sugerido] }}. Es solo una sugerencia.{% endcall %}{% endif %}
+{% call tarjeta(t("plan.escalera")) %}
+  <p>{{ t("plan.escalon_actual", e=(esc_nombre or esc)|e)|safe }}</p>
+  {% if sugerido %}{% call aviso("ok") %}{{ t("plan.sugerido", e=nombre_escalon[sugerido]) }}{% endcall %}{% endif %}
   {% if esc_siguiente %}
   <form class="pila" method="post" action="{{ pref }}/plan/escalon/subir"><input type="hidden" name="csrf" value="{{ csrf }}">
-    <p class="pag-s">Subir a {{ nombre_escalon[esc_siguiente] }} rehace tu plan desde la semana de hoy.</p>
-    <div class="acciones">{{ boton("Subir escalón", "sec", tipo="submit") }}</div></form>
-  {% else %}<p class="pag-s">Ya estás en el último escalón.</p>{% endif %}
+    <p class="pag-s">{{ t("plan.subir_a", e=nombre_escalon[esc_siguiente]) }}</p>
+    <div class="acciones">{{ boton(t("plan.subir"), "sec", tipo="submit") }}</div></form>
+  {% else %}<p class="pag-s">{{ t("plan.ultimo") }}</p>{% endif %}
 {% endcall %}
 {% endif %}
 
-{% call tarjeta("Sesiones del plan") %}
-  <div class="acciones">{{ boton("Descargar plan para el reloj", "sec", href=pref ~ "/plan/reloj.json") }}</div>
-  <p class="pag-s">Guárdalo y, en tu compu: <code>reloj.py semana --plan plan.json</code> (simula; con <code>--si</code> lo manda).</p>
-  <p class="pag-s">Edita los pasos de una sesión (trote, caminata, zona, repeticiones). Solo Z2, Larga y variadas.</p>
+{% call tarjeta(t("plan.sesiones")) %}
+  <div class="acciones">{{ boton(t("plan.descargar"), "sec", href=pref ~ "/plan/reloj.json") }}</div>
+  <p class="pag-s">{{ t("plan.reloj_nota")|safe }}</p>
+  <p class="pag-s">{{ t("plan.edita") }}</p>
   <div class="filas">
   {% for w in plan.weeks %}
-  <details class="fila-ses{{ ' hoy' if w.n == n }}" {{ 'open' if w.n == n }}><summary><span class="fs-n">Semana {{ w.n }} · {{ w.focus }}</span></summary>
+  <details class="fila-ses{{ ' hoy' if w.n == n }}" {{ 'open' if w.n == n }}><summary><span class="fs-n">{{ t("plan.sem_resumen", n=w.n, foco=w.focus) }}</span></summary>
     <div class="fs-cuerpo">{% for s in w.sessions %}
-      <p>{{ s.name }} · {{ s.minutes }}'{% if s.tipo in editables %} · <a href="{{ pref }}/plan/sesion/{{ w.n }}/{{ s.id }}">Editar</a>{% endif %}</p>
+      <p>{{ s.name }} · {{ s.minutes }}'{% if s.tipo in editables %} · <a href="{{ pref }}/plan/sesion/{{ w.n }}/{{ s.id }}">{{ t("comun.editar") }}</a>{% endif %}</p>
     {% endfor %}</div></details>
   {% endfor %}
   </div>

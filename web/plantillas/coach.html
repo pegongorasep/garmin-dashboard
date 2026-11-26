@@ -1,37 +1,37 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, aviso, tarjeta, campo %}
-{% block titulo %}Coach · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("coach.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Coach</h1>
-<p class="pag-s">Tu coach puede ver y editar tu plan, tus ajustes y tus mediciones InBody. Tú decides quién, y se lo quitas cuando quieras.</p>
-{% if ok == "1" %}{% call aviso("ok") %}Si esa persona tiene cuenta, ya tiene acceso.{% endcall %}{% endif %}
-{% if ok == "quitado" %}{% call aviso("ok") %}Acceso quitado.{% endcall %}{% endif %}
+<h1 class="pag-t">{{ t("coach.titulo") }}</h1>
+<p class="pag-s">{{ t("coach.intro") }}</p>
+{% if ok == "1" %}{% call aviso("ok") %}{{ t("coach.ok_dar") }}{% endcall %}{% endif %}
+{% if ok == "quitado" %}{% call aviso("ok") %}{{ t("coach.ok_quitar") }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
-{% call tarjeta("Dar acceso") %}
+{% call tarjeta(t("coach.dar_acceso")) %}
 <form method="post" action="/coach/dar"><input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Correo de tu coach", "correo", tipo="email", requerido=True, ayuda="Tiene que ser el correo con el que su cuenta entra a Ahí la Llevas.") }}
-  <div class="acciones">{{ boton("Dar acceso", tipo="submit") }}</div>
+  {{ campo(t("coach.correo"), "correo", tipo="email", requerido=True, ayuda=t("coach.correo_ayuda")) }}
+  <div class="acciones">{{ boton(t("coach.dar_acceso"), tipo="submit") }}</div>
 </form>
 {% endcall %}
-<h2 class="pag-h">Quién tiene acceso</h2>
-{% if not coaches %}<p class="pag-s">Nadie por ahora.</p>{% endif %}
+<h2 class="pag-h">{{ t("coach.quien") }}</h2>
+{% if not coaches %}<p class="pag-s">{{ t("coach.nadie") }}</p>{% endif %}
 {% for c in coaches %}
   {% call tarjeta() %}
     <p><strong>{{ c.nombre }}</strong></p>
     <form method="post" action="/coach/quitar/{{ c.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
-      {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form>
+      {{ boton(t("comun.quitar"), "sec", chico=True, tipo="submit") }}</form>
   {% endcall %}
 {% endfor %}
-<h2 class="pag-h">Mis atletas</h2>
-{% if not atletas %}<p class="pag-s">Nadie te ha dado acceso todavía.</p>{% endif %}
+<h2 class="pag-h">{{ t("coach.mis_atletas") }}</h2>
+{% if not atletas %}<p class="pag-s">{{ t("coach.nadie_dio") }}</p>{% endif %}
 {% for a in atletas %}
   {% call tarjeta() %}
     <p><strong>{{ a.nombre }}</strong></p>
-    <p class="pag-s">Datos al: {{ a.datos_al or "sin datos" }} · Semana del plan: {{ a.semana or "-" }} · Semáforo de hoy: {{ a.semaforo or "-" }}</p>
-    <div class="acciones">{{ boton("Ver", "sec", chico=True, href="/a/" ~ a.id ~ "/") }}
-      {{ boton("Ajustes", "sec", chico=True, href="/a/" ~ a.id ~ "/ajustes") }}</div>
+    <p class="pag-s">{{ t("coach.fila", datos=(a.datos_al or t("comun.sin_datos")), semana=(a.semana or "-"), semaforo=(a.semaforo or "-")) }}</p>
+    <div class="acciones">{{ boton(t("comun.ver"), "sec", chico=True, href="/a/" ~ a.id ~ "/") }}
+      {{ boton(t("nav.ajustes"), "sec", chico=True, href="/a/" ~ a.id ~ "/ajustes") }}</div>
   {% endcall %}
 {% endfor %}
 {% endblock %}

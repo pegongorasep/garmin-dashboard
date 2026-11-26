@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, aviso %}
-{% block titulo %}Entrar · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("liga.titulo_pagina") }}{% endblock %}
 {% block contenido %}
 {% if no_valida %}
-<h1 class="pag-t">Liga vencida</h1>
-{% call aviso("bad", rol="alert") %}Esta liga ya se usó o venció.{% endcall %}
-<div class="acciones">{{ boton("Pedir otra liga", href="/entrar") }}</div>
+<h1 class="pag-t">{{ t("liga.vencida") }}</h1>
+{% call aviso("bad", rol="alert") %}{{ t("liga.vencida_texto") }}{% endcall %}
+<div class="acciones">{{ boton(t("liga.otra"), href="/entrar") }}</div>
 {% else %}
-<h1 class="pag-t">Entrar</h1>
+<h1 class="pag-t">{{ t("entrar.titulo") }}</h1>
 <form class="pila" method="post">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ boton("Entrar a Ahí la Llevas", tipo="submit") }}
+  {{ boton(t("liga.entrar"), tipo="submit") }}
 </form>
 {% endif %}
 {% endblock %}

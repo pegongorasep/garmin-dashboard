@@ -1,22 +1,21 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, aviso, tarjeta %}
-{% block titulo %}Conectar una IA · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("conector.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1 class="pag-t">Conectar una IA</h1>
-<p>Con un conector, tu IA lee tu semana y tu plan y te ayuda a ajustarlos. Cada cambio queda en el historial y se deshace.
-Nunca ve tu contraseña ni la key de Garmin.</p>
-{% call tarjeta("La dirección del conector") %}<p><code>{{ url_mcp }}</code></p>{% endcall %}
-{% call tarjeta("Claude") %}
-<ol><li>Ajustes, Conectores, Agregar conector personalizado.</li>
-<li>Pega la dirección de arriba y ponle el nombre «Ahí la Llevas».</li>
-<li>Conectar: se abre esta página para que entres y des permiso.</li></ol>
+<h1 class="pag-t">{{ t("conector.titulo") }}</h1>
+<p>{{ t("conector.intro") }}</p>
+{% call tarjeta(t("conector.direccion")) %}<p><code>{{ url_mcp }}</code></p>{% endcall %}
+{% call tarjeta(t("conector.claude")) %}
+<ol><li>{{ t("conector.c1") }}</li>
+<li>{{ t("conector.c2") }}</li>
+<li>{{ t("conector.c3") }}</li></ol>
 {% endcall %}
-{% call tarjeta("ChatGPT") %}
-<ol><li>Ajustes, Conectores, activa el modo desarrollador y crea un conector.</li>
-<li>Pega la misma dirección; la autenticación es OAuth.</li>
-<li>Da permiso cuando se abra esta página.</li></ol>
+{% call tarjeta(t("conector.chatgpt")) %}
+<ol><li>{{ t("conector.g1") }}</li>
+<li>{{ t("conector.g2") }}</li>
+<li>{{ t("conector.g3") }}</li></ol>
 {% endcall %}
-<p>Para quitarle el acceso: <a href="/conexiones">Conexiones</a>, Revocar.</p>
+<p>{{ t("conector.quitar")|safe }}</p>
 {% endblock %}

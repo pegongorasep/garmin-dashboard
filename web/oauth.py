@@ -157,7 +157,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         """(cliente, error). Los errores de client_id/redirect_uri NO redirigen: se muestran en la página."""
         c = db.get(ClienteOAuth, p.get("client_id") or "")
         if c is None or p.get("redirect_uri") not in c.redirect_uris:
-            return None, "Esta conexión no es válida (cliente o dirección de regreso desconocidos)."
+            return None, "oauth.cliente_malo"
         return c, None
 
     def redir_error(p, codigo):
@@ -192,7 +192,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         p = {k: request.query_params.get(k) or "" for k in CAMPOS}
         c, err = revisar(db, p)
         if err:
-            return render(request, "oauth_consentimiento.html", status=400, error=err, cliente="")
+            return render(request, "oauth_consentimiento.html", status=400, error=request.state.t(err), cliente="")
         malo = problema_params(p)
         if malo:
             return redir_error(p, malo)
@@ -211,7 +211,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         p = {k: str(form.get(k) or "") for k in CAMPOS}
         c, err = revisar(db, p)
         if err:
-            return render(request, "oauth_consentimiento.html", status=400, error=err, cliente="")
+            return render(request, "oauth_consentimiento.html", status=400, error=request.state.t(err), cliente="")
         malo = problema_params(p)
         if malo:
             return redir_error(p, malo)

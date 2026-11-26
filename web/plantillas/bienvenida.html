@@ -1,139 +1,132 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso, tarjeta, pasos as barra_pasos %}
-{% block titulo %}Bienvenida · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("bv.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block clase_pie %}ancha{% endblock %}
 {% block contenido %}
-<h1 class="pag-t">Vamos a armar tu plan</h1>
-{{ barra_pasos(pasos, paso, "Paso " ~ paso ~ " de " ~ (pasos|length)) }}
+<h1 class="pag-t">{{ t("bv.titulo") }}</h1>
+{{ barra_pasos([t('bv.s1'), t('bv.s2'), t('bv.s3'), t('bv.s4'), t('bv.s5'), t('bv.s6'), t('bv.s7')], paso, t("bv.paso", n=paso, total=pasos|length), t("bv.avance")) }}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 
 {% if paso == 1 %}
-<h2 class="pag-h">Tu privacidad primero</h2>
+<h2 class="pag-h">{{ t("bv.p1_t") }}</h2>
 {% call tarjeta() %}
   <div class="texto">
-  <p>Para armar tu plan guardamos datos de tu Garmin: <strong>frecuencia cardiaca, variabilidad (HRV), sueño y
-  composición corporal</strong>. Son <strong>datos personales sensibles</strong> y necesitamos tu consentimiento expreso.</p>
+  <p>{{ t("bv.p1_a")|safe }}</p>
   <ul>
-    <li>Los usamos solo para mostrarte tu dashboard y tu plan (y compartirlos con tu coach si tú lo activas).</li>
-    <li>No los vendemos ni los transferimos. Puedes descargarlos o borrarlos cuando quieras.</li>
-    <li>Tu key de Garmin <strong>nunca</strong> llega aquí: se queda en tu cuenta de GitHub.</li>
-    <li>Esto no es consejo médico. Si algo duele, para.</li>
+    <li>{{ t("bv.p1_l1") }}</li>
+    <li>{{ t("bv.p1_l2") }}</li>
+    <li>{{ t("bv.p1_l3")|safe }}</li>
+    <li>{{ t("bv.p1_l4") }}</li>
   </ul>
-  <p><a href="/privacidad" target="_blank" rel="noopener">Leer el aviso de privacidad completo</a> (versión {{ version }}).</p>
+  <p>{{ t("bv.p1_leer", v=version)|safe }}</p>
   </div>
 {% endcall %}
 <form class="pila" method="post" action="/bienvenida/consentimiento">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ opcion("acepto", "Leí el aviso de privacidad y <strong>acepto expresamente</strong> el tratamiento de mis datos sensibles de salud para estas finalidades.", requerido=True, html=True) }}
-  {{ boton("Continuar", tipo="submit") }}
+  {{ opcion("acepto", t("bv.acepto"), requerido=True, html=True) }}
+  {{ boton(t("bv.continuar"), tipo="submit") }}
 </form>
 
 {% elif paso == 2 %}
-<h2 class="pag-h">¿Cuál es tu usuario de GitHub?</h2>
-<p>Tus datos de Garmin viajan por una copia privada que vive en <strong>tu</strong> cuenta de GitHub; así tu key
-nunca sale de ahí. Es gratis.</p>
+<h2 class="pag-h">{{ t("bv.p2_t") }}</h2>
+<p>{{ t("bv.p2_a")|safe }}</p>
 <form class="pila" method="post" action="/bienvenida/github">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Usuario de GitHub", "usuario", valor=u.github_owner or "", requerido=True, ayuda="Es lo que aparece en github.com/tu-usuario.", extra={"autocomplete": "off", "autocapitalize": "off"}) }}
-  {{ boton("Continuar", tipo="submit") }}
+  {{ campo(t("bv.p2_campo"), "usuario", valor=u.github_owner or "", requerido=True, ayuda=t("bv.p2_ayuda"), extra={"autocomplete": "off", "autocapitalize": "off"}) }}
+  {{ boton(t("bv.continuar"), tipo="submit") }}
 </form>
-<p class="pag-s">¿No tienes cuenta? <a href="https://github.com/signup" target="_blank" rel="noopener">Crea una gratis</a>
-(la usamos solo para correr tu copia del programa que baja tus datos).</p>
+<p class="pag-s">{{ t("bv.p2_sin")|safe }}</p>
 
 {% elif paso == 3 %}
-<h2 class="pag-h">Crea tu copia en GitHub</h2>
-<p>Se crea una copia <strong>privada</strong> del programa que baja tus datos de Garmin. Deja el nombre que te sugiere GitHub.</p>
-<div class="acciones"><a class="boton" href="{{ liga.copia }}" target="_blank" rel="noopener">Crear mi copia en GitHub</a></div>
-<p class="pag-s">En GitHub toca «Create repository from template». Luego regresa aquí.</p>
-{% call aviso("warn") %}Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual.{% endcall %}
-<div class="acciones">{{ boton("Ya la creé", "sec", href="/bienvenida?paso=4") }}</div>
+<h2 class="pag-h">{{ t("bv.p3_t") }}</h2>
+<p>{{ t("bv.p3_a")|safe }}</p>
+<div class="acciones"><a class="boton" href="{{ liga.copia }}" target="_blank" rel="noopener">{{ t("bv.p3_boton") }}</a></div>
+<p class="pag-s">{{ t("bv.p3_n") }}</p>
+{% call aviso("warn") %}{{ t("bv.otro_nombre") }}{% endcall %}
+<div class="acciones">{{ boton(t("bv.p3_ya"), "sec", href="/bienvenida?paso=4") }}</div>
 
 {% elif paso == 4 %}
-<h2 class="pag-h">Pon tu key de Garmin en tu repo</h2>
-{% call aviso("warn") %}<strong>Tu key se queda en tu GitHub; aquí no la pedimos nunca.</strong> No la escribas en esta página.{% endcall %}
+<h2 class="pag-h">{{ t("bv.p4_t") }}</h2>
+{% call aviso("warn") %}{{ t("bv.p4_aviso")|safe }}{% endcall %}
 <ol class="pasos-lista">
-  <li>Entra a <a href="{{ liga.key }}" target="_blank" rel="noopener">tu página de Garmin Connect</a>, toca
-  <em>Create Key</em> y elige la expiración más larga. Copia la key (solo se muestra una vez).</li>
-  <li>Abre <a href="{{ liga.secreto }}" target="_blank" rel="noopener">el formulario de secretos de tu repo</a>
-  ({{ liga.repo }}; si le pusiste otro nombre, abre tu repo en GitHub y sigue igual). En <em>Name</em> escribe:
+  <li>{{ t("bv.p4_l1", liga=liga.key)|safe }}</li>
+  <li>{{ t("bv.p4_l2", liga=liga.secreto, repo=liga.repo|e)|safe }}
     <div id="copiar-nombre"><div class="copiar"><code id="nombre-secreto">PERSONAL_API_KEY</code></div></div>
   </li>
-  <li>En <em>Secret</em> pega tu key y toca <em>Add secret</em>.</li>
+  <li>{{ t("bv.p4_l3")|safe }}</li>
 </ol>
-<div class="acciones">{{ boton("Atrás", "sec", href="/bienvenida?paso=3") }} {{ boton("Ya la puse", href="/bienvenida?paso=5") }}</div>
+<div class="acciones">{{ boton(t("comun.atras"), "sec", href="/bienvenida?paso=3") }} {{ boton(t("bv.p4_ya"), href="/bienvenida?paso=5") }}</div>
 
 {% elif paso == 5 %}
-<h2 class="pag-h">Actívalo</h2>
+<h2 class="pag-h">{{ t("bv.p5_t") }}</h2>
 <ol class="pasos-lista">
-  <li>Abre <a href="{{ liga.actions }}" target="_blank" rel="noopener">la pestaña Actions de tu repo</a> y, si GitHub te lo pide,
-  toca <em>I understand my workflows, go ahead and enable them</em>.</li>
-  <li>Elige el flujo <em>Deploy</em> a la izquierda y toca <em>Run workflow</em> (el botón verde).</li>
+  <li>{{ t("bv.p5_l1", liga=liga.actions)|safe }}</li>
+  <li>{{ t("bv.p5_l2")|safe }}</li>
 </ol>
-<p class="pag-s">Corre solo 3 veces al día; este primer disparo manual trae tu historial.</p>
-{% call aviso("warn") %}Si le pusiste otro nombre a tu repo, abre tu repo en GitHub y sigue igual.{% endcall %}
-<div class="acciones">{{ boton("Atrás", "sec", href="/bienvenida?paso=4") }} {{ boton("Ya lo corrí", href="/bienvenida?paso=6") }}</div>
+<p class="pag-s">{{ t("bv.p5_n") }}</p>
+{% call aviso("warn") %}{{ t("bv.otro_nombre") }}{% endcall %}
+<div class="acciones">{{ boton(t("comun.atras"), "sec", href="/bienvenida?paso=4") }} {{ boton(t("bv.p5_ya"), href="/bienvenida?paso=6") }}</div>
 
 {% elif paso == 6 %}
 {% if not u.repo_id %}
-<h2 class="pag-h">Comprueba que ese repo es tuyo</h2>
+<h2 class="pag-h">{{ t("bv.p6_t") }}</h2>
 <ol class="pasos-lista">
-  <li>Abre <a href="{{ liga.actions }}" target="_blank" rel="noopener">la última corrida de tu repo</a> (pestaña Actions).
-  Si no hay ninguna, toca <em>Run workflow</em> en el flujo <em>Deploy</em> y espera un par de minutos.</li>
-  <li>Entra a esa corrida: abajo, en <em>Summary</em>, dice «Tu código para Ahí la Llevas». Solo lo ven quienes tienen acceso a tu repo privado.</li>
-  <li>Escribe aquí el código de 6 dígitos:</li>
+  <li>{{ t("bv.p6_l1", liga=liga.actions)|safe }}</li>
+  <li>{{ t("bv.p6_l2")|safe }}</li>
+  <li>{{ t("bv.p6_l3") }}</li>
 </ol>
 <form class="pila" method="post" action="/bienvenida/codigo">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Código", "codigo", requerido=True, extra={"inputmode": "numeric", "pattern": "[0-9 ]{6,7}", "maxlength": "7", "autocomplete": "one-time-code"}) }}
-  {{ boton("Vincular mi repo", tipo="submit") }}
+  {{ campo(t("bv.p6_codigo"), "codigo", requerido=True, extra={"inputmode": "numeric", "pattern": "[0-9 ]{6,7}", "maxlength": "7", "autocomplete": "one-time-code"}) }}
+  {{ boton(t("bv.p6_vincular"), tipo="submit") }}
 </form>
-<p class="pag-s">El código vence en 1 hora y tienes 5 intentos; si falla, corre «Run workflow» otra vez para uno nuevo.</p>
-<div class="acciones">{{ boton("Atrás", "sec", href="/bienvenida?paso=5") }}</div>
+<p class="pag-s">{{ t("bv.p6_n") }}</p>
+<div class="acciones">{{ boton(t("comun.atras"), "sec", href="/bienvenida?paso=5") }}</div>
 {% else %}
-<h2 class="pag-h">Repo vinculado ✔ — ahora tus datos</h2>
-<p>La corrida que generó el código no guarda datos. Corre el flujo una vez más:</p>
-<div class="acciones"><a class="boton" href="{{ liga.actions }}" target="_blank" rel="noopener">Run workflow en mi repo</a></div>
-<div id="espera">{% call aviso("warn") %}Todavía no llegan. Tarda uno o dos minutos después de «Run workflow».{% endcall %}</div>
-<div id="listo" hidden>{% call aviso("ok") %}Ya llegaron tus datos ✔{% endcall %}</div>
-<div class="acciones"><a class="boton" id="siguiente" href="/bienvenida?paso=7" hidden>Armar mi plan</a></div>
-<p class="pag-s">Si pasan 5 minutos, revisa que el flujo no haya fallado (casi siempre es la key: bien pegada y con el nombre <code>PERSONAL_API_KEY</code>).</p>
+<h2 class="pag-h">{{ t("bv.p6b_t") }}</h2>
+<p>{{ t("bv.p6b_a") }}</p>
+<div class="acciones"><a class="boton" href="{{ liga.actions }}" target="_blank" rel="noopener">{{ t("bv.p6b_boton") }}</a></div>
+<div id="espera">{% call aviso("warn") %}{{ t("bv.p6b_espera") }}{% endcall %}</div>
+<div id="listo" hidden>{% call aviso("ok") %}{{ t("bv.p6b_listo") }}{% endcall %}</div>
+<div class="acciones"><a class="boton" id="siguiente" href="/bienvenida?paso=7" hidden>{{ t("bv.p6b_armar") }}</a></div>
+<p class="pag-s">{{ t("bv.p6b_n")|safe }}</p>
 {% endif %}
 
 {% elif paso == 7 %}
-<h2 class="pag-h">Tu plan</h2>
-<p>Las mismas preguntas de siempre; todo se puede cambiar después en Ajustes.</p>
+<h2 class="pag-h">{{ t("bv.p7_t") }}</h2>
+<p>{{ t("bv.p7_a") }}</p>
 <form class="pila" method="post" action="/bienvenida/plan">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Título de tu página", "titulo", valor=valores.get('titulo', 'Mi entreno'), extra={"maxlength": "60"}) }}
-  {{ seleccion("Tu nivel", "nivel", [
-    ("novato", "Novato: menos de 3 meses corriendo o no corro 20' seguidos"),
-    ("intermedio", "Intermedio: 20–40' seguidos, 1–3 veces por semana"),
-    ("corredor", "Corredor: 45' o más seguidos, 3+ veces por semana")], "intermedio") }}
-  {{ seleccion("Intensidad", "intensidad", [
-    ("solo_z2", "Solo zona 2 (si ya haces algo intenso como HIIT o CrossFit)"),
-    ("z2_poca_z3", "Zona 2 con unos picos opcionales de zona 3"),
-    ("calidad", "Zona 2 y una sesión de calidad por semana (corredores)")], "z2_poca_z3") }}
-  {% call opciones("Tipos de calidad", "(solo si elegiste calidad; si no eliges, rotan)") %}
-    {% for t in tipos_calidad %}{{ opcion("calidad", t, valor=t) }}{% endfor %}
+  {{ campo(t("bv.p7_titulo"), "titulo", valor=valores.get('titulo', t('bv.p7_titulo_def')), extra={"maxlength": "60"}) }}
+  {{ seleccion(t("bv.p7_nivel"), "nivel", [
+    ("novato", t("bv.n_novato")),
+    ("intermedio", t("bv.n_inter")),
+    ("corredor", t("bv.n_corredor"))], "intermedio") }}
+  {{ seleccion(t("aj.intensidad"), "intensidad", [
+    ("solo_z2", t("bv.i_solo")),
+    ("z2_poca_z3", t("aj.i_poca")),
+    ("calidad", t("bv.i_calidad"))], "z2_poca_z3") }}
+  {% call opciones(t("aj.tipos_cal"), t("bv.cal_n")) %}
+    {% for tq in tipos_calidad %}{{ opcion("calidad", tq, valor=tq) }}{% endfor %}
   {% endcall %}
-  {{ opcion("caminatas", "Todavía no corro 20' seguidos: quiero sesiones de trote y caminata") }}
-  {{ campo("Minutos de una corrida Z2 cómoda hoy", "z2", tipo="number", valor=valores.get('z2', 20), requerido=True, corto=True, ayuda="Mejor quedarse corto: el plan sube solo.", extra={"min": "5", "max": "120"}) }}
-  {{ campo("Minutos de tu corrida más larga reciente", "larga", tipo="number", valor=valores.get('larga', 40), requerido=True, corto=True, extra={"min": "5", "max": "240"}) }}
-  {{ campo("Edad", "edad", tipo="number", valor=valores.get('edad', ''), corto=True, extra={"min": "10", "max": "99"}) }}
-  {{ campo("FC máxima", "fc_max", tipo="number", valor=valores.get('fc_max', ''), opcional="opcional", corto=True, ayuda="Si la dejas vacía se usa 220 − edad y tu reloj la corrige solo.", extra={"min": "120", "max": "230"}) }}
-  {% call opciones("¿Qué otras actividades haces?", "Si no marcas ninguna se usan todas las categorías comunes.") %}
-    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (" (intensa)" if c.intensa else ""), valor=c.id) }}{% endfor %}
+  {{ opcion("caminatas", t("bv.caminatas")) }}
+  {{ campo(t("bv.z2"), "z2", tipo="number", valor=valores.get('z2', 20), requerido=True, corto=True, ayuda=t("bv.z2_ayuda"), extra={"min": "5", "max": "120"}) }}
+  {{ campo(t("bv.larga"), "larga", tipo="number", valor=valores.get('larga', 40), requerido=True, corto=True, extra={"min": "5", "max": "240"}) }}
+  {{ campo(t("aj.edad"), "edad", tipo="number", valor=valores.get('edad', ''), corto=True, extra={"min": "10", "max": "99"}) }}
+  {{ campo(t("aj.fcmax"), "fc_max", tipo="number", valor=valores.get('fc_max', ''), opcional=t("comun.opcional"), corto=True, ayuda=t("aj.fcmax_ayuda"), extra={"min": "120", "max": "230"}) }}
+  {% call opciones(t("aj.otras"), t("bv.cats_n")) %}
+    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (t("aj.intensa") if c.intensa else ""), valor=c.id) }}{% endfor %}
   {% endcall %}
-  {% call opciones("Días de pierna", "(para no poner la larga el día siguiente)") %}
-    {% for clave, nombre in dias %}{{ opcion("pierna", nombre, valor=clave) }}{% endfor %}
+  {% call opciones(t("aj.pierna"), t("bv.pierna_n")) %}
+    {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave) }}{% endfor %}
   {% endcall %}
-  {{ campo("Fecha de inicio (un lunes)", "inicio", tipo="date", valor=valores.get('inicio', proximo_lunes), requerido=True) }}
-  {{ seleccion("Sensor de pulso", "sensor", [("banda", "Banda de pecho"), ("muñeca", "Muñeca")]) }}
+  {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=valores.get('inicio', proximo_lunes), requerido=True) }}
+  {{ seleccion(t("aj.sensor"), "sensor", [("banda", t("aj.banda")), ("muñeca", t("aj.muneca"))]) }}
   {% set zonas_op = [] %}{% for z in zonas %}{% set _ = zonas_op.append((z, z)) %}{% endfor %}
-  {{ seleccion("Zona horaria", "zona", zonas_op, "America/Merida") }}
-  {{ opcion("inbody", "Tengo mediciones InBody") }}
-  {{ boton("Crear mi plan", tipo="submit") }}
+  {{ seleccion(t("aj.zona_h"), "zona", zonas_op, "America/Merida") }}
+  {{ opcion("inbody", t("bv.inbody")) }}
+  {{ boton(t("bv.crear"), tipo="submit") }}
 </form>
 {% endif %}
 {% endblock %}
@@ -146,7 +139,7 @@ nunca sale de ahí. Es gratis.</p>
 (function () {
   var lugar = document.getElementById("copiar-nombre");
   if (!lugar || typeof DS === "undefined" || !DS.copiar) return;
-  lugar.replaceChildren(DS.copiar({ texto: "PERSONAL_API_KEY", aviso: "Copiar nombre" }));
+  lugar.replaceChildren(DS.copiar({ texto: "PERSONAL_API_KEY", aviso: {{ t("bv.copiar")|tojson }} }));
 })();
 </script>
 {% elif paso == 6 and u.repo_id %}
