@@ -169,9 +169,9 @@ function tarjetaDoceSemanas(d) {
       h("div", { class: "semanas" }, del.map((x) =>
         h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""}`,
           "aria-pressed": x.n === planSel ? "true" : "false",
-          "aria-label": T("sitio.plan.aria", { n: x.n, e: x.etiqueta || tipoSemana(x.kind), act: x.n === actual ? T("sitio.plan.act_aria") : "" }),
+          "aria-label": T("sitio.plan.aria", { n: x.n, e: etiquetaSemana(x), act: x.n === actual ? T("sitio.plan.act_aria") : "" }),
           onclick: () => { planSel = x.n; c.replaceWith(tarjetaDoceSemanas(d)); } },
-          h("strong", {}, x.n), h("span", { class: "con-ico" }, x.etiqueta === "carrera" ? DS.ico("medalla") : x.etiqueta === "viaje" ? DS.ico("avion") : null, x.etiqueta || (x.kind === "descarga" ? T("sitio.plan.descarga") : T("sitio.plan.carga"))), x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null)))));
+          h("strong", {}, x.n), h("span", { class: "con-ico" }, x.etiqueta === "carrera" ? DS.ico("medalla") : x.etiqueta === "viaje" ? DS.ico("avion") : null, etiquetaSemana(x)), x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null)))));
   }
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,
@@ -187,6 +187,8 @@ function tarjetaDoceSemanas(d) {
 
 const nombreEvento = (t) => (["viaje", "enfermedad", "lesion", "carrera"].includes(t) ? T(`sitio.ev.${t}`) : t);
 const tipoSemana = (k) => (k === "descarga" || k === "carga" ? T(`sitio.plan.${k}`) : k);
+/** `etiqueta` es un id (carrera, viaje, descarga, carga): el texto sale del catálogo. */
+const etiquetaSemana = (x) => { const e = x.etiqueta || x.kind; return e === "carrera" || e === "viaje" ? T(`sitio.plan.et_${e}`) : tipoSemana(e); };
 
 /** Viajes, enfermedades y carreras con fecha (plan.eventos, solo en la web); nada si no hay. */
 function listaEventos(eventos) {

@@ -113,3 +113,64 @@ def test_web_sirve_textos_del_sitio_e_idioma_en_data_json(web_ctx):
     r = c.get("/data.json")
     if r.status_code == 200:
         assert r.json()["idioma"] == "en"
+
+
+# --- I4: los textos que arma el motor salen en el idioma pedido ---
+
+ESPANOL = ("Sin HRV", "Sin FC", "Sin dato", "FC en reposo", "Dormiste", "Semana completa", "Siguiente sesión", "Considera",
+           "Tu plan", "Cada semana", "Aún no", "Trotas", "Incluye", "Descarga", "Calidad", "Larga", "Suave", "Prueba",
+           "Variada", "lunes", "peso", "Corrida", "Carrera", "Pirámide", "Continuo", "Espiga", "El semáforo", "Tus zonas",
+           "Cómo medimos", "recuperación", "corridas suaves")
+
+
+def _textos(o, acc):
+    if isinstance(o, dict):
+        for v in o.values():
+            _textos(v, acc)
+    elif isinstance(o, list):
+        for v in o:
+            _textos(v, acc)
+    elif isinstance(o, str):
+        acc.append(o)
+    return acc
+
+
+def test_data_json_en_ingles_sin_espanol_conocido():
+    import build
+    from test_build import AHORA, CONFIG_FIXTURE, fixture
+    plan = build.load(build.ROOT / "plan" / "plan.example.json")
+    en = build.build(fixture(), plan, {**CONFIG_FIXTURE, "idioma": "en"}, AHORA)
+    es = build.build(fixture(), plan, {**CONFIG_FIXTURE, "idioma": "es"}, AHORA)
+    assert en["idioma"] == "en" and es["idioma"] == "es"
+    textos = _textos({k: v for k, v in en.items() if k != "idioma"}, [])
+    import re
+    palabras = re.compile(r"\b(" + "|".join(map(re.escape, ESPANOL)) + r")\b")
+    mal = [t for t in textos if palabras.search(t) or any(c in t for c in "áéíóúñ¿¡")]
+    assert not mal, mal[:10]
+    assert en["tipos"]["grupos"][0]["nombre"] == "Continuous" and es["tipos"]["grupos"][0]["nombre"] == "Continuos"
+    assert en["plan"]["semanas"][0]["sessions"][-1]["name"] == "Long run" and es["plan"]["semanas"][0]["sessions"][-1]["name"] == "Larga"
+    assert en["ui"]["textos"]["descarga"].startswith("Deload")
+
+
+def test_notas_del_plan_llevan_id_y_texto_traducido():
+    import build
+    from test_build import AHORA, CONFIG_FIXTURE, fixture
+    plan = build.load(build.ROOT / "plan" / "plan.example.json")
+    for idioma, texto in (("es", "opcional"), ("en", "optional")):
+        out = build.build(fixture(), plan, {**CONFIG_FIXTURE, "idioma": idioma}, AHORA)
+        pasos = [p for w in out["plan"]["semanas"] for s in w["sessions"] for p in s["steps"] if p.get("nota_id") == "opcional"]
+        assert all(p["note"] == texto and p["optional"] for p in pasos)
+
+
+def test_calculo_de_la_web_cachea_por_idioma(web_ctx):
+    from test_web_ajustes import listo
+    from web import calculo
+    from web.modelos import Usuario
+    uid, _ = listo(web_ctx)
+    with web_ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        en = calculo.calcular(db, u, idioma="en")
+        es = calculo.calcular(db, u, idioma="es")
+        en2 = calculo.calcular(db, u, idioma="en")
+    assert en["idioma"] == "en" and es["idioma"] == "es" and en2["idioma"] == "en"
+    assert en["ui"]["textos"]["descarga"].startswith("Deload") and es["ui"]["textos"]["descarga"].startswith("Las semanas")

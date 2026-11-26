@@ -32,7 +32,7 @@ def esperado(modo_web: bool):
     cfg = ajustes.cargar_config(ROOT)
     if modo_web:
         cfg = {**cfg, "modo": "web", "menu": calculo.MENU,
-               "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT))}
+               "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT)), "idioma": "es"}
     ahora = AHORA_UTC.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
     return build.build(build.load_data(ROOT), build.load_plan(ROOT), cfg, ahora)
 
@@ -58,6 +58,7 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
     esp = norm(esperado(modo_web=True))
     assert norm(web) == esp
     pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
+    web_n.pop("idioma")   # la web lo manda siempre; Pages solo si está en config.yaml
     for d in (pages, web_n):
         for k in ("menu", "plan_acciones", "editar_urls"):
             d["ui"].pop(k)

@@ -33,13 +33,13 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         for base in ("", "/a/{atleta_id}"):
             getattr(app, metodo)(base + ruta)(fn)
 
-    def contexto(db, atleta, crudo, hoy):
+    def contexto(db, atleta, crudo, hoy, idioma=None):
         """Lo que muestra /plan: config con pausas, plan guardado, estado de hoy y sugerencias."""
         cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
         plan = aw.plan_guardado(db, atleta) or {"start": cfg["plan_start"], "weeks": []}
         data = None
         try:
-            data = calculo.calcular(db, atleta, app.state.reloj().replace(tzinfo=None))
+            data = calculo.calcular(db, atleta, app.state.reloj().replace(tzinfo=None), idioma=idioma)
         except Exception:   # sin datos o config rara: la página sigue sin sugerencias
             data = None
         efectivo = plan_vivo.plan_efectivo(plan, cfg)
@@ -63,7 +63,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if crudo is None:
             return RedirectResponse("/bienvenida", 303)
         hoy = aw.hoy_de(app.state.reloj, crudo)
-        ctx = {"error": None, **contexto(db, atleta, crudo, hoy), **extra}
+        ctx = {"error": None, **contexto(db, atleta, crudo, hoy, request.state.idioma), **extra}
         return render(request, "plan.html", status=status, atleta=atleta, pref=aw.prefijo(usuario, atleta),
                       ok=request.query_params.get("ok"), **ctx)
 

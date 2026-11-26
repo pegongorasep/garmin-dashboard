@@ -8,7 +8,9 @@ import re
 import unicodedata
 from datetime import date, datetime, timedelta
 
+import plan_i18n
 import tipos
+from i18n import tt
 
 ZONAS = ["Z1", "Z2", "Z3", "Z4", "Z5"]
 
@@ -239,13 +241,13 @@ def _senal(estado, valor, referencia, texto, **extra):
 def signal_hrv(day: date, hrv: list) -> dict:
     r = _por_fecha(hrv, day)
     if not r or r.get("lastNightAvg") is None:
-        return _senal("sin_dato", None, None, "Sin HRV de anoche", hrv_baja=False)
+        return _senal("sin_dato", None, None, tt("motor.senal.hrv_sin"), hrv_baja=False)
     v, base = r["lastNightAvg"], r.get("baseline") or {}
     bajo, alto, low_upper = base.get("balancedLow"), base.get("balancedUpper"), base.get("lowUpper")
     ref = f"{bajo}–{alto}"
     baja = r.get("status") == "LOW" or (low_upper is not None and v < low_upper)
     fuera = bajo is not None and v < bajo
-    texto = f"HRV {v} ms, rango base {ref}"
+    texto = tt("motor.senal.hrv", v=v, ref=ref)
     return _senal("fuera" if fuera else "ok", v, ref, texto, hrv_baja=baja)
 
 
@@ -254,25 +256,25 @@ def signal_rhr(day: date, daily_summaries: list, config: dict) -> dict:
     v = ((hoy or {}).get("heartRate") or {}).get("restingValue")
     prom = rhr_7d(daily_summaries, day)
     if v is None or prom is None:
-        return _senal("sin_dato", v, prom, "Sin FC en reposo")
+        return _senal("sin_dato", v, prom, tt("motor.senal.rhr_sin"))
     limite = prom + config["rhr_tolerance_bpm"]
-    texto = f"FC reposo {v} lpm, promedio 7 días {prom:.0f}"
+    texto = tt("motor.senal.rhr", v=v, prom=f"{prom:.0f}")
     return _senal("fuera" if v > limite else "ok", v, round(prom, 1), texto)
 
 
 def _hmin(horas: float) -> str:
     """Horas decimales -> '6 h 29 min' (trunca los segundos)."""
     minutos = int(horas * 60 + 1e-6)
-    return f"{minutos // 60} h {minutos % 60:02d} min"
+    return tt("motor.hmin", h=minutos // 60, m=f"{minutos % 60:02d}")
 
 
 def signal_sleep(day: date, sleep: list, config: dict) -> dict:
     r = _por_fecha(sleep, day)
     if not r or r.get("sleepTimeSeconds") is None:
-        return _senal("sin_dato", None, config["sleep_min_hours"], "Sin dato de sueño")
+        return _senal("sin_dato", None, config["sleep_min_hours"], tt("motor.senal.sueno_sin"))
     horas = r["sleepTimeSeconds"] / 3600
     minimo = config["sleep_min_hours"]
-    texto = f"Sueño {_hmin(horas)}, mínimo {_hmin(minimo)}"
+    texto = tt("motor.senal.sueno", h=_hmin(horas), min=_hmin(minimo))
     return _senal("fuera" if horas < minimo else "ok", round(horas, 2), minimo, texto)
 
 
@@ -316,12 +318,14 @@ def ayer_duro(day: date, activities: list, details: dict, config: dict):
             "rpe": (details.get(str(id_de(a))) or {}).get("rpe")}
 
 
-MOTIVOS = {"hrv": "HRV baja", "rhr": "FC en reposo alta", "sueno": "Dormiste poco"}
+def _motivos() -> dict:
+    return {k: tt(f"motor.motivo.{k}") for k in ("hrv", "rhr", "sueno")}
 
 
 def motivo(sigs: dict, config=None, ayer=None):
     """Por qué la sesión va suave o en descanso: textos de las señales `fuera`, unidos con ' · '; None si no hay.
     Si ayer fue un día duro (esfuerzo ≥ `esfuerzo_duro`), lo dice al final."""
+    MOTIVOS = _motivos()
     textos = [MOTIVOS[k] for k in ("hrv", "rhr", "sueno") if sigs[k]["estado"] == "fuera"]
     if sigs["hrv"].get("hrv_baja") and MOTIVOS["hrv"] not in textos:
         textos.insert(0, MOTIVOS["hrv"])
@@ -329,7 +333,7 @@ def motivo(sigs: dict, config=None, ayer=None):
         return None
     texto = " · ".join(textos)
     if ayer and ayer.get("esfuerzo") is not None and ayer["esfuerzo"] >= (config or {}).get("esfuerzo_duro", 8):
-        texto += " después de un día duro"
+        texto += tt("motor.motivo.dia_duro")
     return texto
 
 
@@ -381,7 +385,7 @@ def _ref_minutos(sesion: dict, luz) -> int:
 
 
 def _estado_sesion(sesion: dict, corrida, config: dict) -> dict:
-    base = {"id": sesion["id"], "name": sesion["name"], "tipo": sesion.get("tipo")}
+    base = {"id": sesion["id"], "name": plan_i18n.nombre(sesion["name"]), "tipo": sesion.get("tipo")}
     if corrida is None:
         return {**base, "estado": "pendiente", "ajustada": False, "fecha": None, "minutos": None}
     suave = corrida.get("luz") in ("amarillo", "rojo")
@@ -427,8 +431,6 @@ def assign_sessions(week: dict, runs: list, config: dict) -> list:
     return [_estado_sesion(s, asignadas[s["id"]], config) for s in sesiones]
 
 
-AVISO_LARGA = "La larga va el sábado o domingo"
-AVISO_SIN_DATOS = "Sin datos de anoche: decide por cómo te sientes"
 
 
 def _unir_avisos(*avisos):
@@ -445,7 +447,7 @@ def _elegir_pendiente(day: date, status: list):
         return (larga or z2), None
     if z2:
         return z2, None
-    return larga, (AVISO_LARGA if larga else None)
+    return larga, (tt("motor.aviso.larga") if larga else None)
 
 
 def aviso_pierna(day: date, sesion: dict, activities: list, config: dict):
@@ -456,8 +458,8 @@ def aviso_pierna(day: date, sesion: dict, activities: list, config: dict):
     ids = {c["id"] for c in config.get("categorias", [])}
     if not any(classify(a, config) in ids for a in activities if day_of(a) == ayer):   # solo lo que Garmin registró
         return None
-    resto = "la Larga" if sesion["tipo"] == "larga" else "la calidad"
-    return f"Ayer pierna: hoy mejor la Z2 y deja {resto} para mañana"
+    resto = tt("motor.aviso.resto_larga") if sesion["tipo"] == "larga" else tt("motor.aviso.resto_calidad")
+    return tt("motor.aviso.pierna", resto=resto)
 
 
 def today_card(day: date, light: dict, status: list, activities: list, config: dict) -> dict:
@@ -468,24 +470,24 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
     hay_run = "run" in hechas
     # Solo una actividad intensa que Garmin ya registró hoy ocupa el día; nunca se adivina por el día de la semana.
     otra = next((i for i in hechas if i in cats and cats[i]["intensa"]), None)
-    aviso = "Repetir la semana" if light.get("repetir_semana") else None
+    aviso = tt("motor.aviso.repetir") if light.get("repetir_semana") else None
     base = {"version": None, "sesion_id": None, "aviso": aviso, "proxima_id": None}
     manana = (_elegir_pendiente(day + timedelta(days=1), status)[0] or {}).get("id") if status else None
     if otra:
         nombre = cats[otra]["nombre"]
-        return {"tipo": "otra", "categoria": nombre, "texto": f"Hoy: {nombre} ✓", **{**base, "proxima_id": manana}}
+        return {"tipo": "otra", "categoria": nombre, "texto": tt("motor.hoy.otra", nombre=nombre), **{**base, "proxima_id": manana}}
     if hay_run:
-        return {"tipo": "hecha_hoy", "texto": "Corrida de hoy hecha", **{**base, "proxima_id": manana}}
+        return {"tipo": "hecha_hoy", "texto": tt("motor.hoy.hecha"), **{**base, "proxima_id": manana}}
     if not status:
-        return {"tipo": "sin_plan", "texto": "Hoy no hay semana de plan activa", **base}
+        return {"tipo": "sin_plan", "texto": tt("motor.hoy.sin_plan"), **base}
     sesion, aviso_larga = _elegir_pendiente(day, status)
     if sesion is None:
-        return {"tipo": "completa", "texto": "Semana completa", **base}
+        return {"tipo": "completa", "texto": tt("motor.hoy.completa"), **base}
     sin_datos = light["color"] == "sin_datos"
     version = "normal" if sin_datos else {"verde": "normal", "amarillo": "suave", "rojo": "descanso"}[light["color"]]
     aviso = _unir_avisos(aviso, aviso_larga, aviso_pierna(day, sesion, activities, config),
-                         AVISO_SIN_DATOS if sin_datos else None)
-    return {"tipo": "sesion", "texto": f"Siguiente sesión: versión {version}",
+                         tt("motor.aviso.sin_datos") if sin_datos else None)
+    return {"tipo": "sesion", "texto": tt("motor.hoy.siguiente", version=tt(f"motor.version.{version}")),
             "version": version, "sesion_id": sesion["id"], "aviso": aviso, "proxima_id": None}
 
 
@@ -596,10 +598,6 @@ def run_check(activity: dict, session, config=None, minutos_z=None, suave: bool 
     return out
 
 
-SUGERENCIAS = {"repetir": "Considera repetir la semana (con /ajustar)", "pesada": "Semana pesada: cuida la recuperación",
-               "sigue": "Sigue el plan"}
-
-
 def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, config: dict):
     """Sugerencia por reglas conservadoras del resumen de la semana pasada: {"tipo", "texto"} o None. En orden:
     pocas sesiones hechas (con plan) o muchos días rojos → repetir; carga muy por encima de la anterior → semana pesada;
@@ -613,9 +611,7 @@ def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, con
         tipo = "sigue"
     else:
         return None
-    texto = SUGERENCIAS[tipo]
-    if config.get("modo") == "web":
-        texto = texto.replace("(con /ajustar)", "(desde Ajustes)")
+    texto = tt("motor.sugerencia.repetir_web" if tipo == "repetir" and config.get("modo") == "web" else f"motor.sugerencia.{tipo}")
     return {"tipo": tipo, "texto": texto}
 
 
@@ -766,27 +762,27 @@ def frase_ritmo(ahora, antes, fc_ref, cuando_ahora: str, cuando_antes: str):
     """"a 144 lpm: 7:48 → 7:35 /km" (promedio de cada periodo, antes → ahora). Si a un periodo le faltan corridas en Z2,
     dice cuál falta. None si no hubo en ninguno."""
     if ahora and antes:
-        return f"a {fc_ref} lpm: {_mmss(antes)} → {_mmss(ahora)} /km"
+        return tt("motor.ritmo.a_fc", fc=fc_ref, antes=_mmss(antes), ahora=_mmss(ahora))
     if not ahora and not antes:
         return None
-    return f"sin corridas en Z2 {cuando_ahora if not ahora else cuando_antes} para comparar el ritmo"
+    return tt("motor.ritmo.sin_z2", cuando=cuando_ahora if not ahora else cuando_antes)
 
 
 def progress_summary(rows: list, hoy: date, semanas: int, fc_ref: int = None) -> str:
     """Compara las últimas `semanas` semanas contra las `semanas` anteriores: % trote y ritmo a la FC de referencia."""
     ahora, antes = periodo_filas(rows, hoy, semanas), periodo_filas(rows, hoy, semanas, 1)
     if not ahora and not antes:
-        return "Aún no hay corridas suficientes para comparar"
+        return tt("motor.progreso.sin_corridas")
     partes = []
     pct_a, pct_b = (promedio([r["pct_trote"] for r in g]) for g in (ahora, antes))
     if pct_a is not None and pct_b is not None:
-        partes.append(f"Trotas {pct_a:.0f} % del tiempo (antes {pct_b:.0f} %)")
-    rit = frase_ritmo(*(promedio([r.get("ritmo_ref_s") for r in g]) for g in (ahora, antes)), fc_ref or "FC ref",
-                      f"en las últimas {semanas} semanas", f"en las {semanas} semanas anteriores")
+        partes.append(tt("motor.progreso.trotas", a=f"{pct_a:.0f}", b=f"{pct_b:.0f}"))
+    rit = frase_ritmo(*(promedio([r.get("ritmo_ref_s") for r in g]) for g in (ahora, antes)), fc_ref or tt("motor.fc_ref"),
+                      tt("motor.progreso.ultimas", n=semanas), tt("motor.progreso.anteriores", n=semanas))
     if rit:
         partes.append(rit)
     if not partes:
-        return "Aún no hay corridas suficientes para comparar"
+        return tt("motor.progreso.sin_corridas")
     return (" · ".join(partes))[0].upper() + (" · ".join(partes))[1:]
 
 
@@ -967,11 +963,11 @@ def mejores_marcas(historial: list, hoy=None, config=None) -> list:
         con = [a for a in historial if a.get(f"fastestSplit_{metros}")]
         if con:
             a = min(con, key=lambda x: (x[f"fastestSplit_{metros}"], x["startTimeLocal"]))
-            out.append(marca(clave, nombre, a, a[f"fastestSplit_{metros}"], metros))
+            out.append(marca(clave, tt(f"motor.marca.{clave}"), a, a[f"fastestSplit_{metros}"], metros))
     largas = [a for a in historial if a.get("distance")]
     if largas:
         a = max(largas, key=lambda x: (x["distance"], x["startTimeLocal"]))
-        out.append(marca("larga", "Corrida más larga", a, a["duration"], a["distance"]))
+        out.append(marca("larga", tt("motor.marca.larga"), a, a["duration"], a["distance"]))
     return out
 
 
@@ -1020,20 +1016,20 @@ def hoja_inbody(med: dict) -> dict:
     out = {"fecha": med["fecha"]}
     mg = med.get("musculo_grasa")
     if mg:
-        filas = [("peso", "Peso", "kg"), ("mme", "MME", "kg"), ("masa_grasa", "Masa grasa", "kg")]
+        filas = [("peso", tt("motor.ib.peso"), "kg"), ("mme", tt("motor.ib.mme"), "kg"), ("masa_grasa", tt("motor.ib.masa_grasa"), "kg")]
         out["musculo_grasa"] = [_barra_inbody(i, n, u, mg[i], mg[i]["pct"], mg[i]["valor"]) for i, n, u in filas if i in mg]
     ob = med.get("obesidad")
     if ob:
         out["obesidad"] = [_barra_inbody(i, n, u, ob[i], ob[i]["valor"], ob[i]["valor"])
-                           for i, n, u in (("imc", "IMC", "kg/m²"), ("pgc", "PGC", "%")) if i in ob]
+                           for i, n, u in (("imc", tt("motor.ib.imc"), "kg/m²"), ("pgc", tt("motor.ib.pgc"), "%")) if i in ob]
     rangos = []
-    for grupo, clave, filas in (("Parámetros de investigación", "investigacion",
-                                 (("tmb_kcal", "TMB", "kcal"), ("cintura_cadera", "Relación cintura-cadera", ""),
-                                  ("grado_obesidad_pct", "Grado de obesidad", "%"))),
-                                ("Composición corporal", "composicion",
-                                 (("agua_l", "Agua corporal", "L"), ("proteinas_kg", "Proteínas", "kg"),
-                                  ("minerales_kg", "Minerales", "kg"), ("masa_grasa_kg", "Masa grasa", "kg"),
-                                  ("peso_kg", "Peso", "kg")))):
+    for grupo, clave, filas in ((tt("motor.ib.g_investigacion"), "investigacion",
+                                 (("tmb_kcal", tt("motor.ib.tmb"), "kcal"), ("cintura_cadera", tt("motor.ib.cintura_cadera"), ""),
+                                  ("grado_obesidad_pct", tt("motor.ib.grado_obesidad"), "%"))),
+                                (tt("motor.ib.g_composicion"), "composicion",
+                                 (("agua_l", tt("motor.ib.agua"), "L"), ("proteinas_kg", tt("motor.ib.proteinas"), "kg"),
+                                  ("minerales_kg", tt("motor.ib.minerales"), "kg"), ("masa_grasa_kg", tt("motor.ib.masa_grasa"), "kg"),
+                                  ("peso_kg", tt("motor.ib.peso"), "kg")))):
         for k, nombre, unidad in filas:
             v = (med.get(clave) or {}).get(k)
             if v:
@@ -1117,5 +1113,4 @@ def max_hr_above_watch(estimacion, max_hr):
     """Aviso si la FC máx medida supera la que se usa; None si no."""
     if estimacion is None or estimacion <= max_hr:
         return None
-    return (f"Tu FC máx medida ({round(estimacion)}) es mayor que la del reloj ({max_hr}). "
-            "Súbela en Garmin Connect y el dashboard la tomará sola.")
+    return tt("motor.aviso.fcmax", est=round(estimacion), reloj=max_hr)

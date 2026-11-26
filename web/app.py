@@ -259,7 +259,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             raise HTTPException(404)   # 404 y no 403: no confirma que exista
         atleta = db.get(Usuario, atleta_id)
         try:
-            salida = calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None), pref)
+            salida = calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None), pref,
+                                      request.state.idioma)
             return JSONResponse({**salida, "idioma": request.state.idioma})   # el sitio se pinta en el idioma de quien lo ve
         except calculo.SinConfig:
             raise HTTPException(404)

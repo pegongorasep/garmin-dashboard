@@ -12,13 +12,14 @@ from zoneinfo import ZoneInfo
 
 import i18n
 import metrics as m
+import plan_i18n
 import tipos
+from i18n import tt
 from ajustes import USER_DIR, cargar_config
 from ayuda import armar_ayuda
 
 ROOT = Path(__file__).parent.parent  # el motor (aquí vive site/)
-DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
-MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]   # español (referencia); lo que sale usa i18n.csv("motor.dias_cortos")
 
 
 def load(path: Path, default=None):
@@ -81,8 +82,9 @@ def convert_steps(steps: list, zonas: list) -> list:
             # planes viejos: los 10' Z2 del inicio de una calidad venían como "calentamiento"; son un tramo normal
             kind = "run" if s["kind"] == "warmup" and zona not in ("Z0", "Z1") else s["kind"]
             out.append({"kind": kind, "minutes": s["minutes"], "zone": zona,
-                        "lpm": lpm_range(zona, zonas), "note": s.get("note", ""),
-                        "optional": s.get("optional", False)})
+                        "lpm": lpm_range(zona, zonas), "note": plan_i18n.nota(s.get("note", "")),
+                        "optional": s.get("optional", False),
+                        **({"nota_id": plan_i18n.nota_id(s.get("note", ""))} if plan_i18n.nota_id(s.get("note", "")) else {})})
     return out
 
 
@@ -134,31 +136,34 @@ def estructura_calidad(s: dict) -> str:
     extras = s["steps"]
     calen = extras[0]
     enfria = next((p for p in extras if p["kind"] == "cooldown"), None)
-    fin = f" · {enfria['minutes']}' suave" if enfria else ""
+    suave = tt("motor.suave")
+    fin = f" · {enfria['minutes']}' {suave}" if enfria else ""
     if s.get("calidad_tipo") == "progresivo":
         medio = [p for p in extras[1:] if p["kind"] != "cooldown"]
         return (f"{calen['minutes']}' {calen['zone']} · " + " · ".join(f"{p['minutes']}' {tipos.zona_unica(p)}" for p in medio)
-                + f" progresivo{fin}")
+                + f" {tt('motor.estructura.progresivo')}{fin}")
     if s.get("calidad_tipo") == "fartlek":
         trabajo = [p["minutes"] for p in extras if p["kind"] == "run" and p["zone"] == "Z3"]
-        return f"{calen['minutes']}' {calen['zone']} · fartlek {'-'.join(str(t) for t in trabajo)}' en Z3 (con pausas de 2' suave){fin}"
+        return f"{calen['minutes']}' {calen['zone']} · " + tt("motor.estructura.fartlek", t="-".join(str(t) for t in trabajo)) + fin
     rep = next(p for p in extras if p["kind"] == "repeat")
     trabajo, rec = rep["steps"][0], rep["steps"][1]
     return (f"{calen['minutes']}' {calen['zone']} · {rep['times']}×{trabajo['minutes']}' "
-            f"{ETIQUETA_CALIDAD.get(s.get('calidad_tipo'), 'calidad')} ({rec['minutes']}' suave){fin}")
+            f"{tt('motor.estructura.' + s['calidad_tipo']) if s.get('calidad_tipo') in ETIQUETA_CALIDAD else tt('motor.calidad_min')} ({rec['minutes']}' {suave}){fin}")
 
 
 def convert_session(s: dict, zonas: list) -> dict:
     easy = s["easy"]
     extra = {k: s[k] for k in ("nota", "calidad_tipo", "variada_tipo") if k in s}
+    if "nota" in extra:
+        extra["nota"] = plan_i18n.nota(extra["nota"])
     if "objetivo" in s:
         extra["objetivo"] = {**s["objetivo"], "lpm": lpm_range(s["objetivo"]["zona"], zonas)}
         extra["estructura"] = estructura_calidad(s)
     forma, sil, sil_easy = tipos.forma_de(s), tipos.silueta_de(s["steps"]), tipos.silueta_de(easy["steps"])
-    return {"id": s["id"], "tipo": s.get("tipo"), "name": s["name"], "minutes": s["minutes"], **extra,
+    return {"id": s["id"], "tipo": s.get("tipo"), "name": plan_i18n.nombre(s["name"]), "minutes": s["minutes"], **extra,
             "forma": forma, "silueta": sil, "titulo": tipos.titulo_de(forma, tipos.silueta_de(s["steps"], False)), "rachas": rachas_de(s["steps"], zonas), **rampas_de(s["steps"]),
             "steps": convert_steps(s["steps"], zonas),
-            "easy": {"name": easy["name"], "minutes": easy["minutes"],
+            "easy": {"name": plan_i18n.nombre(easy["name"]), "minutes": easy["minutes"],
                      "silueta": sil_easy, "titulo": tipos.titulo_de(tipos.forma_de({"steps": easy["steps"]}), tipos.silueta_de(easy["steps"], False)),
                      "rachas": rachas_de(easy["steps"], zonas), **rampas_de(easy["steps"]),
                      "steps": convert_steps(easy["steps"], zonas)}}
@@ -168,7 +173,7 @@ def convert_week(w: dict, zonas: list) -> dict:
     extra = {"evento": w["evento"]} if w.get("evento") else {}   # semana que un viaje o una carrera cambió (solo la web)
     etiqueta = {"carrera": "carrera", "viaje": "viaje", "viaje_igual": "viaje"}.get(w.get("evento")) or (
         "descarga" if w["kind"] == "descarga" else "carga")   # lo que dice la cuadrícula de 12 semanas
-    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "etiqueta": etiqueta, "focus": w["focus"], **extra,
+    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "etiqueta": etiqueta, "focus": plan_i18n.focus(w["focus"]), **extra,
             "sessions": [convert_session(s, zonas) for s in w["sessions"]]}
 
 
@@ -227,7 +232,7 @@ def build_week(hoy: date, data: dict, config: dict, estado: list, plan: dict) ->
     for i in range(7):
         d = ini + timedelta(days=i)
         luz = light_on(d, data, config)["color"] if d <= hoy else None
-        dias.append({"fecha": d.isoformat(), "dia_semana": DIAS[i],
+        dias.append({"fecha": d.isoformat(), "dia_semana": i18n.csv("motor.dias_cortos")[i],
                      "tipo": day_type(d, hoy, acts, config), "luz": luz})
     filas = _semana_corridas(ini, hoy, acts, data["details"], config)
     previas = _semana_corridas(ini - timedelta(days=7), ini - timedelta(days=1), acts, data["details"], config)
@@ -275,7 +280,7 @@ def last_run(data: dict, config: dict, plan: dict):
     if asignada:
         plan_ses = next(s for s in semana["sessions"] if s["id"] == asignada["id"])
         suave = light_on(dia, data, config)["color"] in ("amarillo", "rojo")
-        sesion = {"id": plan_ses["id"], "name": plan_ses["name"], "version": "suave" if suave else "normal",
+        sesion = {"id": plan_ses["id"], "name": plan_i18n.nombre(plan_ses["name"]), "version": "suave" if suave else "normal",
                   "minutes_plan": plan_ses["easy"]["minutes"] if suave else plan_ses["minutes"]}
     return {"fecha": dia.isoformat(), "fc_prom": r1(a.get("averageHR")), "sesion": sesion,
             **corrida_json(a, plan_ses, data, config)}
@@ -345,11 +350,11 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
     if del_dia:
         a = max(del_dia, key=lambda a: a["duration"])
         e = next((e for e in sesiones if e["fecha"] == d.isoformat() and e["minutos"] == a["duration"] / 60), None)
-        corrida = {"minutos": r1(a["duration"] / 60), "sesion_nombre": e["name"] if e else "Extra",
+        corrida = {"minutos": r1(a["duration"] / 60), "sesion_nombre": e["name"] if e else tt("motor.extra"),
                    "estado": e["estado"] if e else "extra", "carrera": m.es_carrera(a, config)}
         corrida["icono"] = "medalla" if corrida["carrera"] else "correr"
     otras = otras_del_dia(d, data, config)
-    return {"fecha": d.isoformat(), "dia_semana": DIAS[d.weekday()],
+    return {"fecha": d.isoformat(), "dia_semana": i18n.csv("motor.dias_cortos")[d.weekday()],
             "luz": light_on(d, data, config)["color"] if d <= hoy else None,
             "corrida": corrida, "corridas_n": len(del_dia), "otras": otras}
 
@@ -607,7 +612,7 @@ def entrenos_semana(ini: date, data, config) -> list:
         if c and ini <= m.day_of(a) < ini + timedelta(days=7):
             k = ("carrera" if m.es_carrera(a, config) else "run") if c == "run" else c
             cuenta[k] = cuenta.get(k, 0) + 1
-    tipos = [("run", "correr", "Corrida"), ("carrera", "medalla", "Carrera")] + \
+    tipos = [("run", "correr", tt("motor.entreno.run")), ("carrera", "medalla", tt("motor.entreno.carrera"))] + \
         [(c["id"], c["icono"], c["nombre"]) for c in config["categorias"]]
     return [{"icono": ic, "nombre": nombre, "n": cuenta[k]} for k, ic, nombre in tipos if cuenta.get(k)]
 
@@ -621,21 +626,22 @@ def _tiempo(seg: float) -> str:
 def texto_prueba(p: dict) -> dict:
     """Textos ya armados de la prueba para los cuadritos: valor, comparación y si mejoró (None = igual o sin base)."""
     tipo, v, base = p["tipo"], p["valor"], p.get("base")
-    nombre = {"fc_fija": "30 min a FC fija", "trote_continuo": "trote continuo", "5k": "5 km a tope"}[tipo]
-    fmt = (lambda x: (f"30 min seguidos ({x:.0f} % de trote)" if x >= m.PRUEBA_SEGUIDO_PCT else f"{x:.0f} % de trote") if tipo == "trote_continuo"
+    nombre = tt(f"motor.prueba.{tipo}")
+    fmt = (lambda x: (tt("motor.prueba.seguidos", x=f"{x:.0f}") if x >= m.PRUEBA_SEGUIDO_PCT else tt("motor.prueba.pct_trote", x=f"{x:.0f}")) if tipo == "trote_continuo"
            else _tiempo(x) if tipo == "5k" else f"{m._mmss(x)} /km")
     out = {"nombre": nombre, "valor": None if v is None else fmt(v), "cambio": None, "mejor": p.get("mejor")}
     if v is None:
-        out["cambio"] = "Sin resultado: la corrida no alcanzó para medirla"
+        out["cambio"] = tt("motor.cuadro.sin_resultado")
     elif base is None or p.get("dif") is None:
-        out["cambio"] = "Sin base para comparar: la próxima se comparará con esta"
+        out["cambio"] = tt("motor.cuadro.sin_base")
     else:
-        donde = {"prueba": "tu prueba anterior", "mejor_5k": "tu mejor 5 km"}.get(base["fuente"], "el inicio")
-        mag = (f"{abs(p['dif']):.0f} puntos" if tipo == "trote_continuo" else _tiempo(abs(p["dif"])) if tipo == "5k" else f"{abs(p['dif']):.0f} s/km")
+        donde = tt({"prueba": "motor.cuadro.donde_prueba", "mejor_5k": "motor.cuadro.donde_mejor_5k"}.get(base["fuente"], "motor.cuadro.donde_inicio"))
+        mag = (tt("motor.cuadro.puntos", n=f"{abs(p['dif']):.0f}") if tipo == "trote_continuo" else _tiempo(abs(p["dif"])) if tipo == "5k" else f"{abs(p['dif']):.0f} s/km")
         if p["mejor"] is None:
-            out["cambio"] = f"= igual que {donde}"
+            out["cambio"] = tt("motor.cuadro.igual", donde=donde)
         else:
-            out["cambio"] = f"{'▲' if p['dif'] > 0 else '▼'} {mag} vs {donde}, {'mejor' if p['mejor'] else 'peor'}"
+            out["cambio"] = tt("motor.cuadro.vs", flecha="▲" if p["dif"] > 0 else "▼", mag=mag, donde=donde,
+                              res=tt("motor.cuadro.mejor" if p["mejor"] else "motor.cuadro.peor"))
     return out
 
 
@@ -658,26 +664,26 @@ def build_mejora(hoy: date, filas: list, zonas: list, data=None, config=None, pl
     ritmo = {"fc_ref": ref, "n": len(ult4), "actual_s": None, "inicio_s": None, "dif_s": None, "mejora": None,
              "valor": None, "cambio": None, "motivo": None}
     if actual is None:
-        ritmo["motivo"] = f"Aún no hay corridas al aire libre con el trote en Z2 (a {ref} lpm)"
+        ritmo["motivo"] = tt("motor.mejora.sin_aire", ref=ref)
     else:
         ritmo.update(actual_s=round(actual), valor=f"{m._mmss(actual)} /km",
-                     motivo=f"Promedio de tus últimas {len(ult4)} corridas válidas" if len(ult4) > 1 else "Tu última corrida válida")
+                     motivo=tt("motor.mejora.promedio", n=len(ult4)) if len(ult4) > 1 else tt("motor.mejora.ultima"))
         if inicio is None:
             ritmo["cambio"] = None
-            ritmo["motivo"] += "; sin corridas válidas en las semanas 1–2 del plan para comparar"
+            ritmo["motivo"] += tt("motor.mejora.sin_inicio")
         else:
             dif = round(actual) - round(inicio)
             ritmo.update(inicio_s=round(inicio), dif_s=dif, mejora=None if dif == 0 else dif < 0,
-                         cambio="= igual que al inicio" if dif == 0 else f"{'▲' if dif > 0 else '▼'} {abs(dif)} s vs inicio")
+                         cambio=tt("motor.mejora.igual_inicio") if dif == 0 else tt("motor.mejora.vs_inicio", flecha="▲" if dif > 0 else "▼", n=abs(dif)))
     der = next((f for f in reversed(filas) if f["deriva_pct"] is not None), None)
     deriva = {"valor": None, "fecha": None, "ok": None, "motivo": None}
     if config.get("sensor") == "muñeca":
-        deriva["motivo"] = "La deriva necesita banda de pecho: con pulso de muñeca no se mide"
+        deriva["motivo"] = tt("motor.mejora.deriva_muneca")
     elif der is None:
-        deriva["motivo"] = "Aún no hay una corrida que cumpla (40' o más, casi toda en Z2)"
+        deriva["motivo"] = tt("motor.mejora.deriva_sin")
     else:
         deriva.update(valor=f"{der['deriva_pct']:.1f} %", fecha=der["fecha"], ok=der["deriva_ok"],
-                      motivo="Menos de 5 % es buena base")
+                      motivo=tt("motor.mejora.deriva_ok"))
     prueba = None
     if data is not None and config is not None and plan is not None and plan.get("weeks"):
         res = prueba_resultado(data, config, plan)
@@ -759,28 +765,24 @@ def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj) -> d
 
 
 def texto_inicio_plan(inicio: date) -> str:
-    return f"Tu plan empieza el {DIAS[inicio.weekday()]} {inicio.day} {MESES[inicio.month - 1]}"
+    return tt("motor.inicio_plan", dia=i18n.csv("motor.dias_cortos")[inicio.weekday()], n=inicio.day,
+              mes=i18n.csv("motor.meses_cortos")[inicio.month - 1])
 
 
-def lista_es(items: list) -> str:
-    """['a', 'b', 'c'] -> 'a, b y c'."""
-    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " y " + items[-1] if items else ""
-
-
-DIAS_LARGO = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+lista_es = i18n.lista   # "a, b y c" / "a, b and c" según el idioma en curso
 
 
 def build_ui(config: dict, plan: dict) -> dict:
     """Todo lo que el sitio necesita de la config: título, categorías y textos ya armados."""
     cats = config["categorias"]
     nombre = m.nombre_intensa(config)
-    sesiones = [("Calidad" if s.get("tipo") == "calidad" else s["name"]) for s in plan["weeks"][0]["sessions"]] if plan.get("weeks") else []
+    sesiones = [(tt("motor.nombre.calidad") if s.get("tipo") == "calidad" else plan_i18n.nombre(s["name"])) for s in plan["weeks"][0]["sessions"]] if plan.get("weeks") else []
     partes = []
     if sesiones:
-        partes.append("Cada semana: " + (", ".join(sesiones[:-1]) + " y la " + sesiones[-1] if len(sesiones) > 1 else sesiones[0])
-                      + " (sábado o domingo)")
+        lista = (tt("motor.ui.cada_semana_y", ini=", ".join(sesiones[:-1]), ult=sesiones[-1]) if len(sesiones) > 1 else sesiones[0])
+        partes.append(tt("motor.ui.cada_semana", lista=lista))
     if config["dias_pierna"]:
-        partes.append("Día de pierna: " + lista_es([DIAS_LARGO[d] for d in config["dias_pierna"]]))
+        partes.append(tt("motor.ui.pierna", dias=lista_es([i18n.csv("motor.dias_largos")[d] for d in config["dias_pierna"]])))
     repo = os.environ.get("GITHUB_REPOSITORY") if config.get("modo") != "web" else None   # en la web la liga la pone quien llama
     acciones = config.get("acciones_url") or (f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None)
     return {
@@ -793,13 +795,11 @@ def build_ui(config: dict, plan: dict) -> dict:
         "menu": [{"texto": i["texto"], "url": i["url"]} for i in config.get("menu") or []],   # solo en la web: [{texto, url relativa}]
         "textos": {
             "semana": ". ".join(partes) + ".",
-            "descarga": "Las semanas de descarga (línea punteada) bajan la carga" + ("." if config["caminatas"] else ": todo continuo en Z2."),
-            "incluye": f"Incluye {lista_es([c['nombre'] for c in cats] + ['corridas'])}.",
-            "fcmax_vacia": (f"Aún no hay clases de {nombre} medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva."
-                            if nombre else "Aún no hay sesiones intensas medidas con correa. Con 2 semanas de mediciones se calcula la FC máx definitiva.")
+            "descarga": tt("motor.ui.descarga" if config["caminatas"] else "motor.ui.descarga_cont"),
+            "incluye": tt("motor.ui.incluye", lista=lista_es([c["nombre"] for c in cats] + [tt("motor.ui.corridas")])),
+            "fcmax_vacia": (tt("motor.ui.fcmax_vacia_n", nombre=nombre) if nombre else tt("motor.ui.fcmax_vacia"))
             if config["fc_max_correa_desde"] else
-            "Sin fecha de correa en la configuración: la FC máx sale del reloj. Si usas correa en tus sesiones intensas, agrega la fecha (fc_max_correa_desde) en "
-            + ("Ajustes." if config.get("modo") == "web" else "config.yaml."),
+            tt("motor.ui.fcmax_sin_fecha", donde=tt("motor.ui.donde_web" if config.get("modo") == "web" else "motor.ui.donde_yaml")),
         },
     }
 
@@ -815,6 +815,12 @@ def eventos_plan(config: dict) -> dict:
 
 
 def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
+    """data.json de una persona. Los textos que arma el motor salen en `config["idioma"]` (es si no lo trae)."""
+    with i18n.usar(config.get("idioma")):
+        return _build(data, plan, config, ahora)
+
+
+def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     # La FC máx viene del reloj; config["max_hr"] es solo respaldo si Garmin no la da.
     reloj = m.watch_max_hr(data["hr_zones"])
     config = {**config, "max_hr": reloj or config["max_hr"]}
@@ -842,7 +848,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     sin_datos = not any(data[k] for k in ("activities", "daily_summaries", "sleep", "hrv"))
     inicio_plan = date.fromisoformat(config["plan_start"])
     if sin_datos:   # primera sincronización: Garmin tarda en mandar el historial
-        texto = "Primera sincronización lista. Garmin tarda en mandar el historial; regresa en unas horas"
+        texto = tt("motor.build.primera")
         if hoy < inicio_plan:
             texto += f". {texto_inicio_plan(inicio_plan)}"
         tarjeta = {**tarjeta, "tipo": "primera_sync", "texto": texto, "version": None, "sesion_id": None}
@@ -855,7 +861,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                                  else "Corre /ajustar para el siguiente bloque"),
                    **({"siguiente_url": "/plan/acciones#siguiente"} if config.get("modo") == "web" else {})}
     elif m.en_pausa(hoy, config):   # semana de viaje sin correr o de enfermedad: el plan espera
-        tarjeta = {**tarjeta, "tipo": "pausa", "texto": "Esta semana el plan está en pausa (viaje o recuperación)",
+        tarjeta = {**tarjeta, "tipo": "pausa", "texto": tt("motor.build.pausa"),
                    "version": None, "sesion_id": None}
     ayer_dato = m.ayer_duro(hoy, data["activities"], data["details"], config)
     tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None

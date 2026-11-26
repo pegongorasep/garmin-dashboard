@@ -315,6 +315,8 @@
 "sitio.plan.descarga_nota": "Deload weeks (dotted line) lower the load.",
 "sitio.plan.doce": "12 weeks",
 "sitio.plan.editar": "Edit",
+"sitio.plan.et_carrera": "race",
+"sitio.plan.et_viaje": "trip",
 "sitio.plan.futura": "Plan: {t} sessions · {m} min",
 "sitio.plan.guardado": "We saved your plan.",
 "sitio.plan.hechas": "Plan: {h} of {t} sessions{inc}",

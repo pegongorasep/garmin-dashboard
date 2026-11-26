@@ -315,6 +315,8 @@
 "sitio.plan.descarga_nota": "Las semanas de descarga (línea punteada) bajan la carga.",
 "sitio.plan.doce": "12 semanas",
 "sitio.plan.editar": "Editar",
+"sitio.plan.et_carrera": "carrera",
+"sitio.plan.et_viaje": "viaje",
 "sitio.plan.futura": "Plan: {t} sesiones · {m} min",
 "sitio.plan.guardado": "Guardamos tu plan.",
 "sitio.plan.hechas": "Plan: {h} de {t} sesiones{inc}",

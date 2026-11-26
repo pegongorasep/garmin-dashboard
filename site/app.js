@@ -51,7 +51,7 @@ function pasoLi(p) {
   const z = p.zone;
   // Mismos colores que la silueta de la sesión (zonas de Garmin); cada paso trae una sola zona.
   const color = z.startsWith("Z") ? `var(--g${z.slice(1, 2)})` : "var(--axis)";
-  const nota = p.note && !(p.optional && p.note === "opcional") && p.note !== etiquetaPaso(p.kind) ? ` · ${p.note}` : "";
+  const nota = p.note && !(p.optional && p.nota_id === "opcional") && p.note !== etiquetaPaso(p.kind) ? ` · ${p.note}` : "";
   return h("li", {},
     h("span", { class: "min" }, `${p.minutes} min`),
     h("span", { class: "zchip" }, h("i", { style: `background:${color}`, "aria-hidden": "true" }), z),
@@ -122,7 +122,7 @@ function leyendaRachas(rachas) {
 function detallePasos(ses) {
   const pasos = ses.steps || [];
   if ((ses.rachas || []).length <= 3 && !pasos.some((p) => p.kind === "repeat")) {
-    const notas = pasos.filter((p) => p.note && p.note !== "opcional" && p.note !== etiquetaPaso(p.kind)).map((p) => {
+    const notas = pasos.filter((p) => p.note && p.nota_id !== "opcional" && p.note !== etiquetaPaso(p.kind)).map((p) => {
       const tipo = etiquetaPaso(p.kind);
       return h("p", { class: "nota" }, `${tipo[0].toUpperCase()}${tipo.slice(1)}${p.optional ? ` ${T("sitio.paso.opcional")}` : ""}: ${p.note}`);
     });
@@ -249,7 +249,7 @@ function rangoSemana(s) {
 function etiquetaSelector(d, s) {
   const total = ((d.plan || {}).semanas || []).length;
   return s.n !== null && s.n !== undefined
-    ? (total ? T("sitio.sel.semana_de", { n: s.n, t: total, r: rangoSemana(s) }) : T("sitio.sel.semana", { n: s.n, r: rangoSemana(s) })) + (s.kind ? ` · ${s.kind}` : "")
+    ? (total ? T("sitio.sel.semana_de", { n: s.n, t: total, r: rangoSemana(s) }) : T("sitio.sel.semana", { n: s.n, r: rangoSemana(s) })) + (s.kind ? ` · ${tipoSemana(s.kind)}` : "")
     : T("sitio.sel.del", { r: rangoSemana(s) });
 }
 

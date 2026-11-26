@@ -4,6 +4,8 @@
 Una clave que falta en otro idioma cae a `es`; con ESTRICTO (pruebas) lanza KeyError.
 """
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 from pathlib import Path
 
@@ -83,3 +85,41 @@ def escribir_json(destino: Path) -> None:
     for idioma in idiomas():
         (destino / f"{idioma}.json").write_text(
             json.dumps(catalogo_sitio(idioma), ensure_ascii=False, indent=0, sort_keys=True) + "\n", encoding="utf-8")
+
+
+# Idioma "en curso" del cálculo (motor): build.build() lo fija y las funciones puras piden sus textos con `tt()` sin pasar
+# el idioma por cada firma. Es un ContextVar: cada petición de la web (hilo/tarea) tiene el suyo.
+_ACTUAL: ContextVar[str] = ContextVar("idioma_motor", default=DEFECTO)
+
+
+@contextmanager
+def usar(idioma: str | None):
+    token = _ACTUAL.set(idioma if idioma in idiomas() else DEFECTO)
+    try:
+        yield
+    finally:
+        _ACTUAL.reset(token)
+
+
+def actual() -> str:
+    return _ACTUAL.get()
+
+
+def tt(clave: str, **vars) -> str:
+    """Texto del catálogo en el idioma en curso del cálculo."""
+    return t(clave, _ACTUAL.get(), **vars)
+
+
+def csv(clave: str) -> list[str]:
+    """Una clave del catálogo que guarda una lista separada por comas (días, meses) como lista."""
+    return tt(clave).split(",")
+
+
+def lista(items: list, idioma: str | None = None) -> str:
+    """['a', 'b', 'c'] -> 'a, b y c' / 'a, b and c'."""
+    items = list(items)
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + " " + t("motor.y", idioma or _ACTUAL.get()) + " " + items[-1]

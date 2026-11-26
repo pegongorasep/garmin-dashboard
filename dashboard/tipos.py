@@ -105,14 +105,17 @@ def titulo_de(forma: str, silueta: list) -> str:
     """Título corto de la silueta de una sesión: nombre del tipo y sus zonas ("Continuo en Z2", "Espiga en Z1–Z3").
     Se le pasa la silueta sin caminatas: "Trote y caminata en Z2"."""
     zonas = sorted({z for _, z, *_ in silueta})
-    nombre = POR_ID[forma]["nombre"] if forma in POR_ID else "Sesión"
+    from i18n import tt
+    nombre = tt(f"motor.tipo.{forma}.nombre") if forma in POR_ID else tt("motor.sesion")
     if not zonas:
         return nombre
-    return f"{nombre} en {zonas[0] if len(zonas) == 1 else f'{zonas[0]}–{zonas[-1]}'}"
+    return tt("motor.tipo.titulo", nombre=nombre, zonas=zonas[0] if len(zonas) == 1 else f"{zonas[0]}–{zonas[-1]}")
 
 
 def catalogo_json(ids_en_plan: set) -> dict:
     """Catálogo para data.json: tipos en orden, con los ids que aparecen en el plan de la persona."""
-    return {"catalogo": [dict(t) for t in CATALOGO],
-            "grupos": [{"id": i, "nombre": n} for i, n in GRUPOS],
+    from i18n import tt   # CATALOGO guarda el español (referencia); los textos que salen vienen del catálogo i18n
+    return {"catalogo": [{**t, "nombre": tt(f"motor.tipo.{t['id']}.nombre"), "descripcion": tt(f"motor.tipo.{t['id']}.descripcion")}
+                         for t in CATALOGO],
+            "grupos": [{"id": i, "nombre": tt(f"motor.grupo.{i}")} for i, _ in GRUPOS],
             "en_plan": [t["id"] for t in CATALOGO if t["id"] in ids_en_plan]}

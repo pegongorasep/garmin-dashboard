@@ -39,12 +39,12 @@ def acciones_url(usuario: Usuario) -> str | None:
     return f"https://github.com/{usuario.repo}/actions/workflows/deploy.yml" if usuario.repo else None
 
 
-def config_de(db: Session, usuario: Usuario, menu: list | None = None) -> dict:
+def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: str | None = None) -> dict:
     aj = db.get(Ajustes, usuario.id)
     if aj is None:
         raise SinConfig()
     crudo = {**aj.config, "modo": "web", "menu": MENU if menu is None else menu,
-             "plan_acciones": PLAN_ACCIONES}
+             "plan_acciones": PLAN_ACCIONES, "idioma": idioma or usuario.idioma or "es"}
     if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
@@ -81,12 +81,12 @@ def plan_de(db: Session, usuario: Usuario) -> dict:
     return p.plan if p else build.load(build.ROOT / "plan" / "plan.example.json")
 
 
-def huella(db: Session, usuario: Usuario, hoy_local: str) -> str:
+def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") -> str:
     n, ultimo = db.execute(select(func.count(DatoGarmin.id), func.max(DatoGarmin.actualizado))
                            .where(DatoGarmin.usuario_id == usuario.id)).one()
     aj, pl = db.get(Ajustes, usuario.id), db.get(Plan, usuario.id)
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
-    partes = [hoy_local, json.dumps([MENU, PLAN_ACCIONES]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
+    partes = [hoy_local, idioma, json.dumps([MENU, PLAN_ACCIONES]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
               usuario.repo, usuario.sensor]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
@@ -126,10 +126,10 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     return out
 
 
-def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, pref: str = "") -> dict:
+def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, pref: str = "", idioma: str | None = None) -> dict:
     """data.json de la persona (con el aviso de repo atrasado, que no se guarda en la caché porque depende de la hora).
     Truena con SinConfig o DataInvalido."""
-    base = _calcular_cacheado(db, usuario, ahora_utc)
+    base = _calcular_cacheado(db, usuario, ahora_utc, idioma)
     ahora_naive = ahora_utc or ahora()
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive)}}
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
@@ -143,12 +143,13 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     return con_prefijo(salida, pref) if pref else salida
 
 
-def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None = None) -> dict:
+def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, idioma: str | None = None) -> dict:
     """De la caché si la huella no cambió y tiene menos de 30 min; si no, recalcula."""
-    cfg = config_de(db, usuario)
+    cfg = config_de(db, usuario, idioma=idioma)
+    idioma = cfg["idioma"]   # el de la petición, o el de la cuenta, o es: la caché lo lleva en su huella
     tz = ZoneInfo(cfg["timezone"])
     local = (ahora_utc.replace(tzinfo=ZoneInfo("UTC")) if ahora_utc else datetime.now(ZoneInfo("UTC"))).astimezone(tz)
-    h = huella(db, usuario, local.date().isoformat())
+    h = huella(db, usuario, local.date().isoformat(), idioma)
     cache = db.get(CacheData, usuario.id)
     if cache and cache.huella == h and ahora() - cache.calculado < timedelta(minutes=MINUTOS_CACHE):
         return cache.contenido
