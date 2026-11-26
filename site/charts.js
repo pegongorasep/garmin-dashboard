@@ -315,10 +315,12 @@ function trazoRedondo(pts, r) {
   return `${d} L${u[0].toFixed(2)},${u[1].toFixed(2)}`;
 }
 
-/** Vuelve a dibujar cuando cambia el ancho de `cont` (y no antes de que tenga ancho). Va en el siguiente cuadro para no encadenar avisos del observador. */
+/** Vuelve a dibujar cuando cambia el ancho de `cont` (y no antes de que tenga ancho). */
+/** Dibuja al medir. Sin requestAnimationFrame a propósito: el observador corre antes del pintado, así que el primer cuadro ya trae la gráfica
+ *  (con rAF se pintaba un cuadro vacío o con el contenido viejo y luego el bueno: el parpadeo al elegir una semana). */
 function alAncho(cont, dibujar) {
   let w0 = 0;
-  new ResizeObserver(() => { const w = cont.clientWidth; if (w && w !== w0) { w0 = w; requestAnimationFrame(() => dibujar(w)); } }).observe(cont);
+  new ResizeObserver(() => { const w = cont.clientWidth; if (w && w !== w0) { w0 = w; dibujar(w); } }).observe(cont);
 }
 
 /** Bloques que se repiten 3 veces o más (patrón de 1 a 3 tramos [[min, zona, opcional?]]) se juntan en un grupo. */

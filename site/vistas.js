@@ -196,7 +196,7 @@ function tarjetaDoceSemanas(d) {
         h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""} ${anilloSemana(x, actual)}`,
           "aria-pressed": x.n === planSel ? "true" : "false",
           "aria-label": T("sitio.plan.aria", { n: x.n, e: etiquetaSemana(x), act: (x.n === actual ? T("sitio.plan.act_aria") : "") + textoMarca(x) }),
-          onclick: () => { planSel = x.n; c.replaceWith(tarjetaDoceSemanas(d)); } },
+          onclick: () => { planSel = x.n; const n = tarjetaDoceSemanas(d); c.replaceWith(n); const b = n.querySelector('.sem[aria-pressed="true"]'); if (b) b.focus({ preventScroll: true }); } },
           x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null,
           h("span", { class: "sem-cab" }, h("strong", {}, x.n),
             iconosSemana(x).map((k) => DS.burbuja(h("span", { class: "sem-ev", "data-ev": k }, DS.ico(ICONO_MARCA[k])), textoBurbuja(x, k)))),
