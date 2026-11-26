@@ -537,6 +537,8 @@
 "sitio.ver_pasos": "See steps",
 "sitio.ver_tabla": "View as table",
 "sitio.version_actualizar": "Update",
+"sitio.version_cuerpo": "Update to see the changes.",
+"sitio.version_luego": "Not now",
 "sitio.version_nueva": "A new version is available",
 "sitio.version_suave": "Easy version ({min} min)",
 "sitio.vol.camina": "Walk",

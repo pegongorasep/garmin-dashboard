@@ -160,8 +160,8 @@ def("Controles", "Estado", "DS.estado() · DS.insignia()", "Insignia redonda con
   DS.estado("ok", "✓", "Hecha"), DS.estado("warn", "!", "Incompleta"), DS.estado("bad", "✕", "No se pudo guardar"), DS.estado("nd", "—", "Pendiente"));
 
 // Navegación
-def("Navegación", "Aviso de versión", "DS.avisoVersion()", "Línea fija arriba cuando hay una versión nueva de la app; al tocar «Actualizar» recarga una vez.",
-  DS.avisoVersion({ estatico: true }));
+def("Navegación", "Diálogo de versión nueva", "DS.dialogoVersion()", "Diálogo modal cuando hay una versión nueva de la app: «Actualizar» recarga una vez; «Ahora no» (o Esc) lo cierra hasta la próxima apertura.",
+  (() => { const d = DS.dialogoVersion(); return [DS.boton("Ver diálogo", { onclick: () => d.showModal() }), d]; })());
 def("Navegación", "Encabezado", "DS.encabezado()", "Logo, actualizado hace…, ayuda, tema y menú; con aviso de coach.",
   DS.encabezado({ actualizado: "Actualizado hace 2 h", conMenu: true }),
   DS.encabezado({ actualizado: h("span", {}, "Actualizado hace 3 días · ", h("a", { href: "#" }, "Jalar datos de Garmin")), tema: "claro" }),

@@ -70,9 +70,14 @@ const DS = (() => {
       onEntendido ? h("div", { class: "aviso-acc" }, boton(T("sitio.aviso.entendido"), { variante: "texto", chico: true, onclick: onEntendido })) : null);
 
   /** Aviso del coach (cuando ves a otra persona). Recibe el nombre. */
-  /** Línea discreta «Hay una versión nueva · Actualizar» (fija arriba; el real lo arma actualizar.js con el mismo marcado). */
-  const avisoVersion = ({ alPulsar = () => {}, estatico = false } = {}) => h("div", { class: "aviso-version" + (estatico ? " estatico" : ""), role: "status" },
-    h("span", {}, T("sitio.version_nueva"), " · "), h("button", { type: "button", class: "boton texto chico", onclick: alPulsar }, T("sitio.version_actualizar")));
+  /** Diálogo «Hay una versión nueva» (el real lo arma actualizar.js con el mismo marcado). Devuelve el <dialog>; se abre con .showModal(). */
+  const dialogoVersion = ({ alActualizar = () => {}, alCerrar = () => {} } = {}) => {
+    const d = h("dialog", { class: "dialogo dialogo-version", "aria-labelledby": "dv-demo-t" },
+      h("h3", { class: "dl-t", id: "dv-demo-t" }, T("sitio.version_nueva")), h("p", { class: "dv-cuerpo" }, T("sitio.version_cuerpo")),
+      h("div", { class: "dv-botones" }, h("button", { type: "button", class: "boton texto", onclick: () => { d.close(); alCerrar(); } }, T("sitio.version_luego")),
+        h("button", { type: "button", class: "boton", onclick: () => { d.close(); alActualizar(); } }, T("sitio.version_actualizar"))));
+    return d;
+  };
   const avisoCoach = (nombre) => h("p", { class: "coach-aviso" }, insignia("warn", "!"), h("span", {}, T("sitio.ds.viendo"), h("b", {}, nombre), T("sitio.ds.como_coach")));
 
   /** Confirmación antes de borrar o perder datos. Recibe { titulo, texto, lista:[], nota, confirmar, cancelar, onConfirmar, onCancelar }. */
@@ -515,7 +520,7 @@ const DS = (() => {
   })();
 
   return {
-    animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
+    animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, dialogoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,

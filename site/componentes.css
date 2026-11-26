@@ -30,8 +30,9 @@ a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:f
 .badge.ok { background: var(--ok); color: var(--on-ok); }
 .badge.warn { background: var(--warn); color: var(--on-warn); }
 .badge.bad { background: var(--bad); color: var(--on-bad); }
-.aviso-version { position: fixed; z-index: 30; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); box-sizing: border-box; display: flex; align-items: center; gap: var(--space-8); padding: 4px 4px 4px 14px; border-radius: var(--radius-pill); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); font-size: 13px; }
-.aviso-version.estatico { position: static; transform: none; width: fit-content; }
+.dialogo-version { width: min(92vw, 360px); }
+.dv-cuerpo { margin: var(--space-8) 0 0; font-size: 14px; line-height: 20px; color: var(--muted); }
+.dv-botones { display: flex; justify-content: flex-end; gap: var(--space-8); margin-top: var(--space-14); }
 .aviso-fondo { border-radius: var(--radius-inner); padding: 10px 12px; font-size: 13px; }
 .aviso-fondo.una-linea { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: var(--space-8); row-gap: var(--space-2); }
 .una-linea .aviso-acc { margin-top: 0; }

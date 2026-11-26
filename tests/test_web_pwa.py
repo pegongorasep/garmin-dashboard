@@ -38,3 +38,7 @@ def test_sw_espera_y_la_pagina_avisa(web_ctx):
     for clave in ("updatefound", "visibilitychange", "controllerchange", "SKIP_WAITING", "reg.update()"):
         assert clave in js.text, clave
     assert 'data-texto="Hay una versión nueva"' in cl.get("/entrar").text
+    h = cl.get("/entrar").text
+    assert 'data-cuerpo="Actualiza para ver los cambios."' in h and 'data-luego="Ahora no"' in h
+    for clave in ("showModal", "dialogo-version", "descartados"):
+        assert clave in js.text, clave
