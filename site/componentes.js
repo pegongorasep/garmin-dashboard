@@ -122,6 +122,10 @@ const DS = (() => {
     return d;
   };
 
+  /** Fila de ayuda con su muestra visual a la izquierda (mini cuadrito, ícono o marca) y el texto a la derecha. `muestras` son nodos ya armados. */
+  const filaMuestra = (muestras, texto) =>
+    h("div", { class: "fila-muestra" }, h("span", { class: "fm-muestra", "aria-hidden": "true" }, muestras), h("p", {}, texto));
+
   /** Burbuja de texto al pasar o enfocar con teclado (no cambia el layout: va absoluta). Recibe el elemento y el texto; devuelve el elemento con
    *  tabindex y aria-describedby. Necesita un ancestro con position: relative (el propio elemento lo es). */
   const burbuja = (el, texto) => {
@@ -475,7 +479,7 @@ const DS = (() => {
 
   return {
     ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
-    boton, botonIco, dialogo, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
+    boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */

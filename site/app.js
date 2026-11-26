@@ -90,7 +90,7 @@ function estadoSesion(est) {
   if (est.estado === "pendiente") return { clase: "nd", simbolo: "—", texto: T("sitio.ses.pendiente"), etiqueta: T("sitio.ses.pendiente_e") };
   if (est.estado === "no_hecha") return { clase: "nd", simbolo: "✗", texto: T("sitio.nohecha"), etiqueta: T("sitio.nohecha_e") };
   if (est.estado === "incompleta") return { clase: "nd", simbolo: "!", texto: T("sitio.ses.incompleta"), etiqueta: T("sitio.ses.incompleta_e") };
-  if (est.ajustada) return { clase: "nd", simbolo: "!", texto: T("sitio.ses.ajustada"), etiqueta: T("sitio.ses.ajustada_e") };
+  if (est.ajustada) return { clase: "ok", simbolo: "✓", texto: T("sitio.ses.ajustada"), etiqueta: T("sitio.ses.ajustada_e") };
   return { clase: "ok", simbolo: "✓", texto: T("sitio.ses.hecha"), etiqueta: T("sitio.ses.hecha_e") };
 }
 

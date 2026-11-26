@@ -110,6 +110,8 @@ def("Contenedores", "Estado vacío", "DS.estadoVacio()", "Cuando todavía no hay
   DS.tarjeta({}, DS.estadoVacio({ icono: "plan", titulo: "No tienes plan todavía", texto: "Elige tu nivel y tus días y armamos tus semanas.", accion: { texto: "Armar mi plan", href: "#" } })));
 def("Contenedores", "Íconos de evento del Plan", "DS.ico()", "Esquina de cada cuadrito de semana: carrera, viaje, enfermedad y prueba.",
   DS.tarjeta({}, h("div", { class: "leyenda" }, ["medalla", "avion", "termometro", "cronometro"].map((n) => h("span", {}, DS.ico(n), n)))));
+def("Contenedores", "Fila de ayuda con muestra", "DS.filaMuestra()", "Muestra visual a la izquierda y texto a la derecha; se usa en el «?» de las 12 semanas.",
+  DS.tarjeta({}, DS.filaMuestra([h("span", { class: "mini-sem" })], "Relleno sólido: semana de carga."), DS.filaMuestra([h("span", { class: "mini-sem desc" })], "Borde punteado: semana de descarga.")));
 def("Contenedores", "Diálogo", "DS.dialogo()", "Ventana nativa con título y botón de cerrar; también cierra con Esc o tocando afuera. Se abre con .showModal().",
   (() => { const d = DS.dialogo({ titulo: "Cómo leer las semanas", cuerpo: [h("p", {}, "Relleno sólido: carga. Borde punteado: descarga.")] });
     return h("div", {}, DS.boton("Abrir diálogo", { variante: "sec", onclick: () => d.showModal() }), d); })());

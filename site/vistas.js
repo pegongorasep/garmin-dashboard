@@ -165,10 +165,23 @@ function renderPlan(d) {
     det.distribucion ? zonaBar(det.distribucion) : null].filter(Boolean));
 }
 
+/** Líneas del «?» de las 12 semanas: cada una con su muestra dibujada con las mismas piezas que los cuadritos reales. */
+function ayudaSemanas() {
+  const mini = (c) => h("span", { class: `mini-sem ${c}` });
+  const ev = (k) => h("span", { class: "sem-ev", "data-ev": k }, DS.ico(ICONO_MARCA[k]));
+  const marca = (c, t) => h("span", { class: "sem-prog", "data-cump": c }, t);
+  return [
+    [[mini("")], "carga"], [[mini("desc")], "desc"],
+    [["anillo-actual", "anillo-carrera", "anillo-prueba"].map((c) => mini(c)), "anillos"],
+    [["carrera", "prueba", "viaje", "enfermedad"].map(ev), "iconos"],
+    [[marca("completa", "✓✓"), marca("casi", "✓"), marca("baja", "–")], "marcas"],
+  ].map(([m, k]) => DS.filaMuestra(m, T(`sitio.plan.ayuda_${k}`)));
+}
+
 function tarjetaDoceSemanas(d) {
   const plan = d.plan || {};
   const semanas = plan.semanas || [];
-  const ayuda = DS.dialogo({ titulo: T("sitio.plan.ayuda_t"), cuerpo: ["carga", "desc", "anillos", "iconos", "marcas"].map((k) => h("p", {}, T(`sitio.plan.ayuda_${k}`))) });
+  const ayuda = DS.dialogo({ titulo: T("sitio.plan.ayuda_t"), cuerpo: ayudaSemanas() });
   const c = DS.tarjeta({ titulo: [T("sitio.plan.doce"), DS.botonIco("ayuda", T("sitio.plan.ayuda_btn"), { onclick: () => ayuda.showModal() })], clase: "ancha" }, ayuda);
   if (!semanas.length) { c.append(DS.estadoVacio({ icono: null, titulo: T("sitio.plan.sin_plan") })); return c; }
   const actual = plan.semana_actual ?? null;
