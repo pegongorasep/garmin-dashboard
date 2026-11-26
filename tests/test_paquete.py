@@ -119,3 +119,9 @@ def test_es_carrera_del_paquete_manda_sobre_el_nombre():
     assert not metrics.es_carrera({**base, "es_carrera": False, "activityName": "Carrera 5K"}, cfg)
     assert metrics.es_carrera({**base, "activityName": "Carrera 5K"}, cfg)
     assert metrics.id_de({"id": "ab", "activityId": 1}) == "ab" and metrics.id_de({"activityId": 7}) == 7
+
+
+def test_paquete_detalles_solo_pulso_derivado():
+    e = {"rpe": 5, "pulso": "banda", "metadataDTO": {"sensors": [{"serialNumber": 9, "sku": "x"}]}, "serialNumber": 9}
+    out = paquete._detalles({"123": e}, "sal")
+    assert list(out.values()) == [{"rpe": 5, "pulso": "banda"}]

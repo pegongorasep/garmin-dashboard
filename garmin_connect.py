@@ -161,7 +161,8 @@ def pull_activity_details(c: Client, activities: list) -> dict:
         s = detalle.get("summaryDTO", {})
         rpe = s.get("directWorkoutRpe")
         out[key] = {"rpe": rpe / 10 if rpe is not None else None,
-                    "feel": s.get("directWorkoutFeel")}
+                    "feel": s.get("directWorkoutFeel"),
+                    "pulso": metrics.pulso_de_detalle(detalle)}   # solo "banda"/"muñeca": nada del dispositivo
         if es_corrida:
             out[key]["splits"] = tramos(detalle)
             extra = detalle_serie(c, key)

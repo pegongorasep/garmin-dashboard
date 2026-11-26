@@ -803,13 +803,14 @@ def test_fc_referencia_es_la_mitad_de_z2():
 
 
 def test_detalle_vigente():
-    completa = {"rpe": 5, "splits": [], "serie": [[0, 0, 100]]}
+    completa = {"rpe": 5, "splits": [], "serie": [[0, 0, 100]], "pulso": "banda"}
     assert m.detalle_vigente(completa, True)
+    assert not m.detalle_vigente({k: v for k, v in completa.items() if k != "pulso"}, True)   # detalle viejo: se repide
     assert not m.detalle_vigente({"rpe": 5, "splits": []}, True)                 # falta la serie
     assert not m.detalle_vigente(None, False)
     assert not m.detalle_vigente({"rpe": 5, "splits": [], "serie": [[0, 0, 1]]}, True, es_carrera=True)
-    assert m.detalle_vigente({"rpe": None}, False)                               # no-corrida vieja sin RPE: no se repide
-    assert not m.detalle_vigente({"rpe": None}, False, reciente=True)            # reciente sin RPE: Pedro puede ponerlo
+    assert m.detalle_vigente({"rpe": None, "pulso": "banda"}, False)                               # no-corrida vieja sin RPE: no se repide
+    assert not m.detalle_vigente({"rpe": None, "pulso": "banda"}, False, reciente=True)            # reciente sin RPE: Pedro puede ponerlo
     assert m.detalle_vigente({**completa, "rpe": None}, True, reciente=False)
 
 
@@ -946,3 +947,39 @@ def test_opciones_hoy_por_color():
     assert m.opciones_hoy("descanso", ses) == ["descanso", "suave", "normal"]
     assert m.opciones_hoy("normal", {}) == []
     assert m.opciones_hoy(None, ses) == []
+
+
+def test_pulso_de_detalle_y_por_actividad():
+    con = {"metadataDTO": {"sensors": [{"antplusDeviceType": "HEART_RATE", "serialNumber": 1, "sku": "x"}]}}
+    sin = {"metadataDTO": {"sensors": []}}
+    assert m.pulso_de_detalle(con) == "banda" and m.pulso_de_detalle(sin) == "muñeca"
+    assert m.pulso_de_detalle({}) is None and m.pulso_de_detalle(None) is None
+    a = act(7, "2026-10-27", maxHR=170)
+    k = str(m.id_de(a))
+    assert m.pulso_de(a, {k: {"pulso": "muñeca"}}, CFG) == "muñeca"
+    assert m.pulso_de(a, {}, CFG) == "banda"                                        # sin detalle: config (default banda)
+    assert m.pulso_de(a, {}, {**CFG, "sensor": "muñeca"}) == "muñeca"
+
+
+def test_max_hr_prefiere_banda_y_aviso_por_pulso():
+    b, w = act(8, "2026-10-27", maxHR=180), act(9, "2026-10-29", maxHR=195)
+    det = {str(m.id_de(b)): {"pulso": "banda"}, str(m.id_de(w)): {"pulso": "muñeca"}}
+    p = m.max_hr_progress([b, w], CFG, det)
+    assert (p["pico"], p["pulso_pico"]) == (180, "banda")                          # el pico de muñeca no manda
+    p = m.max_hr_progress([w], CFG, det)
+    assert (p["pico"], p["pulso_pico"]) == (195, "muñeca")
+    assert "medido con banda" in m.max_hr_above_watch(193, 189, "banda")
+    cauto = m.max_hr_above_watch(198, 189, "muñeca", 195)
+    assert "195" in cauto and "muñeca" in cauto and "medido con banda" not in cauto
+    assert "banda cardiaca" in m.max_hr_above_watch(None, None)
+    assert m.max_hr_above_watch(180, 189, "muñeca") is None
+
+
+def test_deriva_solo_con_banda(monkeypatch):
+    monkeypatch.setattr(m, "deriva_de", lambda *_: {"pct": 3.0, "ok": True})
+    a = act(10, "2026-10-27", "running", dur=2700, distance=5000)
+    for pulso, hay in (("banda", True), ("muñeca", False)):
+        det = {str(m.id_de(a)): {"pulso": pulso}}
+        fila = m.run_rows([a], det, CFG)[0]
+        assert fila["pulso"] == pulso
+        assert (fila["deriva_pct"] is not None) == hay

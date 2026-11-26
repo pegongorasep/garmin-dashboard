@@ -10,14 +10,12 @@
 {% if ok == "sin" %}{% call aviso("warn") %}{{ t("aj.sin") }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% set zs = [] %}{% for z in zonas %}{% set _ = zs.append((z, z)) %}{% endfor %}
-{% set ss = [] %}{% for s in sensores %}{% set _ = ss.append((s, t('aj.banda') if s == 'banda' else t('aj.muneca'))) %}{% endfor %}
 <form class="pila" method="post" action="{{ pref }}/ajustes">
   <input type="hidden" name="csrf" value="{{ csrf }}">
 
   <h2 class="pag-h">{{ t("aj.perfil") }}</h2>
   {{ campo(t("aj.t_pagina"), "titulo", valor=v.titulo, extra={"maxlength": 60}) }}
   {{ seleccion(t("aj.zona_h"), "zona", zs, valor=v.zona, error=errores.get("zona")) }}
-  {{ seleccion(t("aj.sensor"), "sensor", ss, valor=v.sensor, ayuda=t("aj.sensor_ayuda"), error=errores.get("sensor")) }}
 
   <h2 class="pag-h">{{ t("aj.actividades") }}</h2>
   {% call opciones(t("aj.otras"), t("aj.max4"), error=errores.get("cats")) %}

@@ -100,7 +100,8 @@ def crudo_general(crudo: dict, f) -> dict:
         raise ErrorT("err.zona", "zona", zona=zona) from None
     perfil["titulo"] = (str(f.get("titulo", "")).strip() or "Mi entreno")[:60]
     perfil["zona_horaria"] = zona
-    sensor = f.get("sensor", "banda")
+    # el sensor ya no se pide: se detecta por actividad (banda o muñeca); el valor guardado queda de respaldo
+    sensor = f.get("sensor") or perfil.get("sensor") or "banda"
     if sensor not in SENSORES:
         raise ErrorT("err.sensor", "sensor")
     perfil["sensor"] = sensor

@@ -90,7 +90,7 @@ def _actividades(lista: list, salt: str) -> list:
 def _detalles(d: dict, salt: str) -> dict:
     out = {}
     for llave, e in (d or {}).items():
-        item = _campos(e, ["rpe", "ritmos_km", "serie"])
+        item = _campos(e, ["rpe", "ritmos_km", "serie", "pulso"])
         if "splits" in e:
             item["splits"] = [_campos(s, ["tipo", "seg", "m", "fc", "n"]) for s in e["splits"] or []]
         out[id_opaco(salt, llave)] = item

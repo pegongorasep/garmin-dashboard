@@ -433,6 +433,7 @@ def detalle_actividad(a: dict, details: dict, config: dict) -> dict:
             "te_etiqueta": tt(f"motor.te.{etiqueta}") if etiqueta in TE_ETIQUETAS else None,
             "cadencia": round(a["averageRunningCadenceInStepsPerMinute"]) if corrida and a.get("averageRunningCadenceInStepsPerMinute") else None,
             "ritmos_km": [round(x) for x in ritmos] if ritmos else None,
+            "pulso": m.pulso_de(a, details, config),
             "curva_fc": curva_fc(det.get("serie"))}
 
 
@@ -780,7 +781,7 @@ def build_mejora(hoy: date, filas: list, zonas: list, data=None, config=None, pl
                          cambio=tt("motor.mejora.igual_inicio") if dif == 0 else tt("motor.mejora.vs_inicio", flecha="▲" if dif > 0 else "▼", n=abs(dif)))
     der = next((f for f in reversed(filas) if f["deriva_pct"] is not None), None)
     deriva = {"valor": None, "fecha": None, "ok": None, "motivo": None}
-    if config.get("sensor") == "muñeca":
+    if der is None and (config.get("sensor") == "muñeca" or any(f.get("pulso") == "muñeca" for f in filas)):
         deriva["motivo"] = tt("motor.mejora.deriva_muneca")
     elif der is None:
         deriva["motivo"] = tt("motor.mejora.deriva_sin")
@@ -931,7 +932,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     config = {**config, "max_hr": reloj or config["max_hr"]}
     # La FC en reposo solo cuenta si esa noche hubo sueño registrado (señal, promedio 7 días, zonas y gráfica).
     data = {**data, "daily_summaries": m.rhr_con_sueno(data["daily_summaries"], data["sleep"])}
-    fc_max = m.max_hr_progress(data["activities"], config)
+    fc_max = m.max_hr_progress(data["activities"], config, data["details"])
     hoy = ahora.date()
     ayer = hoy - timedelta(days=1)
     rhr = m.rhr_7d(data["daily_summaries"], hoy) or 60
@@ -986,7 +987,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "datos_al": datos_al,
         "zonas": [{"zona": z, "piso": lo, "techo": hi} for z, lo, hi in zonas],
         "rhr_promedio_7d": r1(rhr),
-        "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj),
+        "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
                 "semana_pasada": resumen_semana_pasada(hoy, data, config, plan)},
         "ultima_corrida": last_run(data, config, plan),

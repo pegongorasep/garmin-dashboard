@@ -883,3 +883,10 @@ def test_detalle_de_actividad_campos_zonas_curva_y_sin_claves_prohibidas():
     texto = json.dumps(out, ensure_ascii=False)
     assert "MENSAJE_GARMIN" not in texto
     revisar_privacidad(out)
+
+
+def test_pulso_en_detalle_sin_datos_del_dispositivo(salida):
+    """data.json expone solo pulso banda|muñeca por actividad: nunca serie, sku ni fabricante del sensor."""
+    txt = json.dumps(salida) if isinstance(salida, dict) else str(salida)
+    for prohibido in ("serialNumber", "antplusDeviceType", "softwareVersion", "sku", "manufacturer", "metadataDTO"):
+        assert prohibido not in txt

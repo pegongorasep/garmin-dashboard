@@ -107,12 +107,34 @@ def id_de(a: dict):
     return a.get("id") or a.get("activityId")
 
 
+def pulso_de_detalle(detalle: dict):
+    """Sensor de pulso de una actividad según el detalle de Garmin: "banda" si hay un sensor de FC externo
+    (ANT+ HEART_RATE o BLE), "muñeca" si hay metadatos sin sensor; None si el detalle no trae metadatos.
+    Solo el tipo derivado: nunca serie, sku, fabricante ni versión."""
+    meta = (detalle or {}).get("metadataDTO")
+    if not isinstance(meta, dict) or "sensors" not in meta:
+        return None
+    for s in meta.get("sensors") or []:
+        tipo = str(s.get("antplusDeviceType") or "").upper()
+        if tipo == "HEART_RATE" or (str(s.get("sourceType") or "").upper() == "BLUETOOTH_LE" and "HEART" in tipo):
+            return "banda"
+    return "muñeca"
+
+
+def pulso_de(activity: dict, details: dict, config: dict) -> str:
+    """"banda" o "muñeca" de una actividad: el detectado en su detalle; sin detalle, `config.sensor` (default banda)."""
+    p = (details.get(str(id_de(activity))) or {}).get("pulso")
+    return p if p in ("banda", "muñeca") else (config.get("sensor") or "banda")
+
+
 def detalle_vigente(entrada, es_corrida: bool, es_carrera: bool = False, reciente: bool = False) -> bool:
     """¿Se reusa lo ya guardado de una actividad? Sí si ya existe y, en corridas, trae tramos y serie (y en carreras
     el ritmo por km). Sin RPE solo se vuelve a pedir en los últimos 7 días (`reciente`): Pedro puede ponerlo después."""
     if not entrada:
         return False
     if entrada.get("rpe") is None and reciente:
+        return False
+    if "pulso" not in entrada:      # detalle viejo, sin el sensor de pulso: se vuelve a pedir una vez
         return False
     return (not es_corrida or ("splits" in entrada and "serie" in entrada)) and (not es_carrera or "ritmos_km" in entrada)
 
@@ -743,8 +765,9 @@ def run_rows(activities: list, details: dict, config: dict) -> list:
                 "pct_z1z2": (zm["Z1"] + zm["Z2"]) / total * 100 if total else None,
                 "caminadora": a["activityType"]["typeKey"] == "treadmill_running", "carrera": es_carrera(a, config), **rw}
         # con pulso de muñeca la deriva no es confiable (pide banda de pecho): no se calcula
-        d = {"pct": None, "ok": None} if config.get("sensor") == "muñeca" else deriva_de(a, details, zonas)
-        filas.append({**fila, "ritmo_ref_s": ritmo_fc_ref(fila, zonas), "deriva_pct": d["pct"], "deriva_ok": d["ok"]})
+        pulso = pulso_de(a, details, config)
+        d = {"pct": None, "ok": None} if pulso == "muñeca" else deriva_de(a, details, zonas)
+        filas.append({**fila, "ritmo_ref_s": ritmo_fc_ref(fila, zonas), "deriva_pct": d["pct"], "deriva_ok": d["ok"], "pulso": pulso})
     return filas
 
 
@@ -1089,11 +1112,11 @@ def composicion(inbody):
     return out
 
 
-def max_hr_progress(activities: list, config: dict) -> dict:
+def max_hr_progress(activities: list, config: dict, details: dict = None) -> dict:
     """Progreso de la medición de FC máx con correa en las sesiones intensas (desde `fc_max_correa_desde`)."""
     desde = config.get("fc_max_correa_desde")
     if not desde:
-        return {"sesiones": [], "pico": None, "estimacion": None, "revisar": False,
+        return {"sesiones": [], "pico": None, "estimacion": None, "revisar": False, "pulso_pico": None,
                 "semanas_medidas": 0, "listo": False, "configurada": False}
     desde = date.fromisoformat(desde)
     intensas = {c["id"] for c in categorias_intensas(config)}
@@ -1101,12 +1124,15 @@ def max_hr_progress(activities: list, config: dict) -> dict:
            and day_of(a) >= desde and a.get("maxHR")]
     sesiones = sorted(({"fecha": day_of(a).isoformat(), "max_hr": a["maxHR"]} for a in ses),
                       key=lambda s: s["fecha"])
-    pico = max((s["max_hr"] for s in sesiones), default=None)
+    # el pico sale de las sesiones con banda; solo si no hay ninguna, de las de muñeca (menos confiables)
+    con_banda = [a["maxHR"] for a in ses if pulso_de(a, details or {}, config) == "banda"]
+    pico = max(con_banda) if con_banda else max((s["max_hr"] for s in sesiones), default=None)
+    pulso_pico = None if pico is None else "banda" if con_banda else "muñeca"
     estimacion = max(pico + 3, config["max_hr_floor"]) if pico is not None else None
     semanas = {day_of(a) - timedelta(days=day_of(a).weekday()) for a in ses}
     return {"sesiones": sesiones, "pico": pico, "estimacion": estimacion,
             "revisar": estimacion is not None and estimacion > config["max_hr_review_above"],
-            "semanas_medidas": len(semanas), "listo": len(semanas) >= 2, "configurada": True}
+            "pulso_pico": pulso_pico, "semanas_medidas": len(semanas), "listo": len(semanas) >= 2, "configurada": True}
 
 
 def watch_max_hr(hr_zones):
@@ -1116,10 +1142,13 @@ def watch_max_hr(hr_zones):
     return perfil.get("maxHeartRateUsed")
 
 
-def max_hr_above_watch(estimacion, reloj):
-    """Aviso de FC máx: sin valor de Garmin, cómo sacarla; con valor y estimación mayor, que la cambie en Garmin; si no, None."""
+def max_hr_above_watch(estimacion, reloj, pulso: str = "banda", pico=None):
+    """Aviso de FC máx: sin valor de Garmin, cómo sacarla (más el consejo de la banda); con valor y estimación mayor,
+    que la cambie en Garmin (seguro si el pico salió de banda, con cautela si fue de muñeca); si no, None."""
     if reloj is None:
-        return tt("motor.aviso.fcmax_sin")
+        return tt("motor.aviso.fcmax_sin") + " " + tt("motor.aviso.banda_consejo")
     if estimacion is None or estimacion <= reloj:
         return None
+    if pulso == "muñeca":
+        return tt("motor.aviso.fcmax_muneca", pico=round(pico if pico is not None else estimacion - 3))
     return tt("motor.aviso.fcmax", est=round(estimacion))

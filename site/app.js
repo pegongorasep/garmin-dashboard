@@ -343,7 +343,9 @@ function detalleActividad(dt, a) {
     tile("cadencia", dt.cadencia != null ? fmt(dt.cadencia, 0) : null, T("sitio.act.ppm"))].filter(Boolean);
   const te = dt.te_aerobico != null || dt.te_anaerobico != null
     ? h("p", {}, T("sitio.act.te", { a: dt.te_aerobico != null ? fmt(dt.te_aerobico, 1) : "—", n: dt.te_anaerobico != null ? fmt(dt.te_anaerobico, 1) : "—" }) + (dt.te_etiqueta ? ` · ${dt.te_etiqueta}` : "")) : null;
-  return h("div", { class: "act-cuerpo" }, DS.tiles({ etiqueta: a.nombre, clase: "act-tiles" }, ...tiles),
+  const pulso = dt.pulso ? h("p", { class: "nota" }, T("sitio.act.pulso", { p: T(dt.pulso === "banda" ? "sitio.act.pulso_banda" : "sitio.act.pulso_muneca") })
+    + (dt.pulso === "muñeca" && dt.ritmo_s != null ? ` · ${T("sitio.act.sin_deriva")}` : "")) : null;
+  return h("div", { class: "act-cuerpo" }, DS.tiles({ etiqueta: a.nombre, clase: "act-tiles" }, ...tiles), pulso,
     dt.zonas ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.zonas")), DS.barraZonas(dt.zonas, { etiquetas: true })) : null, te,
     dt.ritmos_km ? h("p", { class: "nota" }, `${T("sitio.act.por_km")}: ${dt.ritmos_km.map(mmss).join(" · ")}`) : null,
     dt.curva_fc ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.curva_t")), DS.curvaFc(dt.curva_fc)) : null);

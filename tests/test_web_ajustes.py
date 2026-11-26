@@ -81,6 +81,7 @@ def test_ajustes_se_ve_con_los_valores(web_ctx):
     r = cl.get("/plan/acciones")
     assert 'name="nivel"' in r.text and 'value="2026-11-09"' in r.text and "Rehacer mi plan" in r.text
     assert 'name="escalon"' not in r.text and 'name="repetidas"' not in r.text and 'name="carreras"' not in r.text
+    assert 'name="sensor"' not in cl.get("/ajustes").text                       # el pulso se detecta por actividad
 
 
 def test_cambio_sin_plan_deja_historial_y_se_deshace_exacto(web_ctx):
