@@ -900,6 +900,21 @@ def test_semanas_plan_progreso_y_marca(salida):
     assert all("progreso" not in w for w in sem[2:])           # futuras: sin clave
     assert all(w["etiqueta"] in ("carga", "descarga") for w in sem)
     assert sem[0].get("marca") is None
+    assert sem[0]["cumplimiento"] == "baja"                     # 1 de 3
+    assert "cumplimiento" not in sem[1] and all("cumplimiento" not in w for w in sem[2:])   # actual y futuras: sin clave
+
+
+def test_cumplimiento_semana():
+    f = build.cumplimiento_semana
+    assert f(3, 3) == "completa" and f(2, 3) == "casi" and f(4, 6) == "casi" and f(1, 3) == "baja" and f(0, 3) == "baja"
+    assert f(0, 0) is None
+
+
+def test_marcas_semana_dos_eventos_en_orden():
+    w = {"sessions": [{"tipo": "prueba"}]}
+    cfg = {"metas": [], "eventos": [{"tipo": "viaje", "desde": "2026-11-03", "hasta": "2026-11-04"}]}
+    assert build.marcas_semana(w, date(2026, 11, 2), cfg) == ["viaje", "prueba"]
+    assert build.marca_semana(w, date(2026, 11, 2), cfg) == "viaje"
 
 
 def test_marca_semana_por_fechas_y_prioridad():

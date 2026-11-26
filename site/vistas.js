@@ -168,7 +168,8 @@ function renderPlan(d) {
 function tarjetaDoceSemanas(d) {
   const plan = d.plan || {};
   const semanas = plan.semanas || [];
-  const c = DS.tarjeta({ titulo: T("sitio.plan.doce"), clase: "ancha" });
+  const ayuda = DS.dialogo({ titulo: T("sitio.plan.ayuda_t"), cuerpo: ["carga", "desc", "anillos", "iconos", "marcas"].map((k) => h("p", {}, T(`sitio.plan.ayuda_${k}`))) });
+  const c = DS.tarjeta({ titulo: [T("sitio.plan.doce"), DS.botonIco("ayuda", T("sitio.plan.ayuda_btn"), { onclick: () => ayuda.showModal() })], clase: "ancha" }, ayuda);
   if (!semanas.length) { c.append(DS.estadoVacio({ icono: null, titulo: T("sitio.plan.sin_plan") })); return c; }
   const actual = plan.semana_actual ?? null;
   if (planSel === null || !semanas.some((w) => w.n === planSel)) planSel = actual ?? semanas[0].n;
@@ -179,24 +180,16 @@ function tarjetaDoceSemanas(d) {
     if (!del.length) continue;
     linea.append(h("div", { class: "bloque" }, h("div", { class: "nota" }, T("sitio.plan.bloque", { n: bloque })),
       h("div", { class: "semanas" }, del.map((x) =>
-        h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""} ${x.marca === "carrera" ? "carrera" : ""}`,
+        h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""} ${anilloSemana(x, actual)}`,
           "aria-pressed": x.n === planSel ? "true" : "false",
-          "aria-label": T("sitio.plan.aria", { n: x.n, e: etiquetaSemana(x), act: (x.n === actual ? T("sitio.plan.act_aria") : "") + (x.progreso ? T("sitio.plan.prog_aria", { h: x.progreso.hechas, t: x.progreso.total }) : "") }),
+          "aria-label": T("sitio.plan.aria", { n: x.n, e: etiquetaSemana(x), act: (x.n === actual ? T("sitio.plan.act_aria") : "") + textoMarca(x) }),
           onclick: () => { planSel = x.n; c.replaceWith(tarjetaDoceSemanas(d)); } },
-          x.marca ? h("span", { class: "sem-ev", title: T(`sitio.plan.et_${x.marca}`) }, DS.ico(ICONO_MARCA[x.marca])) : null,
           x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null,
-          h("strong", {}, x.n), h("span", {}, tipoSemana(x.etiqueta || x.kind)),
-          h("span", { class: "sem-prog" }, x.progreso ? `${x.progreso.hechas}/${x.progreso.total}` : "—"),
-          h("span", { class: `sem-barra ${x.progreso && x.progreso.total && x.progreso.hechas >= x.progreso.total ? "completa" : ""}`, "aria-hidden": "true" },
-            h("i", { style: `width:${x.progreso && x.progreso.total ? Math.round(100 * x.progreso.hechas / x.progreso.total) : 0}%` })))))));
+          h("span", { class: "sem-cab" }, h("strong", {}, x.n),
+            iconosSemana(x).map((k) => h("span", { class: "sem-ev", "data-ev": k, title: T(`sitio.plan.et_${k}`) }, DS.ico(ICONO_MARCA[k])))),
+          h("span", {}, tipoSemana(x.etiqueta || x.kind)),
+          marcaProgreso(x, actual))))));
   }
-  const ley = (...n) => h("span", {}, ...n);
-  linea.append(h("div", { class: "leyenda" },
-    ley(h("i", { class: "sw-carga", "aria-hidden": "true" }), T("sitio.plan.ley_carga")),
-    ley(h("i", { class: "sw-desc", "aria-hidden": "true" }), T("sitio.plan.ley_desc")),
-    ley(h("i", { class: "sw-anillo", "aria-hidden": "true" }), T("sitio.plan.ley_anillo")),
-    ...Object.keys(ICONO_MARCA).map((k) => ley(DS.ico(ICONO_MARCA[k]), T(`sitio.plan.et_${k}`))),
-    ley(T("sitio.plan.ley_prog"))));
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,
     h("p", { class: "nota" }, T("sitio.plan.nota", { d: ui().textos.descarga || T("sitio.plan.descarga_nota") })),
@@ -214,6 +207,18 @@ const nombreEvento = (t) => (["viaje", "enfermedad", "lesion", "carrera"].includ
 const tipoSemana = (k) => (k === "descarga" || k === "carga" ? T(`sitio.plan.${k}`) : k);
 /** `etiqueta` es carga o descarga; `marca` (carrera, viaje, enfermedad, prueba) pone el ícono de la esquina: los textos salen del catálogo. */
 const etiquetaSemana = (x) => tipoSemana(x.etiqueta || x.kind) + (x.marca ? `, ${T(`sitio.plan.et_${x.marca}`)}` : "");
+/** Anillo exterior de la semana: carrera (rojo) gana a prueba (morado) y a la semana actual (azul); viaje y enfermedad no llevan. */
+const anilloSemana = (x, actual) => (x.marca === "carrera" ? "anillo-carrera" : x.marca === "prueba" ? "anillo-prueba" : x.n === actual ? "anillo-actual" : "");
+/** Íconos junto al número: el evento principal (`marca`) y, si hay otro, el de `marcas` (en orden de prioridad). */
+const iconosSemana = (x) => [...new Set([x.marca, ...(x.marcas || [])].filter(Boolean))];
+/** Texto accesible de la marca de avance (el mismo que ve quien usa lector de pantalla). */
+const textoMarca = (x) => (x.cumplimiento ? `, ${T(`sitio.plan.cump_${x.cumplimiento}`, x.progreso || {})}` : x.progreso ? T("sitio.plan.prog_aria", { h: x.progreso.hechas, t: x.progreso.total }) : "");
+/** Ranura de avance: ✓✓ / ✓ verdes, «–» gris en las pasadas; hechas/total en la actual; vacía (misma altura) en las futuras. */
+function marcaProgreso(x, actual) {
+  const p = x.progreso;
+  const simbolo = x.cumplimiento === "completa" ? "✓✓" : x.cumplimiento === "casi" ? "✓" : x.cumplimiento === "baja" ? "–" : x.n === actual && p ? `${p.hechas}/${p.total}` : "";
+  return h("span", { class: "sem-prog", "data-cump": x.cumplimiento || null, "aria-hidden": "true" }, simbolo || " ");
+}
 const ICONO_MARCA = { carrera: "medalla", viaje: "avion", enfermedad: "termometro", prueba: "cronometro" };
 
 /** Viajes, enfermedades y carreras con fecha (plan.eventos, solo en la web); nada si no hay. */

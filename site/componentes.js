@@ -109,6 +109,16 @@ const DS = (() => {
   const botonIco = (nombre, etiqueta, { onclick, expandido } = {}) =>
     h("button", { class: "boton-ico", type: "button", "aria-label": etiqueta, "aria-expanded": expandido === undefined ? null : String(expandido), onclick }, ico(nombre));
 
+  /** Diálogo nativo (<dialog>): se abre con `.showModal()`, cierra con Esc, con el botón o tocando afuera. Recibe { titulo, cuerpo, cerrar }. */
+  const dialogo = ({ titulo, cuerpo = [], cerrar = T("sitio.ds.cerrar") } = {}) => {
+    const id = uid("dl");
+    const d = h("dialog", { class: "dialogo", "aria-labelledby": id },
+      h("div", { class: "dl-cab" }, h("h3", { class: "dl-t", id }, titulo), botonIco("cerrar", cerrar, { onclick: () => d.close() })),
+      h("div", { class: "dl-cuerpo" }, cuerpo));
+    d.addEventListener("click", (e) => { if (e.target === d) d.close(); });
+    return d;
+  };
+
   /** Campo con etiqueta. Recibe { etiqueta, opcional, tipo, valor, opciones:[{valor,texto}|texto], ayuda, error, corto, deshabilitado, nombre, attrs }. */
   const campo = ({ etiqueta, opcional, tipo = "text", valor, opciones, ayuda, error, corto, deshabilitado, nombre, attrs = {} } = {}) => {
     const idErr = error ? uid("err") : null;
@@ -443,7 +453,7 @@ const DS = (() => {
 
   return {
     ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoCoach, confirmacion, bannerCambio, filaHistorial,
-    boton, botonIco, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
+    boton, botonIco, dialogo, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */

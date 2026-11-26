@@ -468,3 +468,18 @@ button.dia.dia-sel { box-shadow: inset 0 0 0 2px var(--ink-2); }   /* elegido: a
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .av-0 { --av-c: var(--z1); } .av-1 { --av-c: var(--z2); } .av-2 { --av-c: var(--z3); }
 .av-3 { --av-c: var(--z4); } .av-4 { --av-c: var(--z5); } .av-5 { --av-c: var(--cat-4); }
+
+/* Diálogo nativo (DS.dialogo) */
+.dialogo { width: min(92vw, 420px); max-height: 85vh; padding: var(--space-14); border: 0; border-radius: var(--radius-card); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card), 0 0 0 1px var(--ring); }
+.dialogo::backdrop { background: color-mix(in srgb, var(--page) 75%, transparent); }
+.dl-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
+.dl-t { margin: 0; font: 600 15px/20px var(--font-sans); }
+.dl-cuerpo { display: grid; gap: var(--space-8); margin-top: var(--space-8); }
+.dl-cuerpo p { margin: 0; font-size: 13.5px; line-height: 19px; color: var(--ink-2); }
+
+/* Anillos de semana del Plan (cuadrito .sem y su muestra en el catálogo) */
+.leyenda i.sw-anillo { width: 14px; height: 14px; background: var(--page); border-radius: var(--radius-inner); vertical-align: -2px; outline: 2px solid transparent; outline-offset: 1px; }
+.leyenda i.sw-anillo.anillo-actual { outline-color: var(--serie-1); }
+.leyenda i.sw-anillo.anillo-carrera { outline-color: var(--bad); }
+.leyenda i.sw-anillo.anillo-prueba { outline-color: var(--morado); }
+.leyenda .sem-prog { margin: 0; height: auto; line-height: 14px; }

@@ -181,6 +181,11 @@ MARCAS_SEMANA = ("carrera", "viaje", "enfermedad", "prueba")   # por prioridad: 
 
 
 def marca_semana(w: dict, ini: date | None, config: dict):
+    """La marca principal de la semana (la de mayor prioridad) o None; ver `marcas_semana`."""
+    return next(iter(marcas_semana(w, ini, config)), None)
+
+
+def marcas_semana(w: dict, ini: date | None, config: dict) -> list:
     """Evento de una semana del plan para el ícono del cuadrito (carrera, viaje, enfermedad, prueba) o None. Sale de
     las fechas de `config` (metas, eventos) contra la semana `ini` (lunes), de `w["evento"]` (plan vivo) y de una sesión de prueba."""
     hay = {"carrera" if w.get("evento") == "carrera" else "", "viaje" if w.get("evento") in ("viaje", "viaje_igual") else "",
@@ -191,12 +196,20 @@ def marca_semana(w: dict, ini: date | None, config: dict):
         hay |= {"carrera" for x in config.get("metas") or [] if cae(x["fecha"], x["fecha"])}
         hay |= {e["tipo"] if e["tipo"] != "lesion" else "enfermedad" for e in config.get("eventos") or []
                 if e["tipo"] in ("viaje", "enfermedad", "lesion") and cae(e["desde"], e["hasta"])}
-    return next((x for x in MARCAS_SEMANA if x in hay), None)
+    return [x for x in MARCAS_SEMANA if x in hay]
+
+
+def cumplimiento_semana(hechas: int, total: int):
+    """Semana pasada: "completa" (todas), "casi" (al menos 2/3) o "baja" (el resto; la página la muestra neutra). None sin sesiones."""
+    if total <= 0:
+        return None
+    return "completa" if hechas >= total else "casi" if 3 * hechas >= 2 * total else "baja"
 
 
 def semanas_plan(plan: dict, zonas: list, hoy: date, data: dict, config: dict) -> list:
     """Las semanas del plan para el Plan: `etiqueta` (carga/descarga), `marca` (evento del ícono) y `progreso`
-    {hechas, total} de las pasadas y la actual (lo que dice estado_sesiones; las futuras no traen la clave)."""
+    {hechas, total} de las pasadas y la actual (lo que dice estado_sesiones; las futuras no traen la clave) y `cumplimiento`
+    (solo las pasadas: completa, casi o baja)."""
     inicio = date.fromisoformat(config["plan_start"])
     sec = m.secuencia_semanas(inicio, config.get("semanas_repetidas", []), config.get("plan_semanas", 12), config.get("pausas", []))
     lunes = {}
@@ -209,9 +222,14 @@ def semanas_plan(plan: dict, zonas: list, hoy: date, data: dict, config: dict) -
         marca = marca_semana(w, ini, config)
         if marca:
             cw["marca"] = marca
+            todas = marcas_semana(w, ini, config)
+            if len(todas) > 1:
+                cw["marcas"] = todas   # dos eventos en la semana: la página muestra los dos íconos, en este orden
         if ini is not None and ini <= monday(hoy):
             _, estado = week_assignment(ini, data, config, plan, hasta=min(ini + timedelta(days=6), hoy))
             cw["progreso"] = {"hechas": sum(1 for e in estado if e["estado"] == "hecha"), "total": len(w["sessions"])}
+            if ini < monday(hoy):
+                cw["cumplimiento"] = cumplimiento_semana(cw["progreso"]["hechas"], cw["progreso"]["total"])
         out.append(cw)
     return out
 

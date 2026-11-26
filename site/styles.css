@@ -112,20 +112,22 @@ body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bot
 .linea { display: grid; gap: var(--space-10); }
 .bloque .semanas { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-6); margin-top: var(--space-4); }
 .sem { position: relative; font: inherit; color: var(--ink); background: var(--page); border: 1.5px solid transparent; border-radius: var(--radius-inner); padding: 18px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: pointer; font-size: 11px; min-height: 84px; }
-.sem strong { font-size: 16px; }
+.sem strong { font-size: 16px; line-height: 20px; }
 .sem.desc { border: 1.5px dashed var(--muted); background: transparent; }
-.sem.carrera { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sem.anillo-actual { outline: 2px solid var(--serie-1); outline-offset: 1px; }
+.sem.anillo-prueba { outline: 2px solid var(--morado); outline-offset: 1px; }
+.sem.anillo-carrera { outline: 2px solid var(--bad); outline-offset: 1px; }
 .sem.actual em { position: absolute; top: 4px; left: 6px; font-style: normal; font-weight: 700; font-size: 10px; text-transform: uppercase; }
-.sem-ev { position: absolute; top: 4px; right: 5px; line-height: 0; }
-.sem-ev .ico { width: 14px; height: 14px; }
-.sem-prog { font-size: 11px; font-variant-numeric: tabular-nums; margin-top: var(--space-2); }
+.sem-cab { display: flex; align-items: center; justify-content: center; gap: var(--space-4); height: 20px; }
+.sem-ev { line-height: 0; color: var(--ink-2); }
+.sem-ev .ico { width: 16px; height: 16px; vertical-align: 0; }
+.sem-ev[data-ev="carrera"] { color: var(--bad); }
+.sem-ev[data-ev="prueba"] { color: var(--morado); }
+.sem-prog { display: block; height: 16px; line-height: 16px; font-size: 12px; font-variant-numeric: tabular-nums; margin-top: var(--space-2); color: var(--muted); white-space: pre; }
+.sem-prog[data-cump="completa"], .sem-prog[data-cump="casi"] { color: var(--bien); font-weight: 700; }
 .sem-barra { display: block; width: 70%; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
 .sem-barra i { display: block; height: 100%; background: currentColor; }
 .sem-barra.completa i { background: var(--ok); }
-.leyenda i.sw-carga, .leyenda i.sw-desc, .leyenda i.sw-anillo { width: 14px; height: 14px; background: transparent; border-radius: 4px; vertical-align: -2px; }
-.leyenda i.sw-carga { border: 1.5px solid var(--ink-2); }
-.leyenda i.sw-desc { border: 1.5px dashed var(--muted); }
-.leyenda i.sw-anillo { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sem:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tipos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-10); }
 @media (min-width: 700px) { .tipos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
