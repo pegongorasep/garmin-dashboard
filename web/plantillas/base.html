@@ -13,6 +13,9 @@
 })();
 </script>
 <title>{% block titulo %}Ahí la Llevas{% endblock %}</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#111a24">
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/componentes.css">
 <link rel="stylesheet" href="/estaticos/paginas.css">
@@ -23,6 +26,7 @@
 {% block contenido %}{% endblock %}
 </main>
 <div class="caja {% block clase_pie %}{% endblock %}">{{ pie() }}</div>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

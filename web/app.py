@@ -24,10 +24,14 @@ SITE = ROOT / "site"
 # `catalogo.html` tampoco está aquí: solo sale por /diseno, para el admin.
 ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "charts.js": "text/javascript",
                   "iconos.js": "text/javascript", "componentes.js": "text/javascript", "vistas.js": "text/javascript",
-                  "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css"}
+                  "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css",
+                  "sw.js": "text/javascript", "manifest.webmanifest": "application/manifest+json",
+                  "icono-192.png": "image/png", "icono-512.png": "image/png", "icono-maskable-512.png": "image/png",
+                  "apple-touch-icon.png": "image/png"}
 FUENTES = {"Lexend-latin.woff2"}
 PIE_SITIO = ('<footer class="pie"><p>Esto no es consejo médico: si algo duele, para.</p>'
-             '<p>Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p></footer>')
+             '<p>Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p></footer>'
+             '<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});</script>')
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 

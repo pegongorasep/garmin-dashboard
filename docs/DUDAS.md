@@ -323,3 +323,8 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - El token de una invitación solo se guarda como hash: la liga se ve únicamente en la respuesta que la crea (sin redirigir). Revocar borra la fila (solo pendientes).
 - Versión "vigente" del motor = la de la subida correcta más reciente de todas las personas. "Atrasado" = última subida con más de 2 días o versión distinta; quien aún no ha subido sale como "sin subidas" y no cuenta como atrasado.
 - La tabla solo lleva correo, apodo, repo, última subida y motor; la liga a `/a/<id>/ajustes` solo aparece si `puede_ver` lo permite (el admin que no es coach no ve ninguna).
+
+### v5 F7c (PWA)
+- Sin Pillow: los PNG se dibujan con `scripts/iconos_pwa.py` (zlib puro) y se commitean en `site/`.
+- El service worker solo guarda estáticos y `data.json` (red primero). Las páginas HTML no se guardan (llevan sesión). Riesgo menor: en un equipo compartido, sin red podría verse el último `data.json` guardado; aceptado.
+- En `site/index.html` los enlaces al manifest/ícono son relativos (sirve también en Pages); el SW solo se registra en las páginas de la web (`base.html`). La vista con sesión (`/`) lo registra por `PIE_SITIO` en `web/app.py`.
