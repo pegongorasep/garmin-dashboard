@@ -160,3 +160,40 @@ class VinculoPendiente(Base):
     creado: Mapped[datetime] = mapped_column(default=ahora)
     expira: Mapped[datetime] = mapped_column()
     intentos: Mapped[int] = mapped_column(default=0)
+
+
+class ClienteOAuth(Base):
+    """F6a: cliente registrado de forma dinámica (RFC 7591), público (sin secreto)."""
+    __tablename__ = "oauth_clientes"
+    client_id: Mapped[str] = mapped_column(sa.String(64), primary_key=True)
+    nombre: Mapped[str] = mapped_column(sa.String(100))
+    redirect_uris: Mapped[list] = mapped_column(sa.JSON)
+    creado: Mapped[datetime] = mapped_column(default=ahora)
+
+
+class CodigoOAuth(Base):
+    """Código de autorización: solo su hash, de un solo uso, vence en 10 minutos."""
+    __tablename__ = "oauth_codigos"
+    codigo_hash: Mapped[str] = mapped_column(sa.String(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(sa.ForeignKey("oauth_clientes.client_id"))
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    redirect_uri: Mapped[str] = mapped_column(sa.String(500))
+    code_challenge: Mapped[str] = mapped_column(sa.String(128))
+    resource: Mapped[str | None] = mapped_column(sa.String(500))
+    expira: Mapped[datetime] = mapped_column()
+    usado_en: Mapped[datetime | None] = mapped_column()
+
+
+class TokenOAuth(Base):
+    """Un par acceso/refresh por conexión. Solo hashes; el refresh rota en cada uso (se reescribe la misma fila)."""
+    __tablename__ = "oauth_tokens"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    client_id: Mapped[str] = mapped_column(sa.ForeignKey("oauth_clientes.client_id"))
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    acceso_hash: Mapped[str] = mapped_column(sa.String(64), unique=True)
+    refresh_hash: Mapped[str] = mapped_column(sa.String(64), unique=True)
+    resource: Mapped[str | None] = mapped_column(sa.String(500))
+    creado: Mapped[datetime] = mapped_column(default=ahora)
+    expira_acceso: Mapped[datetime] = mapped_column()
+    expira_refresh: Mapped[datetime] = mapped_column()
+    ultimo_uso: Mapped[datetime | None] = mapped_column()

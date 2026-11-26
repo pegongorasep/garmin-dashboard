@@ -10,3 +10,4 @@ itsdangerous==2.2.0
 httpx==0.28.1
 pyjwt[crypto]==2.15.1
 cryptography==50.0.2
+mcp==2.3.0

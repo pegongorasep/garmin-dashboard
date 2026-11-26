@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso, tarjeta %}
+{% block titulo %}Conectar · Ahí la Llevas{% endblock %}
+{% block contenido %}
+{% if error %}
+<h1 class="pag-t">No se pudo conectar</h1>
+{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}
+{% elif entrar %}
+<h1 class="pag-t">Entra primero</h1>
+<p>Para conectar {{ cliente }} necesitas entrar a tu cuenta de Ahí la Llevas.</p>
+<div class="acciones">{{ boton("Entrar", href="/entrar") }}</div>
+{% else %}
+<h1 class="pag-t">{{ cliente }} quiere ver y cambiar tu plan en Ahí la Llevas</h1>
+{% call tarjeta("Podrá") %}
+<ul>
+  <li>Ver tu semana, tu plan, tus corridas y tu progreso.</li>
+  <li>Cambiar tus ajustes y tu plan (todo queda en tu historial y se puede deshacer).</li>
+</ul>
+<p>Nunca ve tu contraseña ni la key de Garmin. Puedes quitarle el acceso cuando quieras.</p>
+{% endcall %}
+<form class="pila" method="post" action="/oauth/autorizar">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% for k, v in campos %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <div class="acciones">
+    {{ boton("Permitir", tipo="submit", nombre="decision", valor="permitir") }}
+    {{ boton("Cancelar", "sec", tipo="submit", nombre="decision", valor="negar") }}
+  </div>
+</form>
+{% endif %}
+{% endblock %}
