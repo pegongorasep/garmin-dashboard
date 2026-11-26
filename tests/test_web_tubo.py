@@ -526,33 +526,37 @@ ENTORNO = {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://actions.example/t?x=1", "ACT
            "GITHUB_REPOSITORY_ID": "777"}
 
 
-def test_subir_con_la_web_caida_no_falla_y_publica_pages(tmp_path):
+def test_subir_con_la_web_caida_falla_visible(tmp_path):
     (tmp_path / "meta.json").write_text('{"pulled_at": "2026-11-01"}')
     http = HttpFalso(_caido, lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
     pausas = []
-    assert sub.subir(tmp_path, ENTORNO, http, pausas.append) is True
+    assert sub.subir(tmp_path, ENTORNO, http, pausas.append) == sub.FALLO
     assert len([c for c in http.llamadas if c[0] == "post"]) == 1 + sub.REINTENTOS and len(pausas) == sub.REINTENTOS
     assert sub.instrucciones(http, lambda s: None) == ""
     # sin token OIDC tampoco truena
-    assert sub.subir(tmp_path, {}, http, lambda s: None) is True
+    assert sub.subir(tmp_path, {}, http, lambda s: None) == sub.FALLO
 
 
-def test_subir_ok_y_migrado(tmp_path):
+def test_subir_ok(tmp_path):
     (tmp_path / "meta.json").write_text('{"pulled_at": "2026-11-01"}')
-    for publicar in (True, False):
-        http = HttpFalso(lambda url, **kw: RespuestaFalsa(200, {"ok": True, "publicar_pages": publicar}),
-                         lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
-        assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) is publicar
-        _, url, kw = [c for c in http.llamadas if c[0] == "post"][0]
-        assert url.endswith("/api/tubo/subida") and kw["headers"]["Content-Encoding"] == "gzip"
-        assert json.loads(gzip.decompress(kw["data"]))["esquema"] == 1
-        assert kw["timeout"] == 60 and "key" not in json.dumps(json.loads(gzip.decompress(kw["data"]))).lower()
+    http = HttpFalso(lambda url, **kw: RespuestaFalsa(200, {"ok": True}),
+                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) == sub.SUBIDO
+    _, url, kw = [c for c in http.llamadas if c[0] == "post"][0]
+    assert url.endswith("/api/tubo/subida") and kw["headers"]["Content-Encoding"] == "gzip"
+    assert json.loads(gzip.decompress(kw["data"]))["esquema"] == 1
+    assert kw["timeout"] == 60 and "key" not in json.dumps(json.loads(gzip.decompress(kw["data"]))).lower()
 
 
 def test_web_responde_403_no_vinculado(tmp_path):
     http = HttpFalso(lambda url, **kw: RespuestaFalsa(403, {"error": "repo no vinculado"}),
                      lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
-    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) is True
+    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) == sub.NO_VINCULADO
+    # otro 403 (workflow no autorizado) o un 422 sí son fallo
+    for cod, err in ((403, "workflow no autorizado"), (422, "paquete no válido")):
+        http = HttpFalso(lambda url, **kw: RespuestaFalsa(cod, {"error": err}),
+                         lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
+        assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) == sub.FALLO
     assert sub.instrucciones(http, lambda s: None) == ""
 
 
@@ -571,30 +575,23 @@ def test_instrucciones_a_argumentos(monkeypatch):
     assert sub.instrucciones(http, lambda s: None) == ""
 
 
-def test_main_siempre_sale_con_cero_y_escribe_la_salida(tmp_path, monkeypatch):
-    salida = tmp_path / "out"
-    monkeypatch.setenv("GITHUB_OUTPUT", str(salida))
+def test_main_subir_falla_sin_token_e_instrucciones_nunca(tmp_path, monkeypatch):
     monkeypatch.setenv("GARMIN_USER_DIR", str(tmp_path))
     monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_URL", raising=False)
-    assert sub.main(["subir"]) == 0
-    assert salida.read_text().strip() == "publicar_pages=true"
+    assert sub.main(["subir"]) == 1
     assert sub.main(["instrucciones"]) == 0
 
 
 # --- flujo de GitHub y despliegue ---
 
-def test_motor_yml_pide_instrucciones_sube_y_condiciona_pages():
-    wf = yaml.safe_load((ROOT / ".github" / "workflows" / "motor.yml").read_text())
-    pasos = wf["jobs"]["build"]["steps"]
+def test_motor_yml_es_solo_tubo_de_datos():
     texto = (ROOT / ".github" / "workflows" / "motor.yml").read_text()
+    wf = yaml.safe_load(texto)
     assert "subir.py instrucciones" in texto and "subir.py subir" in texto
-    assert wf["jobs"]["deploy"]["if"] == "needs.build.outputs.publicar == 'true'"
-    por_nombre = {p.get("name") or p.get("uses"): p for p in pasos}
-    for nombre in ("Construir el sitio", "Validar data.json (lista blanca de privacidad)", "actions/configure-pages@v5",
-                   "actions/upload-pages-artifact@v3"):
-        assert "decidir.outputs.publicar == 'true'" in por_nombre[nombre]["if"]
-    assert wf["jobs"]["build"]["permissions"]["id-token"] == "write"
-    assert "config.yaml" in por_nombre["Decidir si se publica Pages"]["run"]
+    assert list(wf["jobs"]) == ["build"]
+    assert wf["jobs"]["build"]["permissions"] == {"contents": "read", "id-token": "write"}
+    for ya_no in ("pages", "Pages", "build.py", "template/"):
+        assert ya_no not in texto, ya_no
 
 
 def test_dockerignore_excluye_lo_personal():
@@ -638,7 +635,7 @@ def test_subir_py_escribe_el_codigo_en_el_resumen_y_no_en_el_log(tmp_path, monke
     (tmp_path / "meta.json").write_text('{"pulled_at": "2026-11-01"}')
     http = HttpFalso(lambda url, **kw: RespuestaFalsa(403, {"error": "repo no vinculado", "codigo": "123456"}),
                      lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
-    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) is True
+    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) == sub.NO_VINCULADO
     assert sub.instrucciones(http, lambda s: None) == ""
     t = resumen.read_text()
     assert "Tu código para Ahí la Llevas: 123456" in t and "vence en 1 h" in t and t.count("123456") == 1

@@ -1,7 +1,7 @@
 name: Motor
 
-# Workflow reutilizable: baja los datos de Garmin de quien lo llama, construye el sitio con el código
-# del motor (etiqueta `stable` salvo que se pida otra) y lo publica en GitHub Pages del que llama.
+# Workflow reutilizable: el tubo de datos. Baja los datos de Garmin de quien lo llama y los sube a la web de
+# Ahí la Llevas (código del motor en la etiqueta `stable` salvo que se pida otra). No publica ningún sitio.
 on:
   workflow_call:
     inputs:
@@ -16,15 +16,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      publicar: ${{ steps.decidir.outputs.publicar }}
     env:
-      # La web de Ahí la Llevas (v5). Si no responde, todo sigue como antes: nunca falla el workflow por ella.
+      # La web de Ahí la Llevas. Si la subida falla, el job falla (se ve en rojo); si el repo aún no está vinculado, solo avisa.
       AHILALLEVAS_URL: https://ahilallevas.com
     permissions:
-      contents: write   # para dejar al día CLAUDE.md y .claude/skills en repos de amigos
-      pages: write      # actions/configure-pages
-      id-token: write
+      contents: read
+      id-token: write   # token OIDC para hablar con la web
     steps:
       # 1. El repo de quien llama, en la raíz: es el directorio de usuario (config.yaml, plan/, data/).
       - uses: actions/checkout@v4
@@ -62,74 +59,8 @@ jobs:
           PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
           GARMIN_USER_DIR: ${{ github.workspace }}
 
-      # 4. Mandar el paquete limpio (lista blanca) a la web. `publicar_pages=false` cuando la persona ya migró.
+      # 4. Mandar el paquete limpio (lista blanca) a la web. Falla si la subida falla; "no vinculado" no es fallo.
       - name: Subir datos a la web
-        id: subida
-        run: python motor/scripts/subir.py subir || echo "publicar_pages=true" >> "$GITHUB_OUTPUT"
+        run: python motor/scripts/subir.py subir
         env:
           GARMIN_USER_DIR: ${{ github.workspace }}
-
-      # 5. Sin config.yaml (repo nuevo que solo es tubo de datos) o ya migrado: no se construye ni se publica Pages.
-      - name: Decidir si se publica Pages
-        id: decidir
-        run: |
-          if [ -f config.yaml ] && [ "${{ steps.subida.outputs.publicar_pages }}" != "false" ]; then
-            echo "publicar=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "publicar=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Construir el sitio
-        if: steps.decidir.outputs.publicar == 'true'
-        run: python motor/dashboard/build.py
-        env:
-          GARMIN_USER_DIR: ${{ github.workspace }}
-
-      - name: Validar data.json (lista blanca de privacidad)
-        if: steps.decidir.outputs.publicar == 'true'
-        run: python motor/dashboard/validar.py
-
-      - uses: actions/configure-pages@v5
-        if: steps.decidir.outputs.publicar == 'true'
-
-      - name: Quitar el catálogo de diseño (no se publica en ninguna Pages; solo en /diseno de la web y en local)
-        if: steps.decidir.outputs.publicar == 'true'
-        run: rm -f motor/site/catalogo.html
-
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.decidir.outputs.publicar == 'true'
-        with:
-          path: motor/site
-
-      # Solo en repos de amigos: CLAUDE.md y las skills se copian del motor. No toca .github/workflows/.
-      # Ya migrados (publicar_pages=false) o sin config.yaml: `decidir.publicar` es false y este paso se salta.
-      # Si el push choca (la persona subió algo a la vez), no frena la publicación: se reintenta en la próxima.
-      - name: Dejar al día las instrucciones de Claude
-        if: github.repository != 'pegongorasep/garmin-dashboard' && steps.decidir.outputs.publicar == 'true'
-        continue-on-error: true
-        run: |
-          cp motor/template/CLAUDE.md CLAUDE.md
-          rm -rf .claude/skills
-          mkdir -p .claude
-          cp -r motor/template/.claude/skills .claude/skills
-          if [ -n "$(git status --porcelain -- CLAUDE.md .claude/skills)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add CLAUDE.md .claude/skills
-            git commit -m "chore: instrucciones al día (motor $(git -C motor rev-parse --short HEAD))"
-            git pull --rebase && git push
-          fi
-
-  deploy:
-    needs: build
-    if: needs.build.outputs.publicar == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4

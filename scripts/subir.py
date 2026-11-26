@@ -1,13 +1,13 @@
 """Lo corre `motor.yml` en el repo de cada persona: pide instrucciones a la web y le sube el paquete de data/.
 
-Solo `requests` y la librería estándar (más dashboard/paquete.py del motor). NUNCA falla el workflow por culpa de la web:
-si no responde, avisa y sigue (`publicar_pages=true`, como antes de la web).
+Solo `requests` y la librería estándar (más dashboard/paquete.py del motor). `instrucciones` nunca falla; `subir`
+sale con 1 si la subida falla (se ve en rojo) y con 0 si subió o si el repo aún no está vinculado.
 
   python subir.py instrucciones   imprime los argumentos para garmin_connect.py (vacío = los de siempre)
-  python subir.py subir           arma el paquete de <GARMIN_USER_DIR>/data y lo sube; escribe publicar_pages=... en $GITHUB_OUTPUT
+  python subir.py subir           arma el paquete de <GARMIN_USER_DIR>/data y lo sube
 
 Variables: AHILALLEVAS_URL (la web), ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN (las pone GitHub con `id-token: write`),
-GITHUB_REPOSITORY_ID (la sal de los ids), GARMIN_USER_DIR, GITHUB_OUTPUT.
+GITHUB_REPOSITORY_ID (la sal de los ids), GARMIN_USER_DIR.
 """
 import gzip
 import json
@@ -23,6 +23,7 @@ URL_POR_DEFECTO = "https://ahilallevas.com"
 TIMEOUT = 60
 REINTENTOS = 2
 ESPERA = 5
+SUBIDO, NO_VINCULADO, FALLO = "subido", "no_vinculado", "fallo"
 ARGS_OK = re.compile(r"^(--dias-actividades [0-9]{1,4})?( --historial-desde [0-9]{4}-[0-9]{2}-[0-9]{2})?$")
 
 
@@ -103,8 +104,8 @@ def instrucciones(http=requests, dormir=time.sleep) -> str:
         return ""
 
 
-def subir(data_dir: Path, entorno=os.environ, http=requests, dormir=time.sleep) -> bool:
-    """Sube el paquete. Devuelve `publicar_pages` (True si la web no respondió o no vinculó este repo)."""
+def subir(data_dir: Path, entorno=os.environ, http=requests, dormir=time.sleep) -> str:
+    """Sube el paquete. Devuelve SUBIDO, NO_VINCULADO (la persona aún no vincula su repo: no es un fallo) o FALLO."""
     try:
         sys.path.insert(0, str(Path(__file__).parent.parent / "dashboard"))
         import paquete
@@ -115,38 +116,42 @@ def subir(data_dir: Path, entorno=os.environ, http=requests, dormir=time.sleep) 
         problemas = paquete.validar(pq)
         if problemas:
             _avisa("el paquete no pasó la lista blanca, no se sube: " + "; ".join(problemas))
-            return True
+            return FALLO
         cuerpo = gzip.compress(json.dumps(pq, separators=(",", ":")).encode())
         r = _pedir("/api/tubo/subida", cuerpo, {"Authorization": f"Bearer {token_oidc(entorno, http)}",
                                                "Content-Type": "application/json", "Content-Encoding": "gzip"}, http, dormir)
         if r.status_code == 200:
-            publicar = bool(r.json().get("publicar_pages", True))
-            print(f"[ahi-la-llevas] datos subidos ({len(cuerpo) / 1024:.0f} KB); publicar Pages: {publicar}")
-            return publicar
+            print(f"[ahi-la-llevas] datos subidos ({len(cuerpo) / 1024:.0f} KB)")
+            return SUBIDO
         _resumen_codigo(r)
-        _avisa(f"la web no aceptó el paquete (HTTP {r.status_code}); todo sigue como siempre")
+        if r.status_code == 403 and _error_de(r) == "repo no vinculado":
+            _avisa("este repo aún no está vinculado a una cuenta de Ahí la Llevas: no se subió nada "
+                   "(vincúlalo con el código del resumen de la corrida y vuelve a correr el workflow)")
+            return NO_VINCULADO
+        _avisa(f"la web no aceptó el paquete (HTTP {r.status_code})")
     except Exception as e:   # noqa: BLE001
-        _avisa(f"no se pudo subir a la web ({type(e).__name__}); todo sigue como siempre")
-    return True
+        _avisa(f"no se pudo subir a la web ({type(e).__name__}: {e})")
+    return FALLO
+
+
+def _error_de(r) -> str:
+    try:
+        return str(r.json().get("error") or "")
+    except Exception:   # noqa: BLE001
+        return ""
 
 
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     orden = argv[0] if argv else ""
     if orden == "instrucciones":
-        print(instrucciones())
+        print(instrucciones())   # nunca falla: sin respuesta se usan los argumentos de siempre
     elif orden == "subir":
-        publicar = subir(Path(os.environ.get("GARMIN_USER_DIR") or ".") / "data")
-        salida = os.environ.get("GITHUB_OUTPUT")
-        linea = f"publicar_pages={'true' if publicar else 'false'}"
-        if salida:
-            with open(salida, "a") as f:
-                f.write(linea + "\n")
-        else:
-            print(linea)
+        # Un fallo real (web caída, paquete inválido, token) tumba el job para que se vea; "no vinculado" no.
+        return 1 if subir(Path(os.environ.get("GARMIN_USER_DIR") or ".") / "data") == FALLO else 0
     else:
         print(__doc__)
-    return 0   # siempre: la web nunca tumba el workflow
+    return 0
 
 
 if __name__ == "__main__":

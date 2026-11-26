@@ -9,11 +9,11 @@ on:
 
 # El grupo vive aquí (no en motor.yml): con el mismo nombre en los dos, el flujo se bloquea a sí mismo.
 concurrency:
-  group: pages
+  group: tubo
   cancel-in-progress: false
 
 jobs:
-  # Pedro prueba el motor antes de publicar: si pytest falla, no se publica.
+  # Pedro prueba el motor antes de correr su tubo de datos: si pytest falla, no corre.
   pruebas:
     runs-on: ubuntu-latest
     steps:
@@ -33,6 +33,5 @@ jobs:
     secrets:
       PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
     permissions:
-      contents: write
-      pages: write
+      contents: read
       id-token: write
