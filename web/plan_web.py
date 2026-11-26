@@ -79,7 +79,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def volver(usuario, atleta) -> str:
         """Adónde regresa un POST del plan: la pestaña Plan (para quien ve su propio sitio) o la página de acciones."""
         pref = aw.prefijo(usuario, atleta)
-        return f"{pref}/plan/acciones?ok=1" if pref else "/#plan"
+        return f"{pref}/plan/acciones?ok=1" if pref else "/?ok=plan#plan"
 
     def accion(nombre: str, hacer, desc_de=None):
         """Registra POST /plan/<nombre>. `hacer(crudo, cfg, plan, form, hoy, data)` devuelve (crudo, plan o None, descripción)."""

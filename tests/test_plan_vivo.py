@@ -521,17 +521,17 @@ def test_plan_redirige_a_la_pestana_y_el_menu_no_trae_plan_vivo(web_ctx):
     r = cl.get("/plan")
     assert r.status_code == 303 and r.headers["location"] == "/#plan"
     ui = cl.get("/data.json").json()["ui"]
-    assert ui["editar_sesion"] is True and ui["plan_acciones"]
+    assert ui["editar_urls"] and ui["plan_acciones"]
     assert all(a["url"].startswith("/plan/acciones") for a in ui["plan_acciones"])
     assert "Plan vivo" not in [i["texto"] for i in ui["menu"]]
     assert cl.get("/plan/acciones").status_code == 200
-    assert cl.post("/plan/repetir", data={"csrf": tok(cl)}).headers["location"] in ("/#plan", "/plan/acciones?ok=1")
+    assert cl.post("/plan/repetir", data={"csrf": tok(cl)}).headers["location"] in ("/?ok=plan#plan", "/plan/acciones?ok=1")
 
 
 def test_ui_del_plan_trae_valores_por_defecto_en_pages():
     from dashboard import ajustes, build, validar
     cfg = ajustes.cargar_config(build.ROOT)
     d = build.build(build.load_data(build.ROOT), build.load_plan(build.ROOT), cfg, __import__("datetime").datetime(2026, 11, 25))
-    assert d["ui"]["plan_acciones"] == [] and d["ui"]["editar_sesion"] is False
+    assert d["ui"]["plan_acciones"] == [] and d["ui"]["editar_urls"] == {}
     d["ui"]["plan_acciones"] = [{"texto": "X", "url": "/plan/acciones"}]
     assert validar.problemas(d) == []

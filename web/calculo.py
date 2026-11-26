@@ -44,12 +44,18 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None) -> dict:
     if aj is None:
         raise SinConfig()
     crudo = {**aj.config, "modo": "web", "menu": MENU if menu is None else menu,
-             "plan_acciones": PLAN_ACCIONES, "editar_sesion": True}   # el que ve su data.json puede editar (permisos.puede_editar == puede_ver)
+             "plan_acciones": PLAN_ACCIONES}
     if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
         crudo["acciones_url"] = acciones_url(usuario)
     return normalizar_config(crudo)
+
+
+def editar_urls(plan: dict) -> dict:
+    """{"<n>/<id>": url} de las sesiones que el editor acepta (el que ve su data.json puede editar: puede_editar == puede_ver)."""
+    return {f"{w['n']}/{s['id']}": f"/plan/sesion/{w['n']}/{s['id']}"
+            for w in plan.get("weeks", []) for s in w.get("sessions", []) if s.get("tipo") in plan_vivo.TIPOS_EDITABLES}
 
 
 def inbody_de(db: Session, usuario_id: int, crudo: dict) -> dict | None:
@@ -131,6 +137,7 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
     crudo = db.get(Ajustes, usuario.id).config
     cfg = plan_vivo.con_pausas(cfg, local.date())
     plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
+    cfg = {**cfg, "editar_urls": editar_urls(plan)}
     salida = build.build(datos_de(db, usuario, crudo), plan, cfg, local)
     problemas = validar.problemas(salida)
     if problemas:
