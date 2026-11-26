@@ -112,7 +112,7 @@ button.dia.sel { background: var(--accent-bg); }
 
 /* Cargando: el logo se arma */
 .cargando { display: grid; place-items: center; gap: 12px; min-height: 200px; }
-.cargando.pagina { position: fixed; inset: 0; min-height: 100dvh; padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px); pointer-events: none; }   /* carga de página completa: al centro exacto de la pantalla, sin hacer scroll */
+.cargando.pagina { position: fixed; align-content: center; inset: 0; min-height: 100dvh; padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px); pointer-events: none; }   /* carga de página completa: al centro exacto de la pantalla, sin hacer scroll */
 .cargando svg { width: 96px; height: 96px; overflow: visible; }
 .cargando rect { transform-box: fill-box; transform-origin: 50% 100%; animation: ahi-sube 2.6s cubic-bezier(.3, 1.4, .5, 1) infinite; }
 .cargando rect:nth-child(2) { animation-delay: .1s; } .cargando rect:nth-child(3) { animation-delay: .2s; }

@@ -2,16 +2,23 @@
 {% from "componentes.html" import boton, tarjeta %}
 {% block titulo %}{{ t("instalar.titulo_pagina") }}{% endblock %}
 {% block contenido %}
+<noscript><style>#inst[hidden]{display:block!important}</style></noscript>
+<div id="inst" hidden>
 <h1 class="pag-t">{{ t("instalar.titulo") }}</h1>
 <p>{{ t("instalar.intro") }}</p>
+<div id="inst-card-android">
 {% call tarjeta(t("instalar.android")) %}
 <p>{{ t("instalar.android_toca") }}</p>
 <div class="acciones"><span id="inst-android" hidden>{{ boton(t("instalar.boton"), "", tipo="button", nombre="instalar") }}</span></div>
 <p id="inst-nota-android" class="nota">{{ t("instalar.android_nota") }}</p>
 {% endcall %}
+</div>
+<div id="inst-card-ios">
 {% call tarjeta(t("instalar.iphone")) %}
 <p>{{ t("instalar.iphone_toca") }}</p>
 {% endcall %}
+</div>
 <div class="acciones">{{ boton(t("instalar.ahora_no"), "sec", href=siguiente) }}</div>
+</div>
 {% endblock %}
 {% block scripts %}<script src="/estaticos/instalar.js" data-siguiente="{{ siguiente }}"></script>{% endblock %}
