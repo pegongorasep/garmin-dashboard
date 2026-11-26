@@ -394,3 +394,12 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - «Quitar mi plan» solo cambia la bandera: el plan y los ajustes se quedan guardados (sin confirmación).
 - Sin plan y sin ajustes, el motor usa la config de fábrica (zona America/Merida, FC máx 190) hasta que haya Ajustes; la zona real se pide si luego quiere plan. Anotado por simple.
 - Con sin_plan el onboarding termina al vincular el repo (no espera la primera subida); el sitio quita la pestaña Plan (L2 pone la tarjeta).
+
+## v5 aprende
+- Los artículos viven en `aprende/es/<slug>.yaml` (`titulo`, `resumen`, `minutos`, `secciones: [{titulo, parrafos, lista}]`, `fuentes`), no en el catálogo `i18n/`: son textos largos y no caben en el catálogo plano. Solo los textos de la interfaz (menú, títulos, avisos) están en `i18n/es.yaml` y `en.yaml`.
+- En inglés se muestra el artículo en español con el aviso «solo en español por ahora»; la traducción se hace cuando Pedro apruebe el español.
+- El aviso «Esto no es consejo médico» sale en el artículo con `pie.consejo` (además del pie de la página).
+- Menú: «Aprende» en el menú de la web (`web/calculo.menu_de`, antes de Privacidad) y en `_nav.html`. No está en el menú de `solo cuerpo` (lista fija `MENU_CUERPO`) ni bajo `/a/<id>` (los artículos no son del atleta).
+- Íconos: la liga del menú ☰ usa el ícono por defecto del sitio; no se tocó `site/vistas.js` para no mover la versión del service worker.
+- Los slugs aceptan solo `[a-z0-9-]`; los 11 se ordenan con `ORDEN` en `web/aprende.py`.
+- Los enlaces contextuales («¿Por qué zona 2?») se agregan después de que Pedro revise.

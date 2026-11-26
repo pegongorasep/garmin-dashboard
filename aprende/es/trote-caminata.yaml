@@ -1,0 +1,29 @@
+titulo: "Correr y caminar"
+resumen: "El método de trote y caminata, cómo se sube la escalera y por qué no es trampa."
+minutos: 3
+secciones:
+  - titulo: "No es trampa"
+    parrafos:
+      - "Alternar trote con caminata es un método de entrenamiento serio. Lo popularizó el exatleta olímpico Jeff Galloway, y lo usa muchísima gente, desde quien empieza hasta quien corre un maratón. Lo que cuenta es el tiempo que pasas moviéndote y la constancia, no que no pares nunca."
+  - titulo: "Por qué funciona"
+    lista:
+      - "Cada pausa de caminata baja el pulso y deja descansar los músculos que más golpe reciben, así que llegas con menos fatiga al final."
+      - "Reduce el impacto acumulado en rodillas, tobillos y tendones, que son lo que más tarda en adaptarse."
+      - "Te permite pasar más tiempo en zona 2 sin dispararte."
+      - "Hace más difícil que salgas demasiado fuerte, que es el error más común."
+      - "Y es más fácil de hacer cuando viniste de pausa, vienes de una lesión o apenas empiezas."
+  - titulo: "La escalera"
+    parrafos:
+      - "En tu plan, el trote y la caminata se organizan como una escalera. Empiezas con intervalos cortos de trote y pausas de caminata, por ejemplo 1 minuto trotando y 1 minuto caminando. Cuando una semana sale bien, el trote crece y la caminata se acorta. Por ejemplo, 2 minutos de trote por 1 de caminata, luego 3 por 1, y así hasta trotar de corrido."
+      - "Subes un escalón solo cuando el anterior se sintió fácil y sin dolor. No hay prisa: si un escalón cuesta, repítelo una semana más. La escalera también se puede bajar un escalón sin problema, por ejemplo después de una pausa o de una semana mala."
+  - titulo: "Cómo hacerlo bien"
+    lista:
+      - "Camina de verdad, no te frenes a medias. Una caminata a buen paso, con los brazos sueltos."
+      - "Hazlo desde el inicio, no cuando ya estés cansado. La pausa que previene vale más que la que repara."
+      - "Trota suave, a un ritmo en el que podrías hablar. El trote no debe sentirse como carrera."
+      - "Si el pulso se sube de tu zona 2, alarga la caminata hasta que baje."
+  - titulo: "Y en la carrera"
+    parrafos:
+      - "Mucha gente termina carreras de 10 K, medio maratón e incluso maratón con este método, y algunos corredores experimentados lo prefieren porque les da un tiempo parecido con menos desgaste. Si lo usas, practícalo en tus entrenamientos con el mismo patrón que vas a llevar el día de la carrera. Ese día no hay que probar nada nuevo."
+      - "Lo que importa es terminar con ganas de volver a salir. Con eso, el resto viene solo."
+fuentes: ["Jeff Galloway (método run/walk)", "consenso de entrenamiento para corredores principiantes"]

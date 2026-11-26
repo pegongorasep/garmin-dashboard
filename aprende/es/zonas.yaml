@@ -1,0 +1,35 @@
+titulo: "Qué son las zonas de frecuencia cardiaca"
+resumen: "Cinco niveles de esfuerzo medidos con tu corazón, y por qué el reloj a veces los pinta mal."
+minutos: 3
+secciones:
+  - titulo: "La idea en una frase"
+    parrafos:
+      - "Tu corazón late más rápido mientras más fuerte te esfuerzas. Las zonas dividen ese rango en cinco escalones, de Z1 (muy suave) a Z5 (máximo esfuerzo). Sirven para que cada entrenamiento tenga el esfuerzo que busca, ni más ni menos."
+      - "El error más común de quien empieza es correr siempre «más o menos fuerte». Las zonas te ayudan a separar los días fáciles de los días duros. Si todos los días son medio duros, ninguno es realmente fácil y ninguno es realmente duro."
+  - titulo: "Las cinco zonas"
+    parrafos:
+      - "Los porcentajes son de tu frecuencia cardiaca máxima. Es la división que usa Garmin por defecto, y cada fuente la mueve un poquito:"
+    lista:
+      - "Z1, 50 a 60 %: muy suave. Calentar, caminar, recuperarte."
+      - "Z2, 60 a 70 %: fácil y conversable. Es la base de casi todo tu plan."
+      - "Z3, 70 a 80 %: moderado. Respiras fuerte pero controlas. Es la zona incómoda del medio: cansa más de lo que parece y no es ni fácil ni intensa."
+      - "Z4, 80 a 90 %: duro. Ritmo de tempo o de umbral. Solo frases cortas."
+      - "Z5, 90 a 100 %: casi máximo. Intervalos cortos, no puedes sostenerlo mucho tiempo."
+  - titulo: "De dónde sale tu máxima"
+    parrafos:
+      - "Tu frecuencia máxima es el dato del que cuelga todo, y es personal: dos personas de la misma edad pueden tener máximas muy distintas. La fórmula clásica «220 menos tu edad» es solo un promedio de población y se equivoca por 10 o 15 latidos hacia cualquier lado."
+      - "La mejor referencia es la más alta que hayas visto de verdad en un esfuerzo máximo, con el reloj bien puesto. Si no la tienes, usa una estimación y ajusta con el tiempo. Una máxima mal puesta mueve todas tus zonas, así que vale la pena revisarla de vez en cuando."
+  - titulo: "Por qué el reloj a veces se equivoca"
+    parrafos:
+      - "El sensor óptico de la muñeca mide con luz a través de la piel, y no es perfecto. Los errores típicos:"
+    lista:
+      - "Se «pega» a tu cadencia. Al correr, el sensor a veces cuenta tus pasos en lugar de tus latidos y marca 170 cuando tu corazón va a 150."
+      - "Tarda en reaccionar. En los primeros minutos suele marcar bajo, y en los intervalos cortos llega tarde: cuando ves el número, el esfuerzo ya terminó."
+      - "Falla con frío, tatuajes, pulsera floja o sudor. Apretar un poco la correa y subirla unos dedos arriba de la muñeca ayuda mucho."
+      - "Con una banda en el pecho casi siempre es más preciso. Si algo te parece raro, compara con cómo te sientes."
+  - titulo: "Cuando el número y tu cuerpo no coinciden"
+    parrafos:
+      - "La frecuencia cardiaca también sube con calor, café, poco sueño, estrés, deshidratación o una enfermedad que viene en camino. Un día así, la misma velocidad te sube más las pulsaciones. No es que estés mal entrenado: es que hoy el cuerpo pide menos."
+      - "Por eso conviene usar dos señales a la vez: el número y el esfuerzo percibido. En Z2 deberías poder hablar con frases completas. Si el reloj dice Z2 pero apenas puedes decir una frase, créele a tu respiración y baja el paso."
+      - "Las zonas son una guía, no un juez. Úsalas para no pasarte en los días fáciles, que es donde casi todos nos pasamos."
+fuentes: ["Garmin (zonas por porcentaje de la máxima)", "Tanaka et al., 2001 (estimación de la FC máxima)", "consenso de entrenamiento de resistencia"]

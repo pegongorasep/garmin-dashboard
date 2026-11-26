@@ -1,0 +1,32 @@
+titulo: "Cuánto subir el volumen cada semana"
+resumen: "La regla del 10 %, las semanas de descarga y las señales de que vas demasiado rápido."
+minutos: 3
+secciones:
+  - titulo: "El gran enemigo es el «demasiado, demasiado pronto»"
+    parrafos:
+      - "La mayoría de las lesiones de quien corre no vienen de un entrenamiento duro, sino de subir la carga más rápido de lo que el cuerpo se adapta. El corazón y los pulmones mejoran en semanas; los tendones, huesos y articulaciones tardan meses. Por eso la sensación de «me siento increíble» no es permiso para correr el doble."
+  - titulo: "La regla del 10 %, como guía"
+    parrafos:
+      - "Una regla muy conocida dice que no subas tu volumen semanal (km o minutos) más de un 10 % respecto a la semana anterior. Es una buena idea de dónde empezar, pero no es una ley científica."
+      - "Funciona mejor con matices: si corres poco (10 o 15 km a la semana), 10 % es casi nada, y puedes subir algo más. Si ya corres bastante, 10 % sí es mucho. También cuenta lo que haces fuera de correr, como el gimnasio, el estrés y el sueño."
+  - titulo: "Mide en minutos, no solo en kilómetros"
+    parrafos:
+      - "Para quien empieza, o corre con trote y caminata, el tiempo es mejor medida que la distancia: 40 minutos son 40 minutos de trabajo para tus piernas, vayas a 6 o a 8 km por hora. Subir de 120 a 130 minutos a la semana es una subida de poco más de 8 %, sin discutir cuántos kilómetros fueron."
+      - "El volumen incluye todo lo que cansa tus piernas, no solo correr. Si además subiste el gimnasio o jugaste futbol, esa semana cuenta como más carga de la que marca el reloj."
+  - titulo: "Semanas de descarga"
+    parrafos:
+      - "Cada 3 o 4 semanas de subida conviene una semana más ligera, con 20 a 30 % menos de volumen. Se llama semana de descarga (en la app, la línea punteada). Ahí es donde el cuerpo absorbe lo que entrenaste y te vuelves más fuerte."
+      - "Es normal que en la semana de descarga te sientas raro o hasta con ganas de «aprovechar». Resiste. Quien se salta las descargas suele pagarlo después con cansancio o una lesión."
+  - titulo: "Señales de que vas muy rápido"
+    lista:
+      - "Tu frecuencia cardiaca en reposo sube varios días seguidos o tu HRV baja de forma sostenida."
+      - "Duermes peor o te despiertas cansado."
+      - "El mismo ritmo fácil te cuesta más o se siente pesado."
+      - "Una molestia que aparece siempre en el mismo lugar y no se va."
+      - "Pierdes las ganas de entrenar durante varios días."
+      - "El semáforo sale amarillo o rojo seguido."
+  - titulo: "Qué hacer si las ves"
+    parrafos:
+      - "Una o dos señales: repite la semana anterior en lugar de subir, o haz una descarga antes de lo planeado. Varias señales juntas, o dolor: baja el volumen más claramente y platica con alguien que sepa, como un fisio o un médico del deporte."
+      - "Repetir una semana no es retroceder. Es darle al cuerpo el tiempo que necesita. Lo que importa es llegar a tu meta sano, no llegar rápido."
+fuentes: ["regla del 10 % (guía popular, no ley)", "consenso de entrenamiento de resistencia sobre semanas de descarga"]

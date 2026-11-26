@@ -24,7 +24,7 @@ def menu_de(idioma: str = "es") -> list[dict]:
     """Lo que pinta el JS junto al ?; el plan vive en la pestaña Plan."""
     return [{"texto": i18n.t(f"web.menu.{k}", idioma), "url": u} for k, u in
             (("ajustes", "/ajustes"), ("historial", "/historial"), ("inbody", "/cuerpo"),
-             ("coach", "/coach"), ("privacidad", "/privacidad"), ("salir", "/salir"))]
+             ("coach", "/coach"), ("aprende", "/aprende"), ("privacidad", "/privacidad"), ("salir", "/salir"))]
 
 
 def plan_acciones(idioma: str = "es") -> list[dict]:

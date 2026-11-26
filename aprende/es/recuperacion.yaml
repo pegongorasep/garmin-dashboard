@@ -1,0 +1,36 @@
+titulo: "Recuperación y el semáforo"
+resumen: "Dormir, VFC y pulso en reposo: qué mide el semáforo y por qué conviene hacerle caso."
+minutos: 3
+secciones:
+  - titulo: "Mejoras cuando descansas, no cuando entrenas"
+    parrafos:
+      - "Entrenar es el estímulo; la mejora ocurre después, mientras duermes y comes. Si el estímulo se repite antes de que el cuerpo se recupere, en lugar de mejorar acumulas fatiga. La recuperación no es lo contrario del entrenamiento: es parte de él."
+  - titulo: "Lo que mira el semáforo"
+    parrafos:
+      - "Cada mañana la app revisa tres señales con los datos de tu reloj:"
+    lista:
+      - "VFC o HRV (variabilidad de la frecuencia cardiaca): cuánto varía el tiempo entre latido y latido. Una VFC más alta que tu normal suele indicar un cuerpo recuperado. Una baja sostenida puede significar fatiga, estrés o una enfermedad en camino."
+      - "Frecuencia cardiaca en reposo: si amanece varios latidos arriba de tu promedio reciente, puede ser fatiga, mal sueño o que algo se está gestando."
+      - "Sueño: dormir menos de lo que necesitas pega a todo lo demás. La mayoría de los adultos necesita entre 7 y 9 horas."
+  - titulo: "Qué significa cada color"
+    lista:
+      - "Verde: ninguna señal fuera de tu rango. Haz la sesión normal."
+      - "Amarillo: una señal fuera. Haz la versión suave de la sesión."
+      - "Rojo: dos o más señales fuera, o HRV baja. Descanso o una caminata ligera."
+      - "Sin datos: si el reloj no midió anoche, el semáforo no inventa. Decide con cómo te sientes."
+  - titulo: "Por qué hacerle caso"
+    parrafos:
+      - "Una noche mala no arruina nada, pero forzar una sesión dura sobre un cuerpo cansado te cuesta más de lo que te da: rindes menos, te recuperas más lento y subes el riesgo de lesión o enfermedad. La versión suave mantiene el hábito sin pasar la factura."
+      - "Y no te preocupes por «perder» el entrenamiento: hacer menos un día, a tiempo, casi siempre te deja mejor parado que forzarlo."
+  - titulo: "Límites de los números"
+    parrafos:
+      - "Son datos de un reloj de pulsera, no un diagnóstico. Pueden fallar, y un día aislado dice poco: lo que importa es la tendencia de varios días. El café, el alcohol, el calor, una cena tarde o un viaje mueven estos números sin que estés «mal»."
+      - "Si el semáforo dice verde pero te sientes fatal, o dice rojo y te sientes increíble, tu sensación también es información. Cuando hay duda, ve más suave."
+  - titulo: "Qué ayuda a recuperarte mejor"
+    lista:
+      - "Dormir lo suficiente y a horas parecidas."
+      - "Comer proteína y carbohidrato después de entrenar, y beber agua."
+      - "Un día fácil o de descanso entre días duros."
+      - "Semanas de descarga cada 3 o 4 semanas."
+      - "Manejar el estrés, que el cuerpo no distingue de cargas de entrenamiento."
+fuentes: ["guías generales de sueño (7 a 9 horas en adultos)", "uso de VFC y FC en reposo en entrenamiento de resistencia"]

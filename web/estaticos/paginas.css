@@ -34,3 +34,12 @@ form.pila { display: grid; gap: var(--space-12); }
   .filas-pasos td .campo, .filas-pasos td .campo input[type="text"] { min-width: 0; }
 }
 ul.pila { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-12); }
+
+/* Aprende: artículos de lectura */
+.articulo { display: grid; gap: var(--space-16); }
+.articulo section { display: grid; gap: var(--space-8); }
+.articulo p, .articulo li { line-height: 1.55; margin: 0; }
+.articulo ul { margin: 0; padding-left: var(--space-24); display: grid; gap: var(--space-6); }
+.articulo-res { color: var(--muted); font-size: 16px; }
+a.aprende-tarjeta { text-decoration: none; color: inherit; display: block; }
+a.aprende-tarjeta .card:hover { box-shadow: var(--shadow-card), inset 0 0 0 1px var(--accent); }

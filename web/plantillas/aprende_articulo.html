@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso %}
+{% block titulo %}{{ a.titulo }}{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<article class="articulo">
+  <p class="pag-s"><a href="/aprende">{{ t("aprende.volver") }}</a> · {{ t("aprende.minutos", n=a.minutos) }}</p>
+  <h1 class="pag-t">{{ a.titulo }}</h1>
+  {% if en_ingles %}{% call aviso("warn") %}{{ t("aprende.solo_es") }}{% endcall %}{% endif %}
+  <p class="articulo-res">{{ a.resumen }}</p>
+  {% for s in a.secciones %}
+  <section>
+    <h2 class="pag-h">{{ s.titulo }}</h2>
+    {% for p in s.parrafos %}<p>{{ p }}</p>{% endfor %}
+    {% if s.lista %}<ul>{% for i in s.lista %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+  </section>
+  {% endfor %}
+  {% if a.fuentes %}<p class="pag-s">{{ t("aprende.fuentes") }}: {{ a.fuentes|join(", ") }}.</p>{% endif %}
+  <p class="pag-s"><strong>{{ t("pie.consejo") }}</strong></p>
+  <div class="acciones">{{ boton(t("aprende.volver"), "sec", href="/aprende") }}</div>
+</article>
+{% endblock %}

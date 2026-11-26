@@ -1,0 +1,29 @@
+titulo: "Para qué sirve el long run"
+resumen: "La salida larga de la semana: resistencia, tendones fuertes y confianza, siempre a ritmo fácil."
+minutos: 3
+secciones:
+  - titulo: "La sesión más importante de la semana"
+    parrafos:
+      - "El long run, o salida larga, es la corrida más larga de tu semana, normalmente en fin de semana. Si tuvieras que quedarte con una sola sesión, sería esta, porque junta casi todo lo que necesitas para una carrera: resistencia, paciencia y práctica de lo que harás el día de la carrera."
+  - titulo: "Qué te da"
+    lista:
+      - "Resistencia aeróbica. Pasar más tiempo en pie y en movimiento enseña a tu cuerpo a mantener el esfuerzo cuando ya hay cansancio."
+      - "Tendones, huesos y articulaciones más fuertes. Se adaptan despacio, y las salidas largas los exponen poco a poco a más carga."
+      - "Eficiencia con la energía. Aprendes a usar mejor la grasa y a manejar tu hidratación y tu comida."
+      - "Confianza. Llegar a la carrera sabiendo que ya corriste casi la distancia (o más) quita mucho miedo."
+  - titulo: "Se corre fácil, de verdad fácil"
+    parrafos:
+      - "El long run no es una carrera. Va en Z2 o incluso un poco más suave, y debes poder platicar todo el tiempo. Lo que lo hace difícil es la duración, no el ritmo."
+      - "Si lo corres fuerte, pierdes el beneficio (te recuperas más lento y arruinas la semana siguiente) y aumentas el riesgo de lesión. Con la pausa de caminata del método trote y caminata, también cuenta: lo importante es el tiempo de pie."
+  - titulo: "Cuánto debe durar"
+    parrafos:
+      - "Una guía común es que el long run sea más o menos entre una cuarta parte y un tercio de tu volumen semanal. Si en la semana acumulas 30 km, una salida larga de 8 a 10 km tiene sentido. Es una regla de dedo, no una ley."
+      - "Para distancias de 10 K, casi nadie necesita rebasar 1 hora 30 o 1 hora 45 de salida larga. Más de eso suma cansancio sin sumar mucho. Para medio maratón y maratón sí crece, pero siempre poco a poco."
+      - "Otra regla útil: no la alargues más de unos 10 a 15 minutos (o 1 a 2 km) de una semana a otra, y cada tercera o cuarta semana, que sea más corta (semana de descarga)."
+  - titulo: "Dónde ponerlo en la semana"
+    parrafos:
+      - "Lo ideal es llegar con piernas frescas: el día anterior, descanso o algo muy suave, y nada de pierna pesada en el gimnasio. Después, el día siguiente es de recuperación. Muchas personas lo corren el sábado o el domingo porque tienen más tiempo, y eso ayuda a comer y a hidratarte bien antes y después."
+  - titulo: "Si hoy no se puede"
+    parrafos:
+      - "Si el semáforo sale amarillo, haz la versión suave (más corta o con más caminata) en lugar de saltarlo. Si sale rojo, descansa y no lo «repongas» después. Una salida larga perdida cuesta mucho menos que una lesión por forzarla."
+fuentes: ["consenso general de entrenamiento de resistencia", "guías comunes de planes para 10 K y media maratón"]

@@ -6,6 +6,7 @@
   {{ boton(t("nav.cuerpo"), "texto", chico=True, href=pref ~ "/cuerpo") }}
   {% if not pref %}{{ boton(t("nav.coach"), "texto", chico=True, href="/coach") }}{% endif %}
   {{ boton(t("nav.historial"), "texto", chico=True, href=pref ~ "/historial") }}
+  {% if not pref %}{{ boton(t("nav.aprende"), "texto", chico=True, href="/aprende") }}{% endif %}
   {% if not pref %}{{ boton(t("nav.grupos"), "texto", chico=True, href="/grupos") }}{% endif %}
   {% if not pref %}{{ boton(t("nav.conexiones"), "texto", chico=True, href="/conexiones") }}{% endif %}
   {% if not pref %}{{ boton(t("nav.mis_datos"), "texto", chico=True, href="/privacidad/mis-datos") }}{% endif %}

@@ -1,0 +1,30 @@
+titulo: "Por qué tanta zona 2"
+resumen: "Correr fácil construye la base aeróbica, y por eso la mayor parte de tu plan va despacio."
+minutos: 3
+secciones:
+  - titulo: "Se siente demasiado fácil, y está bien"
+    parrafos:
+      - "Si tu plan trae mucha zona 2, es normal sentir que «no estás haciendo nada». Esa sensación es parte del diseño: la zona 2 es el esfuerzo que puedes repetir muchas veces por semana sin quedar destruido, y la constancia es lo que de verdad te hace mejor corredor."
+      - "Cómo saber que vas bien: puedes hablar con frases completas, respiras por la nariz o casi, y al terminar sientes que podrías seguir otro rato. Es la «prueba de la plática»."
+  - titulo: "Qué pasa por dentro, a grandes rasgos"
+    parrafos:
+      - "Correr fácil durante semanas hace que tu cuerpo se vuelva más eficiente en usar oxígeno. Sin entrar en detalles de laboratorio, los cambios principales son:"
+    lista:
+      - "Tus músculos fabrican más mitocondrias, que son las «plantas de energía» de cada célula, y mejores."
+      - "Se forman más capilares, los vasitos que llevan oxígeno al músculo."
+      - "Aprendes a quemar más grasa a un mismo ritmo, lo que ahorra el azúcar para cuando la necesitas."
+      - "Tu corazón bombea más sangre por latido, así que al mismo ritmo late menos."
+      - "Tendones, huesos y articulaciones se adaptan, y eso toma más tiempo que el corazón. Es la razón de no apurarse."
+  - titulo: "La regla del 80/20"
+    parrafos:
+      - "Al estudiar a corredores de alto nivel, el investigador Stephen Seiler vio que pasan alrededor del 80 % de sus sesiones en esfuerzo fácil y solo cerca del 20 % en esfuerzo duro. Se llama entrenamiento polarizado, o 80/20."
+      - "Es una guía, no una ley. Para quien está empezando, el porcentaje fácil suele ser todavía mayor, y lo importante es la idea: la mayor parte, suave; un poco, duro; y casi nada en el medio gris de la Z3."
+  - titulo: "Por qué no conviene hacerlo «un poquito más fuerte»"
+    parrafos:
+      - "Correr siempre en Z3 se siente productivo, pero cansa lo suficiente para que llegues mal al siguiente entrenamiento y no es lo bastante duro para dar el estímulo de la calidad. Terminas fatigado sin haber mejorado tanto."
+      - "Los días fáciles protegen a los días duros. Si haces tu zona 2 de verdad fácil, llegas con piernas frescas a la sesión de calidad y a tu long run, y esas sí salen bien."
+  - titulo: "Qué hacer cuando el paso se siente lentísimo"
+    parrafos:
+      - "Al principio, para mantenerte en Z2 quizá tengas que caminar o trotar muy despacio. Es común y no significa que estés mal. Con las semanas, el mismo pulso te da un paso más rápido. Eso es la base aeróbica creciendo, y es la mejor señal de progreso que hay."
+      - "Si el pulso se dispara a los pocos minutos, mira si es calor, poco sueño o un sensor mal puesto, y baja el paso o alterna con caminata. Mejor terminar fácil que terminar fundido."
+fuentes: ["Seiler, distribución de intensidad en atletas de resistencia", "consenso general de entrenamiento aeróbico"]

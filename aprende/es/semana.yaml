@@ -1,0 +1,42 @@
+titulo: "Cómo se arma una semana de entrenamiento"
+resumen: "Días fáciles, un par de días duros, una salida larga y descanso, en el orden que te deja recuperar."
+minutos: 3
+secciones:
+  - titulo: "Las cuatro piezas"
+    parrafos:
+      - "Casi cualquier semana de running se arma con las mismas cuatro piezas:"
+    lista:
+      - "Días fáciles, en zona 2. Son la mayor parte de tu semana y construyen la base."
+      - "Un día de calidad (a veces dos, según tu nivel): tempo, intervalos o cuestas. Ver el artículo sobre entrenamientos de calidad."
+      - "El long run, la salida larga, que va fácil pero es la más larga."
+      - "Descanso, que también es entrenamiento: ahí es cuando el cuerpo se adapta."
+  - titulo: "La regla de oro: dos días duros no van pegados"
+    parrafos:
+      - "Un día duro es la calidad, el long run o una sesión pesada de pierna en el gimnasio. Entre un día duro y otro, deja al menos un día fácil o de descanso. Así el cuerpo repone la energía y repara el músculo antes del siguiente golpe."
+      - "Es la idea de «duro-fácil»: lo que hace mejorar no es el día duro solo, sino el día duro seguido de buena recuperación."
+  - titulo: "Dónde va la calidad"
+    parrafos:
+      - "Lo normal es ponerla a mitad de semana, con al menos dos días de distancia del long run. Por ejemplo, calidad el martes o miércoles y long run el sábado o domingo. Así llegas fresco a las dos."
+      - "Si solo corres tres días a la semana, un buen reparto es: un día fácil, uno de calidad y la salida larga, con descanso entre ellos."
+  - titulo: "Un ejemplo, no una receta"
+    parrafos:
+      - "Para alguien que corre cuatro días, una semana típica podría verse así:"
+    lista:
+      - "Lunes: descanso o fuerza de tren superior."
+      - "Martes: calidad."
+      - "Miércoles: descanso o caminata."
+      - "Jueves: fácil en zona 2."
+      - "Viernes: descanso."
+      - "Sábado: long run."
+      - "Domingo: fácil muy corto o descanso."
+  - titulo: "Lo que importa del ejemplo"
+    parrafos:
+      - "Es solo un ejemplo. Lo que importa es el patrón: lo duro separado, lo fácil de verdad fácil y el descanso protegido."
+  - titulo: "Cuando la vida se mete"
+    parrafos:
+      - "Habrá semanas con viaje, trabajo, mala noche o enfermedad. Si falta un día, no lo repongas doblando otro. Si falta un día fácil, sáltalo sin culpa. Si falta la calidad o el long run, muévelos dentro de la misma semana respetando la regla de no pegar días duros, o déjalos pasar."
+      - "Lo que cuenta es el conjunto de semanas, no una semana perfecta. Perder una sesión casi nunca importa. Compensarla de golpe sí puede lastimarte."
+  - titulo: "Escucha el semáforo"
+    parrafos:
+      - "El plan es el mapa, pero cada mañana el semáforo de recuperación te dice si hoy toca la sesión completa, la versión suave o descanso. Si el cuerpo pide menos, hacerle caso es parte del plan y no una falla."
+fuentes: ["principio duro-fácil (Bill Bowerman)", "consenso general de planes de entrenamiento de resistencia"]

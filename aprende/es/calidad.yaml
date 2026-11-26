@@ -1,0 +1,28 @@
+titulo: "Los entrenamientos de calidad"
+resumen: "Tempo, intervalos y cuestas: qué hace cada uno, cuánto y cuándo, y por qué debe ser poco."
+minutos: 3
+secciones:
+  - titulo: "Qué es «calidad»"
+    parrafos:
+      - "Son las sesiones en las que corres más fuerte que en tu día fácil, con un objetivo claro. Son pocas (normalmente una por semana) y son el 20 % duro de la idea 80/20. Te enseñan a correr más rápido y a sostener esfuerzos más duros."
+  - titulo: "Los tres tipos más comunes"
+    lista:
+      - "Tempo: un bloque sostenido de esfuerzo «cómodamente duro», en Z3 alta o Z4. Por ejemplo, 15 a 30 minutos seguidos en los que solo puedes decir frases cortas. Enseña a sostener un ritmo fuerte sin acumular tanto cansancio."
+      - "Intervalos: repeticiones más cortas y más fuertes, con pausas. Por ejemplo, 4 a 6 repeticiones de 3 a 4 minutos fuertes, con caminata o trote suave entre cada una. Mejoran tu capacidad aeróbica máxima."
+      - "Cuestas: repeticiones de subida, de 30 segundos a 2 minutos. Trabajan fuerza y técnica con menos impacto que correr rápido en plano, y son una buena puerta de entrada a lo rápido."
+  - titulo: "Cuánto es suficiente"
+    parrafos:
+      - "La calidad total de una semana suele ser un 10 a 20 % de tu volumen, sin contar el calentamiento y el enfriamiento. Es poco, y está bien. Más no siempre es mejor: lo duro cuesta caro en recuperación y es donde más se lastima la gente."
+      - "Todas las sesiones de calidad llevan calentamiento (10 a 15 minutos fácil) antes y enfriamiento (5 a 10 minutos suave) después. No te los saltes: protegen contra tirones y te preparan para el esfuerzo."
+  - titulo: "Cuándo meterla"
+    parrafos:
+      - "Primero va la base. Si apenas empiezas, o vienes de pausa, conviene tener varias semanas de correr fácil de manera constante antes de agregar calidad. La calidad se construye encima de la base, no la sustituye."
+      - "En la semana, ponla lejos del long run y de la pierna pesada. Y si el semáforo sale amarillo o rojo, haz la versión suave o cámbiala por un día fácil: forzar calidad con el cuerpo cansado casi nunca vale la pena."
+  - titulo: "Cómo debe sentirse"
+    parrafos:
+      - "Duro pero controlado. Al terminar de cada repetición deberías sentir que podrías hacer una más, no que quedaste vacío. Las últimas deben parecerse a las primeras. Si la primera sale a todo, las demás se caen."
+      - "El esfuerzo se ajusta con el número del reloj y con tu respiración, sobre todo en cuestas y en intervalos cortos, donde el pulso llega tarde."
+  - titulo: "Por qué poca"
+    parrafos:
+      - "Una buena sesión de calidad deja un estímulo fuerte, pero la mejora se da en la recuperación. Si haces calidad todos los días, no te recuperas y dejas de mejorar. Y tu base, que es lo que de verdad te sostiene en una carrera, se queda sin construir."
+fuentes: ["consenso de entrenamiento de resistencia (tempo, intervalos, cuestas)", "idea 80/20 de Seiler"]

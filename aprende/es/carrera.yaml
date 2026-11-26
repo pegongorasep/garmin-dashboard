@@ -1,0 +1,34 @@
+titulo: "La semana antes de una carrera"
+resumen: "Taper, comida, sueño, nada nuevo el día de la carrera y cómo salir sin quemarte."
+minutos: 3
+secciones:
+  - titulo: "Ya hiciste el trabajo"
+    parrafos:
+      - "En la última semana ya no puedes ponerte en forma, solo arruinar lo que construiste con cansancio o una lesión. El objetivo es llegar fresco, descansado y tranquilo. La parte difícil es aguantar las ganas de «hacer algo más»."
+  - titulo: "El taper"
+    parrafos:
+      - "Taper es reducir la carga antes de una carrera para llegar con las piernas frescas. Para un 10 K, lo normal es una o dos semanas de bajada: baja el volumen total (alrededor de 20 a 40 % menos en la última semana, según qué tan larga sea la carrera) pero mantén algo de intensidad en dosis cortas, por ejemplo unos cuantos ritmos de carrera. El cuerpo se mantiene «afilado» sin cansarse."
+      - "Es normal sentirte raro: piernas pesadas, inquietud, o dudas de si entrenaste suficiente. Es una reacción común y casi siempre pasa. No lo «arregles» entrenando más."
+  - titulo: "Comer y beber"
+    lista:
+      - "Los días previos, come como siempre, con un poco más de carbohidrato (arroz, pasta, papa, pan, fruta). No hace falta una cena gigante."
+      - "La noche anterior, algo que ya conoces y te cae bien, sin grasas pesadas ni exceso de fibra."
+      - "El día de la carrera, desayuna de 2 a 3 horas antes lo mismo que has probado en tus salidas largas."
+      - "Toma agua con normalidad. Llegar con ganas de ir al baño es peor que llegar con un poco de sed."
+      - "Alcohol y comida picosa o nueva, mejor después de la carrera."
+  - titulo: "Dormir"
+    parrafos:
+      - "La noche anterior suele salir mala por los nervios, y no pasa nada: lo que más pesa es el sueño de los dos o tres días anteriores. Duerme bien toda la semana y no te preocupes si la última noche te cuesta."
+  - titulo: "Nada nuevo el día de la carrera"
+    parrafos:
+      - "Ni tenis nuevos, ni ropa estrenada, ni geles o bebidas que no hayas probado, ni un desayuno distinto, ni un ritmo que no entrenaste. Si no lo hiciste en tus salidas largas, no lo hagas hoy. Las rozaduras, el estómago y las ampollas son los errores más comunes y los más fáciles de evitar."
+      - "Prepara todo la noche anterior: ropa, número, llaves, comida, ruta y hora de llegada."
+  - titulo: "El ritmo de salida"
+    parrafos:
+      - "Con la emoción, todos salen demasiado rápido. Ese es el error que más carreras echa a perder: lo que ganas en el primer kilómetro lo pagas con intereses en el último. Sal un poco más lento de tu ritmo meta durante el primer kilómetro o los dos primeros, y ve acelerando solo si te sientes bien."
+      - "Si usas trote y caminata, respeta tus intervalos desde el inicio, aunque te sientas fuerte."
+      - "Si corres en altura o con calor, ajusta tu expectativa: el mismo esfuerzo te dará un ritmo más lento, y está bien."
+  - titulo: "Después"
+    parrafos:
+      - "Cruza la meta, camina un poco, toma agua y come algo. Los siguientes días, descanso o movimiento suave. Disfruta lo que lograste antes de pensar en el siguiente plan."
+fuentes: ["consenso general de tapering para carreras de 10 K a maratón", "guías de nutrición deportiva para corredores"]

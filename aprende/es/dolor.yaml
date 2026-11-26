@@ -1,0 +1,35 @@
+titulo: "Dolor normal vs. dolor de parar"
+resumen: "Cómo distinguir las agujetas de una señal de alarma, y cuándo buscar ayuda."
+minutos: 3
+secciones:
+  - titulo: "No todo dolor es lo mismo"
+    parrafos:
+      - "Entrenar incomoda: se cansan las piernas, la respiración se agita y al día siguiente puede haber molestia muscular. Eso es normal y es parte de adaptarse. Lo difícil es distinguir esa incomodidad buena de la señal de que algo se está lastimando."
+  - titulo: "El dolor normal"
+    lista:
+      - "Agujetas: dolor general y parejo en el músculo, 1 o 2 días después de algo nuevo o duro. Suele ser parecido en las dos piernas, y mejora al moverte."
+      - "Cansancio en las piernas: pesadez, sin dolor puntual."
+      - "Molestias que se aflojan al calentar y no empeoran durante la sesión."
+  - titulo: "El dolor de parar"
+    lista:
+      - "Agudo, como piquete, punzada o ardor."
+      - "Localizado: lo puedes señalar con un dedo, en un hueso, un tendón o una articulación."
+      - "Que empeora mientras corres, o te hace cojear o cambiar la forma de pisar."
+      - "Que aparece siempre en el mismo lugar, o se queda y va a más de un día a otro."
+      - "Con hinchazón, calor, moretón o una sensación de inestabilidad."
+      - "Que te despierta en la noche o duele en reposo."
+  - titulo: "La regla de 2 sobre 10"
+    parrafos:
+      - "Una guía práctica: califica tu dolor de 0 (nada) a 10 (insoportable). Si es de 2 o menos, no empeora mientras corres y desaparece o baja en las siguientes 24 horas, probablemente puedes seguir con precaución. Si pasa de 3 o 4, si te cambia la pisada o si al día siguiente está peor, para."
+      - "Es una regla de dedo, no un diagnóstico. Otros profesionales usan umbrales un poco distintos. La idea de fondo es la misma: lo que empeora, no se corre."
+  - titulo: "Qué hacer si algo duele"
+    lista:
+      - "Para esa sesión. Terminar «nada más el kilómetro» es como se convierten molestias en lesiones largas."
+      - "Camina, o haz algo que no duela (bici suave, nadar), si eso no lo empeora."
+      - "Baja o suspende el volumen unos días y observa. Si el dolor se va rápido, regresa con menos y sube de nuevo."
+      - "Dile a la app que algo duele para que el plan se ajuste."
+  - titulo: "Cuándo ver a alguien"
+    parrafos:
+      - "Busca a un médico o a un fisioterapeuta del deporte si el dolor dura más de una semana o dos pese a descansar, si no puedes cargar peso sobre la pierna, si hay hinchazón evidente, o si sospechas de una fractura por estrés (dolor en un punto del hueso que se agrava con el impacto)."
+      - "Y de inmediato, o urgencias, si hay dolor en el pecho, falta de aire raro, mareo fuerte o desmayo durante el ejercicio. No esperes a ver si se quita."
+fuentes: ["guías generales de manejo de dolor en corredores (escala 0 a 10)", "recomendaciones de fisioterapia deportiva"]

@@ -1,0 +1,32 @@
+titulo: "Combinar running con CrossFit o pesas"
+resumen: "Se puede hacer todo, si acomodas bien los días de pierna y sabes qué es lo prioritario."
+minutos: 3
+secciones:
+  - titulo: "Sí se puede, con orden"
+    parrafos:
+      - "Entrenar fuerza ayuda a correr: músculos y tendones más fuertes, mejor economía de carrera y menos riesgo de lesión. La pregunta no es si hacerlo, sino cómo acomodarlo para que una cosa no te estorbe a la otra."
+  - titulo: "El efecto de interferencia"
+    parrafos:
+      - "Cuando entrenas mucha fuerza y mucha resistencia al mismo tiempo, cada una puede restarle un poco a la otra. Esto se llama efecto de interferencia. Las piernas cansadas del gimnasio arruinan la corrida de mañana, y los kilómetros acumulados no dejan que tus piernas se recuperen para levantar pesado."
+      - "No es drástico para la mayoría de las personas, pero es real. Se maneja con calendario, no con culpa."
+  - titulo: "Reglas simples para acomodar los días"
+    lista:
+      - "Días de pierna pesada lejos del long run y de la calidad. Al menos 48 horas de distancia antes de esas sesiones, si se puede."
+      - "Nunca pierna pesada el día anterior a una sesión clave."
+      - "Si en el mismo día vas a correr y a levantar, haz primero lo que más te importe ese día, y deja la otra para después, con unas horas de por medio."
+      - "El tren superior casi no estorba al running, así que es el mejor aliado en los días de calidad o de descanso de pierna."
+      - "En CrossFit, cuida los días con muchas sentadillas, saltos o cargadas pesadas. Cuentan como pierna aunque el entrenamiento no se llame «de pierna»."
+  - titulo: "Cuál es la prioridad"
+    parrafos:
+      - "No se puede maximizar todo a la vez. Elige según tu meta del momento. Si preparas una carrera, el running manda y la fuerza se mantiene con menos volumen y menos carga. Si lo tuyo es CrossFit, el running de base apoya y la salida larga se cuida más."
+      - "Cuando se acerca la carrera, la fuerza de pierna baja primero. En la última semana ya no hay nada nuevo ni pesado."
+  - titulo: "Qué fuerza sí ayuda a correr"
+    lista:
+      - "Sentadilla, peso muerto rumano, zancadas y puentes de glúteo."
+      - "Pantorrillas, que absorben muchísimo en cada paso."
+      - "Core y estabilidad: planchas, trabajo a una pierna."
+      - "Dos sesiones cortas a la semana suelen bastar. Más no siempre es mejor."
+  - titulo: "Cómo saber si te estás pasando"
+    parrafos:
+      - "Si las piernas no responden en tus corridas fáciles, si el pulso va alto con un ritmo suave, o si el semáforo sale amarillo o rojo seguido, algo no está cuadrando. La solución casi siempre es bajar el peso o el volumen de pierna unos días, no dejar de entrenar."
+fuentes: ["efecto de interferencia (Hickson, 1980 y estudios posteriores)", "consenso de entrenamiento concurrente"]
