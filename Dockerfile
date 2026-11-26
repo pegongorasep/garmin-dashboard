@@ -6,6 +6,7 @@ COPY requirements.txt requirements.txt
 COPY web/requirements.txt web/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt -r web/requirements.txt
 COPY dashboard/ dashboard/
+COPY i18n/ i18n/
 COPY plan/gen_plan.py plan/plan.example.json plan/
 COPY site/ site/
 COPY web/ web/
