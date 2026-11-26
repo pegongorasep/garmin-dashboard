@@ -54,7 +54,8 @@ def acciones_url(usuario: Usuario) -> str | None:
 def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: str | None = None) -> dict:
     aj = db.get(Ajustes, usuario.id)
     cuerpo = aj is None and usuario.uso == "cuerpo"   # «solo cuerpo»: sin ajustes de entreno, el motor usa los de fábrica
-    if aj is None and not cuerpo:
+    sin_plan = aj is None and not cuerpo and bool(usuario.sin_plan) and bool(usuario.repo_id)   # sin plan: también los de fábrica
+    if aj is None and not cuerpo and not sin_plan:
         raise SinConfig()
     idioma = idioma or usuario.idioma or "es"
     if menu is None and cuerpo:
@@ -66,7 +67,12 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: s
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
         crudo["acciones_url"] = acciones_url(usuario)
+    crudo["sin_plan"] = bool(usuario.sin_plan)
     return normalizar_config(crudo)
+
+
+def cuerpo_sin_ajustes(usuario: Usuario) -> bool:
+    return usuario.uso == "cuerpo"
 
 
 def solo_cuerpo(salida: dict) -> dict:
@@ -114,7 +120,7 @@ def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") ->
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
     partes = [hoy_local, idioma, json.dumps([menu_de(idioma), plan_acciones(idioma)]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
-              usuario.repo, usuario.sensor]
+              usuario.repo, usuario.sensor, bool(usuario.sin_plan)]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
 
 
@@ -185,10 +191,13 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
     aj = db.get(Ajustes, usuario.id)
     crudo = aj.config if aj else {}
     cfg = plan_vivo.con_pausas(cfg, local.date())
-    plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
+    if cfg["sin_plan"]:   # sin plan: el motor corre con un plan vacío (nadie edita sesiones que no hay)
+        plan = {"start": cfg["plan_start"], "weeks": []}
+    else:
+        plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
     cfg = {**cfg, "editar_urls": editar_urls(plan) if aj else {}}
     salida = build.build(datos_de(db, usuario, crudo), plan, cfg, local)
-    if aj is None:   # solo cuerpo (config_de ya descartó a quien no lo es)
+    if aj is None and cuerpo_sin_ajustes(usuario):   # solo cuerpo (config_de ya descartó a quien no lo es)
         salida = solo_cuerpo(salida)
     problemas = validar.problemas(salida)
     if problemas:

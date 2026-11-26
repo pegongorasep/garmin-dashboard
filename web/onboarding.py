@@ -33,12 +33,13 @@ def estado(db: Session, u: Usuario) -> dict:
             "owner": bool(u.github_owner), "vinculado": bool(u.repo_id),
             "datos": tubo.tuvo_subida_ok(db, u.id), "ajustes": db.get(Ajustes, u.id) is not None,
             "pendiente": tubo.pendiente_vigente(db, u.id) is not None, "uso": u.uso or "completo",
-            "uso_elegido": u.uso is not None}
+            "uso_elegido": u.uso is not None, "sin_plan": bool(u.sin_plan)}
 
 
 def completo(db: Session, u: Usuario) -> bool:
     e = estado(db, u)
-    return bool(e["consentimiento"] and (e["ajustes"] or e["uso"] == "cuerpo"))
+    # sin plan: basta con tener el repo conectado (no hay cuestionario del plan)
+    return bool(e["consentimiento"] and (e["ajustes"] or e["uso"] == "cuerpo" or (e["sin_plan"] and e["vinculado"])))
 
 
 def paso_maximo(e: dict) -> int:
@@ -48,7 +49,7 @@ def paso_maximo(e: dict) -> int:
         return 1   # ya tiene plan: no hay nada más que hacer aquí
     if not e["owner"]:
         return 2
-    return 7 if e["datos"] else 6
+    return 7 if (e["datos"] and not e["sin_plan"]) else 6
 
 
 def paso_inicial(e: dict) -> int:
@@ -56,7 +57,7 @@ def paso_inicial(e: dict) -> int:
         return 1
     if not e["owner"]:
         return 2
-    if e["datos"]:
+    if e["datos"] and not e["sin_plan"]:
         return 7
     return 6 if (e["vinculado"] or e["pendiente"]) else 3
 
@@ -168,6 +169,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             db.commit()
             return RedirectResponse("/", 303)
         usuario.uso = "completo"
+        usuario.sin_plan = form.get("plan") != "si"   # «¿Quieres un plan de running?»: por defecto «No, solo ver cómo voy»
         db.commit()
         return RedirectResponse("/bienvenida", 303)
 

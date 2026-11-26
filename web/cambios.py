@@ -45,6 +45,9 @@ def _escribir(db: Session, atleta_id: int, campo: str, valor) -> None:
         fila = db.get(Ajustes, atleta_id)
         if fila is None:
             db.add(Ajustes(usuario_id=atleta_id, config=valor))
+            u = db.get(Usuario, atleta_id)
+            if u is not None:
+                u.sin_plan = False   # quien guarda ajustes de entreno tiene plan
         else:
             fila.config, fila.version, fila.actualizado = valor, fila.version + 1, ahora()
     elif campo == "plan":

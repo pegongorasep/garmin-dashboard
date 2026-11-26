@@ -171,6 +171,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         crudo = crudo_de(db, atleta)
         if crudo is None and atleta.uso == "cuerpo":
             return render(request, "ajustes_cuerpo.html", atleta=atleta, pref=prefijo(usuario, atleta))
+        if crudo is None and atleta.sin_plan and atleta.repo_id:
+            return render(request, "ajustes_sin_plan.html", atleta=atleta, pref=prefijo(usuario, atleta))
         if crudo is None:
             return RedirectResponse("/bienvenida", 303)
         return render(request, "ajustes.html", **contexto_ajustes(db, atleta, usuario, crudo, ok=request.query_params.get("ok"), **extra))
@@ -193,6 +195,21 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             usuario.uso = "completo"
             db.commit()
         return RedirectResponse("/bienvenida", 303)
+
+    @app.post("/ajustes/plan")
+    async def ajustes_plan(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        """«Quiero un plan de running» (sin_plan=False y al cuestionario si aún no hay plan) o «Quitar mi plan» (sin_plan=True;
+        el plan guardado se queda). Solo la propia persona."""
+        form = await formulario(request)
+        if usuario is None:
+            return RedirectResponse("/entrar", 303)
+        if form.get("accion") == "quitar":
+            usuario.sin_plan = True
+            db.commit()
+            return RedirectResponse("/", 303)
+        usuario.sin_plan = False
+        db.commit()
+        return RedirectResponse("/" if db.get(Ajustes, usuario.id) else "/bienvenida", 303)
 
     async def guardar_ajustes(request: Request, usuario, db, atleta_id):
         form = await formulario(request)

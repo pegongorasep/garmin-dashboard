@@ -642,7 +642,8 @@ let vistaActual = null;
 // Rutas viejas que siguen sirviendo.
 const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
-const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" }, { id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" },
+const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
+  ...(ui().sin_plan ? [] : [{ id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" }]),   // sin plan: no hay pestaña Plan (L2 la reemplaza por una tarjeta)
   { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" }];
 const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
 

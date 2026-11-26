@@ -12,6 +12,9 @@ umbrales:
   max_hr_review_above: 200          # avisar si la FC máx medida pasa de aquí
   run_types: [running, treadmill_running, trail_running, track_running]
 
+# Sin plan de running (solo ver cómo va). Se pone en la raíz de config.yaml: `sin_plan: true`. Por defecto, con plan.
+sin_plan: false
+
 # Categorías para quien no defina `actividades.categorias`. `walking` y lo no listado no se muestran.
 categorias:
   - {id: fuerza, nombre: Fuerza, letra: F, tipos: [strength_training], intensa: false}

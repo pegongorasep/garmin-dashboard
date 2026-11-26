@@ -221,6 +221,7 @@ def normalizar_config(crudo: dict) -> dict:
     desde = perfil.get("fc_max_correa_desde")
     return {
         "modo": modo,
+        "sin_plan": bool(cfg.get("sin_plan", defaults.get("sin_plan", False))),   # sin plan: el sitio muestra «tu semana»
         "idioma": _idioma(cfg.get("idioma")),   # es | en; None = el del navegador (el sitio lo decide)
         "menu": list(cfg.get("menu") or []),   # solo la web: [{texto, url}] para ui.menu
         "acciones_url": cfg.get("acciones_url"),

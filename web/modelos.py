@@ -30,6 +30,7 @@ class Usuario(Base):
     historial_desde: Mapped[str | None] = mapped_column(sa.String(10))    # pedido pendiente: la siguiente corrida lo baja
     idioma: Mapped[str | None] = mapped_column(sa.String(5))              # es | en; None = el del navegador
     uso: Mapped[str | None] = mapped_column(sa.String(10))                # None = completo | cuerpo (solo mediciones)
+    sin_plan: Mapped[bool] = mapped_column(default=False, server_default=sa.false())   # L1: sin plan de running (solo ver cómo va). Se fija en «¿Quieres un plan?» del onboarding (por defecto No = True); lo demás, con plan
     migrado: Mapped[bool] = mapped_column(default=False)                  # F8: Pages apagado
     nombre: Mapped[str | None] = mapped_column(sa.String(60))             # G1: None = aún no lo ha dicho (se le pide en /perfil)
     apellido: Mapped[str | None] = mapped_column(sa.String(60))

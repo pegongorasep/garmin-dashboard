@@ -55,6 +55,17 @@
   <div class="acciones">{{ boton(t("comun.guardar"), tipo="submit") }}</div>
 </form>
 {% if not pref %}
+<form class="pila" method="post" action="/ajustes/plan">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2 class="pag-h">{{ t("aj.sp_t") }}</h2>
+  {% if atleta.sin_plan %}
+  <p>{{ t("aj.sp_a") }}</p>
+  <div class="acciones">{{ boton(t("aj.sp_quiero"), "sec", tipo="submit", nombre="accion", valor="quiero") }}</div>
+  {% else %}
+  <p>{{ t("aj.sp_quitar_a") }}</p>
+  <div class="acciones">{{ boton(t("aj.sp_quitar"), "sec", tipo="submit", nombre="accion", valor="quitar") }}</div>
+  {% endif %}
+</form>
 <form class="pila" method="post" action="/idioma">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="siguiente" value="/ajustes">

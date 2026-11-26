@@ -388,3 +388,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Reacciones 👏 🔥 💪 por semana ISO (`Reaccion`, única por grupo/de/para/semana/emoji); POST con CSRF que alterna (poner/quitar). No a una misma, ni a quien está en pausa. Se borran al salir del grupo (las que dio y las que recibió ahí), al borrar el grupo y al borrar la cuenta.
 - Límite: no había limitador general; se cuentan las reacciones creadas por la persona en la última hora (máx. 60, 429). Quitar y poner de nuevo no suma al contar quitadas, aceptable.
 - El aviso en Hoy («Ana y Luis te aplaudieron») se omitió: requiere llave nueva en el data.json público (lista blanca) y JS en el sitio. Sí se ve en la tarjeta propia dentro del grupo.
+
+## v5 sin plan (L1)
+- La bandera vive en `Usuario.sin_plan` (no en Ajustes): una cuenta sin plan no tiene fila de Ajustes. Por defecto `false` (las cuentas existentes y las de tests con ajustes no cambian); solo la fija «¿Quieres un plan de running?» del onboarding (sin respuesta = No = `true`). Crear ajustes (`cambios._escribir`) la pone en `false`.
+- «Quitar mi plan» solo cambia la bandera: el plan y los ajustes se quedan guardados (sin confirmación).
+- Sin plan y sin ajustes, el motor usa la config de fábrica (zona America/Merida, FC máx 190) hasta que haya Ajustes; la zona real se pide si luego quiere plan. Anotado por simple.
+- Con sin_plan el onboarding termina al vincular el repo (no espera la primera subida); el sitio quita la pestaña Plan (L2 pone la tarjeta).

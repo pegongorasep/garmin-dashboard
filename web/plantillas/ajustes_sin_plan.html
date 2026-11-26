@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, tarjeta %}
+{% block titulo %}{{ t("aj.titulo_pagina") }}{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1 class="pag-t">{{ t("aj.titulo") }}</h1>
+<p class="acciones pag-s">{{ ((atleta.nombre or "") ~ " " ~ (atleta.apellido or ""))|trim }} {{ boton(t("perfil.editar"), "texto", chico=True, href="/perfil") }}</p>
+{% call tarjeta() %}
+  <div class="texto">
+  <h2 class="pag-h">{{ t("aj.sp_t") }}</h2>
+  <p>{{ t("aj.sp_a") }}</p>
+  <form class="pila" method="post" action="/ajustes/plan">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ boton(t("aj.sp_quiero"), tipo="submit", nombre="accion", valor="quiero") }}
+  </form>
+  </div>
+{% endcall %}
+<div class="acciones">{{ boton(t("comun.volver"), "sec", href="/") }}</div>
+{% endblock %}

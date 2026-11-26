@@ -790,6 +790,7 @@ def build_ui(config: dict, plan: dict) -> dict:
         "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase", "icono")} for c in cats],
         "nombre_intensa": nombre,
         "acciones_url": acciones,
+        "sin_plan": bool(config.get("sin_plan", False)),
         "plan_acciones": list(config.get("plan_acciones") or []),   # solo en la web: [{texto, url}] sobre el plan
         "editar_urls": {str(k): str(v) for k, v in (config.get("editar_urls") or {}).items()},   # solo en la web: {"<n>/<id>": url} de las sesiones editables
         "menu": [{"texto": i["texto"], "url": i["url"]} for i in config.get("menu") or []],   # solo en la web: [{texto, url relativa}]

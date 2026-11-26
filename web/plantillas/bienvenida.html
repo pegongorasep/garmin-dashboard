@@ -5,7 +5,9 @@
 {% block clase_pie %}ancha{% endblock %}
 {% block contenido %}
 <h1 class="pag-t">{{ t("bv.titulo") }}</h1>
-{{ barra_pasos([t('bv.s1'), t('bv.s2'), t('bv.s3'), t('bv.s4'), t('bv.s5'), t('bv.s6'), t('bv.s7')], paso, t("bv.paso", n=paso, total=pasos|length), t("bv.avance")) }}
+{% set nombres = [t('bv.s1'), t('bv.s2'), t('bv.s3'), t('bv.s4'), t('bv.s5'), t('bv.s6'), t('bv.s7')] %}
+{% if e.sin_plan %}{% set nombres = nombres[:6] %}{% endif %}
+{{ barra_pasos(nombres, paso, t("bv.paso", n=paso, total=nombres|length), t("bv.avance")) }}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 
 {% if pregunta_uso %}
@@ -13,6 +15,10 @@
 <form class="pila" method="post" action="/bienvenida/uso">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <p>{{ t("bv.uso_a") }}</p>
+  {% call opciones(t("bv.plan_q")) %}
+    {{ opcion("plan", t("bv.plan_no"), valor="no", tipo="radio", marcado=True) }}
+    {{ opcion("plan", t("bv.plan_si"), valor="si", tipo="radio") }}
+  {% endcall %}
   <div class="acciones">
     <button class="boton" type="submit" name="uso" value="completo">{{ t("bv.uso_completo") }}</button>
     <button class="boton sec" type="submit" name="uso" value="cuerpo">{{ t("bv.uso_cuerpo") }}</button>
