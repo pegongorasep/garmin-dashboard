@@ -1,9 +1,10 @@
 """Páginas del plan vivo: /plan (metas, eventos, escalón, siguiente bloque) y /plan/sesion/<n>/<id> (editor de pasos).
 Todo cambio pasa por `aplicar_cambio`; las rutas valen para uno mismo y para el atleta de un coach (`/a/<id>/plan`)."""
+import json
 from datetime import date
 
 from fastapi import Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 
 import build
 import gen_plan
@@ -11,6 +12,8 @@ from ajustes import ConfigError, normalizar_config
 
 from . import ajustes_web as aw
 from . import calculo, cambios, plan_vivo
+from .modelos import Usuario
+from .permisos import puede_ver
 
 TIPOS_EVENTO = {"enfermedad": "Enfermedad", "lesion": "Lesión"}
 NOMBRE_ESCALON = {"3/1": "3' trote · 1' caminata", "5/1": "5' trote · 1' caminata", "8/1": "8' trote · 1' caminata",
@@ -66,6 +69,25 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def ver_acciones(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         return pagina(request, usuario, db, atleta_id)
     doble("get", "/plan/acciones", ver_acciones)
+
+    def plan_reloj(atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+        """Descarga el plan efectivo en el JSON que lee `reloj.py semana --plan`. Dueño o coach."""
+        if usuario is None:
+            return RedirectResponse("/entrar", 303)
+        aid = atleta_id or usuario.id
+        if not puede_ver(db, usuario, aid):
+            raise HTTPException(404)
+        atleta = db.get(Usuario, aid)
+        crudo = aw.crudo_de(db, atleta)
+        plan = aw.plan_guardado(db, atleta)
+        if crudo is None or not plan:
+            raise HTTPException(404)
+        hoy = aw.hoy_de(app.state.reloj, crudo)
+        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+        cuerpo = json.dumps(plan_vivo.plan_efectivo(plan, cfg), ensure_ascii=False, indent=1)
+        return Response(cuerpo, media_type="application/json",
+                        headers={"Content-Disposition": 'attachment; filename="plan.json"', "Cache-Control": "no-store"})
+    doble("get", "/plan/reloj.json", plan_reloj)
 
     def ver_plan(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         """El plan vive en la pestaña Plan del sitio: /plan solo redirige (tras comprobar sesión y permiso)."""

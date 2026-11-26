@@ -96,6 +96,8 @@
 {% endif %}
 
 {% call tarjeta("Sesiones del plan") %}
+  <div class="acciones">{{ boton("Descargar plan para el reloj", "sec", href=pref ~ "/plan/reloj.json") }}</div>
+  <p class="pag-s">Guárdalo y, en tu compu: <code>reloj.py semana --plan plan.json</code> (simula; con <code>--si</code> lo manda).</p>
   <p class="pag-s">Edita los pasos de una sesión (trote, caminata, zona, repeticiones). Solo Z2, Larga y variadas.</p>
   <div class="filas">
   {% for w in plan.weeks %}

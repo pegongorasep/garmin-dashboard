@@ -324,3 +324,18 @@ def test_ajustes_de_pedro_sin_tocar_no_cambian_nada(web_ctx):
     r = cl.post("/ajustes", data=datos)
     assert r.status_code == 303 and r.headers["location"] == "/ajustes?ok=sin", r.text[:500]
     assert crudo(web_ctx, uid) == pedro
+
+
+def test_descargar_plan_para_el_reloj(web_ctx):
+    uid_a, cl_a = listo(web_ctx, "atleta@x.com")
+    uid_c, cl_c = listo(web_ctx, "coach@x.com")
+    uid_o, cl_o = listo(web_ctx, "otro@x.com")
+    r = cl_a.get("/plan/reloj.json")
+    assert r.status_code == 200 and "attachment" in r.headers["content-disposition"]
+    assert r.json()["weeks"] and "Descargar plan para el reloj" in cl_a.get("/plan/acciones").text
+    assert cl_o.get(f"/a/{uid_a}/plan/reloj.json").status_code == 404
+    with web_ctx.sesiones() as db:
+        db.add(Coach(atleta_id=uid_a, coach_id=uid_c))
+        db.commit()
+    assert cl_c.get(f"/a/{uid_a}/plan/reloj.json").json() == r.json()
+    assert web_ctx.cliente().get("/plan/reloj.json", follow_redirects=False).status_code == 303

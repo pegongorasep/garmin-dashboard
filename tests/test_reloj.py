@@ -86,3 +86,9 @@ def test_clasificar():
     borrar, pend = rp.clasificar(env, estado)
     assert [e["id"] for e in borrar] == [1] and [e["id"] for e in pend] == [2, 3, 4]
     assert rp.clasificar([], estado) == ([], [])
+
+
+def test_reloj_acepta_plan_por_ruta():
+    import subprocess
+    r = subprocess.run([sys.executable, str(ROOT / "reloj.py"), "semana", "--help"], capture_output=True, text=True)
+    assert "--plan" in r.stdout

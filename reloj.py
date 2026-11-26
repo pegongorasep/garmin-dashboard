@@ -8,6 +8,7 @@ Uso:
   .venv/bin/python reloj.py lista            # entrenamientos de la biblioteca
   .venv/bin/python reloj.py borrar ID [ID…]  # borra esos entrenamientos
   .venv/bin/python reloj.py semana           # muestra qué mandaría de la semana del plan (no escribe nada)
+  .venv/bin/python reloj.py semana --plan ruta/plan.json   # usa ese plan en vez de plan/plan.json
   .venv/bin/python reloj.py semana --si      # lo manda de verdad (borra lo viejo, sube y envía al reloj)
 """
 import argparse
@@ -138,7 +139,7 @@ def dispositivo(g: Garmin, guardado):
 def semana(a) -> None:
     config = cargar_config()
     hoy = datetime.now(ZoneInfo(config["timezone"])).date()
-    plan, data = build.load_plan(), None
+    plan, data = (json.loads(Path(a.plan).read_text()) if a.plan else build.load_plan()), None
     n = a.semana or rp.semana_actual(hoy, config, plan)
     if n is None:
         sys.exit("Hoy no hay semana de plan activa (usa --semana N para elegir una).")
@@ -213,6 +214,7 @@ def main() -> None:
     b.add_argument("ids", nargs="*", type=int)
     s = sub.add_parser("semana")
     s.add_argument("--semana", type=int, help="semana del plan (por defecto la de hoy)")
+    s.add_argument("--plan", help="ruta de un plan.json (por ejemplo el que se baja de la web); por defecto plan/plan.json")
     s.add_argument("--si", action="store_true", help="escribir de verdad en Garmin")
     s.add_argument("--borrar-pendientes", action="store_true")
     s.add_argument("--conservar-pendientes", action="store_true")
