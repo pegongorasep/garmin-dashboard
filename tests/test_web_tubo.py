@@ -410,7 +410,7 @@ def test_onboarding_completo(ctx):
     r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "@Yo-Mismo"})
     assert r.status_code == 303
     p3 = cl.get("/bienvenida?paso=3").text
-    assert "template_owner=pegongorasep" in p3 and "template_name=garmin-prueba" in p3 and "visibility=private" in p3
+    assert "template_owner=pegongorasep" in p3 and "template_name=garmin-dashboard-template" in p3 and "visibility=private" in p3
     assert "&amp;name=ahilallevas-datos" in p3 and "Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual" in p3
     p4 = cl.get("/bienvenida?paso=4").text
     assert "https://github.com/Yo-Mismo/ahilallevas-datos/settings/secrets/actions/new" in p4 and "PERSONAL_API_KEY" in p4

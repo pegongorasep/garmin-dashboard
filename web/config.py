@@ -21,7 +21,7 @@ class Settings:
     admin_correo: str = ""
     # URL de las llaves públicas de GitHub Actions (se cambia solo en pruebas)
     jwks_url: str = "https://token.actions.githubusercontent.com/.well-known/jwks"
-    plantilla_repo: str = "garmin-prueba"   # PLANTILLA_REPO; cambiar a PLANTILLA_V5_REPO cuando exista el repo definitivo
+    plantilla_repo: str = "garmin-dashboard-template"   # PLANTILLA_REPO; cambiar a PLANTILLA_V5_REPO cuando exista el repo definitivo
     nombre_repo_sugerido: str = "ahilallevas-datos"   # nombre que se propone para la copia de cada persona
     google_client_id: str = ""       # GOOGLE_CLIENT_ID; vacío = sin botón de Google
     google_client_secret: str = ""
@@ -57,5 +57,5 @@ def desde_entorno() -> Settings:
     return Settings(database_url=e.get("DATABASE_URL", ""), secret_key=e.get("SECRET_KEY", ""),
                     base_url=e.get("BASE_URL", "http://localhost:8000"), resend_api_key=e.get("RESEND_API_KEY", ""),
                     correo_de=e.get("CORREO_DE", "Ahí la Llevas <entrar@ahilallevas.com>"),
-                    oidc_audience=e.get("OIDC_AUDIENCE", ""), plantilla_repo=e.get("PLANTILLA_REPO", "garmin-prueba"), admin_correo=e.get("ADMIN_CORREO", ""),
+                    oidc_audience=e.get("OIDC_AUDIENCE", ""), plantilla_repo=e.get("PLANTILLA_REPO", "garmin-dashboard-template"), admin_correo=e.get("ADMIN_CORREO", ""),
                     google_client_id=e.get("GOOGLE_CLIENT_ID", ""), google_client_secret=e.get("GOOGLE_CLIENT_SECRET", ""))
