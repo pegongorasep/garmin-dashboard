@@ -123,7 +123,7 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 
 /* Barra de navegación */
 .tabs { display: flex; border-top: 1px solid var(--grid); background: var(--surface); }
-.tabs a { flex: 1; display: grid; justify-items: center; gap: 3px; padding: 8px 2px 10px; font: 600 11px/14px var(--font-sans); color: var(--ink-2); text-decoration: none; }
+.tabs a { flex: 1 1 0; min-width: 0; display: grid; justify-items: center; gap: 3px; padding: 8px 2px 10px; font: 600 11px/14px var(--font-sans); color: var(--ink-2); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .tabs svg { width: 20px; height: 20px; padding: 3px 12px; border-radius: var(--radius-pill); }
 .tabs a[aria-current="page"] { color: var(--ink); }
 .tabs a[aria-current="page"] svg { background: var(--accent-bg); color: var(--accent); }
@@ -508,9 +508,9 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .con-burbuja { position: relative; }
 .burbuja { --bu-dx: 0px; position: absolute; z-index: 30; bottom: calc(100% + 4px); left: 50%; transform: translateX(calc(-50% + var(--bu-dx))); width: max-content; max-width: min(220px, 90vw);
   padding: var(--space-4) var(--space-8); border-radius: var(--radius-inner); background: var(--ink); color: var(--page); font: 500 12px/16px var(--font-sans); text-align: center;
-  white-space: normal; pointer-events: none; visibility: hidden; opacity: 0; transition: opacity .12s; }
-@media (hover: hover) { .con-burbuja:hover > .burbuja { visibility: visible; opacity: 1; } }
-.con-burbuja:focus-visible > .burbuja { visibility: visible; opacity: 1; }
+  white-space: normal; pointer-events: none; display: none; }   /* oculta con display:none: una burbuja invisible pero absoluta ensanchaba la página (scroll horizontal) */
+@media (hover: hover) { .con-burbuja:hover > .burbuja { display: block; } }
+.con-burbuja:focus-visible > .burbuja { display: block; }
 
 /* Anillos de semana del Plan (cuadrito .sem y su muestra en el catálogo) */
 .leyenda i.sw-anillo { width: 14px; height: 14px; background: var(--page); border-radius: var(--radius-inner); vertical-align: -2px; outline: 2px solid transparent; outline-offset: 1px; }
