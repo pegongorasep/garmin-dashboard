@@ -198,3 +198,19 @@ def test_conexiones_lista_revoca_y_el_token_revocado_da_401(web_ctx):
     assert r.status_code == 303
     with web_ctx.cliente() as c2:
         assert rpc(c2, tok, "tools/list").status_code == 401
+
+
+def test_sin_plan_las_herramientas_de_plan_dan_rechazo_claro(web_ctx):
+    from web.modelos import Usuario
+    uid, _ = listo(web_ctx, "a@x.com")
+    with web_ctx.sesiones() as db:
+        db.get(Usuario, uid).sin_plan = True
+        db.commit()
+    tok = token_para(web_ctx, uid)
+    with web_ctx.cliente() as cl:
+        for herr, args in [("plan", {}), ("semana", {}), ("subir_escalon", {}), ("repetir_semana", {}),
+                           ("agregar_evento", {"tipo": "viaje", "desde": "2026-12-01"})]:
+            err, txt = llamar(cl, tok, herr, **args)
+            assert err and "no tiene plan de running" in txt, (herr, txt)
+        err, txt = llamar(cl, tok, "resumen_hoy")
+        assert "no tiene plan de running" not in txt

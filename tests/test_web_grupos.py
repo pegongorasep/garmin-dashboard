@@ -211,3 +211,24 @@ def test_reacciones(web_ctx):
         cuenta.borrar_cuenta(db, db.query(Usuario).filter_by(correo="a@x.com").one())
     with web_ctx.sesiones() as db:
         assert db.query(Reaccion).count() == 0
+
+
+def test_tarjeta_sin_plan_usa_semana_libre(web_ctx, monkeypatch):
+    from web import grupos_resumen
+    a = sesion(web_ctx, "a@x.com")
+    gid = crear(a)
+    sl = {"actividades": 3, "minutos": 95.4, "racha_semanas": 4, "km": 9, "nombre": "Ruta secreta",
+          "dias": [{"actividades": [{"nombre": "Correr", "minutos": 30}] if i in (0, 2, 3) else [], "futuro": i > 3} for i in range(7)]}
+    monkeypatch.setattr(grupos_resumen.calculo, "calcular", lambda db, u: {"semana_libre": sl})
+    with web_ctx.sesiones() as db:
+        u = db.query(Usuario).filter_by(correo="a@x.com").one()
+        u.sin_plan, u.repo_id = True, 1
+        db.commit()
+        m = db.query(MiembroGrupo).filter_by(grupo_id=gid).one()
+        c = grupos_resumen.tarjeta_de(db, u, m)
+    assert set(c) == grupos_resumen.CAMPOS and c["estado"] == "libre"
+    assert c["dias"] == ["hecha", "libre", "hecha", "hecha", "futuro", "futuro", "futuro"]
+    assert c["libre"] == {"actividades": 3, "minutos": 95, "racha": 4}
+    pag = a.get(f"/grupos/{gid}").text
+    assert "3 actividades · 95 min esta semana" in pag and "Racha: 4 semanas activas" in pag
+    assert "Ruta secreta" not in pag

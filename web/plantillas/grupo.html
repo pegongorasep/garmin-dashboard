@@ -23,6 +23,10 @@
     </div>
     {% if c.estado == "pausa" %}<p class="pag-s">{{ t("grupos.pausado") }}</p>
     {% elif c.estado == "sin_plan" %}<p class="pag-s">{{ t("grupos.sin_plan") }}</p>
+    {% elif c.estado == "libre" %}
+    <p class="pag-s">{{ t("grupos.libre", n=c.libre.actividades, min=c.libre.minutos) }}</p>
+    {% if c.libre.racha %}<p class="pag-s">{{ t("grupos.racha", n=c.libre.racha) }}</p>{% endif %}
+    <div class="acciones" aria-label="{{ t('grupos.semana') }}">{% for d in c.dias %}<span class="badge {{ 'ok' if d == 'hecha' else 'nd' }}">{{ '✓' if d == 'hecha' else '·' }}</span>{% endfor %}</div>
     {% else %}
     <p class="pag-s">{% if c.meta %}{{ c.meta }} · {% endif %}{% if c.etapa_n %}{{ t("grupos.etapa", n=c.etapa_n) }}{% endif %}</p>
     {% if c.adherencia is not none %}

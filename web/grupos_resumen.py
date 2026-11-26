@@ -9,7 +9,7 @@ from .modelos import Ajustes, MiembroGrupo, Plan, Usuario
 
 log = logging.getLogger("web.grupos_resumen")
 
-CAMPOS = {"usuario_id", "estado", "meta", "etapa_n", "adherencia", "dias", "ultima"}   # lo único que sale de una tarjeta
+CAMPOS = {"usuario_id", "estado", "meta", "etapa_n", "adherencia", "dias", "ultima", "libre"}   # lo único que sale de una tarjeta
 SEMANAS_ADHERENCIA = 4
 
 
@@ -22,10 +22,21 @@ def _adherencia(semanas: list) -> int | None:
 
 
 def tarjeta_de(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> dict:
-    base = {"usuario_id": usuario.id, "estado": "ok", "meta": None, "etapa_n": None, "adherencia": None, "dias": [], "ultima": None}
+    base = {"usuario_id": usuario.id, "estado": "ok", "meta": None, "etapa_n": None, "adherencia": None, "dias": [], "ultima": None, "libre": None}
     if miembro.pausado:
         return {**base, "estado": "pausa"}
     sin_plan = {**base, "estado": "sin_plan"}
+    if usuario.sin_plan and usuario.repo_id:   # modo sin plan: su tarjeta sale de `semana_libre` (solo conteos, nada de nombres)
+        try:
+            sl = calculo.calcular(db, usuario).get("semana_libre")
+        except Exception:
+            log.warning("tarjeta libre de usuario %s sin datos", usuario.id, exc_info=True)
+            return sin_plan
+        if not sl:
+            return sin_plan
+        dias = ["hecha" if d["actividades"] else "futuro" if d["futuro"] else "libre" for d in sl["dias"]]
+        return {**base, "estado": "libre", "dias": dias,
+                "libre": {"actividades": sl["actividades"], "minutos": round(sl["minutos"]), "racha": sl["racha_semanas"]}}
     if db.get(Ajustes, usuario.id) is None or db.get(Plan, usuario.id) is None:
         return sin_plan
     try:

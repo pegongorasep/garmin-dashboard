@@ -54,6 +54,12 @@ def _data(db, actor: Usuario, atleta: int | None, ahora_utc) -> tuple[Usuario, d
         raise Rechazo("No se pudo preparar la información.")
 
 
+def _con_plan(a: Usuario) -> None:
+    if a.sin_plan:
+        raise Rechazo("Esa persona no tiene plan de running (solo ve cómo va). Usa resumen_hoy, corridas_recientes o progreso; "
+                      "para tener plan, ella misma debe pedirlo en Ajustes.")
+
+
 def _trozo(d: dict, *claves) -> dict:
     return {k: d[k] for k in claves if k in d}
 
@@ -64,11 +70,13 @@ def resumen_hoy(db, actor, atleta, ahora) -> dict:
 
 
 def semana(db, actor, atleta, ahora) -> dict:
+    _con_plan(resolver(db, actor, atleta))
     _, d = _data(db, actor, atleta, ahora)
     return _trozo(d, "semana", "semana_hoy_idx")
 
 
 def plan(db, actor, atleta, ahora) -> dict:
+    _con_plan(resolver(db, actor, atleta))
     _, d = _data(db, actor, atleta, ahora)
     return _trozo(d, "plan", "semanas_hoy", "semana_hoy_idx", "carreras", "mejores_marcas")
 
@@ -133,6 +141,7 @@ def _editable(db, actor, atleta) -> tuple[Usuario, dict, dict | None, date]:
     a = resolver(db, actor, atleta)
     if not puede_editar(db, actor, a.id):
         raise Rechazo("Solo puedes ver a esa persona, no cambiarle el plan.")
+    _con_plan(a)
     crudo = aw.crudo_de(db, a)
     if crudo is None:
         raise Rechazo("Esa persona aún no tiene ajustes ni plan.")
