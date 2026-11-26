@@ -137,6 +137,12 @@
   {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
   {{ campo(t("aj.z2"), "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
   {{ campo(t("aj.larga"), "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
+  {% if not atleta.sin_plan %}
+  <input type="hidden" name="pierna_form" value="1">
+  {% call opciones(t("aj.pierna"), t("aj.pierna_n")) %}
+    {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave, marcado=clave in v.pierna) }}{% endfor %}
+  {% endcall %}
+  {% endif %}
   <div class="acciones">{{ boton(t("plan.rehacer_b"), tipo="submit") }}</div>
 </form>
 {% if not pref and not atleta.sin_plan %}

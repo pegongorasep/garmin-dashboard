@@ -104,7 +104,7 @@ def crudo_general(crudo: dict, f) -> dict:
     if sensor not in SENSORES:
         raise ErrorT("err.sensor", "sensor")
     perfil["sensor"] = sensor
-    # actividades: categorías elegidas (conserva las personalizadas que ya había) y días de pierna
+    # actividades: categorías elegidas (conserva las personalizadas que ya había); los días de pierna van en «Rehacer mi plan»
     elegidas = f.getlist("cats")
     previas = {c["id"]: c for c in (act.get("categorias") or [])}
     defecto = {c["id"]: c for c in categorias_por_defecto()}
@@ -113,7 +113,6 @@ def crudo_general(crudo: dict, f) -> dict:
     cats = [previas.get(i) or defecto[i] for i in elegidas if i in previas or i in defecto]
     if "categorias" in act or {c["id"] for c in cats} != set(defecto):
         act["categorias"] = cats
-    act["dias_pierna"] = [d for d in f.getlist("pierna") if d in dict(DIAS)]
     nuevo["inbody"] = f.get("inbody") == "on"
     return nuevo
 
@@ -132,6 +131,8 @@ def crudo_plan(crudo: dict, f) -> dict:
     corrida["inicio"] = str(f.get("inicio", "")).strip()
     corrida["base_min"] = {**(corrida.get("base_min") or {}), "z2": _entero(f, "z2", "z2"),
                            "larga": _entero(f, "larga", "larga")}
+    if "pierna" in f or f.get("pierna_form"):   # el formulario manda el marcador porque sin marcas no manda nada
+        nuevo.setdefault("actividades", {})["dias_pierna"] = [d for d in f.getlist("pierna") if d in dict(DIAS)]
     if "escalon" in f:   # solo clientes viejos (y el MCP) lo mandan
         esc = str(f.get("escalon", "")).strip()
         if esc:
