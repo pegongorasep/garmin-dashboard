@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 
 from ajustes import ConfigError
 
-from . import ROOT, admin, ajustes_web, auth, calculo, coach, correo, cuenta, mcp_servidor, oauth, onboarding, plan_web, tubo
+from . import ROOT, admin, ajustes_web, auth, calculo, coach, correo, cuenta, google, mcp_servidor, oauth, onboarding, plan_web, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -142,7 +142,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     @app.get("/invitacion/{token}")
     def invitacion_form(request: Request, token: str, db=Depends(get_db)):
         inv = auth.invitacion_vigente(db, token)
-        return render(request, "invitacion.html", no_valida=inv is None, nota=inv.nota if inv else None)
+        return render(request, "invitacion.html", no_valida=inv is None, nota=inv.nota if inv else None, token=token)
 
     @app.post("/invitacion/{token}")
     async def invitacion(request: Request, token: str, db=Depends(get_db)):
@@ -151,7 +151,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if auth.invitacion_vigente(db, token) is None:
             return render(request, "invitacion.html", status=400, no_valida=True)
         if not auth.correo_valido(correo_in):
-            return render(request, "invitacion.html", status=400, nota=None, error="Escribe un correo válido.")
+            return render(request, "invitacion.html", status=400, nota=None, token=token, error="Escribe un correo válido.")
         u = auth.aceptar_invitacion(db, token, correo_in) or auth.buscar_por_correo(db, correo_in)
         if u:
             mandar_liga(db, u)
@@ -183,6 +183,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     oauth.montar_conexiones(app, get_db, actual, render, formulario, settings)
     cuenta.montar(app, get_db, actual, render, formulario, settings)
     admin.montar(app, get_db, actual, render, formulario, settings)
+    google.montar(app, get_db, actual, render, settings, poner_sesion)
     mcp_servidor.montar(app, settings)
 
     # --- dashboard por usuario ---

@@ -333,3 +333,14 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 
 ### v5 F8c
 - `plantilla_v5/` lista en este repo. El repo `pegongorasep/ahi-la-llevas-plantilla` aún NO existe (Opus lo crea con permiso de Pedro). Mientras tanto la web sigue usando `garmin-prueba` (setting `plantilla_repo`, env `PLANTILLA_REPO`); al crear el repo, poner `PLANTILLA_REPO=ahi-la-llevas-plantilla` o cambiar el default a `PLANTILLA_V5_REPO`.
+
+## v5 login (docs/PLAN_LOGIN.md)
+
+- **L1 Google.** Sin `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` el botón no aparece. Para activarlo, Pedro:
+  1. Entra a Google Cloud Console, proyecto de Ahí la Llevas, APIs y servicios, Pantalla de consentimiento OAuth (externa, scopes `openid` y `email`; publicarla en producción para que no quede en modo prueba).
+  2. Credenciales, Crear credenciales, ID de cliente OAuth, tipo «Aplicación web».
+  3. URI de redireccionamiento autorizado: `https://<BASE_URL>/entrar/google/vuelta` (y `http://localhost:8000/entrar/google/vuelta` para pruebas).
+  4. Guarda el ID y el secreto en Google Secret Manager como `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` y exponlos al servicio de Cloud Run (nunca en el chat ni en el repo).
+- Decisión simple: la identificación por correo exige `email_verified=true`; una cuenta ya ligada a un `google_sub` distinto no se re-liga. El estado/nonce/PKCE viaja en una cookie HttpOnly de 10 min limitada a `/entrar/google`.
+- Tras entrar con Google va a `/` (o al conector si hay cookie); `/` manda a `/bienvenida` si falta el onboarding. L3 cambiará el destino.
+- «Ligar mi cuenta de Google» quedó en `/privacidad/mis-datos` (lo más simple; ya hay sesión y página de cuenta).

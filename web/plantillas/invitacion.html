@@ -9,6 +9,10 @@
 {% call aviso("bad", rol="alert") %}Esta invitación ya se usó o venció. Pídele a Pedro una nueva.{% endcall %}
 {% else %}
 {% if nota %}<p class="pag-s">Invitación: {{ nota }}</p>{% endif %}
+{% if settings.google_client_id %}
+{{ boton("Continuar con Google", href="/entrar/google?inv=" ~ token) }}
+<p class="pag-s">o con un correo:</p>
+{% endif %}
 <p>Escribe tu correo para crear tu cuenta. Te mandamos una liga para entrar; no hay contraseñas.</p>
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 <form class="pila" method="post">

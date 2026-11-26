@@ -25,6 +25,7 @@ class Usuario(Base):
     github_owner_id: Mapped[int | None] = mapped_column(sa.BigInteger)
     repo: Mapped[str | None] = mapped_column(sa.String(200))          # "owner/nombre"
     repo_id: Mapped[int | None] = mapped_column(sa.BigInteger, index=True)
+    google_sub: Mapped[str | None] = mapped_column(sa.String(64), unique=True)   # login con Google
     sensor: Mapped[str] = mapped_column(sa.String(10), default="banda")   # banda | muñeca
     historial_desde: Mapped[str | None] = mapped_column(sa.String(10))    # pedido pendiente: la siguiente corrida lo baja
     migrado: Mapped[bool] = mapped_column(default=False)                  # F8: Pages apagado

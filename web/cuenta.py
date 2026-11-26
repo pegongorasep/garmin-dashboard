@@ -77,7 +77,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def mis_datos(request: Request, usuario=Depends(actual)):
         if usuario is None:
             return RedirectResponse("/entrar", 303)
-        return render(request, "mis_datos.html", atleta=usuario, pref="", palabra=PALABRA)
+        return render(request, "mis_datos.html", atleta=usuario, pref="", palabra=PALABRA, google_ligada=bool(usuario.google_sub))
 
     @app.get("/privacidad/mis-datos/descargar")
     def descargar(usuario=Depends(actual), db: Session = Depends(get_db)):

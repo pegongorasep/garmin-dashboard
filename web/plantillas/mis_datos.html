@@ -7,6 +7,14 @@
 <h1 class="pag-t">Mis datos</h1>
 <p>Tus derechos sobre tus datos, según el <a href="/privacidad">aviso de privacidad</a>.</p>
 
+{% if settings.google_client_id %}
+{% call tarjeta("Cuenta de Google") %}
+{% if google_ligada %}<p>Tu cuenta de Google ya está ligada.</p>
+{% else %}<p>Si tu correo de Google es distinto al de tu cuenta, ligala aquí para entrar con un toque.</p>
+<div class="acciones">{{ boton("Ligar mi cuenta de Google", href="/entrar/google?ligar=1") }}</div>{% endif %}
+{% endcall %}
+{% endif %}
+
 {% call tarjeta("Descargar mis datos") %}
 <p>Un ZIP con archivos JSON: tus ajustes, tu plan, InBody, los datos de Garmin guardados, el historial de cambios,
 tus consentimientos, los accesos de coach y tus conexiones de IA (solo nombre y fecha).</p>
