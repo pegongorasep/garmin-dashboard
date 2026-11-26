@@ -671,8 +671,11 @@ def test_primera_subida_importa_personales_y_la_segunda_no_pisa(ctx):
 def test_subida_sin_personales_o_con_config_roto_sigue_funcionando(ctx):
     uid = usuario_amigo(ctx, repo_id=777)
     cl = ctx.cliente()
-    assert subir(cl, token(ctx), paquete_chico()).status_code == 200
+    # primero el config roto: los datos de esa misma subida no deben perderse
     assert subir(cl, token(ctx), paquete_chico(personales={"config": {"perfil": {}}})).status_code == 200
+    with ctx.sesiones() as db:
+        assert db.query(DatoGarmin).filter_by(usuario_id=uid).count() > 0
+    assert subir(cl, token(ctx), paquete_chico()).status_code == 200
     with ctx.sesiones() as db:
         assert db.get(Ajustes, uid) is None
         assert db.query(DatoGarmin).filter_by(usuario_id=uid).count() > 0

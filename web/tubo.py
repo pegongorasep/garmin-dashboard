@@ -248,6 +248,7 @@ def montar(app, get_db, settings) -> None:
             db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error=type(e).__name__))
             db.commit()
             return JSONResponse({"error": "no se pudo guardar"}, status_code=500)
+        db.commit()   # el paquete queda guardado antes de importar (un rollback ahí no debe tirarlo)
         _importar_personales(db, u, pq.get("personales"))
         db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=True))
         u.historial_desde = None   # el pedido pendiente se cumplió con esta subida
