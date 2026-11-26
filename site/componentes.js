@@ -251,10 +251,15 @@ const DS = (() => {
   };
 
   /** Un día del calendario de la semana. Recibe { nombre (lun…), numero, hoy, titulo (tooltip y lectores), hijos:[nodos],
-   numeroEnMarca }. Con numeroEnMarca el número del día va dentro del círculo (hijos) y no se repite arriba. */
-  const diaCal = ({ nombre, numero, hoy, titulo, hijos = [], numeroEnMarca = false } = {}) =>
-    h("div", { class: `dia${hoy ? " hoy" : ""}`, role: "group", title: titulo, "aria-label": titulo },
-      h("span", { class: "dn" }, nombre), numeroEnMarca ? null : h("span", { class: "df" }, numero), ...hijos);
+   numeroEnMarca, alTocar (función: el día pasa a ser un botón), seleccionado }. Con numeroEnMarca el número del día va
+   dentro del círculo (hijos) y no se repite arriba. */
+  const diaCal = ({ nombre, numero, hoy, titulo, hijos = [], numeroEnMarca = false, alTocar, seleccionado = false } = {}) => {
+    const partes = [h("span", { class: "dn" }, nombre), numeroEnMarca ? null : h("span", { class: "df" }, numero), ...hijos];
+    const clase = `dia${hoy ? " hoy" : ""}${alTocar && seleccionado ? " sel" : ""}`;
+    return alTocar
+      ? h("button", { type: "button", class: clase, title: titulo, "aria-label": titulo, "aria-pressed": String(!!seleccionado), onclick: alTocar }, ...partes)
+      : h("div", { class: clase, role: "group", title: titulo, "aria-label": titulo }, ...partes);
+  };
 
   /** Calendario de 7 días. Recibe los días (DS.diaCal). */
   const calendario = (...dias) => h("div", { class: "cal" }, ...dias.flat());

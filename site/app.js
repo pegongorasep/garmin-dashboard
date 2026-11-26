@@ -315,7 +315,7 @@ const diaTexto = (x) => {
   return `${fechaCorta(x.fecha)}: ${partes.length ? partes.join("; ") : T("sitio.dia.sin")}`;
 };
 
-function diaCalendario(x, hoyIso) {
+function diaCalendario(x, hoyIso, seleccionado, alTocar) {
   const varias = ui().categorias.length > 1;   // con una sola categoría no hace falta distinguir por color
   const marcaCat = (cat, cfTxt) => {
     const c = categoria(cat);
@@ -330,12 +330,43 @@ function diaCalendario(x, hoyIso) {
   }
   if (!marca.length && x.planeado) marca = [h("span", { class: "circ planeado", "aria-hidden": "true" }, parseFecha(x.fecha).getDate())];   // corrida planeada, aún sin hacer
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.esfuerzo != null ? fmt(cf.esfuerzo, 1) : null));
-  return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), numeroEnMarca: marca.length > 0, hijos: [...marca, ...cfMarca] });
+  return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), numeroEnMarca: marca.length > 0, hijos: [...marca, ...cfMarca], seleccionado, alTocar });
+}
+
+/** Una actividad del día: tipo, minutos, km y FC prom.; en corridas, la sesión del plan y si se hizo. */
+function filaActividad(a) {
+  const datos = [T("sitio.min_n", { n: fmt(a.minutos, 0) }), a.km != null ? T("sitio.km_n", { n: fmt(a.km) }) : null,
+    a.fc_prom != null ? `${fmt(a.fc_prom, 0)} ${T("sitio.lpm")}` : null].filter(Boolean).join(" · ");
+  const ses = a.sesion ? `${a.sesion.nombre} · ${["hecha", "incompleta", "extra", "no_hecha", "pendiente"].includes(a.sesion.estado) ? T(`sitio.dia.${a.sesion.estado}`) : a.sesion.estado}` : null;
+  return h("div", { class: "act-fila" }, h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre), h("span", {}, datos),
+    ses ? h("span", { class: "nota" }, ses) : null);
+}
+
+/** Tarjeta del día tocado: una fila por actividad; sin nada, «día de descanso» (o «corrida planeada» / «aún no»). */
+function tarjetaDia(x, hoyIso) {
+  const acts = x.actividades || [];
+  const vacio = x.planeado ? T("sitio.dia.planeada") : x.fecha > hoyIso ? T("sitio.dia.por_venir") : T("sitio.dia.descanso");
+  return h("div", { class: "dia-det", "aria-live": "polite" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)),
+    ...(acts.length ? acts.map(filaActividad) : [h("p", { class: "nota" }, vacio)]));
+}
+
+/** Calendario de 7 días tocables + la tarjeta del día elegido (hoy; en otra semana, el último con actividad). `mk(x, sel, alTocar)` pinta cada día. */
+function calendarioTocable(dias, hoyIso, mk) {
+  if (!dias.length) return [];
+  const inicial = dias.find((x) => x.fecha === hoyIso) || [...dias].reverse().find((x) => (x.actividades || []).length) || dias[0];
+  const det = h("div", {}), botones = [];
+  const elegir = (x) => {
+    for (const [b, f] of botones) { b.classList.toggle("sel", f === x.fecha); b.setAttribute("aria-pressed", String(f === x.fecha)); }
+    det.replaceChildren(tarjetaDia(x, hoyIso));
+  };
+  const cal = DS.calendario(dias.map((x) => { const b = mk(x, x.fecha === inicial.fecha, () => elegir(x)); botones.push([b, x.fecha]); return b; }));
+  elegir(inicial);
+  return [cal, det];
 }
 
 function calendarioSemana(d, s) {
   const hoyIso = (d.generado || "").slice(0, 10);
-  return h("div", { class: "cal-caja" }, DS.calendario((s.dias || []).map((x) => diaCalendario(x, hoyIso))),
+  return h("div", { class: "cal-caja" }, ...calendarioTocable(s.dias || [], hoyIso, (x, sel, tocar) => diaCalendario(x, hoyIso, sel, tocar)),
     h("p", { class: "nota" }, T("sitio.cal.nota")));
 }
 
@@ -530,8 +561,10 @@ function tarjetaCarreraHoy(c) {
 function renderHoySinPlan(d) {
   const sl = d.semana_libre || {};
   const dif = (v, prom, unidad) => (prom ? [[T("sitio.sl.vs", { p: fmt(prom, 0), u: unidad }), "neutro"]] : [[T("sitio.sl.sin_prom"), "neutro"]]);
-  const dias = (sl.dias || []).map((x) => h("div", { class: "kv" }, h("span", {}, x.dia_semana + (x.hoy ? ` · ${T("sitio.sl.hoy")}` : "")),
-    h("span", {}, x.actividades.length ? x.actividades.map((a) => `${a.nombre} ${T("sitio.min_n", { n: fmt(a.minutos, 0) })}`).join(" · ") : (x.futuro ? "" : "—"))));
+  const hoyIso = (d.generado || "").slice(0, 10);
+  const dias = calendarioTocable(sl.dias || [], hoyIso, (x, sel, tocar) => DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.hoy,
+    titulo: `${fechaCorta(x.fecha)}: ${x.actividades.length ? x.actividades.map((a) => `${a.nombre} ${T("sitio.min_n", { n: fmt(a.minutos, 0) })}`).join("; ") : T("sitio.dia.sin")}`,
+    hijos: x.actividades.map((a) => h("span", { class: "cf" }, DS.ico(a.icono || "punto"), h("span", {}, fmt(a.minutos, 0)))), seleccionado: sel, alTocar: tocar }));
   const rec = sl.recuperacion;
   const racha = sl.racha_semanas || 0;
   $("vista-hoy").replaceChildren(...[
@@ -542,7 +575,7 @@ function renderHoySinPlan(d) {
         DS.tile({ k: T("sitio.sl.km"), valor: fmt(sl.km, 1), unidad: "km", deltas: dif(sl.km, sl.promedio_km, "km") }),
         DS.tile({ k: T("sitio.sl.racha"), valor: String(racha), unidad: T(racha === 1 ? "sitio.sl.semana_1" : "sitio.sl.semana_n") }))
         : DS.estadoVacio({ icono: null, titulo: T("sitio.sl.vacia") }),
-      h("div", {}, ...dias)),
+      h("div", { class: "cal-caja" }, ...dias)),
     sl.intensidad ? zonaBar(sl.intensidad) : null,
     rec ? DS.tarjeta({ titulo: T("sitio.sl.recup") },
       rec.hrv_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.hrv")), h("span", {}, `${fmt(rec.hrv_7d, 0)} ms`)) : null,

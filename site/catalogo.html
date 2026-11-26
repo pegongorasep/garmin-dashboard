@@ -215,13 +215,13 @@ def("Datos", "Selector de semana", "DS.selectorSemana()", "Anterior y siguiente 
   DS.selectorSemana({ texto: "Semana 7 de 12 · 24–30 nov · carga", sinSiguiente: false }));
 def("Datos", "Anillo del plan", "DS.anilloPlan()", "Avance de la semana contra el plan.",
   DS.tarjeta({ titulo: "Esta semana" }, DS.anilloPlan({ pct: 62, titulo: "56 / 90 min · 62 %", texto: "Plan: 1 de 3 sesiones" })));
-def("Datos", "Calendario", "DS.calendario()", "Los 7 días con la corrida (círculo con los minutos), otras actividades y el día de hoy.",
+def("Datos", "Calendario", "DS.calendario()", "Los 7 días con la corrida (círculo con los minutos), otras actividades y el día de hoy. Con alTocar cada día es un botón (aria-pressed) y abajo va la tarjeta del día.",
   DS.tarjeta({}, DS.calendario(
     DS.diaCal({ nombre: "lun", numero: 23, titulo: "lunes 23 nov: CrossFit 60 min", hijos: [h("span", { class: "cf" }, DS.ico("rayo"), h("span", {}, "7.5"))] }),
     DS.diaCal({ nombre: "mar", numero: 24, numeroEnMarca: true, titulo: "martes 24 nov: corrida de 24 min", hijos: [h("span", { class: "circ" }, "24"), h("span", { class: "sn" }, DS.ico("correr"), h("span", {}, "Z2 #1"))] }),
     DS.diaCal({ nombre: "mié", numero: 25, hoy: true, titulo: "miércoles 25 nov: sin actividad" }),
     DS.diaCal({ nombre: "jue", numero: 26, numeroEnMarca: true, titulo: "jueves 26 nov: corrida incompleta", hijos: [h("span", { class: "circ incompleta" }, "26")] }),
-    DS.diaCal({ nombre: "vie", numero: 27, titulo: "viernes 27 nov: sin actividad" }),
+    DS.diaCal({ nombre: "vie", numero: 27, titulo: "viernes 27 nov: sin actividad", alTocar: () => {}, seleccionado: true }),
     DS.diaCal({ nombre: "sáb", numero: 28, titulo: "sábado 28 nov: sin actividad" }),
     DS.diaCal({ nombre: "dom", numero: 29, titulo: "domingo 29 nov: sin actividad" })),
   h("p", { class: "nota" }, "número = esfuerzo calculado con tu FC (1–10)")));

@@ -419,3 +419,10 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Ruta vieja: `POST /ajustes` con campos de la corrida (`nivel`) responde 307 a `/plan/rehacer`.
 - «Quitar mi plan» / «Quiero un plan» viven en esa página (siguen usando `POST /ajustes/plan`); la tarjeta del sitio sin plan apunta a ella.
 - Sitio: `ui.liga_ajustar_plan` (default null = sin botón; la web lo pone `/plan/acciones` si hay ajustes y plan). sw v10.
+
+## v5 día y actividad
+
+- **Día: lo que hiciste.** Cada día del calendario de Hoy es un botón (`aria-pressed`); la tarjeta de abajo lista las
+  actividades del día (tipo del catálogo, minutos, km, FC prom., y la sesión del plan con su estado). Día elegido: hoy; en otra
+  semana, el último con actividad. Sin actividad: «Día de descanso» (o «corrida planeada» / «todavía no llega»).
+  Python arma `dias[].actividades` (`build.actividades_del_dia`), también en `semana_libre`, donde el calendario reemplaza la lista de texto.

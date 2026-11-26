@@ -817,7 +817,7 @@ def test_semana_libre_solo_sin_plan_promedios_racha_y_sin_claves_prohibidas():
     assert len(sl["dias"]) == 7 and sum(len(d["actividades"]) for d in sl["dias"]) == sl["actividades"]
     assert sl["minutos"] == round(sum(a["minutos"] for d in sl["dias"] for a in d["actividades"]), 0) or sl["minutos"] >= 0
     assert sl["promedio_minutos"] >= 0 and sl["racha_semanas"] >= 0
-    assert all(set(a) == {"nombre", "icono", "minutos"} for d in sl["dias"] for a in d["actividades"])
+    assert all({"nombre", "icono", "minutos", "km", "fc_prom", "sesion"} <= set(a) for d in sl["dias"] for a in d["actividades"])
     assert validar.problemas(out) == []
     assert "semana_libre" not in build.build(fixture(), gen_plan.generar(CONFIG_CORREDOR), CONFIG_CORREDOR, AHORA)
 
@@ -838,3 +838,18 @@ def test_tarjeta_hoy_trae_opciones_y_recomendada(monkeypatch):
         assert t["opciones"][-1] == "normal" and "suave" in t["opciones"]
     else:
         assert t["opciones"] == [] and t["recomendada"] is None
+
+
+def test_dia_agrupa_actividades_por_dia_con_sesion_y_dia_de_descanso():
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    out = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)
+    dias = {d["fecha"]: d for s in out["semanas_hoy"] for d in s["dias"]}
+    tres = dias["2026-11-03"]["actividades"]
+    assert [a["cat"] for a in tres][0] == "run" and len(tres) == 2   # corrida + HIIT el mismo día
+    run = tres[0]
+    assert (run["minutos"], run["km"], run["fc_prom"]) == (30, 4.5, 140) and run["nombre"] == "Corrida"
+    assert run["sesion"] is None or set(run["sesion"]) == {"nombre", "estado"}
+    assert dias["2026-11-01"]["actividades"] == []   # día de descanso
+    assert all(set(a) >= {"cat", "nombre", "icono", "minutos", "km", "fc_prom", "carrera", "sesion"}
+               for d in dias.values() for a in d["actividades"])
+    revisar_privacidad(out)

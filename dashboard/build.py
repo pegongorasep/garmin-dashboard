@@ -343,7 +343,7 @@ def otras_del_dia(d: date, data: dict, config: dict) -> list:
     return out
 
 
-def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, config: dict) -> dict:
+def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, config: dict, acts=None) -> dict:
     """Un día del calendario: corrida más larga (con su sesión) y otras actividades registradas (futuro: vacío)."""
     del_dia = [a for a in runs if m.day_of(a) == d]
     corrida = None
@@ -356,7 +356,8 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
     otras = otras_del_dia(d, data, config)
     return {"fecha": d.isoformat(), "dia_semana": i18n.csv("motor.dias_cortos")[d.weekday()],
             "luz": light_on(d, data, config)["color"] if d <= hoy else None,
-            "corrida": corrida, "corridas_n": len(del_dia), "otras": otras}
+            "corrida": corrida, "corridas_n": len(del_dia), "otras": otras,
+            "actividades": actividades_del_dia(d, acts or [], config, sesiones)}
 
 
 def marcar_planeados(dias: list, sesiones: list, hoy: date, pasada: bool) -> None:
@@ -387,13 +388,30 @@ def intensidad_semana(acts: list, ini: date) -> dict:
             "alto": r1(d["alto"])}
 
 
+def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None) -> list:
+    """Todo lo que se hizo un día, una fila por actividad: tipo (texto del catálogo), minutos, km, FC prom. y, en
+    corridas, la sesión del plan que cumplió. `acts` ya viene sin repetidas. Nunca nombres, IDs ni GPS."""
+    nombres = {"run": (tt("motor.entreno.run"), "correr"), "carrera": (tt("motor.entreno.carrera"), "medalla"),
+               **{c["id"]: (c["nombre"], c.get("icono", "punto")) for c in config["categorias"]}}
+    out = []
+    for a in sorted((x for x in acts if m.day_of(x) == d and m.classify(x, config)), key=lambda x: x["startTimeLocal"]):
+        c = m.classify(a, config)
+        carrera = c == "run" and m.es_carrera(a, config)
+        k = ("carrera" if carrera else "run") if c == "run" else c
+        e = next((e for e in sesiones or [] if c == "run" and e["fecha"] == d.isoformat()
+                  and e["minutos"] == a["duration"] / 60), None)
+        km = (a.get("distance") or 0) / 1000
+        out.append({"cat": c, "nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(a["duration"] / 60),
+                    "km": r2(km) if km >= 0.05 else None, "fc_prom": round(a["averageHR"]) if a.get("averageHR") else None,
+                    "carrera": carrera, "sesion": {"nombre": e["name"], "estado": e["estado"]} if e else None})
+    return out
+
+
 def build_semana_libre(hoy: date, data: dict, config: dict) -> dict:
     """«Tu semana» (modo sin plan): actividades por día, minutos y km contra el promedio de las 4 semanas anteriores,
     zonas, recuperación y racha de semanas activas. Nunca nombres, IDs ni GPS: solo tipo y minutos."""
     ini = monday(hoy)
     acts = m.sin_repetidas(data["activities"], config)
-    nombres = {"run": (tt("motor.entreno.run"), "correr"), "carrera": (tt("motor.entreno.carrera"), "medalla"),
-               **{c["id"]: (c["nombre"], c["icono"]) for c in config["categorias"]}}
 
     def de_semana(i):
         a, b = i, i + timedelta(days=7)
@@ -406,12 +424,7 @@ def build_semana_libre(hoy: date, data: dict, config: dict) -> dict:
     dias = []
     for i in range(7):
         d = ini + timedelta(days=i)
-        items = []
-        for x in esta:
-            if m.day_of(x) == d:
-                c = m.classify(x, config)
-                k = ("carrera" if m.es_carrera(x, config) else "run") if c == "run" else c
-                items.append({"nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(x["duration"] / 60)})
+        items = actividades_del_dia(d, esta, config)
         dias.append({"fecha": d.isoformat(), "dia_semana": i18n.csv("motor.dias_cortos")[i], "hoy": d == hoy,
                      "futuro": d > hoy, "actividades": items})
     prev = [totales(de_semana(ini - timedelta(weeks=k))) for k in range(1, 5)]
@@ -447,7 +460,8 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
             sin_asignar.remove(clave)
         else:
             extras.append({"fecha": clave[0], **corrida_plana(a, None, data, config)})
-    dias = [dia_de_semana(ini + timedelta(days=i), hoy, runs, sesiones, data, config) for i in range(7)]
+    acts = m.sin_repetidas(data["activities"], config)
+    dias = [dia_de_semana(ini + timedelta(days=i), hoy, runs, sesiones, data, config, acts) for i in range(7)]
     marcar_planeados(dias, sesiones, hoy, pasada)
     for s in sesiones:
         s["minutos"] = r1(s["minutos"])
