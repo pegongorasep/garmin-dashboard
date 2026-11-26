@@ -4,6 +4,7 @@ Uso: python dashboard/build.py [--day YYYY-MM-DD] [--plan-start YYYY-MM-DD] [--o
 Es el único lugar con reloj: "hoy" se calcula en la zona horaria del config.
 """
 import argparse
+import hashlib
 import json
 import os
 from datetime import date, datetime, timedelta, timezone
@@ -961,6 +962,25 @@ def eventos_plan(config: dict) -> dict:
     return {"eventos": sorted(out, key=lambda e: e["desde"])} if out else {}
 
 
+def huella(contenido) -> str:
+    """Huella corta y estable de lo que dice un aviso: quien lo dio por entendido lo ve de nuevo solo si ella cambia."""
+    return hashlib.sha1(str(contenido).encode("utf-8")).hexdigest()[:10]
+
+
+def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n) -> dict:
+    """{id: huella} de los avisos que hoy están activos (los que el sitio puede cerrar con «Entendido»). Sin aviso, sin clave."""
+    out = {}
+    if tarjeta.get("aviso"):
+        out["hoy"] = huella(tarjeta["aviso"])
+    if aviso_zonas:
+        out["zonas"] = huella(aviso_zonas)
+    if fc_max.get("revisar"):
+        out["fcmax"] = huella(round(fc_max["estimacion"]))
+    if semaforo.get("repetir_semana"):
+        out["repetir"] = huella(semana_n)
+    return out
+
+
 def titular_hoy(tarjeta: dict, estado: list) -> str | None:
     """Línea de estado bajo el saludo de Hoy. None = el sitio la deja vacía (pausa, plan terminado, primera sincronización)."""
     tipo = tarjeta.get("tipo")
@@ -1074,7 +1094,9 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "numeros": build_numeros(hoy, filas, mejora["modo"]),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
-        "ui": build_ui(config, plan),
+        "ui": {**build_ui(config, plan), "avisos": huellas_avisos(
+            tarjeta, m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
+            fc_max, luz, n)},
         "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
         "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),

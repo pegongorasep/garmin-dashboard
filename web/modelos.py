@@ -66,6 +66,15 @@ class MiembroGrupo(Base):
     unido: Mapped[datetime] = mapped_column(default=ahora)
 
 
+class AvisoOculto(Base):
+    """Un aviso del sitio que la persona dio por «Entendido». `huella` = lo que decía: si cambia, el aviso vuelve a salir."""
+    __tablename__ = "avisos_ocultos"
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), primary_key=True)
+    aviso_id: Mapped[str] = mapped_column(sa.String(20), primary_key=True)
+    huella: Mapped[str] = mapped_column(sa.String(16))
+    creado: Mapped[datetime] = mapped_column(default=ahora)
+
+
 class Reaccion(Base):
     """G4: aplauso/fuego/fuerza de una persona a otra en un grupo, por semana ISO (lunes de esa semana en `semana`)."""
     __tablename__ = "reacciones"

@@ -31,6 +31,7 @@ a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:f
 .badge.warn { background: var(--warn); color: var(--on-warn); }
 .badge.bad { background: var(--bad); color: var(--on-bad); }
 .aviso-fondo { border-radius: var(--radius-inner); padding: 10px 12px; font-size: 13px; }
+.aviso-acc { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 .aviso-fondo.warn { background: var(--warn-bg); }
 .aviso-fondo.ok { background: var(--ok-bg); }
 .aviso-fondo.bad { background: var(--bad-bg); }

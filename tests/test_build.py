@@ -923,3 +923,12 @@ def test_titular_hoy_por_estado():
     assert build.titular_hoy({"tipo": "completa"}, est) == "Hoy toca descansar"
     assert build.titular_hoy({"tipo": "sin_plan"}, est) == "¿Salimos a moverte?"
     assert build.titular_hoy({"tipo": "pausa"}, est) is None
+
+
+def test_huella_de_avisos_estable_y_cambia_con_el_contenido():
+    assert build.huella("FC máx 190") == build.huella("FC máx 190") != build.huella("FC máx 191")
+    fc = {"revisar": True, "estimacion": 190.4}
+    a = build.huellas_avisos({"aviso": "x"}, "zonas!", fc, {"repetir_semana": True}, 3)
+    assert set(a) == {"hoy", "zonas", "fcmax", "repetir"}
+    assert build.huellas_avisos({"aviso": "x"}, None, {"revisar": False}, {}, 3) == {"hoy": a["hoy"]}
+    assert build.huellas_avisos({}, None, {"revisar": True, "estimacion": 191}, {}, 3)["fcmax"] != a["fcmax"]

@@ -190,6 +190,19 @@ def test_migracion_inicial_crea_las_mismas_tablas_que_los_modelos(tmp_path):
     assert set(Base.metadata.tables) <= tablas
 
 
+def test_migracion_avisos_ocultos_sube_y_baja(tmp_path):
+    db = tmp_path / "m.db"
+    cfg = Config(str(ROOT / "web" / "alembic.ini"))
+    cfg.cmd_opts = type("O", (), {"x": [f"url=sqlite:///{db}"]})()
+    tablas = lambda: {r[0] for r in sqlite3.connect(db).execute("select name from sqlite_master where type='table'")}  # noqa: E731
+    command.upgrade(cfg, "head")
+    assert "avisos_ocultos" in tablas()
+    command.downgrade(cfg, "0012")
+    assert "avisos_ocultos" not in tablas()
+    command.upgrade(cfg, "head")
+    assert "avisos_ocultos" in tablas()
+
+
 def test_settings_exigen_secret_key_fuera_de_localhost_y_arreglan_la_url_de_postgres():
     from web.config import Settings
     with pytest.raises(RuntimeError):

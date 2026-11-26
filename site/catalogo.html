@@ -92,7 +92,7 @@ def("Contenedores", "Tarjeta", "DS.tarjeta()", "Contenedor base con título.",
   DS.tarjeta({ titulo: "Carrera de hoy", clase: "carrera" }, h("p", { class: "mu" }, "Con raya de color a la izquierda.")));
 def("Contenedores", "Aviso", "DS.aviso()", "Aviso con fondo: atención, bien o problema.",
   DS.aviso({ clase: "warn", titulo: "Duerme un poco más", texto: "Tu recuperación viene baja hace 3 días." }),
-  DS.aviso({ clase: "ok", texto: "Plan al día." }), DS.aviso({ clase: "bad", titulo: "No se pudo guardar", texto: "Intenta otra vez." }));
+  DS.aviso({ clase: "ok", texto: "Plan al día." }), DS.aviso({ clase: "warn", simbolo: "!", texto: "Con botón «Entendido» cuando se puede cerrar.", onEntendido: () => {} }), DS.aviso({ clase: "bad", titulo: "No se pudo guardar", texto: "Intenta otra vez." }));
 def("Contenedores", "Confirmación", "DS.confirmacion()", "Antes de una acción que borra o pierde datos.",
   DS.confirmacion({ titulo: "¿Rehacer el plan desde la semana 7?", texto: "Las sesiones de esas semanas que editaste a mano se pierden:",
     lista: ["Semana 7 · Z2 #2 (30 min)", "Semana 8 · Intervalos"], nota: "Puedes deshacerlo desde el historial.", confirmar: "Sí, rehacer" }));

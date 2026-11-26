@@ -60,10 +60,11 @@ const DS = (() => {
     h("span", { class: `avatar ${["av-0", "av-1", "av-2", "av-3", "av-4", "av-5"][color % 6]}${grande ? " g" : ""}`, "aria-hidden": "true" },
       foto ? h("img", { src: foto, alt: "", width: 256, height: 256 }) : iniciales);
 
-  /** Aviso con fondo. Recibe { clase: "warn"|"ok"|"bad", simbolo (insignia al inicio: el color no va solo), titulo, texto }. */
-  const aviso = ({ clase = "warn", simbolo, titulo, texto, extra } = {}) =>
+  /** Aviso con fondo. Recibe { clase: "warn"|"ok"|"bad", simbolo (insignia al inicio: el color no va solo), titulo, texto, onEntendido (agrega el botón «Entendido») }. */
+  const aviso = ({ clase = "warn", simbolo, titulo, texto, extra, onEntendido } = {}) =>
     h("div", { class: `aviso-fondo ${clase}${extra ? ` ${extra}` : ""}`, role: "status" }, titulo ? h("div", { class: "b-t" }, titulo) : null,
-      simbolo ? h("div", { class: "estado" }, insignia(clase, simbolo), h("span", {}, texto)) : texto);
+      simbolo ? h("div", { class: "estado" }, insignia(clase, simbolo), h("span", {}, texto)) : texto,
+      onEntendido ? h("div", { class: "aviso-acc" }, boton(T("sitio.aviso.entendido"), { variante: "texto", chico: true, onclick: onEntendido })) : null);
 
   /** Aviso del coach (cuando ves a otra persona). Recibe el nombre. */
   const avisoCoach = (nombre) => h("p", { class: "coach-aviso" }, insignia("warn", "!"), h("span", {}, T("sitio.ds.viendo"), h("b", {}, nombre), T("sitio.ds.como_coach")));

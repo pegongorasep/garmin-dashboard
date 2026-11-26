@@ -398,3 +398,24 @@ def test_hoy_saludo_el_nombre_va_en_la_pagina_y_nunca_en_data_json(web_ctx):
     datos = cl.get("/data.json")
     assert "Ana" not in datos.text and validar.problemas(datos.json()) == []
     assert datos.json()["hoy"]["titular"]
+
+
+def test_avisos_entendido_requiere_csrf_y_sesion_y_se_guarda_por_cuenta(web_ctx):
+    from web.modelos import AvisoOculto
+    uid, cl = listo(web_ctx)
+    pag = cl.get("/").text
+    assert 'data-avisos-ocultos="{}"' in pag and "data-csrf=" in pag
+    token = csrf_de(pag) if False else pag.split('data-csrf="')[1].split('"')[0]
+    assert cl.post("/avisos/ocultar", data={"id": "zonas", "huella": "ab12"}).status_code == 403   # sin CSRF
+    assert web_ctx.cliente().post("/avisos/ocultar", data={"id": "zonas", "huella": "ab12", "csrf": token}).status_code == 403   # sin sesión
+    assert cl.post("/avisos/ocultar", data={"id": "Zonas!", "huella": "ab12", "csrf": token}).status_code == 422
+    assert cl.post("/avisos/ocultar", data={"id": "zonas", "huella": "ab12", "csrf": token}).json() == {"ok": True}
+    assert cl.post("/avisos/ocultar", data={"id": "zonas", "huella": "cd34", "csrf": token}).status_code == 200   # cambia la huella: se actualiza
+    with web_ctx.sesiones() as db:
+        assert [(a.aviso_id, a.huella) for a in db.query(AvisoOculto).filter_by(usuario_id=uid)] == [("zonas", "cd34")]
+    assert '&quot;zonas&quot;: &quot;cd34&quot;' in cl.get("/").text
+    # otra cuenta no ve lo de esta
+    _, otra = listo(web_ctx, correo="b@x.com")
+    assert 'data-avisos-ocultos="{}"' in otra.get("/").text
+    # el coach que mira /a/<id>/ no recibe botón ni mapa
+    assert "data-csrf" not in cl.get(f"/a/{uid}/").text

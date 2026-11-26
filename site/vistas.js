@@ -584,7 +584,7 @@ function tarjetaFcMax(d) {
       h("div", { class: "kv" }, h("span", {}, T("sitio.fcm.pico")), h("span", {}, `${fmt(f.pico, 0)} ${T("sitio.lpm")}`)),
       h("div", { class: "kv" }, h("span", {}, T("sitio.fcm.est", { m: fmt(u.max_hr_floor, 0) })), h("span", {}, `${fmt(f.estimacion, 0)} ${T("sitio.lpm")}`)),
       f.listo ? DS.estado("ok", "✓", T("sitio.fcm.lista"), T("sitio.fcm.lista_e")) : DS.estado("nd", "—", Tn("sitio.fcm.faltan", faltan), T("sitio.fcm.en_curso")),
-      f.revisar ? DS.aviso({ clase: "warn", simbolo: "!", texto: T("sitio.fcm.revisar", { v: fmt(u.max_hr_review_above, 0) }) }) : null];
+      f.revisar ? avisoCerrable("fcmax", { clase: "warn", simbolo: "!", texto: T("sitio.fcm.revisar", { v: fmt(u.max_hr_review_above, 0) }) }) : null];
   const zonas = d.zonas || [];
   return DS.tarjeta({ titulo: T("sitio.fcz.titulo") }, ...cuerpo,
     zonas.length ? h("div", { class: "zonas-fc" }, h("p", { class: "nota" }, T("sitio.fcz.uso", { v: fmt(f.config, 0), f: T(f.fuente === "reloj" ? "sitio.fcz.reloj" : "sitio.fcz.respaldo"), r: fmt(d.rhr_promedio_7d, 0) })),
@@ -781,6 +781,11 @@ async function iniciar() {
   pintarEncabezado();
   setInterval(actualizarEncabezado, 60000);
   $("tabs").replaceChildren(DS.tabs({ items: tabsDef(), actual: null }));
+  repintarVistas();
+}
+
+/** Pinta todas las vistas con `datos` (al arrancar y cuando cambia algo local, como dar un aviso por «Entendido»). */
+function repintarVistas() {
   const vistas = ui().solo_cuerpo ? { progreso: renderProgreso } : { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
   for (const [id, fn] of Object.entries(vistas)) {
     try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, T("sitio.err.vista")); }

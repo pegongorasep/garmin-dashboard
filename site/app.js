@@ -182,6 +182,26 @@ function saludoHoy(d) {
     h("p", { class: "hoy-estado" }, (d.hoy && d.hoy.titular) || "\u00a0"));
 }
 
+/** Aviso que se puede dar por «Entendido» (solo en tu propia cuenta de la web). Python da `ui.avisos[id]` = huella de lo que dice;
+ *  si ya lo diste por visto con esa huella no se pinta, y si cambió, vuelve. Sin huella o sin sesión propia, sale normal. */
+function avisoCerrable(id, props) {
+  const huella = (ui().avisos || {})[id], app = $("app");
+  let ocultos = {};
+  try { ocultos = JSON.parse(app.dataset.avisosOcultos || "{}"); } catch (e) { /* sin mapa: nada oculto */ }
+  if (huella && ocultos[id] === huella) return null;
+  if (!huella || !app.dataset.csrf) return DS.aviso(props);
+  const entendido = async () => {
+    try {
+      const r = await fetch("/avisos/ocultar", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ csrf: app.dataset.csrf, id, huella }) });
+      if (!r.ok) return;
+    } catch (e) { return; }
+    app.dataset.avisosOcultos = JSON.stringify({ ...ocultos, [id]: huella });
+    repintarVistas();   // el hueco se cierra
+  };
+  return DS.aviso({ ...props, onEntendido: entendido });
+}
+
 const nombrePrueba = (tipo) => T(`sitio.prueba.${tipo}`);
 
 /** "7:42 /km", "93 % de trote" o "25:00" según la prueba. */
@@ -493,7 +513,7 @@ function filaHoyElegir(e, s, t, abierta) {
     opciones: ops.map((v) => ({ id: v, texto: v === "descanso" ? T("sitio.hoy.v_descanso") : T(`sitio.hoy.v_${v}`, { min: sesDe(v).minutes }) })),
     onCambio: (v) => { nom.textContent = nombreDe(v); mi.textContent = minDe(v); por.textContent = textoPor(v); mostrar(v); } });
   const cuerpo = [seg, por, cont];
-  if (t.aviso) cuerpo.push(DS.aviso({ clase: "warn", simbolo: "!", texto: t.aviso }));
+  { const av = t.aviso ? avisoCerrable("hoy", { clase: "warn", simbolo: "!", texto: t.aviso }) : null; if (av) cuerpo.push(av); }
   return DS.filaSesion({ nombre: h("span", {}, nom, " ", mi), hoy: true, abierta,
     estado: { clase: "nd", simbolo: "—", texto: T("sitio.ses.pendiente"), etiqueta: T("sitio.ses.pendiente_e") }, cuerpo });
 }
@@ -506,7 +526,7 @@ function filaHoy(e, s, t, abierta) {
   if (t.motivo) cuerpo.push(h("p", { class: "nota" }, T("sitio.por", { m: t.motivo })));
   if (t.version === "descanso") cuerpo.push(h("p", {}, T("sitio.descanso")));
   else if (ses) cuerpo.push(...[bloqueSilueta(ses), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
-  if (t.aviso) cuerpo.push(DS.aviso({ clase: "warn", simbolo: "!", texto: t.aviso }));
+  { const av = t.aviso ? avisoCerrable("hoy", { clase: "warn", simbolo: "!", texto: t.aviso }) : null; if (av) cuerpo.push(av); }
   return DS.filaSesion({ nombre: t.version === "descanso" ? e.name : `${e.name}${suave ? T("sitio.suave_par") : ""}`, minutos: t.version === "descanso" || !ses ? null : ses.minutes,
     hoy: true, abierta, estado: { clase: "nd", simbolo: "—", texto: T("sitio.ses.pendiente"), etiqueta: T("sitio.ses.pendiente_e") }, cuerpo });
 }
@@ -630,7 +650,7 @@ function renderHoySinPlan(d) {
       rec.hrv_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.hrv")), h("span", {}, `${fmt(rec.hrv_7d, 0)} ms`)) : null,
       rec.rhr_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.rhr")), h("span", {}, `${fmt(rec.rhr_7d, 0)} ${T("sitio.lpm")}`)) : null,
       rec["sueño_7d"] != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.sueno")), h("span", {}, T("sitio.sl.horas", { n: fmt(rec["sueño_7d"], 1) }))) : null) : null,
-    d.aviso_zonas ? DS.aviso({ clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
+    d.aviso_zonas ? avisoCerrable("zonas", { clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
 }
 
 function renderHoy(d) {
@@ -641,10 +661,10 @@ function renderHoy(d) {
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
     d.hoy.semaforo.repetir_semana
-      ? DS.aviso({ clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
+      ? avisoCerrable("repetir", { clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
       : null,
     tarjetaPlanTerminado(d), bannerHoy(d, !d.hoy.semana_pasada), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
-    d.aviso_zonas ? DS.aviso({ clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
+    d.aviso_zonas ? avisoCerrable("zonas", { clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
   pintarSemana(d);
 }
 function bloqueCarga(s) {

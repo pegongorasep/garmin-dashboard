@@ -1,10 +1,12 @@
 """Rutas y arranque de la web. `crear_app()` arma la app (las pruebas le pasan su propia base y su propio correo)."""
+import json
 import logging
-from html import escape
 import secrets
 import re
 from datetime import datetime, timezone
+from html import escape
 
+from sqlalchemy import select
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -17,8 +19,8 @@ from . import ROOT, admin, aprende, ajustes_web, auth, calculo, coach, correo, c
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
-from .modelos import Usuario
-from .permisos import puede_ver
+from .modelos import AvisoOculto, Usuario
+from .permisos import puede_editar, puede_ver
 
 log = logging.getLogger("web")
 SITE = ROOT / "site"
@@ -255,9 +257,36 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if not onboarding.completo(db, usuario):
             return RedirectResponse("/bienvenida", 303)
         html = (SITE / "index.html").read_text().replace("</main>", pie_sitio(request.state.idioma) + "</main>", 1)
-        # El nombre va solo en esta página (nunca en data.json). Las páginas no se guardan en el service worker; no-store por si acaso.
-        html = html.replace('<main id="app">', f'<main id="app" data-nombre="{escape(usuario.nombre or "", quote=True)}">', 1)
-        return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+        # Nombre, avisos ya entendidos y token CSRF van solo en esta página (nunca en data.json). Las páginas no se
+        # guardan en el service worker; no-store por si acaso.
+        ocultos = {a.aviso_id: a.huella for a in db.scalars(select(AvisoOculto).where(AvisoOculto.usuario_id == usuario.id))}
+        cookie = request.cookies.get(auth.COOKIE_CSRF)
+        nueva = cookie is None
+        cookie = cookie or secrets.token_urlsafe(24)
+        attrs = {"data-nombre": usuario.nombre or "", "data-avisos-ocultos": json.dumps(ocultos),
+                 "data-csrf": auth.campo_csrf(settings.secret_key, cookie)}
+        html = html.replace('<main id="app">', '<main id="app" ' + " ".join(f'{k}="{escape(v, quote=True)}"' for k, v in attrs.items()) + ">", 1)
+        resp = HTMLResponse(html, headers={"Cache-Control": "no-store"})
+        if nueva:
+            resp.set_cookie(auth.COOKIE_CSRF, cookie, httponly=True, secure=settings.cookie_segura, samesite="lax", path="/")
+        return resp
+
+    @app.post("/avisos/ocultar")
+    async def ocultar_aviso(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        """«Entendido»: la persona da por visto un aviso hasta que cambie su huella. Solo en su propia cuenta."""
+        form = await formulario(request)
+        if usuario is None or not puede_editar(db, usuario, usuario.id):
+            raise HTTPException(403)
+        aviso_id, huella = str(form.get("id", "")), str(form.get("huella", ""))
+        if not re.fullmatch(r"[a-z_]{1,20}", aviso_id) or not re.fullmatch(r"[0-9a-f]{1,16}", huella):
+            raise HTTPException(422)
+        fila = db.get(AvisoOculto, (usuario.id, aviso_id))
+        if fila is None:
+            db.add(AvisoOculto(usuario_id=usuario.id, aviso_id=aviso_id, huella=huella))
+        else:
+            fila.huella = huella
+        db.commit()
+        return JSONResponse({"ok": True})
 
     @app.get("/diseno")
     def diseno(usuario=Depends(actual)):
