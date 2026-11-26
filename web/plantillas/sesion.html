@@ -18,12 +18,12 @@
     <tbody>
     {% for f in filas %}{% set i = loop.index %}
     <tr>
-      <td>{{ i }}<input type="hidden" name="opc_{{ i }}" value="{{ '1' if f.opcional else '' }}"></td>
-      <td><div class="campo"><select name="tipo_{{ i }}" aria-label="Tipo del paso {{ i }}"><option value="trote" {{ 'selected' if f.tipo == 'trote' }}>Trote</option><option value="caminata" {{ 'selected' if f.tipo == 'caminata' }}>Caminata</option></select></div></td>
-      <td><div class="campo"><input type="number" name="min_{{ i }}" value="{{ f.min }}" min="1" max="240" aria-label="Minutos del paso {{ i }}"></div></td>
-      <td><div class="campo"><select name="zona_{{ i }}" aria-label="Zona del paso {{ i }}">{% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == f.zona }}>{{ z }}</option>{% endfor %}</select></div></td>
-      <td><div class="campo"><select name="grupo_{{ i }}" aria-label="Grupo del paso {{ i }}"><option value="0">—</option>{% for g in grupos %}<option value="{{ g }}" {{ 'selected' if f.grupo == g }}>{{ g }}</option>{% endfor %}</select></div></td>
-      <td><div class="campo"><input type="text" name="nota_{{ i }}" value="{{ f.nota }}" maxlength="60" aria-label="Nota del paso {{ i }}"></div></td>
+      <td class="c-n">{{ i }}<input type="hidden" name="opc_{{ i }}" value="{{ '1' if f.opcional else '' }}"></td>
+      <td class="c-tipo" data-l="Tipo"><div class="campo"><select name="tipo_{{ i }}" aria-label="Tipo del paso {{ i }}"><option value="trote" {{ 'selected' if f.tipo == 'trote' }}>Trote</option><option value="caminata" {{ 'selected' if f.tipo == 'caminata' }}>Caminata</option></select></div></td>
+      <td class="c-min" data-l="Minutos"><div class="campo"><input type="number" name="min_{{ i }}" value="{{ f.min }}" min="1" max="240" aria-label="Minutos del paso {{ i }}"></div></td>
+      <td class="c-zona" data-l="Zona"><div class="campo"><select name="zona_{{ i }}" aria-label="Zona del paso {{ i }}">{% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == f.zona }}>{{ z }}</option>{% endfor %}</select></div></td>
+      <td class="c-grupo" data-l="Grupo"><div class="campo"><select name="grupo_{{ i }}" aria-label="Grupo del paso {{ i }}"><option value="0">—</option>{% for g in grupos %}<option value="{{ g }}" {{ 'selected' if f.grupo == g }}>{{ g }}</option>{% endfor %}</select></div></td>
+      <td class="c-nota" data-l="Nota"><div class="campo"><input type="text" name="nota_{{ i }}" value="{{ f.nota }}" maxlength="60" aria-label="Nota del paso {{ i }}"></div></td>
     </tr>
     {% endfor %}
     </tbody>

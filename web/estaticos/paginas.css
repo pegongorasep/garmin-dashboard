@@ -21,3 +21,15 @@ form.pila { display: grid; gap: var(--space-12); }
 .card.nuevo { box-shadow: var(--shadow-card), inset 4px 0 0 var(--accent); }
 .card.deshecho { opacity: .65; }
 .caja details > .fs-cuerpo p { margin: 0; }
+
+/* Editor de sesión en pantalla angosta: cada paso es una tarjeta con los campos en rejilla (sin scroll lateral) */
+@media (max-width: 640px) {
+  .filas-pasos thead { display: none; }
+  .filas-pasos, .filas-pasos tbody { display: block; }
+  .filas-pasos tr { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8) var(--space-10); padding-block: var(--space-12); border-top: 1px solid var(--grid); }
+  .filas-pasos td { display: block; padding: 0; border: 0; min-width: 0; }
+  .filas-pasos td.c-n { grid-column: 1 / -1; font-weight: 600; }
+  .filas-pasos td.c-nota { grid-column: 1 / -1; }
+  .filas-pasos td[data-l]::before { content: attr(data-l); display: block; font: 600 12.5px/17px var(--font-sans); color: var(--ink-2); margin-bottom: var(--space-2); }
+  .filas-pasos td .campo, .filas-pasos td .campo input[type="text"] { min-width: 0; }
+}
