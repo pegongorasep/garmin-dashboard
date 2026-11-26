@@ -346,7 +346,7 @@ function detalleActividad(dt, a) {
   const pulso = dt.pulso ? h("p", { class: "nota" }, T("sitio.act.pulso", { p: T(dt.pulso === "banda" ? "sitio.act.pulso_banda" : "sitio.act.pulso_muneca") })
     + (dt.pulso === "muñeca" && dt.ritmo_s != null ? ` · ${T("sitio.act.sin_deriva")}` : "")) : null;
   return h("div", { class: "act-cuerpo" }, DS.tiles({ etiqueta: a.nombre, clase: "act-tiles" }, ...tiles), pulso,
-    dt.zonas ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.zonas")), DS.barraZonas(dt.zonas, { etiquetas: true })) : null, te,
+    dt.zonas ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.zonas")), DS.barraZonas(dt.zonas, { compacta: true, sinMeta: true, leyenda: true })) : null, te,
     dt.ritmos_km ? h("p", { class: "nota" }, `${T("sitio.act.por_km")}: ${dt.ritmos_km.map(mmss).join(" · ")}`) : null,
     dt.curva_fc ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.curva_t")), DS.curvaFc(dt.curva_fc)) : null);
 }
@@ -375,7 +375,7 @@ function calendarioTocable(dias, hoyIso, mk) {
   const inicial = dias.find((x) => x.fecha === hoyIso) || [...dias].reverse().find((x) => (x.actividades || []).length) || dias[0];
   const det = h("div", {}), botones = [];
   const elegir = (x) => {
-    for (const [b, f] of botones) { b.classList.toggle("sel", f === x.fecha); b.setAttribute("aria-pressed", String(f === x.fecha)); }
+    for (const [b, f] of botones) { b.classList.toggle("dia-sel", f === x.fecha); b.setAttribute("aria-pressed", String(f === x.fecha)); }
     det.replaceChildren(tarjetaDia(x, hoyIso));
   };
   const cal = DS.calendario(dias.map((x) => { const b = mk(x, x.fecha === inicial.fecha, () => elegir(x)); botones.push([b, x.fecha]); return b; }));

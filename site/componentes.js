@@ -255,7 +255,7 @@ const DS = (() => {
    dentro del círculo (hijos) y no se repite arriba. */
   const diaCal = ({ nombre, numero, hoy, titulo, hijos = [], numeroEnMarca = false, alTocar, seleccionado = false } = {}) => {
     const partes = [h("span", { class: "dn" }, nombre), numeroEnMarca ? null : h("span", { class: "df" }, numero), ...hijos];
-    const clase = `dia${hoy ? " hoy" : ""}${alTocar && seleccionado ? " sel" : ""}`;
+    const clase = `dia${hoy ? " hoy" : ""}${alTocar && seleccionado ? " dia-sel" : ""}`;
     return alTocar
       ? h("button", { type: "button", class: clase, title: titulo, "aria-label": titulo, "aria-pressed": String(!!seleccionado), onclick: alTocar }, ...partes)
       : h("div", { class: clase, role: "group", title: titulo, "aria-label": titulo }, ...partes);
@@ -296,9 +296,9 @@ const DS = (() => {
 
   /**
    * Barra de minutos por zona (Z1–Z5) con la marca de 80 %. dist = { minutos:{Z1…Z5}, bajo, limbo, alto }.
-   * opts: { compacta (delgada, sin corchetes), etiquetas (zona y % dentro de cada tramo, con leyenda en pantalla chica) }.
+   * opts: { sinMeta (sin la marca de 80 %: la meta es semanal), leyenda (leyenda fija con % bajo la barra), compacta (delgada, sin corchetes), etiquetas (zona y % dentro de cada tramo, con leyenda en pantalla chica) }.
    */
-  const barraZonas = (dist, { compacta = false, etiquetas = false } = {}) => {
+  const barraZonas = (dist, { compacta = false, etiquetas = false, sinMeta = false, leyenda = false } = {}) => {
     const z = ["Z1", "Z2", "Z3", "Z4", "Z5"];
     const total = z.reduce((a, k) => a + dist.minutos[k], 0);
     if (total <= 0) return null;
@@ -325,14 +325,17 @@ const DS = (() => {
       barra.append(seg);
     }
     wrap.append(tip, barra);
-    if (!compacta) {
+    if (!compacta && !sinMeta) {
       wrap.append(h("div", { class: "brackets", "aria-hidden": "true" }, [["Z1", "Z2"], ["Z3"], ["Z4", "Z5"]].map((g) => {
         const m = g.reduce((a, k) => a + dist.minutos[k], 0);
         return h("div", { style: `flex:${m} 1 0;${m <= 0 ? "display:none" : ""}` });
       })));
     }
-    wrap.append(h("div", { class: "meta80", "aria-hidden": "true" }, compacta ? null : h("i", {}, T("sitio.zb.meta"))));
-    if (etiquetas) {
+    if (!sinMeta) wrap.append(h("div", { class: "meta80", "aria-hidden": "true" }, compacta ? null : h("i", {}, T("sitio.zb.meta"))));
+    if (leyenda) {
+      wrap.append(h("div", { class: "leyenda zb-ley fija" }, z.filter((k) => dist.minutos[k] > 0).map((k) =>
+        h("span", {}, h("i", { style: `background:${ZONA_VAR[k]}`, "aria-hidden": "true" }), `${k} ${fmt(pct(k), 0)} %`))));
+    } else if (etiquetas) {
       wrap.append(h("div", { class: "leyenda zb-ley" }, z.filter((k) => dist.minutos[k] > 0).map((k) =>
         h("span", {}, h("i", { style: `background:${ZONA_VAR[k]}`, "aria-hidden": "true" }), k))));
     }

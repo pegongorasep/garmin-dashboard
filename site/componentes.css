@@ -63,11 +63,10 @@ a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:f
 /* Calendario */
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-2); }
 .dia { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0; border-radius: var(--radius-inner); border: 2px solid transparent; min-height: 74px; }
-.dia.hoy { border-color: var(--accent); background: var(--accent-bg); }
+.dia.hoy, button.dia.hoy { background: var(--accent-bg); }   /* hoy: fondo suave y rótulo en acento; el borde no cambia nunca (el tamaño no se mueve al elegir) */
+.dia.hoy .dn { color: var(--accent); font-weight: 700; }
 button.dia { font: inherit; color: inherit; background: none; cursor: pointer; width: 100%; min-width: 0; }
-button.dia.hoy { background: var(--accent-bg); }
-button.dia.sel:not(.hoy) { border-color: var(--ink-2); }
-button.dia.sel { background: var(--accent-bg); }
+button.dia.dia-sel { box-shadow: inset 0 0 0 2px var(--ink-2); }   /* elegido: aro por dentro, sin cambiar tamaño ni relleno */
 .dia-det { display: grid; gap: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--grid); }
 .act-fila { display: grid; gap: 2px; }
 .act-fila .act-t { display: flex; align-items: center; gap: var(--space-8); font: 600 13.5px/19px var(--font-sans); }
@@ -76,7 +75,8 @@ button.dia.sel { background: var(--accent-bg); }
 .act-fila .act-t svg { width: 16px; height: 16px; }
 .dn { font-size: 10px; color: var(--ink-2); text-transform: uppercase; }
 .df { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.circ { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--font-sans); background: var(--accent); color: var(--on-accent); margin-top: 2px; }
+.circ { width: 30px; height: 30px; flex: none; aspect-ratio: 1; box-sizing: border-box; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--font-sans); background: var(--accent); color: var(--on-accent); margin-top: 2px; }
+.circ svg { width: 60%; height: 60%; }   /* ícono dentro del círculo: 60 %, centrado, sin tocar el borde */
 .circ.incompleta { background: var(--warn); color: var(--on-warn); }
 .sn { font-size: 10px; font-weight: 600; }
 .cf { font-size: 10.5px; color: var(--muted); display: grid; justify-items: center; }
