@@ -174,3 +174,32 @@ def test_calculo_de_la_web_cachea_por_idioma(web_ctx):
         en2 = calculo.calcular(db, u, idioma="en")
     assert en["idioma"] == "en" and es["idioma"] == "es" and en2["idioma"] == "en"
     assert en["ui"]["textos"]["descarga"].startswith("Deload") and es["ui"]["textos"]["descarga"].startswith("Las semanas")
+
+
+def _literales_con_espanol(ruta):
+    """Cadenas "..." / '...' / `...` con tilde, ñ, ¿ o ¡ fuera de comentarios (heurística simple)."""
+    import re
+    texto = ruta.read_text(encoding="utf-8")
+    texto = re.sub(r"\{#.*?#\}", "", texto, flags=re.S) if ruta.suffix == ".html" else texto
+    texto = re.sub(r"/\*.*?\*/", "", texto, flags=re.S)
+    texto = re.sub(r"(?m)(^|\s)//.*$", "", texto)
+    esp = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡]")
+    cadenas = re.findall(r'"(?:[^"\\\n]|\\.)*"|\'(?:[^\'\\\n]|\\.)*\'|`(?:[^`\\]|\\.)*`', texto)
+    return sorted({c for c in cadenas if esp.search(c)})
+
+
+# Cadenas con tilde que no son texto para la persona: claves de data.json / valores guardados / alternativa sin catálogo.
+PERMITIDAS_ESPANOL = {
+    '"ahí la llevas"', '"señales"', '"sueño_h"', '"sueño_7d"', '"muñeca"', '"plan.terminó"',
+    '"Esto no es consejo médico: si algo duele, para."',   # alternativa de DS.pie si la plantilla no pasa t
+}
+
+
+def test_sin_texto_en_espanol_fuera_del_catalogo():
+    """Plantillas de la web y JS del sitio: todo texto visible sale del catálogo i18n (el catálogo de diseño es del admin y va en español)."""
+    from pathlib import Path
+    raiz = Path(__file__).parent.parent
+    archivos = [*(raiz / "web" / "plantillas").glob("*.html"), *(raiz / "site").glob("*.js")]
+    hallazgos = {f.name: [c for c in _literales_con_espanol(f) if c not in PERMITIDAS_ESPANOL] for f in archivos}
+    hallazgos = {k: v for k, v in hallazgos.items() if v}
+    assert not hallazgos, f"texto en español fuera de i18n/*.yaml: {hallazgos}"

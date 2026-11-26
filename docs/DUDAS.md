@@ -364,3 +364,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **I4 (textos del motor):** el idioma del cálculo viaja en `config["idioma"]` (Pages: `config.yaml`, por defecto es; web: el de la petición > cuenta > es) y `build.build()` lo fija en un `ContextVar` (`i18n.usar`) para que las funciones puras de `metrics`/`tipos`/`ayuda` pidan sus textos con `i18n.tt("motor.*")` sin cambiar firmas. La caché de `web/calculo` lleva el idioma en su huella. Las claves `motor.*` no van al JS (solo `sitio.*`).
 - **I4 (plan):** el plan guardado sigue en español; `dashboard/plan_i18n.py` reconoce nombres, notas y `focus` conocidos por el catálogo `es` y los traduce al armar data.json (lo que escribió la persona queda tal cual). No se añadieron `nombre_id`/`nota_id` a `gen_plan` (los planes ya guardados no los traen); `build` emite `nota_id` en cada paso con nota conocida y el JS compara con él (ya no `p.note === "opcional"`). `etiqueta` de semana sigue siendo un id; el JS la traduce (`sitio.plan.et_*`).
 - **I4 (pendiente a propósito):** los `ConfigError` de `ajustes.py` (mensajes para quien edita config.yaml) y los textos de `reloj_plan` siguen en español; menús/`plan_acciones` de la web (`web/calculo.MENU`) y el aviso `estado_repo` siguen en español.
+
+## v5 idiomas (I5)
+- Vocabulario del inglés: "Run/walk" (no "Jog and walk"), "Easy run #1/#2", "Long run", "Zone 2" (Z2 en textos cortos), "Deload week", "Race week". Se conserva "jog/jogging" como verbo dentro de las frases.
+- Menú, acciones del plan y aviso de repo de `web/calculo.py` ahora salen de `web.*` del catálogo; `MENU` y `PLAN_ACCIONES` quedan como la versión en español (las pruebas los comparan).
+- Prueba anti-español (`test_sin_texto_en_espanol_fuera_del_catalogo`): heurística de tildes/ñ/¿¡ en cadenas de plantillas y JS; lista `PERMITIDAS_ESPANOL`. No cubre `catalogo.html` (admin, en español).
+- Siguen en español a propósito: ConfigError, reloj_plan, MCP.

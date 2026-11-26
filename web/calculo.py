@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import build
+import i18n
 import validar
 from ajustes import normalizar_config
 
@@ -17,14 +18,24 @@ from .modelos import Ajustes, CacheData, DatoGarmin, InBody, Plan, Usuario, ahor
 
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
-MENU = [{"texto": "Ajustes", "url": "/ajustes"}, {"texto": "Historial", "url": "/historial"},
-        {"texto": "InBody", "url": "/cuerpo"}, {"texto": "Coach", "url": "/coach"}, {"texto": "Privacidad", "url": "/privacidad"},
-        {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; el plan vive en la pestaña Plan (Coach/Admin: cuando existan sus rutas)
-# Botones de la pestaña Plan (ui.plan_acciones): llevan a los formularios del plan vivo.
-PLAN_ACCIONES = [{"texto": "Voy de viaje", "url": "/plan/acciones#viaje"},
-                 {"texto": "Estoy enfermo o lastimado", "url": "/plan/acciones#enfermo"},
-                 {"texto": "Agregar carrera", "url": "/plan/acciones#carrera"},
-                 {"texto": "Repetir semana y eventos", "url": "/plan/acciones"}]
+
+
+def menu_de(idioma: str = "es") -> list[dict]:
+    """Lo que pinta el JS junto al ?; el plan vive en la pestaña Plan."""
+    return [{"texto": i18n.t(f"web.menu.{k}", idioma), "url": u} for k, u in
+            (("ajustes", "/ajustes"), ("historial", "/historial"), ("inbody", "/cuerpo"),
+             ("coach", "/coach"), ("privacidad", "/privacidad"), ("salir", "/salir"))]
+
+
+def plan_acciones(idioma: str = "es") -> list[dict]:
+    """Botones de la pestaña Plan (ui.plan_acciones): llevan a los formularios del plan vivo."""
+    return [{"texto": i18n.t(f"web.accion.{k}", idioma), "url": u} for k, u in
+            (("viaje", "/plan/acciones#viaje"), ("enfermo", "/plan/acciones#enfermo"),
+             ("carrera", "/plan/acciones#carrera"), ("repetir", "/plan/acciones"))]
+
+
+MENU = menu_de("es")
+PLAN_ACCIONES = plan_acciones("es")
 
 
 class SinConfig(Exception):
@@ -43,8 +54,9 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: s
     aj = db.get(Ajustes, usuario.id)
     if aj is None:
         raise SinConfig()
-    crudo = {**aj.config, "modo": "web", "menu": MENU if menu is None else menu,
-             "plan_acciones": PLAN_ACCIONES, "idioma": idioma or usuario.idioma or "es"}
+    idioma = idioma or usuario.idioma or "es"
+    crudo = {**aj.config, "modo": "web", "menu": menu_de(idioma) if menu is None else menu,
+             "plan_acciones": plan_acciones(idioma), "idioma": idioma}
     if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
@@ -86,7 +98,7 @@ def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") ->
                            .where(DatoGarmin.usuario_id == usuario.id)).one()
     aj, pl = db.get(Ajustes, usuario.id), db.get(Plan, usuario.id)
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
-    partes = [hoy_local, idioma, json.dumps([MENU, PLAN_ACCIONES]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
+    partes = [hoy_local, idioma, json.dumps([menu_de(idioma), plan_acciones(idioma)]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
               usuario.repo, usuario.sensor]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
@@ -96,17 +108,18 @@ HORAS_SIN_SUBIR = 24
 LIGA_KEY = "https://connect.garmin.com/app/settings/personalApiToken"
 
 
-def estado_repo(db: Session, usuario: Usuario, ahora_utc: datetime) -> dict | None:
+def estado_repo(db: Session, usuario: Usuario, ahora_utc: datetime, idioma: str = "es") -> dict | None:
     """Aviso para quien tiene repo vinculado y lleva más de 24 h sin subir (o nunca ha subido). Nada si no está vinculado."""
     if not usuario.repo_id:
         return None
     ultima = tubo.ultima_subida(db, usuario.id)
     if ultima and ahora_utc - ultima < timedelta(hours=HORAS_SIN_SUBIR):
         return None
-    cuando = "todavía no ha mandado datos" if ultima is None else f"no manda datos desde hace {int((ahora_utc - ultima).total_seconds() // 3600)} h"
-    return {"texto": f"Tu repo {cuando}: revisa que Actions esté activo o renueva tu key de Garmin.",
-            "ligas": [{"texto": "Abrir Actions", "url": f"https://github.com/{usuario.repo}/actions"},
-                      {"texto": "Renovar mi key de Garmin", "url": LIGA_KEY}]}
+    cuando = (i18n.t("web.repo.nunca", idioma) if ultima is None else
+              i18n.t("web.repo.hace", idioma, h=int((ahora_utc - ultima).total_seconds() // 3600)))
+    return {"texto": i18n.t("web.repo.aviso", idioma, cuando=cuando),
+            "ligas": [{"texto": i18n.t("web.repo.actions", idioma), "url": f"https://github.com/{usuario.repo}/actions"},
+                      {"texto": i18n.t("web.repo.key", idioma), "url": LIGA_KEY}]}
 
 
 PREFIJABLES = ("/ajustes", "/historial", "/cuerpo", "/plan")   # rutas que existen también bajo /a/<id>
@@ -131,7 +144,7 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     Truena con SinConfig o DataInvalido."""
     base = _calcular_cacheado(db, usuario, ahora_utc, idioma)
     ahora_naive = ahora_utc or ahora()
-    salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive)}}
+    salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es")}}
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)
     if avisos:
