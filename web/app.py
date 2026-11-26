@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 
 from ajustes import ConfigError
 
-from . import ROOT, ajustes_web, auth, calculo, coach, correo, oauth, onboarding, plan_web, tubo
+from . import ROOT, ajustes_web, auth, calculo, coach, correo, mcp_servidor, oauth, onboarding, plan_web, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -130,7 +130,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if u is None:
             return render(request, "liga.html", status=400, no_valida=True)
         volver = request.cookies.get(oauth.COOKIE_VOLVER, "")
-        resp = RedirectResponse(volver if volver.startswith(oauth.ENTRADA + "?") else "/", 303)   # conexión de una IA a medias
+        resp = RedirectResponse(oauth.volver_seguro(volver), 303)   # conexión de una IA a medias
         poner_sesion(resp, auth.crear_sesion(db, u))
         resp.delete_cookie(oauth.COOKIE_VOLVER, path="/")
         return resp
@@ -175,6 +175,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     plan_web.montar(app, get_db, actual, render, formulario, settings)
     coach.montar(app, get_db, actual, render, formulario, settings)
     oauth.montar(app, get_db, actual, render, formulario, settings)
+    mcp_servidor.montar(app, settings)
 
     # --- dashboard por usuario ---
 

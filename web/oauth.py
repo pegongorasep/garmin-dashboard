@@ -24,6 +24,13 @@ COOKIE_VOLVER = "oauth_volver"
 ENTRADA = "/oauth/autorizar"
 
 
+def volver_seguro(valor: str) -> str:
+    """Adónde regresa /entrar/liga: solo una ruta relativa a la pantalla de consentimiento; si no, al inicio (sin redirección abierta)."""
+    if valor.startswith(ENTRADA + "?") and "\\" not in valor and "\r" not in valor and "\n" not in valor:
+        return valor
+    return "/"
+
+
 def uri_valida(uri: str) -> bool:
     """https, o http solo en localhost/127.0.0.1 (pruebas); sin fragmento ni credenciales."""
     try:
