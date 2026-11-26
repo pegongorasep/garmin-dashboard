@@ -747,7 +747,7 @@ async function iniciar() {
   mostrarVista();
   // Mientras llega data.json: el logo que se arma; si falla, el error con «Volver a intentar».
   $("app").hidden = true;
-  $("carga").replaceChildren(DS.cargando(T("sitio.carga_frase")));
+  $("carga").replaceChildren(DS.cargando(T("sitio.carga_frase"), { pagina: true }));
   try {
     const resp = await fetch("data.json", { cache: "no-cache" });
     if (!resp.ok) throw new Error(`data.json: ${resp.status}`);

@@ -42,7 +42,7 @@ const DS = (() => {
       h("p", {}, fuente, enlace ? " · " : null, enlace ? h("a", { href: enlace.href }, enlace.texto) : null));
 
   /** Pantalla de carga: el logo se arma. Recibe la frase que va debajo. */
-  const cargando = (frase = T("sitio.ds.cargando")) => h("div", { class: "cargando", role: "status" }, logo(), h("p", { class: "frase" }, frase));
+  const cargando = (frase = T("sitio.ds.cargando"), { pagina = false } = {}) => h("div", { class: pagina ? "cargando pagina" : "cargando", role: "status" }, logo(), h("p", { class: "frase" }, frase));
 
   /** Error de carga. Recibe { titulo, texto, detalle, onReintentar }. */
   const errorCarga = ({ titulo = T("sitio.ds.error_t"), texto = "", detalle = "", onReintentar } = {}) =>
@@ -313,9 +313,9 @@ const DS = (() => {
       tip.style.left = `${Math.min(Math.max(r.left - w.left + r.width / 2, 60), w.width - 60)}px`;
     };
     for (const k of z) {
-      const seg = h("div", { style: `flex:${Math.max(dist.minutos[k], 0)} 1 0;background:${ZONA_VAR[k]}`, tabindex: "0",
+      if (dist.minutos[k] <= 0) continue;   // un tramo vacío no se pinta: así el primero y el último con datos llevan las esquinas redondas
+      const seg = h("div", { style: `flex:${dist.minutos[k]} 1 0;background:${ZONA_VAR[k]}`, tabindex: "0",
         "aria-label": T("sitio.zb.seg", { k, m: fmt(dist.minutos[k]), p: fmt(pct(k), 0) }) });
-      if (dist.minutos[k] <= 0) seg.style.display = "none";
       if (etiquetas) seg.append(h("span", { class: "zb-t", "aria-hidden": "true" }, h("span", { class: "zb-z" }, k), h("span", {}, `${fmt(pct(k), 0)} %`)));
       seg.addEventListener("pointerenter", () => mostrar(seg, k));
       seg.addEventListener("pointerdown", () => mostrar(seg, k));

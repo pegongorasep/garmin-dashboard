@@ -79,7 +79,7 @@ function def(grupo, nombre, fn, que, ...ejemplos) {
 
 // Marca
 def("Marca", "Marca", "DS.marca()", "Logo de 5 barras con los colores de zona y el nombre.", DS.marca());
-def("Marca", "Cargando", "DS.cargando()", "El logo se arma mientras llegan los datos.", DS.cargando("Armando tu semana…"));
+def("Marca", "Cargando", "DS.cargando()", "El logo se arma mientras llegan los datos. Con { pagina: true } queda al centro de la pantalla (carga inicial).", DS.cargando("Armando tu semana…"));
 def("Marca", "Error de carga", "DS.errorCarga()", "Cuando data.json no llega.",
   DS.errorCarga({ texto: "Revisa tu conexión y vuelve a intentar. Si sigue igual, puede que tu repo no haya subido datos hoy.", detalle: "data.json: 404" }));
 

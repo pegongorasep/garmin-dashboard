@@ -1,6 +1,6 @@
 /* Service worker mínimo: guarda lo estático; data.json y los textos (i18n/*.json) primero de la red y, sin red, la última copia.
    Nunca toca POST ni /api, /oauth, /mcp, /admin, ni las páginas (llevan datos de la sesión). */
-const VERSION = "v13";
+const VERSION = "v14";
 const ESTATICOS = ["/tokens.css", "/componentes.css", "/styles.css", "/base.js", "/app.js", "/charts.js", "/iconos.js",
   "/componentes.js", "/vistas.js", "/i18n/es.json", "/i18n/en.json", "/fuentes/Lexend-latin.woff2", "/icono-192.png", "/icono-512.png"];
 const PROHIBIDO = /^\/(api|oauth|mcp|admin)(\/|$)/;
