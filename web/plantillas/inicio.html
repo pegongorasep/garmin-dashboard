@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% from "componentes.html" import boton %}
 {% block contenido %}
-<h1>Ahí la Llevas</h1>
+<h1 class="pag-t">Ahí la Llevas</h1>
 <p>Tu entrenamiento de carrera, con tu plan y tus datos de Garmin. Solo para amigos de Pedro, por invitación.</p>
-<p><a class="btn" href="/entrar">Entrar</a></p>
-<p class="muted">¿No tienes cuenta? Pídele a Pedro una invitación.</p>
+<div class="acciones">{{ boton("Entrar", href="/entrar") }}</div>
+<p class="pag-s">¿No tienes cuenta? Pídele a Pedro una invitación.</p>
 {% endblock %}

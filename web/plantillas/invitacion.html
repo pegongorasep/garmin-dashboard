@@ -1,20 +1,20 @@
 {% extends "base.html" %}
+{% from "componentes.html" import boton, campo, aviso %}
 {% block titulo %}Invitación · Ahí la Llevas{% endblock %}
 {% block contenido %}
-<h1>Te invitaron a Ahí la Llevas</h1>
+<h1 class="pag-t">Te invitaron a Ahí la Llevas</h1>
 {% if mensaje %}
-<p class="ok" role="status">{{ mensaje }}</p>
+{% call aviso("ok") %}{{ mensaje }}{% endcall %}
 {% elif no_valida %}
-<p class="error">Esta invitación ya se usó o venció. Pídele a Pedro una nueva.</p>
+{% call aviso("bad", rol="alert") %}Esta invitación ya se usó o venció. Pídele a Pedro una nueva.{% endcall %}
 {% else %}
-{% if nota %}<p class="muted">Invitación: {{ nota }}</p>{% endif %}
+{% if nota %}<p class="pag-s">Invitación: {{ nota }}</p>{% endif %}
 <p>Escribe tu correo para crear tu cuenta. Te mandamos una liga para entrar; no hay contraseñas.</p>
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post">
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+<form class="pila" method="post">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label class="campo"><span>Correo</span>
-    <input type="email" name="correo" autocomplete="email" required autofocus></label>
-  <button class="btn" type="submit">Crear mi cuenta</button>
+  {{ campo("Correo", "correo", tipo="email", requerido=True, extra={"autocomplete": "email", "autofocus": true}) }}
+  {{ boton("Crear mi cuenta", tipo="submit") }}
 </form>
 {% endif %}
 {% endblock %}

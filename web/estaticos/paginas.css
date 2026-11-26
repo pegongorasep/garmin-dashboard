@@ -1,0 +1,15 @@
+/* Páginas de entrada y bienvenida (D3b-2): solo la caja y el ritmo vertical; todo lo demás sale de componentes.css. */
+body.pagina { padding-inline: var(--space-16); }
+.caja { max-width: 560px; margin: 0 auto; padding-block: var(--space-24); display: grid; gap: var(--space-16); }
+.caja.ancha { max-width: 760px; }
+.caja > * { min-width: 0; }
+.pag-t { font: 600 24px/30px var(--font-sans); letter-spacing: -.01em; }
+.pag-h { font: 600 17px/22px var(--font-sans); }
+.pag-s { color: var(--muted); font-size: 13px; line-height: 18px; }
+.texto { display: grid; gap: var(--space-8); }
+.texto ul, .texto ol, .pasos-lista { padding-left: var(--space-24); display: grid; gap: var(--space-8); margin: 0; }
+.acciones { display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: center; }
+form.pila { display: grid; gap: var(--space-12); }
+.caja a:not(.boton) { color: var(--accent); }
+.caja .pie { padding-inline: 0; }
+.texto h2 { margin-top: var(--space-16); }

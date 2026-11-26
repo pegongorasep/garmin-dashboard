@@ -1,19 +1,17 @@
 {% extends "base.html" %}
+{% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso, tarjeta, pasos as barra_pasos %}
 {% block titulo %}Bienvenida · Ahí la Llevas{% endblock %}
 {% block clase %}ancha{% endblock %}
+{% block clase_pie %}ancha{% endblock %}
 {% block contenido %}
-<h1>Vamos a armar tu plan</h1>
-<ol class="pasos" aria-label="Pasos">
-  {% for nombre in pasos %}
-  <li class="{{ 'actual' if loop.index == paso else ('hecho' if loop.index < paso else '') }}"
-      {% if loop.index == paso %}aria-current="step"{% endif %}>{{ loop.index }}. {{ nombre }}</li>
-  {% endfor %}
-</ol>
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<h1 class="pag-t">Vamos a armar tu plan</h1>
+{{ barra_pasos(pasos, paso, "Paso " ~ paso ~ " de " ~ (pasos|length)) }}
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 
 {% if paso == 1 %}
-<h2>Tu privacidad primero</h2>
-<div class="tarjeta">
+<h2 class="pag-h">Tu privacidad primero</h2>
+{% call tarjeta() %}
+  <div class="texto">
   <p>Para armar tu plan guardamos datos de tu Garmin: <strong>frecuencia cardiaca, variabilidad (HRV), sueño y
   composición corporal</strong>. Son <strong>datos personales sensibles</strong> y necesitamos tu consentimiento expreso.</p>
   <ul>
@@ -23,93 +21,135 @@
     <li>Esto no es consejo médico. Si algo duele, para.</li>
   </ul>
   <p><a href="/privacidad" target="_blank" rel="noopener">Leer el aviso de privacidad completo</a> (versión {{ version }}).</p>
-</div>
-<form method="post" action="/bienvenida/consentimiento">
+  </div>
+{% endcall %}
+<form class="pila" method="post" action="/bienvenida/consentimiento">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label class="check"><input type="checkbox" name="acepto" required>
-    <span>Leí el aviso de privacidad y <strong>acepto expresamente</strong> el tratamiento de mis datos sensibles de salud
-    para estas finalidades.</span></label>
-  <button class="btn" type="submit">Continuar</button>
+  {{ opcion("acepto", "Leí el aviso de privacidad y acepto expresamente el tratamiento de mis datos sensibles de salud para estas finalidades.", requerido=True) }}
+  {{ boton("Continuar", tipo="submit") }}
 </form>
 
 {% elif paso == 2 %}
-<h2>¿Cuál es tu usuario de GitHub?</h2>
+<h2 class="pag-h">¿Cuál es tu usuario de GitHub?</h2>
 <p>Tus datos de Garmin viajan por una copia privada que vive en <strong>tu</strong> cuenta de GitHub; así tu key
 nunca sale de ahí. Es gratis.</p>
-<form method="post" action="/bienvenida/github">
+<form class="pila" method="post" action="/bienvenida/github">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label class="campo"><span>Usuario de GitHub</span>
-    <input type="text" name="usuario" value="{{ u.github_owner or '' }}" autocomplete="off" autocapitalize="off" required>
-    <small>Es lo que aparece en github.com/<em>tu-usuario</em>.</small></label>
-  <button class="btn" type="submit">Continuar</button>
+  {{ campo("Usuario de GitHub", "usuario", valor=u.github_owner or "", requerido=True, ayuda="Es lo que aparece en github.com/tu-usuario.", extra={"autocomplete": "off", "autocapitalize": "off"}) }}
+  {{ boton("Continuar", tipo="submit") }}
 </form>
-<p class="muted">¿No tienes cuenta? <a href="https://github.com/signup" target="_blank" rel="noopener">Crea una gratis</a>
+<p class="pag-s">¿No tienes cuenta? <a href="https://github.com/signup" target="_blank" rel="noopener">Crea una gratis</a>
 (la usamos solo para correr tu copia del programa que baja tus datos).</p>
 
 {% elif paso == 3 %}
-<h2>Crea tu copia en GitHub</h2>
+<h2 class="pag-h">Crea tu copia en GitHub</h2>
 <p>Se crea una copia <strong>privada</strong> del programa que baja tus datos de Garmin. Deja el nombre que te sugiere GitHub.</p>
-<p><a class="btn" href="{{ liga.copia }}" target="_blank" rel="noopener">Crear mi copia en GitHub</a></p>
-<p class="muted">En GitHub toca «Create repository from template». Luego regresa aquí.</p>
-<p class="aviso">Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual.</p>
-<p><a class="btn sec" href="/bienvenida?paso=4">Ya la creé</a></p>
+<div class="acciones"><a class="boton" href="{{ liga.copia }}" target="_blank" rel="noopener">Crear mi copia en GitHub</a></div>
+<p class="pag-s">En GitHub toca «Create repository from template». Luego regresa aquí.</p>
+{% call aviso("warn") %}Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual.{% endcall %}
+<div class="acciones">{{ boton("Ya la creé", "sec", href="/bienvenida?paso=4") }}</div>
 
 {% elif paso == 4 %}
-<h2>Pon tu key de Garmin en tu repo</h2>
-<div class="aviso"><strong>Tu key se queda en tu GitHub; aquí no la pedimos nunca.</strong> No la escribas en esta página.</div>
-<ol>
+<h2 class="pag-h">Pon tu key de Garmin en tu repo</h2>
+{% call aviso("warn") %}<strong>Tu key se queda en tu GitHub; aquí no la pedimos nunca.</strong> No la escribas en esta página.{% endcall %}
+<ol class="pasos-lista">
   <li>Entra a <a href="{{ liga.key }}" target="_blank" rel="noopener">tu página de Garmin Connect</a>, toca
   <em>Create Key</em> y elige la expiración más larga. Copia la key (solo se muestra una vez).</li>
   <li>Abre <a href="{{ liga.secreto }}" target="_blank" rel="noopener">el formulario de secretos de tu repo</a>
   ({{ liga.repo }}; si le pusiste otro nombre, abre tu repo en GitHub y sigue igual). En <em>Name</em> escribe:
-    <div class="copiable"><code id="nombre-secreto">PERSONAL_API_KEY</code>
-    <button class="btn sec" type="button" id="copiar">Copiar nombre</button></div>
+    <div id="copiar-nombre"><div class="copiar"><code id="nombre-secreto">PERSONAL_API_KEY</code></div></div>
   </li>
   <li>En <em>Secret</em> pega tu key y toca <em>Add secret</em>.</li>
 </ol>
-<p><a class="btn sec" href="/bienvenida?paso=3">Atrás</a> <a class="btn" href="/bienvenida?paso=5">Ya la puse</a></p>
-<script>
-document.getElementById("copiar").addEventListener("click", function () {
-  var b = this; navigator.clipboard.writeText("PERSONAL_API_KEY").then(function () { b.textContent = "Copiado ✔"; });
-});
-</script>
+<div class="acciones">{{ boton("Atrás", "sec", href="/bienvenida?paso=3") }} {{ boton("Ya la puse", href="/bienvenida?paso=5") }}</div>
 
 {% elif paso == 5 %}
-<h2>Actívalo</h2>
-<ol>
+<h2 class="pag-h">Actívalo</h2>
+<ol class="pasos-lista">
   <li>Abre <a href="{{ liga.actions }}" target="_blank" rel="noopener">la pestaña Actions de tu repo</a> y, si GitHub te lo pide,
   toca <em>I understand my workflows, go ahead and enable them</em>.</li>
   <li>Elige el flujo <em>Deploy</em> a la izquierda y toca <em>Run workflow</em> (el botón verde).</li>
 </ol>
-<p class="muted">Corre solo 3 veces al día; este primer disparo manual trae tu historial.</p>
-<p class="aviso">Si le pusiste otro nombre a tu repo, abre tu repo en GitHub y sigue igual.</p>
-<p><a class="btn sec" href="/bienvenida?paso=4">Atrás</a> <a class="btn" href="/bienvenida?paso=6">Ya lo corrí</a></p>
+<p class="pag-s">Corre solo 3 veces al día; este primer disparo manual trae tu historial.</p>
+{% call aviso("warn") %}Si le pusiste otro nombre a tu repo, abre tu repo en GitHub y sigue igual.{% endcall %}
+<div class="acciones">{{ boton("Atrás", "sec", href="/bienvenida?paso=4") }} {{ boton("Ya lo corrí", href="/bienvenida?paso=6") }}</div>
 
 {% elif paso == 6 %}
 {% if not u.repo_id %}
-<h2>Comprueba que ese repo es tuyo</h2>
-<ol>
+<h2 class="pag-h">Comprueba que ese repo es tuyo</h2>
+<ol class="pasos-lista">
   <li>Abre <a href="{{ liga.actions }}" target="_blank" rel="noopener">la última corrida de tu repo</a> (pestaña Actions).
   Si no hay ninguna, toca <em>Run workflow</em> en el flujo <em>Deploy</em> y espera un par de minutos.</li>
   <li>Entra a esa corrida: abajo, en <em>Summary</em>, dice «Tu código para Ahí la Llevas». Solo lo ven quienes tienen acceso a tu repo privado.</li>
   <li>Escribe aquí el código de 6 dígitos:</li>
 </ol>
-<form method="post" action="/bienvenida/codigo">
+<form class="pila" method="post" action="/bienvenida/codigo">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label class="campo"><span>Código</span>
-    <input type="text" name="codigo" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" required></label>
-  <button class="btn" type="submit">Vincular mi repo</button>
+  {{ campo("Código", "codigo", requerido=True, extra={"inputmode": "numeric", "pattern": "[0-9 ]{6,7}", "maxlength": "7", "autocomplete": "one-time-code"}) }}
+  {{ boton("Vincular mi repo", tipo="submit") }}
 </form>
-<p class="muted">El código vence en 1 hora y tienes 5 intentos; si falla, corre «Run workflow» otra vez para uno nuevo.</p>
-<p><a class="btn sec" href="/bienvenida?paso=5">Atrás</a></p>
+<p class="pag-s">El código vence en 1 hora y tienes 5 intentos; si falla, corre «Run workflow» otra vez para uno nuevo.</p>
+<div class="acciones">{{ boton("Atrás", "sec", href="/bienvenida?paso=5") }}</div>
 {% else %}
-<h2>Repo vinculado ✔ — ahora tus datos</h2>
+<h2 class="pag-h">Repo vinculado ✔ — ahora tus datos</h2>
 <p>La corrida que generó el código no guarda datos. Corre el flujo una vez más:</p>
-<p><a class="btn" href="{{ liga.actions }}" target="_blank" rel="noopener">Run workflow en mi repo</a></p>
-<p id="espera" class="aviso" role="status" aria-live="polite">Todavía no llegan. Tarda uno o dos minutos después de «Run workflow».</p>
-<p id="listo" class="ok" role="status" hidden>Ya llegaron tus datos ✔</p>
-<p><a class="btn" id="siguiente" href="/bienvenida?paso=7" hidden>Armar mi plan</a></p>
-<p class="muted">Si pasan 5 minutos, revisa que el flujo no haya fallado (casi siempre es la key: bien pegada y con el nombre <code>PERSONAL_API_KEY</code>).</p>
+<div class="acciones"><a class="boton" href="{{ liga.actions }}" target="_blank" rel="noopener">Run workflow en mi repo</a></div>
+<div id="espera">{% call aviso("warn") %}Todavía no llegan. Tarda uno o dos minutos después de «Run workflow».{% endcall %}</div>
+<div id="listo" hidden>{% call aviso("ok") %}Ya llegaron tus datos ✔{% endcall %}</div>
+<div class="acciones"><a class="boton" id="siguiente" href="/bienvenida?paso=7" hidden>Armar mi plan</a></div>
+<p class="pag-s">Si pasan 5 minutos, revisa que el flujo no haya fallado (casi siempre es la key: bien pegada y con el nombre <code>PERSONAL_API_KEY</code>).</p>
+{% endif %}
+
+{% elif paso == 7 %}
+<h2 class="pag-h">Tu plan</h2>
+<p>Las mismas preguntas de siempre; todo se puede cambiar después en Ajustes.</p>
+<form class="pila" method="post" action="/bienvenida/plan">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ campo("Título de tu página", "titulo", valor=valores.get('titulo', 'Mi entreno'), extra={"maxlength": "60"}) }}
+  {{ seleccion("Tu nivel", "nivel", [
+    ("novato", "Novato: menos de 3 meses corriendo o no corro 20' seguidos"),
+    ("intermedio", "Intermedio: 20–40' seguidos, 1–3 veces por semana"),
+    ("corredor", "Corredor: 45' o más seguidos, 3+ veces por semana")], "intermedio") }}
+  {{ seleccion("Intensidad", "intensidad", [
+    ("solo_z2", "Solo zona 2 (si ya haces algo intenso como HIIT o CrossFit)"),
+    ("z2_poca_z3", "Zona 2 con unos picos opcionales de zona 3"),
+    ("calidad", "Zona 2 y una sesión de calidad por semana (corredores)")], "z2_poca_z3") }}
+  {% call opciones("Tipos de calidad", "(solo si elegiste calidad; si no eliges, rotan)") %}
+    {% for t in tipos_calidad %}{{ opcion("calidad", t, valor=t) }}{% endfor %}
+  {% endcall %}
+  {{ opcion("caminatas", "Todavía no corro 20' seguidos: quiero sesiones de trote y caminata") }}
+  {{ campo("Minutos de una corrida Z2 cómoda hoy", "z2", tipo="number", valor=valores.get('z2', 20), requerido=True, corto=True, ayuda="Mejor quedarse corto: el plan sube solo.", extra={"min": "5", "max": "120"}) }}
+  {{ campo("Minutos de tu corrida más larga reciente", "larga", tipo="number", valor=valores.get('larga', 40), requerido=True, corto=True, extra={"min": "5", "max": "240"}) }}
+  {{ campo("Edad", "edad", tipo="number", valor=valores.get('edad', ''), corto=True, extra={"min": "10", "max": "99"}) }}
+  {{ campo("FC máxima", "fc_max", tipo="number", valor=valores.get('fc_max', ''), opcional="opcional", corto=True, ayuda="Si la dejas vacía se usa 220 − edad y tu reloj la corrige solo.", extra={"min": "120", "max": "230"}) }}
+  {% call opciones("¿Qué otras actividades haces?", "Si no marcas ninguna se usan todas las categorías comunes.") %}
+    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (" (intensa)" if c.intensa else ""), valor=c.id) }}{% endfor %}
+  {% endcall %}
+  {% call opciones("Días de pierna", "(para no poner la larga el día siguiente)") %}
+    {% for clave, nombre in dias %}{{ opcion("pierna", nombre, valor=clave) }}{% endfor %}
+  {% endcall %}
+  {{ campo("Fecha de inicio (un lunes)", "inicio", tipo="date", valor=valores.get('inicio', proximo_lunes), requerido=True) }}
+  {{ seleccion("Sensor de pulso", "sensor", [("banda", "Banda de pecho"), ("muñeca", "Muñeca")]) }}
+  {% set zonas_op = [] %}{% for z in zonas %}{% set _ = zonas_op.append((z, z)) %}{% endfor %}
+  {{ seleccion("Zona horaria", "zona", zonas_op, "America/Merida") }}
+  {{ opcion("inbody", "Tengo mediciones InBody") }}
+  {{ boton("Crear mi plan", tipo="submit") }}
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if paso == 4 %}
+<script src="/base.js"></script>
+<script src="/iconos.js"></script>
+<script src="/componentes.js"></script>
+<script>
+(function () {
+  var lugar = document.getElementById("copiar-nombre");
+  if (!lugar || typeof DS === "undefined" || !DS.copiar) return;
+  lugar.replaceChildren(DS.copiar({ texto: "PERSONAL_API_KEY", aviso: "Copiar nombre" }));
+})();
+</script>
+{% elif paso == 6 and u.repo_id %}
 <script>
 (function () {
   function revisar() {
@@ -124,58 +164,5 @@ document.getElementById("copiar").addEventListener("click", function () {
   revisar();
 })();
 </script>
-{% endif %}
-
-{% elif paso == 7 %}
-<h2>Tu plan</h2>
-<p>Las mismas preguntas de siempre; todo se puede cambiar después en Ajustes.</p>
-<form method="post" action="/bienvenida/plan">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label class="campo"><span>Título de tu página</span>
-    <input type="text" name="titulo" value="{{ valores.get('titulo', 'Mi entreno') }}" maxlength="60"></label>
-  <label class="campo"><span>Tu nivel</span>
-    <select name="nivel">
-      <option value="novato">Novato: menos de 3 meses corriendo o no corro 20' seguidos</option>
-      <option value="intermedio" selected>Intermedio: 20–40' seguidos, 1–3 veces por semana</option>
-      <option value="corredor">Corredor: 45' o más seguidos, 3+ veces por semana</option>
-    </select></label>
-  <label class="campo"><span>Intensidad</span>
-    <select name="intensidad">
-      <option value="solo_z2">Solo zona 2 (si ya haces algo intenso como HIIT o CrossFit)</option>
-      <option value="z2_poca_z3" selected>Zona 2 con unos picos opcionales de zona 3</option>
-      <option value="calidad">Zona 2 y una sesión de calidad por semana (corredores)</option>
-    </select></label>
-  <fieldset class="campo"><legend><strong>Tipos de calidad</strong> (solo si elegiste calidad; si no eliges, rotan)</legend>
-    {% for t in tipos_calidad %}
-    <label class="check"><input type="checkbox" name="calidad" value="{{ t }}"><span>{{ t }}</span></label>
-    {% endfor %}</fieldset>
-  <label class="check"><input type="checkbox" name="caminatas"><span>Todavía no corro 20' seguidos: quiero sesiones de trote y caminata</span></label>
-  <label class="campo"><span>Minutos de una corrida Z2 cómoda hoy</span>
-    <input type="number" name="z2" value="{{ valores.get('z2', 20) }}" min="5" max="120" required>
-    <small>Mejor quedarse corto: el plan sube solo.</small></label>
-  <label class="campo"><span>Minutos de tu corrida más larga reciente</span>
-    <input type="number" name="larga" value="{{ valores.get('larga', 40) }}" min="5" max="240" required></label>
-  <label class="campo"><span>Edad</span><input type="number" name="edad" value="{{ valores.get('edad', '') }}" min="10" max="99"></label>
-  <label class="campo"><span>FC máxima (opcional)</span>
-    <input type="number" name="fc_max" value="{{ valores.get('fc_max', '') }}" min="120" max="230">
-    <small>Si la dejas vacía se usa 220 − edad y tu reloj la corrige solo.</small></label>
-  <fieldset class="campo"><legend><strong>¿Qué otras actividades haces?</strong></legend>
-    {% for c in categorias %}
-    <label class="check"><input type="checkbox" name="cats" value="{{ c.id }}"><span>{{ c.nombre }}{% if c.intensa %} (intensa){% endif %}</span></label>
-    {% endfor %}
-    <small>Si no marcas ninguna se usan todas las categorías comunes.</small></fieldset>
-  <fieldset class="campo"><legend><strong>Días de pierna</strong> (para no poner la larga el día siguiente)</legend>
-    {% for clave, nombre in dias %}
-    <label class="check"><input type="checkbox" name="pierna" value="{{ clave }}"><span>{{ nombre }}</span></label>
-    {% endfor %}</fieldset>
-  <label class="campo"><span>Fecha de inicio (un lunes)</span>
-    <input type="date" name="inicio" value="{{ valores.get('inicio', proximo_lunes) }}" required></label>
-  <label class="campo"><span>Sensor de pulso</span>
-    <select name="sensor"><option value="banda">Banda de pecho</option><option value="muñeca">Muñeca</option></select></label>
-  <label class="campo"><span>Zona horaria</span>
-    <select name="zona">{% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == 'America/Merida' }}>{{ z }}</option>{% endfor %}</select></label>
-  <label class="check"><input type="checkbox" name="inbody"><span>Tengo mediciones InBody</span></label>
-  <button class="btn" type="submit">Crear mi plan</button>
-</form>
 {% endif %}
 {% endblock %}

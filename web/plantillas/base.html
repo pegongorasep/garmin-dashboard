@@ -14,14 +14,15 @@
 </script>
 <title>{% block titulo %}Ahí la Llevas{% endblock %}</title>
 <link rel="stylesheet" href="/tokens.css">
-<link rel="stylesheet" href="/estaticos/web.css">
+<link rel="stylesheet" href="/componentes.css">
+<link rel="stylesheet" href="/estaticos/paginas.css">
 </head>
 <body class="pagina">
+{% from "componentes.html" import pie %}
 <main class="caja {% block clase %}{% endblock %}">
 {% block contenido %}{% endblock %}
 </main>
-<footer class="pie">
-  <p>Esto no es consejo médico: si algo duele, para. · Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p>
-</footer>
+<div class="caja {% block clase_pie %}{% endblock %}">{{ pie() }}</div>
+{% block scripts %}{% endblock %}
 </body>
 </html>

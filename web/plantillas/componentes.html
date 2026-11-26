@@ -1,4 +1,4 @@
-{# Macros con el mismo HTML que site/componentes.js (clases de site/componentes.css). Todavía no las usan las páginas.
+{# Macros con el mismo HTML que site/componentes.js (clases de site/componentes.css). 
    Uso: {% from "componentes.html" import boton, campo, aviso, tarjeta, pasos, confirmacion, pie %} #}
 
 {# Botón o liga con aspecto de botón. variante: "", "sec", "texto" o "peligro"; chico: bool; href: si viene, es <a>. #}
@@ -12,10 +12,10 @@
 {%- endmacro %}
 
 {# Campo con etiqueta. opcional: texto chico entre paréntesis; ayuda y error: textos; corto: ancho de número. #}
-{% macro campo(etiqueta, nombre, tipo="text", valor="", opcional=None, ayuda=None, error=None, corto=False, deshabilitado=False, placeholder=None, requerido=False) -%}
+{% macro campo(etiqueta, nombre, tipo="text", valor="", opcional=None, ayuda=None, error=None, corto=False, deshabilitado=False, placeholder=None, requerido=False, extra={}) -%}
 <label class="campo{% if error %} error{% endif %}{% if corto %} corto{% endif %}">
   <span class="campo-t">{{ etiqueta }}{% if opcional %} <small>({{ opcional }})</small>{% endif %}</span>
-  <input type="{{ tipo }}" name="{{ nombre }}" value="{{ valor if valor is not none else '' }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if requerido %} required{% endif %}{% if deshabilitado %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="err-{{ nombre }}"{% endif %}>
+  <input type="{{ tipo }}" name="{{ nombre }}" value="{{ valor if valor is not none else '' }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if requerido %} required{% endif %}{% for k, v in extra.items() %} {{ k }}{% if v is not true %}="{{ v }}"{% endif %}{% endfor %}{% if deshabilitado %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="err-{{ nombre }}"{% endif %}>
   {%- if error %}
   <span class="error-t" id="err-{{ nombre }}" role="alert"><span class="badge bad">✕</span>{{ error }}</span>
   {%- endif %}
@@ -25,9 +25,40 @@
 </label>
 {%- endmacro %}
 
+{# Lista desplegable con etiqueta. opciones: lista de (valor, texto); valor: el elegido. #}
+{% macro seleccion(etiqueta, nombre, opciones, valor="", ayuda=None) -%}
+<label class="campo">
+  <span class="campo-t">{{ etiqueta }}</span>
+  <select name="{{ nombre }}">
+    {%- for v, t in opciones %}
+    <option value="{{ v }}"{% if v == valor %} selected{% endif %}>{{ t }}</option>
+    {%- endfor %}
+  </select>
+  {%- if ayuda %}
+  <span class="ayuda">{{ ayuda }}</span>
+  {%- endif %}
+</label>
+{%- endmacro %}
+
+{# Casillas con título (fieldset). Las opciones van en el bloque {% call opciones("Título") %}{{ opcion(...) }}{% endcall %}. #}
+{% macro opciones(titulo, pista=None) -%}
+<fieldset class="opciones">
+  <legend class="campo-t">{{ titulo }}{% if pista %} <small>{{ pista }}</small>{% endif %}</legend>
+  {{ caller() if caller else "" }}
+</fieldset>
+{%- endmacro %}
+
+{# Una casilla (o radio). texto puede llevar HTML marcado como seguro; nota: línea chica debajo. #}
+{% macro opcion(nombre, texto, valor=None, nota=None, marcado=False, requerido=False, tipo="checkbox") -%}
+<label class="opcion">
+  <input type="{{ tipo }}" name="{{ nombre }}"{% if valor is not none %} value="{{ valor }}"{% endif %}{% if marcado %} checked{% endif %}{% if requerido %} required{% endif %}>
+  <span>{{ texto }}{% if nota %}<small>{{ nota }}</small>{% endif %}</span>
+</label>
+{%- endmacro %}
+
 {# Aviso con fondo. clase: "warn", "ok" o "bad". El cuerpo va en el bloque {% call aviso("warn", "Título") %}…{% endcall %}. #}
-{% macro aviso(clase="warn", titulo=None) -%}
-<div class="aviso-fondo {{ clase }}" role="status">
+{% macro aviso(clase="warn", titulo=None, rol="status") -%}
+<div class="aviso-fondo {{ clase }}" role="{{ rol }}">
   {%- if titulo %}<div class="b-t">{{ titulo }}</div>{% endif %}
   {{ caller() if caller else "" }}
 </div>

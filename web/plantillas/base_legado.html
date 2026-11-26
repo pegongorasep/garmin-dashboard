@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<script>
+(function () {
+  var t = "dark";
+  try { var g = localStorage.getItem("tema"); if (g === "light" || g === "dark") t = g; } catch (e) {}
+  document.documentElement.setAttribute("data-theme", t);
+})();
+</script>
+<title>{% block titulo %}Ahí la Llevas{% endblock %}</title>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/estaticos/web.css">
+</head>
+<body class="pagina">
+<main class="caja {% block clase %}{% endblock %}">
+{% block contenido %}{% endblock %}
+</main>
+<footer class="pie">
+  <p>Esto no es consejo médico: si algo duele, para. · Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p>
+</footer>
+</body>
+</html>

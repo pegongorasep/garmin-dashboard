@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_legado.html" %}
 {% block titulo %}Ajustes · Ahí la Llevas{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% macro err(campo) %}{% if errores.get(campo) %}<small class="error-campo" role="alert">{{ errores[campo] }}</small>{% endif %}{% endmacro %}

@@ -42,12 +42,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, .btn:focus-vi
 .aviso { padding: 10px 12px; border-radius: 10px; background: var(--warn-bg); margin: 12px 0; }
 .error { padding: 10px 12px; border-radius: 10px; background: var(--bad-bg); margin: 12px 0; }
 .ok { padding: 10px 12px; border-radius: 10px; background: var(--ok-bg); margin: 12px 0; }
-.pasos { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 16px; flex-wrap: wrap; }
-.pasos li { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--axis); color: var(--muted); font-size: 0.85rem; }
-.pasos li.hecho { color: var(--ink); border-color: var(--ink-2); }
-.pasos li.actual { background: var(--ink); color: var(--page); border-color: var(--ink); }
-.copiable { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.copiable code { padding: 8px 10px; background: var(--page); border: 1px solid var(--axis); border-radius: 8px; overflow-wrap: anywhere; }
 .pie { max-width: 760px; margin: 24px auto 0; padding-block: 16px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--grid); }
 .pie a, .caja a { color: var(--ink-2); }
 .muted { color: var(--muted); }

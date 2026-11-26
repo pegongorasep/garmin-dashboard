@@ -1,23 +1,26 @@
 {% extends "base.html" %}
 {% block titulo %}Aviso de privacidad · Ahí la Llevas{% endblock %}
 {% block clase %}ancha{% endblock %}
+{% block clase_pie %}ancha{% endblock %}
 {% block contenido %}
-<h1>Aviso de privacidad</h1>
-<p class="muted">Versión {{ version }} · Ahí la Llevas</p>
+{% from "componentes.html" import tarjeta %}
+<h1 class="pag-t">Aviso de privacidad</h1>
+<p class="pag-s">Versión {{ version }} · Ahí la Llevas</p>
 
-<h2>Resumen</h2>
-<div class="tarjeta">
+<div class="texto">
+<h2 class="pag-h">Resumen</h2>
+{% call tarjeta() %}
   <p>Ahí la Llevas guarda tus datos de entrenamiento y salud de Garmin para mostrarte tu plan y tu progreso. Solo entran
   amigos por invitación. No vendemos tus datos ni los transferimos. Puedes pedir verlos, corregirlos, descargarlos o
   borrarlos cuando quieras.</p>
-</div>
+{% endcall %}
 
-<h2>1. Quién es el responsable</h2>
+<h2 class="pag-h">1. Quién es el responsable</h2>
 <p>El responsable del tratamiento es Pedro, administrador de Ahí la Llevas (proyecto personal, sin fines de lucro).
 Para ejercer tus derechos escribe a
 {% if settings.admin_correo %}<strong>{{ settings.admin_correo }}</strong>{% else %}el correo con el que Pedro te invitó{% endif %}.</p>
 
-<h2>2. Qué datos tratamos</h2>
+<h2 class="pag-h">2. Qué datos tratamos</h2>
 <ul>
   <li><strong>Cuenta:</strong> tu correo, tu apodo y tu usuario de GitHub.</li>
   <li><strong>Entrenamiento:</strong> fecha, duración, distancia, ritmo y pulso por segundo de tus actividades; RPE y sensación.
@@ -27,7 +30,7 @@ Para ejercer tus derechos escribe a
   <li><strong>Tus decisiones:</strong> tus ajustes, tu plan y el historial de cambios (quién los hizo y cuándo).</li>
 </ul>
 
-<h2>3. Para qué los usamos (finalidades)</h2>
+<h2 class="pag-h">3. Para qué los usamos (finalidades)</h2>
 <ul>
   <li>Mostrarte tu dashboard, tu plan y tu progreso.</li>
   <li>Compartirlos con tu coach <strong>solo si tú le das acceso</strong>, y quitárselo cuando quieras.</li>
@@ -35,7 +38,7 @@ Para ejercer tus derechos escribe a
 </ul>
 <p>No usamos tus datos para publicidad, perfiles comerciales ni ninguna otra finalidad.</p>
 
-<h2>4. Quién más participa (encargados y fuentes)</h2>
+<h2 class="pag-h">4. Quién más participa (encargados y fuentes)</h2>
 <ul>
   <li><strong>Google Cloud</strong> (Cloud Run y Cloud Storage): aloja la aplicación y los respaldos.</li>
   <li><strong>Neon:</strong> guarda la base de datos.</li>
@@ -46,15 +49,16 @@ Para ejercer tus derechos escribe a
 </ul>
 <p>No hay transferencias a terceros ni venta de datos.</p>
 
-<h2>5. Tus derechos (ARCO)</h2>
+<h2 class="pag-h">5. Tus derechos (ARCO)</h2>
 <p>Puedes <strong>acceder, rectificar, cancelar u oponerte</strong> al tratamiento de tus datos, y revocar tu consentimiento.
 Escribe al correo del responsable. Desde la cuenta tendrás los botones <em>Descargar mis datos</em> y
 <em>Borrar mi cuenta</em>. Al borrar tu cuenta se borran tus datos de la web; tu repo de GitHub es tuyo.</p>
 
-<h2>6. Cambios a este aviso</h2>
+<h2 class="pag-h">6. Cambios a este aviso</h2>
 <p>Si cambia, te lo mostramos y te pedimos aceptar la nueva versión. La versión vigente está arriba.</p>
 
-<h2>7. Importante</h2>
+<h2 class="pag-h">7. Importante</h2>
 <p><strong>Esto no es consejo médico.</strong> Si algo duele, para. Consulta a un profesional de la salud ante cualquier duda.
 Datos de Garmin.</p>
+</div>
 {% endblock %}
