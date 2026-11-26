@@ -984,6 +984,7 @@ def build_ui(config: dict, plan: dict) -> dict:
         "sin_plan": bool(config.get("sin_plan", False)),
         "plan_acciones": list(config.get("plan_acciones") or []),   # solo en la web: [{texto, url}] sobre el plan
         "liga_ajustar_plan": config.get("liga_ajustar_plan") or None,   # solo en la web: url de «Ajustar mi plan»; null = sin botón
+        "cuerpo_nuevo": config.get("cuerpo_nuevo") or None,   # solo en la web: url de «Agregar medición»; null = sin botón
         "editar_urls": {str(k): str(v) for k, v in (config.get("editar_urls") or {}).items()},   # solo en la web: {"<n>/<id>": url} de las sesiones editables
         "menu": [{"texto": i["texto"], "url": i["url"]} for i in config.get("menu") or []],   # solo en la web: [{texto, url relativa}]
         "textos": {

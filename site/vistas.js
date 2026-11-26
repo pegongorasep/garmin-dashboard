@@ -77,6 +77,12 @@ function selectorProgreso() {
     onCambio: (id) => { location.hash = id === "cuerpo" ? "#progreso/cuerpo" : "#progreso"; } });
 }
 
+/** Cabecera de Progreso > Cuerpo: «Agregar medición» (solo si la web trae ui.cuerpo_nuevo; en el sitio local no hay botón). */
+function cabCuerpo() {
+  const url = ui().cuerpo_nuevo;
+  return url ? h("div", { class: "cuerpo-cab" }, h("a", { class: "boton chico", href: url }, T("sitio.ib.agregar"))) : null;
+}
+
 function renderProgreso(d) {
   PINTAR.progreso = [];
   PINTAR.cuerpo = [];
@@ -84,7 +90,7 @@ function renderProgreso(d) {
   const prog = d.progreso || {};
   if (ui().solo_cuerpo) {   // «solo cuerpo»: sin Corridas ni selector; sin mediciones, un estado vacío con el botón
     const comp = tarjetaComposicion(d.composicion);
-    raiz.replaceChildren(h("div", { class: "sub", id: "prog-cuerpo" }, comp || DS.estadoVacio({ icono: null, titulo: T("sitio.ib.vacio_t"), texto: T("sitio.ib.vacio_x"),
+    raiz.replaceChildren(h("div", { class: "sub", id: "prog-cuerpo" }, comp ? [cabCuerpo(), comp] : DS.estadoVacio({ icono: null, titulo: T("sitio.ib.vacio_t"), texto: T("sitio.ib.vacio_x"),
       accion: { href: ui().cuerpo_nuevo || "/cuerpo/nuevo", texto: T("sitio.ib.agregar") } })));
     return;
   }
@@ -99,7 +105,7 @@ function renderProgreso(d) {
       tarjetaMarcasYCarreras(d),
       d.detalles && d.detalles.carga ? tarjetaCarga(d.detalles) : null].filter(Boolean)),
     h("div", { class: "sub", id: "prog-cuerpo", hidden: subProgreso !== "cuerpo" },
-      ...[tarjetaRecuperacion(d), tarjetaComposicion(d.composicion)].filter(Boolean)));
+      ...[cabCuerpo(), tarjetaRecuperacion(d), tarjetaComposicion(d.composicion)].filter(Boolean)));
 }
 
 /** Muestra Corridas o Cuerpo según `subProgreso` y marca el botón elegido. */

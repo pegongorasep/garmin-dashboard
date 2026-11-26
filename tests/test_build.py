@@ -1002,3 +1002,11 @@ def test_semanas_plan_estados_por_sesion(salida):
     assert {e["estado"] for e in sem[0]["estados"]} <= {"hecha", "incompleta", "no_hecha"}      # pasada: nada «pendiente»
     assert "estados" not in sem[1]                                                              # la actual usa estado_sesiones
     assert all(e["estado"] == "pendiente" for w in sem[2:] for e in w["estados"])               # futuras
+
+
+def test_ui_cuerpo_nuevo_null_por_defecto_y_con_la_clave():
+    plan = gen_plan.generar(CONFIG_CORREDOR)
+    assert build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)["ui"]["cuerpo_nuevo"] is None
+    cfg = {**CONFIG_CORREDOR, "cuerpo_nuevo": "/cuerpo/nuevo"}
+    out = build.build(fixture(), plan, cfg, AHORA)
+    assert out["ui"]["cuerpo_nuevo"] == "/cuerpo/nuevo" and validar.problemas(out) == []

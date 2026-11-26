@@ -222,13 +222,13 @@ function tarjetaPlanTerminado(d) {
 }
 
 /** La línea de resumen de una semana («1 corrida · 24 min · 3.1 km · 94 % trote»): la usan Esta semana y Semana pasada. `extra` = items al final. */
-function lineaSemana(st, vacio, extra = []) {
+function lineaSemana(st, vacio, extra = [], clase = "titular") {
   st = st || {};
   const partes = st.corridas
     ? [Tn("sitio.corrida", st.corridas), st.minutos != null ? T("sitio.min_n", { n: fmt(st.minutos, 0) }) : null,
       st.km != null ? T("sitio.km_n", { n: fmt(st.km) }) : null, st.pct_trote != null ? T("sitio.trote_pct", { v: fmt(st.pct_trote, 0) }) : null, ...extra].filter(Boolean)
     : [vacio];
-  return h("p", { class: "titular" }, partes.join(" · "));
+  return h("p", { class: clase }, partes.join(" · "));
 }
 
 /** Resumen de la semana pasada (calculado en Python): el veredicto en dos líneas y, al abrir, el mismo resumen que Esta semana. */
@@ -240,7 +240,7 @@ function resumenSemanaPasada(d) {
   const pct = tiene && r.sesiones_total ? Math.min(100, (r.sesiones_hechas / r.sesiones_total) * 100) : 0;
   const minutos = (r.stats || {}).minutos || 0;
   const bajo = (r.intensidad || {}).bajo;
-  const resumen = lineaSemana(r.stats, T("sitio.sin_corridas"), bajo != null ? [T("sitio.sp.bajas", { v: fmt(bajo, 0) })] : []);
+  const resumen = lineaSemana(r.stats, T("sitio.sin_corridas"), bajo != null ? [T("sitio.sp.bajas", { v: fmt(bajo, 0) })] : [], "sp-resumen");
   const verSemana = () => { semIdx = idxPasada; pintarSemana(d); const x = $("hoy-semana"); if (x && x.firstElementChild) x.firstElementChild.scrollIntoView({ behavior: "smooth", block: "start" }); };
   // La línea 2 vive en el summary: tocar «Entendido» no debe abrir ni cerrar el detalle.
   const linea2 = !sug ? null : sug.tipo === "sigue" ? h("p", { class: "sp-sigue" }, sug.texto)

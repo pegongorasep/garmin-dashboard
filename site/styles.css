@@ -35,6 +35,8 @@ body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el con
 .sp-cab { display: grid; flex: 1; min-width: 0; gap: var(--space-6); font-weight: 400; }
 .sp-cab .sem-barra { width: 100%; }
 .sp-linea { font-weight: 600; }
+.sp-resumen { margin: 0; font: 400 14px/20px var(--font-sans); }   /* letra de contenido, no de titular */
+.cuerpo-cab { display: flex; justify-content: flex-end; margin-bottom: var(--space-8); }
 .sp-sigue { margin: 0; font-size: 13px; color: var(--muted); }
 .sil-fila { pointer-events: none; }
 .titulo-sil { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }

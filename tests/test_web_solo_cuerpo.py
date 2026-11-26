@@ -99,3 +99,23 @@ def test_completo_no_cambia(web_ctx):
     assert cl.get("/data.json").status_code == 404   # sin ajustes sigue sin data.json
     with web_ctx.sesiones() as db:
         assert db.get(Usuario, uid).uso == "completo"
+
+
+def test_cuerpo_nuevo_segun_inbody_activo(web_ctx):
+    from web.calculo import config_de
+    uid, cl = nuevo(web_ctx, uso="cuerpo")
+    with web_ctx.sesiones() as db:
+        assert config_de(db, db.get(Usuario, uid))["cuerpo_nuevo"] == "/cuerpo/nuevo"
+    assert cl.get("/data.json").json()["ui"]["cuerpo_nuevo"] == "/cuerpo/nuevo"
+
+
+def test_cuerpo_nuevo_sin_inbody_no_hay_boton(web_ctx):
+    import copy
+    from test_web_ajustes import CONFIG
+    from web.calculo import config_de
+    from web.modelos import Ajustes
+    uid, cl = nuevo(web_ctx, uso="completo")
+    with web_ctx.sesiones() as db:
+        db.add(Ajustes(usuario_id=uid, config={**copy.deepcopy(CONFIG), "inbody": False}))
+        db.commit()
+        assert config_de(db, db.get(Usuario, uid)).get("cuerpo_nuevo") is None

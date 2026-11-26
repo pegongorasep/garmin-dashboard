@@ -66,6 +66,8 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: s
              "plan_acciones": plan_acciones(idioma), "idioma": idioma}
     if aj is not None and not usuario.sin_plan:
         crudo["liga_ajustar_plan"] = LIGA_AJUSTAR_PLAN
+    if crudo.get("inbody", True):   # InBody activo: botón «Agregar medición» en Progreso > Cuerpo
+        crudo["cuerpo_nuevo"] = "/cuerpo/nuevo"
     if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
