@@ -677,6 +677,7 @@ function renderHoy(d) {
     tarjetaPlanTerminado(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
     d.aviso_zonas ? avisoCerrable("zonas", { clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
   pintarSemana(d);
+  DS.animar.entrada();
 }
 function bloqueCarga(s) {
   const a = s.carga.total, b = s.carga_anterior.total;

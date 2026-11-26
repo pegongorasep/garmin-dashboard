@@ -516,3 +516,18 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .leyenda i.sw-anillo.anillo-carrera { outline-color: var(--bad); }
 .leyenda i.sw-anillo.anillo-prueba { outline-color: var(--morado); }
 .leyenda .sem-prog { margin: 0; height: auto; line-height: 14px; }
+
+/* Animaciones (G5): entrada de Hoy y cambio de tema. El estado final es el de siempre; con reduced-motion no hay nada. */
+@media (prefers-reduced-motion: no-preference) {
+  html.anim-entrada .plan .l { animation: anim-anillo 600ms ease-out backwards; }
+  html.anim-entrada .sem-barra i { transform-origin: left center; animation: anim-ancho 600ms ease-out backwards; }
+  html.anim-entrada #vista-hoy .graf .serie { transform-box: fill-box; transform-origin: bottom; animation: anim-alto 500ms ease-out backwards; }
+  html.anim-entrada #vista-hoy .graf .serie:nth-of-type(2n) { animation-delay: 40ms; }
+  html.anim-entrada #vista-hoy .graf .serie:nth-of-type(3n) { animation-delay: 80ms; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+  ::view-transition-old(root) { z-index: 1; }
+  ::view-transition-new(root) { z-index: 2; }
+}
+@keyframes anim-anillo { from { stroke-dashoffset: 190; } }
+@keyframes anim-ancho { from { transform: scaleX(0); } }
+@keyframes anim-alto { from { transform: scaleY(0); } }

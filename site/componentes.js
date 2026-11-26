@@ -479,8 +479,42 @@ const DS = (() => {
   /** Barras apiladas por semana (envoltorio de barChart). Recibe el cfg de barChart sin `ancho`. */
   const graficaBarras = (cfg) => conAncho((ancho) => barChart({ ...cfg, ancho }));
 
+  /** Animaciones (todas se apagan con prefers-reduced-motion). `tema(aplicar, boton)`: cambio de tema con un círculo que
+   *  nace en el botón (sin la API, cambia al instante). `entrada()`: la primera vez que se pinta Hoy, anillo y barras se
+   *  llenan (clase en <html> que se quita sola); las repintadas posteriores no animan. */
+  const animar = (() => {
+    const sinMov = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let hecha = false;
+    return {
+      tema(aplicar, boton) {
+        if (!document.startViewTransition || sinMov()) return aplicar();
+        const r = boton ? boton.getBoundingClientRect() : { left: innerWidth, top: 0, width: 0, height: 0 };
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        const fin = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        const t = document.startViewTransition(aplicar);
+        t.ready.then(() => document.documentElement.animate(
+          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${fin}px at ${x}px ${y}px)`] },
+          { duration: 450, easing: "ease-out", pseudoElement: "::view-transition-new(root)" })).catch(() => {});
+      },
+      entrada() {
+        if (hecha) return;
+        hecha = true;
+        if (sinMov()) return;
+        const raiz = document.documentElement, quitar = () => {
+          raiz.classList.remove("anim-entrada");
+          removeEventListener("pointerdown", quitar, true);
+          removeEventListener("keydown", quitar, true);
+        };
+        raiz.classList.add("anim-entrada");
+        addEventListener("pointerdown", quitar, true);
+        addEventListener("keydown", quitar, true);
+        setTimeout(quitar, 1400);
+      },
+    };
+  })();
+
   return {
-    ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
+    animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,

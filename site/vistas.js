@@ -664,12 +664,15 @@ function dibujarDetalles() {
 
 const temaActual = () => (document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
 
-function cambiarTema() {
+function cambiarTema(ev) {
   const nuevo = temaActual() === "light" ? "dark" : "light";
-  document.documentElement.setAttribute("data-theme", nuevo);
-  document.querySelector('meta[name="color-scheme"]').setAttribute("content", nuevo);
-  try { localStorage.setItem("tema", nuevo); } catch (e) { /* sin almacenamiento: vale solo esta visita */ }
-  pintarEncabezado();
+  const aplicar = () => {
+    document.documentElement.setAttribute("data-theme", nuevo);
+    document.querySelector('meta[name="color-scheme"]').setAttribute("content", nuevo);
+    try { localStorage.setItem("tema", nuevo); } catch (e) { /* sin almacenamiento: vale solo esta visita */ }
+    pintarEncabezado();
+  };
+  DS.animar.tema(aplicar, ev && ev.currentTarget);
 }
 
 // --- arranque ---

@@ -230,6 +230,8 @@ def("Datos", "Barra trote y caminata", "DS.barraTroteCaminata()", "Minutos trota
 // Hoy: selector de semana, anillo, calendario, números, barra de zonas y pestañas inferiores
 def("Datos", "Selector de semana", "DS.selectorSemana()", "Anterior y siguiente con la semana al centro.",
   DS.selectorSemana({ texto: "Semana 7 de 12 · 24–30 nov · carga", sinSiguiente: false }));
+def("Datos", "Animaciones", "DS.animar.tema() · DS.animar.entrada()", "Cambio de tema con un círculo que nace en el botón (View Transitions; sin la API cambia al instante) y entrada de Hoy: anillo y barras se llenan solo la primera vez. Sin movimiento si el sistema pide reducirlo. Aquí el botón solo prueba el tema.",
+  DS.tarjeta({ titulo: "Probar" }, DS.boton("Cambiar tema", { onclick: (e) => DS.animar.tema(() => { const r = document.documentElement; r.setAttribute("data-theme", r.getAttribute("data-theme") === "light" ? "dark" : "light"); }, e.currentTarget) })));
 def("Datos", "Anillo del plan", "DS.anilloPlan()", "Avance de la semana contra el plan.",
   DS.tarjeta({ titulo: "Esta semana" }, DS.anilloPlan({ pct: 62, titulo: "56 / 90 min · 62 %", texto: "Plan: 1 de 3 sesiones" })));
 def("Datos", "Curva de FC", "DS.curvaFc()", "Frecuencia cardiaca de una actividad: línea simple con rejilla y minutos. Recibe { seg, fc:[lpm] } con ≤120 puntos ya bajados en Python.",
