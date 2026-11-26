@@ -45,6 +45,36 @@ class FotoPerfil(Base):
     actualizada: Mapped[datetime] = mapped_column(default=ahora)
 
 
+class Grupo(Base):
+    """G2: grupo de amigos. Quien lo crea es el rol "admin" (rol en MiembroGrupo)."""
+    __tablename__ = "grupos"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nombre: Mapped[str] = mapped_column(sa.String(60))
+    creado_por: Mapped[int | None] = mapped_column(sa.ForeignKey("usuarios.id"))
+    creado: Mapped[datetime] = mapped_column(default=ahora)
+
+
+class MiembroGrupo(Base):
+    __tablename__ = "miembros_grupo"
+    __table_args__ = (sa.UniqueConstraint("grupo_id", "usuario_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    grupo_id: Mapped[int] = mapped_column(sa.ForeignKey("grupos.id"), index=True)
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    rol: Mapped[str] = mapped_column(sa.String(10), default="miembro")   # admin | miembro
+    pausado: Mapped[bool] = mapped_column(default=False)                  # «Pausar lo que comparto» (G3 lo respeta)
+    unido: Mapped[datetime] = mapped_column(default=ahora)
+
+
+class InvitacionGrupo(Base):
+    """Liga para unirse a un grupo; solo se guarda el hash. Vale varias veces hasta que expira."""
+    __tablename__ = "invitaciones_grupo"
+    token_hash: Mapped[str] = mapped_column(sa.String(64), primary_key=True)
+    grupo_id: Mapped[int] = mapped_column(sa.ForeignKey("grupos.id"), index=True)
+    creada_por: Mapped[int | None] = mapped_column(sa.ForeignKey("usuarios.id"))
+    creada: Mapped[datetime] = mapped_column(default=ahora)
+    expira: Mapped[datetime] = mapped_column()
+
+
 class Invitacion(Base):
     __tablename__ = "invitaciones"
     token_hash: Mapped[str] = mapped_column(sa.String(64), primary_key=True)

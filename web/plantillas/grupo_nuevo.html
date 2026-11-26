@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, aviso %}
+{% block titulo %}{{ t("grupos.nuevo_titulo") }}{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1 class="pag-t">{{ t("grupos.nuevo_titulo") }}</h1>
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+<form class="pila" method="post" action="/grupos/nuevo">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ campo(t("grupos.nombre"), "nombre", valor=valor, requerido=True, extra={"maxlength": 60}) }}
+  <div class="acciones">
+    {{ boton(t("grupos.crear"), tipo="submit") }}
+    {{ boton(t("comun.cancelar"), "sec", href="/grupos") }}
+  </div>
+</form>
+{% endblock %}

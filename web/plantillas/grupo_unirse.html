@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso %}
+{% block titulo %}{{ t("grupos.unirse_titulo") }}{% endblock %}
+{% block contenido %}
+<h1 class="pag-t">{{ t("grupos.unirse_titulo") }}</h1>
+{% if estado == "sin_sesion" %}
+<p>{{ t("grupos.unirse_sin_sesion") }}</p>
+<div class="acciones">{{ boton(t("grupos.entrar"), href="/entrar") }}</div>
+{% elif estado == "invalida" %}
+{% call aviso("bad", rol="alert") %}{{ t("grupos.liga_invalida") }}{% endcall %}
+<div class="acciones">{{ boton(t("comun.volver"), "sec", href="/grupos") }}</div>
+{% else %}
+<p>{{ t("grupos.unirse_texto", nombre=grupo.nombre) }}</p>
+{% if estado == "cuerpo" %}{% call aviso("warn") %}{{ t("grupos.err_cuerpo") }}{% endcall %}
+{% elif estado == "lleno" %}{% call aviso("bad", rol="alert") %}{{ t("grupos.err_lleno") }}{% endcall %}
+{% elif estado == "muchos" %}{% call aviso("bad", rol="alert") %}{{ t("grupos.err_muchos", n=5) }}{% endcall %}{% endif %}
+{% if estado == "ok" %}
+<p class="pag-s">{{ t("grupos.unirse_aviso") }}</p>
+<form class="acciones" method="post" action="/grupos/unirse/{{ token }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ boton(t("grupos.unirse"), tipo="submit") }}
+  {{ boton(t("comun.cancelar"), "sec", href="/grupos") }}
+</form>
+{% else %}
+<div class="acciones">{{ boton(t("comun.volver"), "sec", href="/grupos") }}</div>
+{% endif %}
+{% endif %}
+{% endblock %}

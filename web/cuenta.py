@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import auth
+from . import auth, grupos
 from .modelos import (FotoPerfil, Ajustes, CacheData, Cambio, ClienteOAuth, CodigoOAuth, Coach, Consentimiento, DatoGarmin, InBody,
                       CodigoLogin, Invitacion, LigaLogin, Plan, Sesion, CuentaBorrada, Subida, TokenOAuth, Usuario, VinculoPendiente)
 
@@ -69,6 +69,7 @@ def borrar_cuenta(db: Session, u: Usuario) -> None:
     db.execute(sa.delete(TokenOAuth).where(TokenOAuth.usuario_id == uid))
     db.execute(sa.delete(Coach).where(sa.or_(Coach.atleta_id == uid, Coach.coach_id == uid)))
     db.execute(sa.delete(Cambio).where(Cambio.atleta_id == uid))
+    grupos.quitar_de_todos(db, uid)
     db.execute(sa.delete(Invitacion).where(Invitacion.creada_por == uid))
     for modelo in (CacheData, LigaLogin, CodigoLogin, Sesion, Consentimiento, DatoGarmin, FotoPerfil, Subida, Ajustes, Plan, InBody, VinculoPendiente):
         db.execute(sa.delete(modelo).where(modelo.usuario_id == uid))

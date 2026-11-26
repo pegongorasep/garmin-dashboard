@@ -1,7 +1,7 @@
 """G1: perfil de la persona (nombre, apellido, foto opcional).
 
 La foto se recodifica con Pillow (256x256, recorte al centro, WebP): eso borra el EXIF/GPS. Se guarda en la base y solo
-la sirve la ruta autenticada `/perfil/foto/{id}` (hoy: la dueña y su coach; G2 la extiende a quienes comparten grupo).
+la sirve la ruta autenticada `/perfil/foto/{id}` (la dueña, su coach y quienes comparten grupo).
 """
 import io
 
@@ -121,8 +121,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
 
     @app.get("/perfil/foto/{usuario_id}")
     def foto(usuario_id: int, usuario=Depends(actual), db: Session = Depends(get_db)):
-        # G1: solo la dueña y su coach (permisos.puede_ver). G2 agrega a quienes comparten grupo.
-        if not permisos.puede_ver(db, usuario, usuario_id):
+        # La dueña, su coach y quienes comparten un grupo con ella.
+        if not (permisos.puede_ver(db, usuario, usuario_id) or permisos.mismo_grupo(db, usuario, usuario_id)):
             return Response(status_code=404)
         f = db.get(FotoPerfil, usuario_id)
         if f is None:

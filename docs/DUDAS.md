@@ -377,3 +377,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 
 ### v5 solo cuerpo (C2)
 - data.json de quien usa solo cuerpo: se corre el motor con ajustes de fábrica y datos vacíos y `calculo.solo_cuerpo` lo recorta (claves obligatorias vacías, `composicion`, `ui.solo_cuerpo`, `ui.cuerpo_nuevo`). Menú sin Historial ni Coach. El sitio oculta las pestañas y muestra solo Cuerpo; sin mediciones, estado vacío con «Agregar medición». /admin muestra la columna Modo.
+
+## v5 grupos (G2)
+- «Pausar lo que comparto» es una marca en la membresía (`MiembroGrupo.pausado`), por grupo; se cambia en la página del grupo. G3 la respeta en las tarjetas.
+- La liga de invitación vale 7 días y varias veces (se manda por chat); hash en la base. Máximo 12 personas por grupo y 5 grupos por persona.
+- Unirse exige cuenta (solo por invitación a la web): sin sesión se pide entrar y abrir la liga otra vez. «Solo cuerpo» no puede unirse.
+- Al salir la admin, la miembro más antigua pasa a admin; si no queda nadie, el grupo se borra. Solo la admin quita gente.

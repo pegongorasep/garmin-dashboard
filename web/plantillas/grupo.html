@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso, avatar, confirmacion %}
+{% block titulo %}{{ grupo.nombre }} · {{ t("grupos.titulo") }}{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1 class="pag-t">{{ grupo.nombre }}</h1>
+<p class="pag-s">{{ t("grupos.personas", n=miembros|length) }}</p>
+{% if liga %}{% call aviso("ok") %}{{ t("grupos.liga_lista", dias=7) }} <code>{{ liga }}</code>{% endcall %}{% endif %}
+<ul class="pila" aria-label="{{ t('grupos.miembros') }}">
+  {% for m, u in miembros %}
+  <li class="acciones">
+    {{ avatar(u, u.id in fotos) }}
+    <span>{{ ((u.nombre or "") ~ " " ~ (u.apellido or ""))|trim or u.correo }}{% if m.rol == "admin" %} <small>({{ t("grupos.admin") }})</small>{% endif %}{% if u.id == atleta.id %} <small>({{ t("grupos.tu") }})</small>{% endif %}</span>
+    {% if yo.rol == "admin" and u.id != atleta.id %}
+    <form method="post" action="/grupos/{{ grupo.id }}/quitar/{{ u.id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      {{ boton(t("grupos.quitar"), "texto", chico=True, tipo="submit") }}
+    </form>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+<h2 class="pag-h">{{ t("grupos.compartir") }}</h2>
+<p class="pag-s">{{ t("grupos.compartir_ayuda") }}</p>
+<form class="acciones" method="post" action="/grupos/{{ grupo.id }}/pausar">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="pausado" value="{{ '0' if yo.pausado else '1' }}">
+  {% if yo.pausado %}{{ boton(t("grupos.reanudar"), tipo="submit") }}<span class="badge warn">{{ t("grupos.pausado") }}</span>
+  {% else %}{{ boton(t("grupos.pausar"), "sec", tipo="submit") }}{% endif %}
+</form>
+<h2 class="pag-h">{{ t("grupos.invitar") }}</h2>
+{% if lleno %}<p>{{ t("grupos.err_lleno") }}</p>{% else %}
+<form class="acciones" method="post" action="/grupos/{{ grupo.id }}/invitar">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ boton(t("grupos.crear_liga"), "sec", tipo="submit") }}
+</form>
+{% endif %}
+<h2 class="pag-h">{{ t("grupos.salir") }}</h2>
+{% call confirmacion(t("grupos.salir_conf", nombre=grupo.nombre)) %}
+<form class="acciones" method="post" action="/grupos/{{ grupo.id }}/salir">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ boton(t("grupos.salir"), "peligro", tipo="submit") }}
+</form>
+{% endcall %}
+{% endblock %}
