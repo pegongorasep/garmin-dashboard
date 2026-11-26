@@ -560,3 +560,16 @@ def test_ui_del_plan_trae_valores_por_defecto_en_pages():
     assert d["ui"]["plan_acciones"] == [] and d["ui"]["editar_urls"] == {}
     d["ui"]["plan_acciones"] = [{"texto": "X", "url": "/plan/acciones"}]
     assert validar.problemas(d) == []
+
+
+def test_solo_el_modo_menos_vuelve_descarga_la_semana_5_pegada_a_la_4():
+    """Semana 4 es descarga natural. «Sigo igual» y «pausa» dejan la 5 en carga (con o sin carrera); «menos» la vuelve ligera."""
+    for meta in (None, 9, 10):
+        base = CONFIG if meta is None else plan_vivo.agregar_carrera(CONFIG, fecha_semana(meta, 6), 10, "10K")
+        tipos_ = {}
+        for modo in ("igual", "pausa", "menos"):
+            c = plan_vivo.agregar_evento(base, "viaje", fecha_semana(5, 1), fecha_semana(5, 4), modo=modo)
+            p = plan_vivo.plan_efectivo(plan_base(), cfg_de(c))
+            tipos_[modo] = (p["weeks"][3]["kind"], p["weeks"][4]["kind"])
+        assert tipos_["igual"] == ("descarga", "carga") and tipos_["pausa"] == ("descarga", "carga")
+        assert tipos_["menos"] == ("descarga", "descarga")
