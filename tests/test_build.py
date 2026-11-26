@@ -1010,3 +1010,9 @@ def test_ui_cuerpo_nuevo_null_por_defecto_y_con_la_clave():
     cfg = {**CONFIG_CORREDOR, "cuerpo_nuevo": "/cuerpo/nuevo"}
     out = build.build(fixture(), plan, cfg, AHORA)
     assert out["ui"]["cuerpo_nuevo"] == "/cuerpo/nuevo" and validar.problemas(out) == []
+
+
+def test_ui_grupos_cero_por_defecto():
+    plan = gen_plan.generar(CONFIG_CORREDOR)
+    out = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)
+    assert out["ui"]["grupos"] == 0 and validar.problemas(out) == []

@@ -14,7 +14,7 @@ import validar
 from ajustes import normalizar_config
 
 from . import cambios, datos, plan_vivo, tubo
-from .modelos import Ajustes, CacheData, DatoGarmin, InBody, Plan, Usuario, ahora
+from .modelos import Ajustes, CacheData, DatoGarmin, InBody, MiembroGrupo, Plan, Usuario, ahora
 
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
@@ -185,7 +185,10 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     Truena con SinConfig o DataInvalido."""
     base = _calcular_cacheado(db, usuario, ahora_utc, idioma)
     ahora_naive = ahora_utc or ahora()
-    salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es")}}
+    # `grupos` también va fuera de la caché: la huella no cuenta las membresías. Al coach que ve a su atleta no se le muestra.
+    n_grupos = 0 if pref else db.scalar(select(func.count()).select_from(MiembroGrupo).where(MiembroGrupo.usuario_id == usuario.id)) or 0
+    salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
+                             "grupos": n_grupos}}
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)
     if avisos:

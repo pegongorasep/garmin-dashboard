@@ -315,3 +315,78 @@ def test_reacciones_ocho_emojis_y_quienes_por_emoji(web_ctx):
     post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="❤️")   # toggle
     with web_ctx.sesiones() as db:
         assert grupos.reacciones_de(db, gid, grupos.semana_iso(), ub)[ua]["por_emoji"]["❤️"] == [uc]
+
+
+# --- G2 (parte 2): API JSON y ui.grupos ---
+
+def _dos(web_ctx):
+    a, b = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com")
+    gid = crear(a)
+    post(b, f"/grupos/unirse/{liga(a, gid)}")
+    with web_ctx.sesiones() as db:
+        ua = db.query(Usuario).filter_by(correo="a@x.com").one().id
+        ub = db.query(Usuario).filter_by(correo="b@x.com").one().id
+    return a, b, gid, ua, ub
+
+
+def test_api_requiere_sesion_y_miembro(web_ctx):
+    a, b, gid, ua, ub = _dos(web_ctx)
+    anon = web_ctx.cliente()
+    assert anon.get("/api/grupos").status_code == 401 and anon.get(f"/api/grupos/{gid}").status_code == 401
+    c = sesion(web_ctx, "c@x.com")
+    assert c.get(f"/api/grupos/{gid}").status_code == 404 and c.get("/api/grupos").json() == []
+    assert a.get("/api/grupos").json() == [{"id": gid, "nombre": "Los Fieras", "miembros_n": 2}]
+
+
+def test_api_forma_y_lista_blanca(web_ctx):
+    from web import grupos_resumen
+    a, b, gid, ua, ub = _dos(web_ctx)
+    d = a.get(f"/api/grupos/{gid}").json()
+    assert set(d) == {"grupo", "yo", "miembros", "total", "insignias", "novedades", "emojis", "admin_url"}
+    assert d["grupo"] == {"id": gid, "nombre": "Los Fieras"} and d["yo"] == ua and d["admin_url"] == f"/grupos/{gid}"
+    assert len(d["emojis"]) == 8
+    for m in d["miembros"]:
+        assert set(m) == {"usuario_id", "nombre", "foto", "tarjeta", "reacciones"}
+        assert set(m["tarjeta"]) <= grupos_resumen.CAMPOS
+        assert m["foto"] is None
+
+
+def test_api_pausado_sin_reacciones_y_reaccion_json(web_ctx):
+    a, b, gid, ua, ub = _dos(web_ctx)
+    r = post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥")           # sin Accept: redirección de siempre
+    assert r.status_code == 303
+    cs = csrf_de(b.get("/grupos/nuevo").text)
+    j = b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": cs, "emoji": "🏆"}, headers={"accept": "application/json"})
+    assert j.status_code == 200
+    rr = j.json()
+    assert rr["para_id"] == ua and rr["reacciones"]["🔥"] == {"n": 1, "quienes": ["Ana Prueba"], "mia": True}
+    assert rr["reacciones"]["🏆"]["mia"] is True
+    d = a.get(f"/api/grupos/{gid}").json()
+    mia = next(m for m in d["miembros"] if m["usuario_id"] == ua)
+    assert mia["reacciones"]["🔥"]["mia"] is False and mia["reacciones"]["🔥"]["n"] == 1
+    j = b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": cs, "emoji": "🏆"}, headers={"accept": "application/json"})
+    assert "🏆" not in j.json()["reacciones"]                           # toggle
+    post(a, f"/grupos/{gid}/pausar", pausado="1")
+    mia = next(m for m in a.get(f"/api/grupos/{gid}").json()["miembros"] if m["usuario_id"] == ua)
+    assert mia["reacciones"] == {} and mia["tarjeta"]["estado"] == "pausa"
+
+
+def test_reaccion_json_exige_csrf(web_ctx):
+    a, b, gid, ua, ub = _dos(web_ctx)
+    h = {"accept": "application/json"}
+    assert b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"emoji": "🔥"}, headers=h).status_code == 403
+    assert b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": "malo", "emoji": "🔥"}, headers=h).status_code == 403
+    c = sesion(web_ctx, "c@x.com")
+    cs = csrf_de(c.get("/grupos/nuevo").text)
+    assert c.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": cs, "emoji": "🔥"}, headers=h).status_code == 404
+
+
+def test_ui_grupos_0_1_2(web_ctx):
+    crear_usuario(web_ctx, "a@x.com", con_ajustes=True)
+    a = entrar(web_ctx, web_ctx.cliente(), "a@x.com")
+    n = lambda: a.get("/data.json").json()["ui"]["grupos"]   # noqa: E731
+    assert n() == 0
+    crear(a)
+    assert n() == 1                     # fuera de la caché: se ve al momento
+    crear(a, "Otro")
+    assert n() == 2

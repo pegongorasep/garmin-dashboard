@@ -7,7 +7,7 @@ from datetime import date, timedelta
 
 import sqlalchemy as sa
 from fastapi import Depends, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -39,6 +39,20 @@ def reacciones_de(db: Session, grupo_id: int, semana: str, yo: int) -> dict:
         if r.de_id not in d["quienes"]:
             d["quienes"].append(r.de_id)
     return out
+
+
+def reacciones_json(r: dict | None, nombres: dict, yo: int) -> dict:
+    """Lo que ve el cliente de las reacciones de una persona: {emoji: {n, quienes [nombres], mia}} (solo n >= 1)."""
+    out: dict = {}
+    for e in EMOJIS:
+        ids = (r or {}).get("por_emoji", {}).get(e) or []
+        if ids:
+            out[e] = {"n": len(ids), "quienes": [nombres.get(i, "") for i in ids], "mia": yo in ids}
+    return out
+
+
+def nombre_de(u: Usuario) -> str:
+    return ((u.nombre or "") + " " + (u.apellido or "")).strip() or u.correo
 
 
 def miembros_de(db: Session, grupo_id: int) -> list[tuple[MiembroGrupo, Usuario]]:
@@ -109,6 +123,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                       reacc=reacciones_de(db, grupo.id, semana_iso(), usuario.id), por_id={u.id: u for _, u in miembros}, tarjetas=res["tarjetas"], total=res["total"], insignias=res["insignias"], novedades=res["novedades"], liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
                       error=error, lleno=len(miembros) >= MAX_MIEMBROS)
 
+    def quiere_json(request) -> bool:
+        return "application/json" in request.headers.get("accept", "")
+
     def propio(request, usuario, db, gid):
         """(grupo, mi membresía) o None si no soy miembro (404 igual que si no existe)."""
         m = db.scalar(select(MiembroGrupo).where(MiembroGrupo.grupo_id == gid, MiembroGrupo.usuario_id == usuario.id))
@@ -124,6 +141,31 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         gs = grupos_de(db, usuario.id)
         cuantos = {g.id: len(miembros_de(db, g.id)) for g in gs}
         return render(request, "grupos.html", atleta=usuario, pref="", grupos=gs, cuantos=cuantos)
+
+    @app.get("/api/grupos")
+    def api_lista(usuario=Depends(actual), db: Session = Depends(get_db)):
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        return [{"id": g.id, "nombre": g.nombre, "miembros_n": len(miembros_de(db, g.id))} for g in grupos_de(db, usuario.id)]
+
+    @app.get("/api/grupos/{gid}")
+    def api_grupo(gid: int, usuario=Depends(actual), db: Session = Depends(get_db)):
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        if propio(None, usuario, db, gid) is None:
+            return JSONResponse({"error": "No encontrado."}, status_code=404)
+        miembros = miembros_de(db, gid)
+        res = grupos_resumen.resumen(db, miembros)
+        nombres = {u.id: nombre_de(u) for _, u in miembros}
+        reacc = reacciones_de(db, gid, semana_iso(), usuario.id)
+        return {"grupo": {"id": gid, "nombre": db.get(Grupo, gid).nombre}, "yo": usuario.id,
+                "miembros": [{"usuario_id": u.id, "nombre": nombres[u.id],
+                              "foto": f"/perfil/foto/{u.id}" if perfil_tiene_foto(db, u.id) else None,
+                              "tarjeta": res["tarjetas"][u.id],
+                              "reacciones": {} if res["tarjetas"][u.id]["estado"] == "pausa" else reacciones_json(reacc.get(u.id), nombres, usuario.id)}
+                             for m, u in miembros],
+                "total": res["total"], "insignias": res["insignias"], "novedades": res["novedades"],
+                "emojis": list(EMOJIS), "admin_url": f"/grupos/{gid}"}
 
     @app.get("/grupos/nuevo")
     def nuevo_get(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
@@ -234,6 +276,10 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                 return Response(status_code=429)
             db.add(Reaccion(grupo_id=gid, de_id=usuario.id, para_id=uid, semana=semana_iso(), emoji=emoji))
         db.commit()
+        if quiere_json(request):
+            nombres = {u.id: nombre_de(u) for _, u in miembros_de(db, gid)}
+            r = reacciones_de(db, gid, semana_iso(), usuario.id).get(uid)
+            return {"para_id": uid, "reacciones": reacciones_json(r, nombres, usuario.id)}
         return RedirectResponse(f"/grupos/{gid}", 303)
 
     @app.post("/grupos/{gid}/pausar")
