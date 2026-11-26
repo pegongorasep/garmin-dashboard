@@ -384,7 +384,21 @@ function filaActividad(a) {
   const ses = a.sesion ? `${a.sesion.nombre} · ${["hecha", "incompleta", "extra", "no_hecha", "pendiente"].includes(a.sesion.estado) ? T(`sitio.dia.${a.sesion.estado}`) : a.sesion.estado}` : null;
   const cabeza = [h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre), h("span", {}, [ses, datos].filter(Boolean).join(" · "))];
   if (!a.detalle) return h("div", { class: "act-fila" }, ...cabeza);
-  return DS.desplegable({ titulo: h("span", { class: "act-fila" }, ...cabeza), clase: "act-det" }, detalleActividad(a.detalle, a));
+  const det = DS.desplegable({ titulo: h("span", { class: "act-fila" }, ...cabeza), clase: "act-det", abierto: detalleAbierto() }, detalleActividad(a.detalle, a));
+  det.addEventListener("toggle", () => guardarDetalleAbierto(det.open));
+  return det;
+}
+
+/* Si el detalle de la actividad está abierto: se recuerda al cambiar de día (en memoria y en localStorage). Por defecto cerrado.
+ * EXCEPCIÓN A LA ALTURA FIJA, acordada con Pedro: con el detalle abierto la tarjeta puede cambiar de alto entre días; cerrado, el alto sigue fijo. */
+let _detAbierto = null;
+function detalleAbierto() {
+  if (_detAbierto === null) { try { _detAbierto = localStorage.getItem("detalle_dia_abierto") === "1"; } catch (e) { _detAbierto = false; } }
+  return _detAbierto;
+}
+function guardarDetalleAbierto(v) {
+  _detAbierto = !!v;
+  try { localStorage.setItem("detalle_dia_abierto", v ? "1" : "0"); } catch (e) { /* sin almacenamiento: queda en memoria */ }
 }
 
 /** Texto del día sin actividad: [título, línea]. Los textos vienen de Python (`plan_ses`: nombre de la sesión, "" = descanso, ausente = sin plan). */

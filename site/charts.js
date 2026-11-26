@@ -315,8 +315,7 @@ function trazoRedondo(pts, r) {
   return `${d} L${u[0].toFixed(2)},${u[1].toFixed(2)}`;
 }
 
-/** Vuelve a dibujar cuando cambia el ancho de `cont` (y no antes de que tenga ancho). */
-/** Dibuja al medir. Sin requestAnimationFrame a propósito: el observador corre antes del pintado, así que el primer cuadro ya trae la gráfica
+/** Vuelve a dibujar cuando cambia el ancho de `cont` (y no antes de que tenga ancho). Dibuja al medir. Sin requestAnimationFrame a propósito: el observador corre antes del pintado, así que el primer cuadro ya trae la gráfica
  *  (con rAF se pintaba un cuadro vacío o con el contenido viejo y luego el bueno: el parpadeo al elegir una semana). */
 function alAncho(cont, dibujar) {
   let w0 = 0;
