@@ -317,3 +317,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Al borrar: las invitaciones que creó se borran; en las que usó, `usada_por` queda en NULL; los cambios que hizo en datos de otras personas siguen, con `autor_id` NULL. No existen "tokens del tubo" en la base (usa OIDC), así que no hay nada más que borrar.
 - El ZIP no incluye correos ni datos de otras personas: los accesos de coach solo llevan dirección y fecha. La descarga es un GET con sesión (sin CSRF, no cambia nada).
 - Mis datos tiene botón en el menú (_nav) además del enlace desde /privacidad.
+
+### v5 F7b (panel de admin)
+- Admin = `es_admin` o correo igual a `ADMIN_CORREO`; cualquier otra persona (o sin sesión) recibe 404, también en los POST. El botón "Admin" del menú sale solo para el admin.
+- El token de una invitación solo se guarda como hash: la liga se ve únicamente en la respuesta que la crea (sin redirigir). Revocar borra la fila (solo pendientes).
+- Versión "vigente" del motor = la de la subida correcta más reciente de todas las personas. "Atrasado" = última subida con más de 2 días o versión distinta; quien aún no ha subido sale como "sin subidas" y no cuenta como atrasado.
+- La tabla solo lleva correo, apodo, repo, última subida y motor; la liga a `/a/<id>/ajustes` solo aparece si `puede_ver` lo permite (el admin que no es coach no ve ninguna).
