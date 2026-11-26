@@ -374,3 +374,6 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 ## v5 solo cuerpo
 - C1: `Usuario.uso` (None = completo, "cuerpo"). La pregunta «¿Qué quieres usar?» sale tras el aviso mientras `uso` sea None y no haya usuario de GitHub, repo ni pendiente (cuentas viejas no la ven). Elegir completo guarda `uso="completo"` (equivale a None) para no repetirla.
 - C1: cuerpo no crea fila de `Ajustes` (zona horaria y título quedan en los valores por defecto); así «Activar entrenamiento» solo cambia `uso` y el onboarding retoma desde GitHub. Pendiente C2: `/` de un cuerpo hoy sirve el sitio completo.
+
+### v5 solo cuerpo (C2)
+- data.json de quien usa solo cuerpo: se corre el motor con ajustes de fábrica y datos vacíos y `calculo.solo_cuerpo` lo recorta (claves obligatorias vacías, `composicion`, `ui.solo_cuerpo`, `ui.cuerpo_nuevo`). Menú sin Historial ni Coach. El sitio oculta las pestañas y muestra solo Cuerpo; sin mediciones, estado vacío con «Agregar medición». /admin muestra la columna Modo.

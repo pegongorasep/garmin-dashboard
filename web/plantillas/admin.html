@@ -30,12 +30,12 @@
 {% call tarjeta(t("admin.personas")) %}
 <p>{{ t("admin.atrasado_nota", dias=dias) }}</p>
 <div style="overflow-x:auto"><table>
-  <thead><tr><th>{{ t("comun.correo") }}</th><th>{{ t("admin.apodo") }}</th><th>{{ t("admin.repo") }}</th><th>{{ t("admin.ultima") }}</th><th>{{ t("admin.motor") }}</th><th></th></tr></thead>
+  <thead><tr><th>{{ t("comun.correo") }}</th><th>{{ t("admin.apodo") }}</th><th>{{ t("admin.repo") }}</th><th>{{ t("admin.ultima") }}</th><th>{{ t("admin.modo") }}</th><th>{{ t("admin.motor") }}</th><th></th></tr></thead>
   <tbody>
   {% for u in usuarios %}
   <tr><td>{% if u.liga %}<a href="{{ u.liga }}">{{ u.correo }}</a>{% else %}{{ u.correo }}{% endif %}</td>
     <td>{{ u.apodo or "—" }}</td><td>{{ u.repo or "—" }}</td><td>{{ u.ultima_subida or t("admin.sin_subidas") }}</td>
-    <td>{{ u.motor or "—" }}</td><td>{% if u.atrasado %}<strong>{{ t("admin.atrasado") }}</strong>{% endif %}</td></tr>
+    <td>{{ t("admin.modo_cuerpo") if u.uso == "cuerpo" else t("admin.modo_completo") }}</td><td>{{ u.motor or "—" }}</td><td>{% if u.atrasado %}<strong>{{ t("admin.atrasado") }}</strong>{% endif %}</td></tr>
   {% endfor %}
   </tbody>
 </table></div>

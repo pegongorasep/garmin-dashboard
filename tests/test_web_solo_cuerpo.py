@@ -73,3 +73,29 @@ def test_ajustes_uso_sin_sesion_va_a_entrar(web_ctx):
     cl = web_ctx.cliente()
     cl.get("/entrar")
     assert cl.post("/ajustes/uso", data={"csrf": "x"}).status_code in (303, 403)
+
+
+def test_data_json_solo_cuerpo_minimo_y_vacio(web_ctx):
+    from dashboard import validar
+    uid, cl = nuevo(web_ctx, uso="cuerpo")
+    d = cl.get("/data.json").json()
+    assert validar.problemas(d) == []
+    assert d["ui"]["solo_cuerpo"] is True and d["ui"]["cuerpo_nuevo"] == "/cuerpo/nuevo"
+    assert d["composicion"] is None and d["plan"] == {} and d["progreso"] == {}
+    assert [m["url"] for m in d["ui"]["menu"]] == ["/ajustes", "/cuerpo", "/privacidad", "/salir"]
+
+
+def test_data_json_solo_cuerpo_con_medicion(web_ctx):
+    uid, cl = nuevo(web_ctx, uso="cuerpo")
+    with web_ctx.sesiones() as db:
+        db.add(InBody(usuario_id=uid, fecha="2026-11-20", valores={"fecha": "2026-11-20", "peso_kg": 80.0, "mme_kg": 35.0, "pgc": 20.0, "masa_grasa_kg": 16.0}))
+        db.commit()
+    d = cl.get("/data.json").json()
+    assert d["composicion"] and len(d["composicion"]["mediciones"]) == 1
+
+
+def test_completo_no_cambia(web_ctx):
+    uid, cl = nuevo(web_ctx, uso="completo")
+    assert cl.get("/data.json").status_code == 404   # sin ajustes sigue sin data.json
+    with web_ctx.sesiones() as db:
+        assert db.get(Usuario, uid).uso == "completo"

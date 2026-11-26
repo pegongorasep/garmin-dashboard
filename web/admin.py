@@ -30,7 +30,7 @@ def usuarios_de(db: Session, admin: Usuario) -> list[dict]:
     for u in db.scalars(select(Usuario).where(Usuario.borrado.is_(None)).order_by(Usuario.id)):
         s = ultima.get(u.id)
         atrasado = s is not None and (s.fecha < limite or (actual is not None and s.motor != actual))
-        filas.append({"id": u.id, "correo": u.correo, "apodo": u.apodo, "repo": u.repo,
+        filas.append({"id": u.id, "correo": u.correo, "apodo": u.apodo, "repo": u.repo, "uso": u.uso or "completo",
                       "ultima_subida": s.fecha.strftime("%Y-%m-%d %H:%M") if s else None,
                       "motor": s.motor if s else None, "atrasado": atrasado,
                       "liga": f"/a/{u.id}/ajustes" if permisos.puede_ver(db, admin, u.id) and u.id != admin.id else None})

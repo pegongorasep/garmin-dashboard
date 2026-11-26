@@ -82,6 +82,12 @@ function renderProgreso(d) {
   PINTAR.cuerpo = [];
   const raiz = $("vista-progreso");
   const prog = d.progreso || {};
+  if (ui().solo_cuerpo) {   // «solo cuerpo»: sin Corridas ni selector; sin mediciones, un estado vacío con el botón
+    const comp = tarjetaComposicion(d.composicion);
+    raiz.replaceChildren(h("div", { class: "sub", id: "prog-cuerpo" }, comp || DS.estadoVacio({ icono: null, titulo: T("sitio.ib.vacio_t"), texto: T("sitio.ib.vacio_x"),
+      accion: { href: ui().cuerpo_nuevo || "/cuerpo/nuevo", texto: T("sitio.ib.agregar") } })));
+    return;
+  }
   raiz.replaceChildren(selectorProgreso(),
     h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...[
       DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodo, opciones: [4, 8, 12].map((n) => ({ id: n, texto: T("sitio.prog.n_sem", { n }) })),
@@ -99,6 +105,7 @@ function renderProgreso(d) {
 /** Muestra Corridas o Cuerpo según `subProgreso` y marca el botón elegido. */
 function mostrarSubvista() {
   const corr = $("prog-corridas"), cue = $("prog-cuerpo");
+  if (ui().solo_cuerpo) { if (cue) cue.hidden = false; return; }
   if (!corr || !cue) return;
   corr.hidden = subProgreso !== "corridas";
   cue.hidden = subProgreso !== "cuerpo";
@@ -635,7 +642,7 @@ let vistaActual = null;
 // Rutas viejas que siguen sirviendo.
 const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
-const tabsDef = () => [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" }, { id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" },
+const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" }, { id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" },
   { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" }];
 const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
 
@@ -689,8 +696,9 @@ function actualizarEncabezado() {
 function mostrarVista() {
   const ruta = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
   const [nombre, sub] = (ALIAS_RUTA[ruta] || ruta).split("/");
-  const v = VISTAS.includes(nombre) ? nombre : "hoy";
-  subProgreso = v === "progreso" && sub === "cuerpo" ? "cuerpo" : "corridas";
+  const solo = !!ui().solo_cuerpo;   // solo cuerpo: todo cae en Progreso > Cuerpo (la ayuda sigue)
+  const v = solo && nombre !== "ayuda" ? "progreso" : VISTAS.includes(nombre) ? nombre : "hoy";
+  subProgreso = solo || (v === "progreso" && sub === "cuerpo") ? "cuerpo" : "corridas";
   if (v !== "ayuda") rutaPrevia = `#${ruta || "hoy"}`;
   vistaActual = v;
   for (const id of VISTAS) $(`vista-${id}`).hidden = id !== v;
@@ -752,7 +760,8 @@ async function iniciar() {
   $("app").hidden = false;
   pintarEncabezado();
   setInterval(actualizarEncabezado, 60000);
-  const vistas = { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
+  $("tabs").replaceChildren(DS.tabs({ items: tabsDef(), actual: null }));
+  const vistas = ui().solo_cuerpo ? { progreso: renderProgreso } : { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
   for (const [id, fn] of Object.entries(vistas)) {
     try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, T("sitio.err.vista")); }
   }

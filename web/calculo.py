@@ -34,6 +34,7 @@ def plan_acciones(idioma: str = "es") -> list[dict]:
              ("carrera", "/plan/acciones#carrera"), ("repetir", "/plan/acciones"))]
 
 
+MENU_CUERPO = ("/ajustes", "/cuerpo", "/privacidad", "/salir")   # lo que tiene sentido sin entreno: sin historial ni coach
 MENU = menu_de("es")
 PLAN_ACCIONES = plan_acciones("es")
 
@@ -52,16 +53,29 @@ def acciones_url(usuario: Usuario) -> str | None:
 
 def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: str | None = None) -> dict:
     aj = db.get(Ajustes, usuario.id)
-    if aj is None:
+    cuerpo = aj is None and usuario.uso == "cuerpo"   # «solo cuerpo»: sin ajustes de entreno, el motor usa los de fábrica
+    if aj is None and not cuerpo:
         raise SinConfig()
     idioma = idioma or usuario.idioma or "es"
-    crudo = {**aj.config, "modo": "web", "menu": menu_de(idioma) if menu is None else menu,
+    if menu is None and cuerpo:
+        menu = [m for m in menu_de(idioma) if m["url"] in MENU_CUERPO]
+    base = aj.config if aj else {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}   # los de fábrica (config_por_defecto)
+    crudo = {**base, "modo": "web", "menu": menu_de(idioma) if menu is None else menu,
              "plan_acciones": plan_acciones(idioma), "idioma": idioma}
     if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
         crudo["acciones_url"] = acciones_url(usuario)
     return normalizar_config(crudo)
+
+
+def solo_cuerpo(salida: dict) -> dict:
+    """data.json mínimo de quien usa solo mediciones de cuerpo: la composición y el encabezado; lo demás, vacío
+    (las claves obligatorias siguen existiendo para la lista blanca). `ui.solo_cuerpo` hace que el sitio muestre solo Cuerpo."""
+    ui = {k: v for k, v in salida["ui"].items() if k in ("titulo", "menu", "usuario", "repo_estado", "textos", "categorias")}
+    return {"generado": salida["generado"], "datos_al": salida.get("datos_al"), "zonas": [], "hoy": {}, "plan": {},
+            "progreso": {}, "detalles": {}, "semanas_hoy": [], "composicion": salida.get("composicion"),
+            "idioma": salida.get("idioma"), "ui": {**ui, "solo_cuerpo": True, "cuerpo_nuevo": "/cuerpo/nuevo"}}
 
 
 def editar_urls(plan: dict) -> dict:
@@ -133,6 +147,8 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     ui = {**ui, "menu": [{**m, "url": f(m["url"])} for m in ui.get("menu") or [] if m["url"] != "/coach"],
           "plan_acciones": [{**a, "url": f(a["url"])} for a in ui.get("plan_acciones") or []],
           "editar_urls": {k: f(v) for k, v in (ui.get("editar_urls") or {}).items()}}
+    if ui.get("cuerpo_nuevo"):
+        ui["cuerpo_nuevo"] = f(ui["cuerpo_nuevo"])
     out = {**salida, "ui": ui}
     if out.get("avisos"):
         out["avisos"] = [{**a, "url": f(a.get("url"))} for a in out["avisos"]]
@@ -166,11 +182,14 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
     cache = db.get(CacheData, usuario.id)
     if cache and cache.huella == h and ahora() - cache.calculado < timedelta(minutes=MINUTOS_CACHE):
         return cache.contenido
-    crudo = db.get(Ajustes, usuario.id).config
+    aj = db.get(Ajustes, usuario.id)
+    crudo = aj.config if aj else {}
     cfg = plan_vivo.con_pausas(cfg, local.date())
     plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
-    cfg = {**cfg, "editar_urls": editar_urls(plan)}
+    cfg = {**cfg, "editar_urls": editar_urls(plan) if aj else {}}
     salida = build.build(datos_de(db, usuario, crudo), plan, cfg, local)
+    if aj is None:   # solo cuerpo (config_de ya descartó a quien no lo es)
+        salida = solo_cuerpo(salida)
     problemas = validar.problemas(salida)
     if problemas:
         log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)
