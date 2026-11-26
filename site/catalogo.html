@@ -143,6 +143,8 @@ def("Controles", "Chip", "DS.chip()", "Mayúsculas cortas: HOY, NUEVO, EN TU PLA
 def("Controles", "Copiar", "DS.copiar()", "Texto que se copia con un toque, antes y después.",
   DS.copiar({ etiqueta: "Tu código para vincular el repo", texto: "AHI-7K2Q-94MD" }),
   DS.copiar({ texto: "https://ahilallevas.com/invitacion/9f3c2a1e8b7d4c6f", copiado: true }));
+def("Controles", "Punto de recuperación", "DS.punto()", "Punto de 8 px del semáforo, con su texto solo para lectores de pantalla.",
+  DS.punto("ok", "recuperación verde"), DS.punto("warn", "recuperación amarilla"), DS.punto("bad", "recuperación roja"), DS.punto("nd", "recuperación sin datos"));
 def("Controles", "Estado", "DS.estado() · DS.insignia()", "Insignia redonda con símbolo y texto: el color nunca va solo.",
   DS.estado("ok", "✓", "Hecha"), DS.estado("warn", "!", "Incompleta"), DS.estado("bad", "✕", "No se pudo guardar"), DS.estado("nd", "—", "Pendiente"));
 

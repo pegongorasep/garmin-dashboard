@@ -151,27 +151,14 @@ function filaSesion(s, est, extra = {}) {
 
 const nombreSesion = (estado, id) => ((estado || []).find((e) => e.id === id) || {}).name;
 
-function textoBanner(d) {
-  const t = d.hoy.tarjeta, plan = d.plan || {}, est = plan.estado_sesiones || [];
-  const prox = nombreSesion(est, t.proxima_id);
-  if (t.tipo === "otra") return prox ? T("sitio.banner.otra_prox", { cat: t.categoria, prox }) : T("sitio.banner.otra", { cat: t.categoria });
-  if (t.tipo === "sesion") { const sig = nombreSesion(est, t.sesion_id); return sig ? T("sitio.banner.proxima", { sig }) : null; }
-  if (t.tipo === "hecha_hoy") return prox ? T("sitio.banner.hecha_prox", { prox }) : T("sitio.banner.hecha");
-  if (t.tipo === "sin_plan" || t.tipo === "primera_sync" || t.tipo === "pausa") return t.texto;
-  if (t.tipo === "completa") return T("sitio.banner.completa");
-  if (t.tipo === "plan_terminado") return null;   // lo dice su propia tarjeta
-  return null;
-}
-
-/** Banner de la sesión de hoy con el semáforo como chip: «Recuperación: verde · ver señales» abre las señales. */
-function bannerHoy(d, ancha = true) {
-  const sem = d.hoy.semaforo, est = estadoSemaforo(sem.color) || estadoSemaforo("sin_datos");
-  const texto = textoBanner(d);
+/** Línea 3 de Hoy: «● Recuperación ⌄». El punto lleva el color del semáforo (verde, amarillo, rojo o gris sin datos); al abrirla salen
+ *  el estado, las señales y lo de ayer. Es el único amarillo que no se cierra con «Entendido»: es un dato, no un aviso. */
+function recuperacionHoy(d) {
+  const sem = d.hoy.semaforo, color = SEMAFORO_BASE[sem.color] ? sem.color : "sin_datos", est = estadoSemaforo(color);
   const ayer = d.hoy.ayer ? T("sitio.ayer", { cat: d.hoy.ayer.categoria, esf: d.hoy.ayer.esfuerzo != null ? T("sitio.ayer_esfuerzo", { v: fmt(d.hoy.ayer.esfuerzo, 1) }) : "" }) : null;
-  return DS.tarjeta({ clase: ancha ? "ancha banner" : "banner" },
-    texto ? h("p", { class: "b-t" }, texto) : null,
-    DS.desplegable({ titulo: [badge(est.clase, est.icono, est.titulo), T("sitio.recuperacion", { estado: sem.color === "sin_datos" ? T("sitio.sin_datos_min") : est.titulo.toLowerCase() }), h("span", { class: "mu" }, T("sitio.ver_senales"))] },
-      DS.senales({ senales: (d.hoy["señales"] || []).map((x) => ({ ...estadoSenal(x.estado), nombre: nombreSenal(x.id), texto: x.texto })), nota: ayer })));
+  return DS.desplegable({ titulo: [DS.punto(est.clase, T(`sitio.rec.sr_${color}`)), T("sitio.rec.titulo")], clase: "rec-linea" },
+    h("p", { class: "b-t" }, T("sitio.recuperacion", { estado: color === "sin_datos" ? T("sitio.sin_datos_min") : est.titulo.toLowerCase() })),
+    DS.senales({ senales: (d.hoy["señales"] || []).map((x) => ({ ...estadoSenal(x.estado), nombre: nombreSenal(x.id), texto: x.texto })), nota: ayer }));
 }
 
 /** Saludo de Hoy. El nombre NUNCA viene en data.json: la web lo pone en `<main data-nombre>` (solo en tu propia página). La 2.ª línea la arma Python (`hoy.titular`); su ranura siempre existe. */
@@ -179,7 +166,8 @@ function saludoHoy(d) {
   const nombre = ($("app") && $("app").dataset.nombre) || "";
   return h("header", { class: "hoy-saludo ancha" },
     h("h1", {}, nombre ? T("sitio.hoy.hola", { nombre }) : T("sitio.hoy.hola_sin")),
-    h("p", { class: "hoy-estado" }, (d.hoy && d.hoy.titular) || "\u00a0"));
+    h("p", { class: "hoy-estado" }, (d.hoy && d.hoy.titular) || "\u00a0"),
+    d.hoy && d.hoy.semaforo ? recuperacionHoy(d) : null);
 }
 
 /** Aviso que se puede dar por «Entendido» (solo en tu propia cuenta de la web). Python da `ui.avisos[id]` = huella de lo que dice;
@@ -244,7 +232,7 @@ function resumenSemanaPasada(d) {
   const carga = r.carga_anterior ? T("sitio.sp.carga_vs", { c: fmt(r.carga, 0), f: r.carga >= r.carga_anterior ? "▲" : "▼", p: Math.abs(Math.round(((r.carga - r.carga_anterior) / r.carga_anterior) * 100)), a: fmt(r.carga_anterior, 0) }) : T("sitio.sp.carga", { c: fmt(r.carga, 0) });
   const ritmo = r.ritmo_ref_s != null ? T("sitio.sp.ritmo", { fc: (d.progreso || {}).fc_ref, r: mmss(r.ritmo_ref_s), cmp: cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s) ? `, ${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s)}` : "" }) : null;
   const dist = r.intensidad || {};
-  return DS.tarjeta({ clase: "banner semana-pasada" }, DS.desplegable({
+  return DS.tarjeta({ clase: "ancha banner semana-pasada" }, DS.desplegable({
     titulo: h("span", { class: "sp-titulo" }, h("span", { class: "sp-linea" }, T("sitio.sp.titulo", { l: linea.join(" · ") })),
       sug ? h("span", { class: "estado" }, badge(sug.tipo === "sigue" ? "ok" : "warn", sug.tipo === "sigue" ? "✓" : "!", T("sitio.sugerencia")), sug.texto) : null) },
   h("div", { class: "sp-cuerpo" },
@@ -637,7 +625,7 @@ function renderHoySinPlan(d) {
   const rec = sl.recuperacion;
   const racha = sl.racha_semanas || 0;
   $("vista-hoy").replaceChildren(...[
-    saludoHoy(d), bannerHoy(d),
+    saludoHoy(d),
     DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
       sl.actividades ? DS.tiles({ etiqueta: T("sitio.sl.titulo") },
         DS.tile({ k: T("sitio.sl.minutos"), valor: fmt(sl.minutos, 0), unidad: T("sitio.sl.min"), deltas: dif(sl.minutos, sl.promedio_minutos, T("sitio.sl.min")) }),
@@ -663,7 +651,7 @@ function renderHoy(d) {
     d.hoy.semaforo.repetir_semana
       ? avisoCerrable("repetir", { clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
       : null,
-    tarjetaPlanTerminado(d), bannerHoy(d, !d.hoy.semana_pasada), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
+    tarjetaPlanTerminado(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
     d.aviso_zonas ? avisoCerrable("zonas", { clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
   pintarSemana(d);
 }

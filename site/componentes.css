@@ -261,6 +261,14 @@ button.dia.dia-sel { box-shadow: inset 0 0 0 2px var(--ink-2); }   /* elegido: a
 .desplegable summary small { font-weight: 400; color: var(--muted); }
 .desplegable > :not(summary) { margin-bottom: var(--space-10); }
 .desplegable.liga-d { border-top: 0; }
+.desplegable.rec-linea { border-top: 0; }
+.desplegable.rec-linea summary { min-height: 32px; gap: var(--space-6); font-weight: 400; font-size: 13px; color: var(--muted); }
+.desplegable.rec-linea summary .ico { margin-left: 0; color: var(--muted); }
+.punto-luz { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.punto-luz.ok { background: var(--ok); }
+.punto-luz.warn { background: var(--warn); }
+.punto-luz.bad { background: var(--bad); }
+.solo-lector { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .desplegable.liga-d summary { min-height: 36px; color: var(--accent); font-size: 13px; }
 .desplegable.liga-d summary .ico { margin-left: 0; color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .desplegable summary .ico { transition: none; } }

@@ -170,6 +170,9 @@ const DS = (() => {
   const insignia = (clase, simbolo, etiqueta) =>
     h("span", { class: `badge ${clase}`, role: etiqueta ? "img" : null, "aria-label": etiqueta || null }, simbolo);
 
+  /** Punto de color de 8 px (semáforo de recuperación): clase "ok"|"warn"|"bad"|"nd" y su texto solo para lectores de pantalla. */
+  const punto = (clase, etiqueta) => h("span", { class: `punto-luz ${clase}` }, h("span", { class: "solo-lector" }, etiqueta));
+
   /** Línea de estado: insignia + texto. Recibe la clase, el símbolo, el texto y, si hace falta, la etiqueta accesible de la insignia. */
   const estado = (clase, simbolo, texto, etiqueta) => h("p", { class: "estado" }, insignia(clase, simbolo, etiqueta), texto);
 
@@ -440,7 +443,7 @@ const DS = (() => {
 
   return {
     ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoCoach, confirmacion, bannerCambio, filaHistorial,
-    boton, botonIco, campo, opciones, chip, copiar, formulario, filaCampos, insignia, estado,
+    boton, botonIco, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */

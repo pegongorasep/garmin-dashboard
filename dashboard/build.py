@@ -981,23 +981,40 @@ def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, sem
     return out
 
 
-def titular_hoy(tarjeta: dict, estado: list) -> str | None:
-    """Línea de estado bajo el saludo de Hoy. None = el sitio la deja vacía (pausa, plan terminado, primera sincronización)."""
+def etiqueta_sesion(ses: dict, suave: bool = False) -> str:
+    """«Z2 #1 · 20 min», «Larga suave · Z2 · 15 min»: nombre, zona (si el nombre no la dice) y minutos."""
+    base = ses["easy"] if suave and ses.get("easy") else ses
+    nombre = plan_i18n.nombre(ses["name"]) + (f" {tt('motor.version.suave')}" if suave and ses.get("easy") else "")
+    zona = None if suave else (ses.get("objetivo") or {}).get("zona")
+    if not zona:
+        por_zona: dict = {}
+        for minutos, z, *_ in tipos.silueta_de(base["steps"]):
+            por_zona[z] = por_zona.get(z, 0) + minutos
+        zona = max(por_zona, key=por_zona.get) if por_zona else None
+    partes = [nombre] + ([zona] if zona and zona not in nombre else []) + [tt("motor.titular.min", n=f"{base['minutes']:g}")]
+    return " · ".join(partes)
+
+
+def titular_hoy(tarjeta: dict, sesiones: list, manana_id: str | None = None) -> str | None:
+    """Línea 2 de Hoy: la sesión completa (nombre, zona, minutos) y, si ya está planeada, la de mañana.
+    `sesiones` = sesiones del plan de esta semana. None = el sitio la deja vacía (plan terminado)."""
     tipo = tarjeta.get("tipo")
-    nombre = lambda i: next((e["name"] for e in estado or [] if e.get("id") == i), None)   # noqa: E731
+    por_id = {s["id"]: s for s in sesiones or []}
+    sig = por_id.get(manana_id)
+    manana = lambda base: f"{base} · " + tt("motor.titular.manana", sesion=etiqueta_sesion(sig)) if sig else base   # noqa: E731
     if tipo == "sesion":
         if tarjeta.get("version") == "descanso":
-            return tt("motor.titular.descanso")
-        ses = tarjeta.get("sesion") or {}
-        n = ((ses.get("easy") or {}).get("name") if tarjeta.get("version") == "suave" else None) or ses.get("name") or nombre(tarjeta.get("sesion_id"))
-        return tt("motor.titular.toca", sesion=n) if n else None
-    if tipo in ("hecha_hoy", "otra"):
-        prox = nombre(tarjeta.get("proxima_id"))
-        return tt("motor.titular.hecha_manana", sesion=prox) if prox else tt("motor.titular.hecha")
+            return manana(tt("motor.titular.descanso"))
+        ses = por_id.get(tarjeta.get("sesion_id"))
+        return tt("motor.titular.toca", sesion=etiqueta_sesion(ses, tarjeta.get("version") == "suave")) if ses else None
+    if tipo == "hecha_hoy":
+        return manana(tt("motor.titular.hecha"))
+    if tipo == "otra":
+        return manana(tt("motor.titular.otra", cat=tarjeta.get("categoria")))
     if tipo == "completa":
-        return tt("motor.titular.descanso")
-    if tipo == "sin_plan":
-        return tt("motor.titular.libre")
+        return tt("motor.titular.completa")
+    if tipo in ("sin_plan", "primera_sync", "pausa"):
+        return tarjeta.get("texto")
     return None
 
 
@@ -1054,6 +1071,8 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None
     tarjeta["opciones"] = m.opciones_hoy(tarjeta["version"], tarjeta.get("sesion"))
     tarjeta["recomendada"] = tarjeta["version"] if tarjeta["opciones"] else None
+    manana_id = tarjeta.get("proxima_id") or ((m._elegir_pendiente(hoy + timedelta(days=1), estado)[0] or {}).get("id")
+                                              if estado and tarjeta["version"] == "descanso" else None)
 
     pulled = data["meta"].get("pulled_at_utc")
     datos_al = None
@@ -1070,7 +1089,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "rhr_promedio_7d": r1(rhr),
         "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
-                "titular": titular_hoy(tarjeta, estado),
+                "titular": titular_hoy(tarjeta, (semana_plan or {}).get("sessions"), manana_id),
                 "semana_pasada": resumen_semana_pasada(hoy, data, config, plan)},
         "ultima_corrida": last_run(data, config, plan),
         "semana": build_week(hoy, data, config, estado, plan),

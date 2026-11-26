@@ -915,14 +915,24 @@ def test_marca_semana_por_fechas_y_prioridad():
 
 
 def test_titular_hoy_por_estado():
-    est = [{"id": "x", "name": "Z2 #3"}]
-    assert build.titular_hoy({"tipo": "sesion", "version": "normal", "sesion": {"name": "Z2 #2"}}, est) == "Hoy toca: Z2 #2"
-    assert build.titular_hoy({"tipo": "sesion", "version": "descanso", "sesion": {"name": "Z2 #2"}}, est) == "Hoy toca descansar"
-    assert build.titular_hoy({"tipo": "hecha_hoy", "proxima_id": None}, est) == "Ya la hiciste hoy ✔"
-    assert build.titular_hoy({"tipo": "hecha_hoy", "proxima_id": "x"}, est).endswith("Mañana: Z2 #3")
-    assert build.titular_hoy({"tipo": "completa"}, est) == "Hoy toca descansar"
-    assert build.titular_hoy({"tipo": "sin_plan"}, est) == "¿Salimos a moverte?"
-    assert build.titular_hoy({"tipo": "pausa"}, est) is None
+    z2 = {"id": "a", "name": "Z2 #1", "minutes": 20, "steps": [{"kind": "run", "minutes": 20, "zone": "Z2"}],
+          "easy": {"name": "Suave", "minutes": 15, "steps": [{"kind": "run", "minutes": 15, "zone": "Z2"}]}}
+    larga = {"id": "l", "name": "Larga", "minutes": 30, "steps": [{"kind": "run", "minutes": 30, "zone": "Z2"}],
+             "easy": {"name": "Suave", "minutes": 20, "steps": [{"kind": "run", "minutes": 20, "zone": "Z2"}]}}
+    ses = [z2, larga]
+    t = build.titular_hoy
+    assert t({"tipo": "sesion", "version": "normal", "sesion_id": "a"}, ses) == "Hoy toca: Z2 #1 · 20 min"
+    assert t({"tipo": "sesion", "version": "normal", "sesion_id": "l"}, ses) == "Hoy toca: Larga · Z2 · 30 min"
+    assert t({"tipo": "sesion", "version": "suave", "sesion_id": "l"}, ses) == "Hoy toca: Larga suave · Z2 · 20 min"
+    assert t({"tipo": "sesion", "version": "descanso", "sesion_id": "a"}, ses, "l") == "Hoy descansas · mañana: Larga · Z2 · 30 min"
+    assert t({"tipo": "sesion", "version": "descanso", "sesion_id": "a"}, ses) == "Hoy descansas"
+    assert t({"tipo": "hecha_hoy"}, ses) == "Ya la hiciste hoy ✔"
+    assert t({"tipo": "hecha_hoy"}, ses, "a") == "Ya la hiciste hoy ✔ · mañana: Z2 #1 · 20 min"
+    assert t({"tipo": "otra", "categoria": "Pierna"}, ses, "l") == "Hoy: Pierna ✓ · mañana: Larga · Z2 · 30 min"
+    assert t({"tipo": "completa"}, ses) == "Semana completa: hiciste las 3"
+    for tipo in ("sin_plan", "primera_sync", "pausa"):
+        assert t({"tipo": tipo, "texto": "Texto X"}, ses) == "Texto X"
+    assert t({"tipo": "plan_terminado", "texto": "Plan terminado"}, ses) is None
 
 
 def test_huella_de_avisos_estable_y_cambia_con_el_contenido():
