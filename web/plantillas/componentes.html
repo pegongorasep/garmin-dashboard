@@ -102,7 +102,7 @@
 {% macro pie(t=none, idioma=none, csrf=none, siguiente="/") -%}
 <footer class="pie">
   <p>{{ t("pie.consejo") if t else "Esto no es consejo médico: si algo duele, para." }}</p>
-  <p>{{ t("pie.datos") if t else "Datos de Garmin" }} · <a href="/privacidad">{{ t("pie.privacidad") if t else "Aviso de privacidad" }}</a></p>
+  <div class="pie-fila">
   {%- if t and idioma and csrf %}
   <form class="pie-idioma" method="post" action="/idioma">
     <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="siguiente" value="{{ siguiente }}">
@@ -112,6 +112,8 @@
     <noscript><button type="submit">{{ t("idioma.guardar") }}</button></noscript>
   </form>
   {%- endif %}
+  <p>{{ t("pie.datos") if t else "Datos de Garmin" }} · <a href="/privacidad">{{ t("pie.privacidad") if t else "Aviso de privacidad" }}</a></p>
+  </div>
 </footer>
 {%- endmacro %}
 

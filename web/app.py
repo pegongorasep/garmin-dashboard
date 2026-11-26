@@ -43,7 +43,7 @@ def pie_sitio(idioma: str, csrf: str = "", ruta: str = "/") -> str:
             f'<svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/></svg><select id="pie-idioma-sel" name="idioma">{opciones}</select>'
             f'<noscript><button type="submit">{i18n.t("idioma.guardar", idioma)}</button></noscript></form>') if csrf else ""
     return (f'<footer class="pie"><p>{i18n.t("pie.consejo", idioma)}</p>'
-            f'<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p>{form}</footer>'
+            f'<div class="pie-fila">{form}<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p></div></footer>'
             f'<script src="/actualizar.js" data-texto="{i18n.t("sitio.version_nueva", idioma)}" data-accion="{i18n.t("sitio.version_actualizar", idioma)}" '
             f'data-cuerpo="{i18n.t("sitio.version_cuerpo", idioma)}" data-luego="{i18n.t("sitio.version_luego", idioma)}" '
             f'data-actualizando="{i18n.t("sitio.version_actualizando", idioma)}"></script>')
