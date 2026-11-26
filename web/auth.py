@@ -7,7 +7,7 @@ from datetime import timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .modelos import Invitacion, LigaLogin, Sesion, Usuario, ahora
+from .modelos import CodigoLogin, Invitacion, LigaLogin, Sesion, Usuario, ahora
 
 COOKIE_SESION = "sesion"
 COOKIE_CSRF = "csrf"
@@ -15,7 +15,9 @@ DIAS_INVITACION = 14
 MIN_LIGA = 15
 DIAS_SESION = 60
 LIGAS_POR_HORA = 5
-MENSAJE_LIGA = "Si tu correo está registrado, te llegó una liga."
+MIN_CODIGO = 10
+INTENTOS_CODIGO = 5
+MENSAJE_LIGA = "Si tu correo está registrado, te llegó un código de 6 dígitos."
 
 
 def hash_token(token: str) -> str:
@@ -116,6 +118,43 @@ def gastar_liga(db: Session, token: str) -> Usuario | None:
         return None
     u = db.get(Usuario, liga.usuario_id)
     return u if u and u.borrado is None else None
+
+
+# --- código de 6 dígitos por correo ---
+
+def _hash_codigo(secret_key: str, usuario_id: int, codigo: str) -> str:
+    return hmac.new(secret_key.encode(), f"{usuario_id}:{codigo}".encode(), hashlib.sha256).hexdigest()
+
+
+def crear_codigo(db: Session, secret_key: str, usuario: Usuario) -> str | None:
+    """Código de 6 dígitos (10 min, un uso, 5 intentos). None si ya pidió 5 en la última hora."""
+    pedidos = db.scalar(select(func.count()).select_from(CodigoLogin).where(
+        CodigoLogin.usuario_id == usuario.id, CodigoLogin.creada > ahora() - timedelta(hours=1)))
+    if pedidos >= LIGAS_POR_HORA:
+        return None
+    codigo = f"{secrets.randbelow(10**6):06d}"
+    db.add(CodigoLogin(usuario_id=usuario.id, codigo_hash=_hash_codigo(secret_key, usuario.id, codigo),
+                       expira=ahora() + timedelta(minutes=MIN_CODIGO)))
+    db.commit()
+    return codigo
+
+
+def gastar_codigo(db: Session, secret_key: str, correo: str, codigo: str) -> Usuario | None:
+    """Verifica el código más reciente vigente de ese correo. Cada fallo cuenta; con 5 se bloquea. Un solo uso."""
+    u = buscar_por_correo(db, correo)
+    if u is None:
+        return None
+    c = db.scalar(select(CodigoLogin).where(
+        CodigoLogin.usuario_id == u.id, CodigoLogin.usada_en.is_(None), CodigoLogin.expira > ahora(),
+        CodigoLogin.intentos < INTENTOS_CODIGO).order_by(CodigoLogin.id.desc()))
+    if c is None:
+        return None
+    buenos = hmac.compare_digest(c.codigo_hash, _hash_codigo(secret_key, u.id, (codigo or "").strip()))
+    cond = [CodigoLogin.id == c.id, CodigoLogin.usada_en.is_(None), CodigoLogin.intentos < INTENTOS_CODIGO]
+    vals = {"usada_en": ahora()} if buenos else {"intentos": CodigoLogin.intentos + 1}
+    r = db.execute(CodigoLogin.__table__.update().where(*cond).values(**vals))
+    db.commit()
+    return u if buenos and r.rowcount == 1 else None
 
 
 # --- sesiones ---

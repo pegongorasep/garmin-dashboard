@@ -52,6 +52,17 @@ class LigaLogin(Base):
     usada_en: Mapped[datetime | None] = mapped_column()
 
 
+class CodigoLogin(Base):
+    __tablename__ = "codigos_login"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    codigo_hash: Mapped[str] = mapped_column(sa.String(64))   # HMAC del código con la SECRET_KEY; el código no se guarda
+    creada: Mapped[datetime] = mapped_column(default=ahora)
+    expira: Mapped[datetime] = mapped_column()
+    intentos: Mapped[int] = mapped_column(default=0)
+    usada_en: Mapped[datetime | None] = mapped_column()
+
+
 class Sesion(Base):
     __tablename__ = "sesiones"
     id: Mapped[str] = mapped_column(sa.String(64), primary_key=True)   # sha256 del valor de la cookie

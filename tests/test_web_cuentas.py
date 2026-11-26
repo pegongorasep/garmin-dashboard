@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from ajustes import leer_config_yaml
 from web import auth
-from web.modelos import Ajustes, Coach, Consentimiento, LigaLogin, Sesion, Usuario, ahora
+from web.modelos import Ajustes, CodigoLogin, Coach, Consentimiento, LigaLogin, Sesion, Usuario, ahora
 
 
 CONFIG = json.loads(json.dumps(leer_config_yaml(Path(__file__).parent / "fixtures" / "config.yaml"), default=str))
@@ -25,12 +25,24 @@ def liga_de(ctx) -> str:
     return re.search(r"https://ahilallevas\.test(/entrar/liga/\S+)", ctx.enviados[-1][2]).group(1)
 
 
+def con_codigo(cl, correo, codigo):
+    return cl.post("/entrar/codigo", data={"csrf": csrf_de(cl.get("/entrar").text), "correo": correo, "codigo": codigo})
+
+
+def codigo_de(ctx) -> str:
+    return re.search(r"entrar a Ahí la Llevas: (\d{6}) \(vale 10 minutos\)", ctx.enviados[-1][2]).group(1)
+
+
 def entrar(ctx, cl, correo):
-    post(cl, "/entrar", correo=correo)
-    url = liga_de(ctx)
-    r = cl.get(url)
-    cl.post(url, data={"csrf": csrf_de(r.text)})
+    r = post(cl, "/entrar", correo=correo)
+    con_codigo(cl, correo, codigo_de(ctx))
     return cl
+
+
+def liga_nueva(ctx, correo) -> str:
+    """Liga vieja (ya no se manda por correo): la crea directo para probar que sigue sirviendo."""
+    with ctx.sesiones() as db:
+        return "/entrar/liga/" + auth.crear_liga(db, auth.buscar_por_correo(db, correo))
 
 
 def crear_usuario(ctx, correo="a@x.com", con_ajustes=False):
@@ -103,8 +115,7 @@ def test_limite_de_cinco_ligas_por_hora(web_ctx):
 def test_liga_un_uso_y_sesion(web_ctx):
     crear_usuario(web_ctx, "si@x.com", con_ajustes=False)
     cl = web_ctx.cliente()
-    post(cl, "/entrar", correo="si@x.com")
-    url = liga_de(web_ctx)
+    url = liga_nueva(web_ctx, "si@x.com")
     # abrir la liga (un escáner de correo) no la gasta
     page = cl.get(url)
     assert "Entrar a Ahí la Llevas" in page.text and cl.get(url).status_code == 200
@@ -121,12 +132,12 @@ def test_liga_un_uso_y_sesion(web_ctx):
 
 def test_liga_vencida(web_ctx):
     crear_usuario(web_ctx, "si@x.com")
-    post(web_ctx.cliente(), "/entrar", correo="si@x.com")
+    url = liga_nueva(web_ctx, "si@x.com")
     with web_ctx.sesiones() as db:
         for liga in db.query(LigaLogin):
             liga.expira = ahora() - timedelta(minutes=1)
         db.commit()
-    assert "ya se usó o venció" in web_ctx.cliente().get(liga_de(web_ctx)).text
+    assert "ya se usó o venció" in web_ctx.cliente().get(url).text
 
 
 def test_salir_borra_la_sesion(web_ctx):
@@ -213,3 +224,57 @@ def test_cabeceras_de_seguridad(web_ctx):
     r = web_ctx.cliente().get("/")
     assert r.headers["x-frame-options"] == "DENY" and "default-src 'self'" in r.headers["content-security-policy"]
     assert r.headers["cache-control"] == "no-store"
+
+
+def test_codigo_correcto_crea_sesion_y_solo_sirve_una_vez(web_ctx):
+    crear_usuario(web_ctx, "si@x.com")
+    cl = web_ctx.cliente()
+    r = post(cl, "/entrar", correo="si@x.com")
+    assert "name=\"codigo\"" in r.text and "/entrar/liga/" not in web_ctx.enviados[-1][2]
+    cod = codigo_de(web_ctx)
+    with web_ctx.sesiones() as db:   # solo queda el hash
+        assert cod not in db.query(CodigoLogin).one().codigo_hash
+    r = con_codigo(cl, "SI@x.com", cod)
+    assert r.status_code == 303 and "httponly" in r.headers["set-cookie"].lower()
+    assert cl.get("/").headers["location"] == "/bienvenida"
+    assert con_codigo(web_ctx.cliente(), "si@x.com", cod).status_code == 400
+
+
+def test_codigo_equivocado_cinco_veces_bloquea(web_ctx):
+    crear_usuario(web_ctx, "si@x.com")
+    cl = web_ctx.cliente()
+    post(cl, "/entrar", correo="si@x.com")
+    cod = codigo_de(web_ctx)
+    mal = "000000" if cod != "000000" else "111111"
+    for _ in range(5):
+        assert con_codigo(cl, "si@x.com", mal).status_code == 400
+    r = con_codigo(cl, "si@x.com", cod)   # ya con el bueno: bloqueado
+    assert r.status_code == 400 and "Código incorrecto o vencido" in r.text
+
+
+def test_codigo_vencido_falla(web_ctx):
+    crear_usuario(web_ctx, "si@x.com")
+    cl = web_ctx.cliente()
+    post(cl, "/entrar", correo="si@x.com")
+    with web_ctx.sesiones() as db:
+        for c in db.query(CodigoLogin):
+            c.expira = ahora() - timedelta(minutes=1)
+        db.commit()
+    assert con_codigo(cl, "si@x.com", codigo_de(web_ctx)).status_code == 400
+
+
+def test_codigo_de_correo_inexistente_no_revela_nada(web_ctx):
+    cl = web_ctx.cliente()
+    assert con_codigo(cl, "no@x.com", "123456").status_code == 400
+    assert not web_ctx.enviados
+
+
+def test_invitacion_mas_codigo_crea_la_cuenta(web_ctx):
+    with web_ctx.sesiones() as db:
+        token = auth.crear_invitacion(db, None)
+    cl = web_ctx.cliente()
+    post(cl, f"/invitacion/{token}", correo="nuevo@x.com")
+    r = con_codigo(cl, "nuevo@x.com", codigo_de(web_ctx))
+    assert r.status_code == 303
+    with web_ctx.sesiones() as db:
+        assert auth.buscar_por_correo(db, "nuevo@x.com") is not None

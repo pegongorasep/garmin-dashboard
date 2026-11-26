@@ -166,6 +166,6 @@ def test_sin_sesion_vuelve_al_consentimiento_despues_de_entrar(web_ctx):
     cid = registrar(cl).json()["client_id"]
     cl.get("/oauth/autorizar", params=params(cid))
     cl.post("/entrar", data={"csrf": csrf_de(cl.get("/entrar").text), "correo": "a@x.com"})
-    liga = next(t for _, _, t in reversed(web_ctx.enviados) if "/entrar/liga/" in t).split("/entrar/liga/")[1].split()[0]
-    r = cl.post(f"/entrar/liga/{liga}", data={"csrf": csrf_de(cl.get(f"/entrar/liga/{liga}").text)})
+    from test_web_cuentas import codigo_de
+    r = cl.post("/entrar/codigo", data={"csrf": csrf_de(cl.get("/entrar").text), "correo": "a@x.com", "codigo": codigo_de(web_ctx)})
     assert r.status_code == 303 and r.headers["location"].startswith("/oauth/autorizar?") and f"client_id={cid}" in r.headers["location"]

@@ -344,3 +344,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Decisión simple: la identificación por correo exige `email_verified=true`; una cuenta ya ligada a un `google_sub` distinto no se re-liga. El estado/nonce/PKCE viaja en una cookie HttpOnly de 10 min limitada a `/entrar/google`.
 - Tras entrar con Google va a `/` (o al conector si hay cookie); `/` manda a `/bienvenida` si falta el onboarding. L3 cambiará el destino.
 - «Ligar mi cuenta de Google» quedó en `/privacidad/mis-datos` (lo más simple; ya hay sesión y página de cuenta).
+
+## v5 login L2 (código de 6 dígitos)
+- Tabla nueva `codigos_login` (migración 0006), no se reutilizó LigaLogin: necesita contador de intentos. Se guarda HMAC(SECRET_KEY, usuario:código), nunca el código.
+- Un código vale 10 min, un uso, 5 intentos fallidos (luego se bloquea y hay que pedir otro); tope de 5 pedidos por hora por persona.
+- La liga `/entrar/liga/<token>` se dejó funcionando (lo más simple, no se borra código) pero ya no se manda por correo; se puede quitar cuando se quiera.
+- Respuesta neutra: código malo, vencido o correo inexistente dan el mismo mensaje.

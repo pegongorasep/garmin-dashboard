@@ -4,18 +4,17 @@
 {% block contenido %}
 <h1 class="pag-t">Entrar</h1>
 {% if mensaje %}
-{% call aviso("ok") %}{{ mensaje }}{% endcall %}
-<p class="pag-s">La liga sirve 15 minutos y una sola vez. Revisa también el correo no deseado.</p>
+{% include "_codigo.html" %}
 {% else %}
 {% if settings.google_client_id %}
 {{ boton("Continuar con Google", href="/entrar/google") }}
 <p class="pag-s">o con un correo:</p>
 {% endif %}
-<p>Te mandamos una liga a tu correo; no hay contraseñas.</p>
+<p>Te mandamos un código de 6 dígitos a tu correo; no hay contraseñas.</p>
 <form class="pila" method="post" action="/entrar">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   {{ campo("Correo", "correo", tipo="email", requerido=True, extra={"autocomplete": "email", "autofocus": true}) }}
-  {{ boton("Mandar liga", tipo="submit") }}
+  {{ boton("Mandar código", tipo="submit") }}
 </form>
 {% endif %}
 {% endblock %}

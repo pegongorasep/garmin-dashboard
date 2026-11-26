@@ -92,13 +92,12 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         resp.set_cookie(auth.COOKIE_SESION, valor, max_age=auth.DIAS_SESION * 86400, httponly=True,
                         secure=settings.cookie_segura, samesite="lax", path="/")
 
-    def mandar_liga(db, usuario) -> None:
-        token = auth.crear_liga(db, usuario)
-        if token:
-            url = f"{settings.base_url}/entrar/liga/{token}"
-            enviar(settings, usuario.correo, "Tu liga para entrar a Ahí la Llevas",
-                   f"Entra con esta liga (sirve 15 minutos y una sola vez):\n\n{url}\n\n"
-                   "Si no la pediste tú, ignora este correo.")
+    def mandar_codigo(db, usuario) -> None:
+        codigo = auth.crear_codigo(db, settings.secret_key, usuario)
+        if codigo:
+            enviar(settings, usuario.correo, "Tu código para entrar a Ahí la Llevas",
+                   f"Tu código para entrar a Ahí la Llevas: {codigo} (vale 10 minutos)\n\n"
+                   "Si no lo pediste tú, ignora este correo.")
 
     # --- salud ---
 
@@ -119,8 +118,21 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         form = await formulario(request)
         u = auth.buscar_por_correo(db, str(form.get("correo", "")))
         if u:
-            mandar_liga(db, u)
-        return render(request, "entrar.html", mensaje=auth.MENSAJE_LIGA)   # siempre lo mismo
+            mandar_codigo(db, u)
+        return render(request, "entrar.html", mensaje=auth.MENSAJE_LIGA, correo=auth.normalizar_correo(str(form.get("correo", ""))))   # siempre lo mismo
+
+    @app.post("/entrar/codigo")
+    async def entrar_codigo(request: Request, db=Depends(get_db)):
+        form = await formulario(request)
+        correo_in = str(form.get("correo", ""))
+        u = auth.gastar_codigo(db, settings.secret_key, correo_in, str(form.get("codigo", "")))
+        if u is None:
+            return render(request, "entrar.html", status=400, mensaje=auth.MENSAJE_LIGA,
+                          correo=auth.normalizar_correo(correo_in), error="Código incorrecto o vencido. Pide uno nuevo si hace falta.")
+        resp = RedirectResponse(oauth.volver_seguro(request.cookies.get(oauth.COOKIE_VOLVER, "")), 303)
+        poner_sesion(resp, auth.crear_sesion(db, u))
+        resp.delete_cookie(oauth.COOKIE_VOLVER, path="/")
+        return resp
 
     @app.get("/entrar/liga/{token}")
     def liga_form(request: Request, token: str, db=Depends(get_db)):
@@ -154,8 +166,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             return render(request, "invitacion.html", status=400, nota=None, token=token, error="Escribe un correo válido.")
         u = auth.aceptar_invitacion(db, token, correo_in) or auth.buscar_por_correo(db, correo_in)
         if u:
-            mandar_liga(db, u)
-        return render(request, "invitacion.html", mensaje=auth.MENSAJE_LIGA)   # igual exista o no la cuenta
+            mandar_codigo(db, u)
+        return render(request, "invitacion.html", mensaje=auth.MENSAJE_LIGA, correo=auth.normalizar_correo(correo_in))   # igual exista o no la cuenta
 
     @app.get("/salir")
     def salir_form(request: Request):

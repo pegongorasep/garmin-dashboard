@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from . import auth
 from .modelos import (Ajustes, CacheData, Cambio, ClienteOAuth, CodigoOAuth, Coach, Consentimiento, DatoGarmin, InBody,
-                      Invitacion, LigaLogin, Plan, Sesion, CuentaBorrada, Subida, TokenOAuth, Usuario, VinculoPendiente)
+                      CodigoLogin, Invitacion, LigaLogin, Plan, Sesion, CuentaBorrada, Subida, TokenOAuth, Usuario, VinculoPendiente)
 
 PALABRA = "BORRAR"
 
@@ -65,7 +65,7 @@ def borrar_cuenta(db: Session, u: Usuario) -> None:
     db.execute(sa.delete(Coach).where(sa.or_(Coach.atleta_id == uid, Coach.coach_id == uid)))
     db.execute(sa.delete(Cambio).where(Cambio.atleta_id == uid))
     db.execute(sa.delete(Invitacion).where(Invitacion.creada_por == uid))
-    for modelo in (CacheData, LigaLogin, Sesion, Consentimiento, DatoGarmin, Subida, Ajustes, Plan, InBody, VinculoPendiente):
+    for modelo in (CacheData, LigaLogin, CodigoLogin, Sesion, Consentimiento, DatoGarmin, Subida, Ajustes, Plan, InBody, VinculoPendiente):
         db.execute(sa.delete(modelo).where(modelo.usuario_id == uid))
     db.delete(u)
     db.add(CuentaBorrada())

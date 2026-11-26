@@ -4,7 +4,7 @@
 {% block contenido %}
 <h1 class="pag-t">Te invitaron a Ahí la Llevas</h1>
 {% if mensaje %}
-{% call aviso("ok") %}{{ mensaje }}{% endcall %}
+{% include "_codigo.html" %}
 {% elif no_valida %}
 {% call aviso("bad", rol="alert") %}Esta invitación ya se usó o venció. Pídele a Pedro una nueva.{% endcall %}
 {% else %}
@@ -13,7 +13,7 @@
 {{ boton("Continuar con Google", href="/entrar/google?inv=" ~ token) }}
 <p class="pag-s">o con un correo:</p>
 {% endif %}
-<p>Escribe tu correo para crear tu cuenta. Te mandamos una liga para entrar; no hay contraseñas.</p>
+<p>Escribe tu correo para crear tu cuenta. Te mandamos un código de 6 dígitos para entrar; no hay contraseñas.</p>
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 <form class="pila" method="post">
   <input type="hidden" name="csrf" value="{{ csrf }}">
