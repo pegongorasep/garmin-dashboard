@@ -1,5 +1,10 @@
 // Registra el service worker y avisa cuando hay una versión nueva esperando (sin recargar solo). Lo cargan las páginas de la web y el sitio.
 (function () {
+  // Selector de idioma del pie: al cambiar envía el mismo formulario (sin JS queda el botón del <noscript>).
+  document.addEventListener("change", (e) => {
+    const sel = e.target;
+    if (sel && sel.matches && sel.matches(".pie-idioma select") && sel.form) sel.form.requestSubmit ? sel.form.requestSubmit() : sel.form.submit();
+  });
   if (!("serviceWorker" in navigator)) return;
   const yo = document.currentScript;
   const texto = yo && yo.dataset.texto, accion = yo && yo.dataset.accion;

@@ -35,12 +35,13 @@ ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "ch
 FUENTES = {"Lexend-latin.woff2"}
 def pie_sitio(idioma: str, csrf: str = "", ruta: str = "/") -> str:
     """Pie y registro del service worker que la web agrega al sitio, en el idioma de quien lo ve."""
-    actual = ' aria-current="true"'
-    botones = " · ".join(
-        f'<button type="submit" name="idioma" value="{c}" lang="{c}"{actual if c == idioma else ""}>{i18n.t("idioma." + c, idioma)}</button>'
-        for c in ("es", "en"))
+    opciones = "".join(
+        f'<option value="{c}" lang="{c}"{" selected" if c == idioma else ""}>{i18n.t("idioma." + c, idioma)}</option>' for c in ("es", "en"))
     form = (f'<form class="pie-idioma" method="post" action="/idioma"><input type="hidden" name="csrf" value="{escape(csrf, quote=True)}">'
-            f'<input type="hidden" name="siguiente" value="{escape(ruta, quote=True)}">{botones}</form>') if csrf else ""
+            f'<input type="hidden" name="siguiente" value="{escape(ruta, quote=True)}">'
+            f'<label for="pie-idioma-sel" class="sr">{i18n.t("idioma.titulo", idioma)}</label>'
+            f'<svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/></svg><select id="pie-idioma-sel" name="idioma">{opciones}</select>'
+            f'<noscript><button type="submit">{i18n.t("idioma.guardar", idioma)}</button></noscript></form>') if csrf else ""
     return (f'<footer class="pie"><p>{i18n.t("pie.consejo", idioma)}</p>'
             f'<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p>{form}</footer>'
             f'<script src="/actualizar.js" data-texto="{i18n.t("sitio.version_nueva", idioma)}" data-accion="{i18n.t("sitio.version_actualizar", idioma)}"></script>')

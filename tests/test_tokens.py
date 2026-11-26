@@ -35,3 +35,10 @@ def test_toda_variable_usada_existe():
             if v not in definidas and v not in locales and not re.fullmatch(r"g", v):   # var(--g${n}) en app.js
                 faltan.setdefault(f.name, set()).add(v)
     assert not faltan, faltan
+
+
+def test_pie_idioma_es_selector():
+    from web.app import pie_sitio
+    h = pie_sitio("en", "tok", "/x")
+    assert '<select id="pie-idioma-sel" name="idioma">' in h and '<option value="en" lang="en" selected>' in h
+    assert "<noscript>" in h and 'name="siguiente" value="/x"' in h and "aria-current" not in h

@@ -98,7 +98,7 @@
 </div>
 {%- endmacro %}
 
-{# Pie de página: aviso médico, fuente de datos, privacidad e idioma (enlaces «Español · English»; el actual lleva aria-current). #}
+{# Pie de página: aviso médico, fuente de datos, privacidad e idioma (selector nativo con globo; al cambiar se envía solo, y sin JS queda el botón). #}
 {% macro pie(t=none, idioma=none, csrf=none, siguiente="/") -%}
 <footer class="pie">
   <p>{{ t("pie.consejo") if t else "Esto no es consejo médico: si algo duele, para." }}</p>
@@ -106,7 +106,10 @@
   {%- if t and idioma and csrf %}
   <form class="pie-idioma" method="post" action="/idioma">
     <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="siguiente" value="{{ siguiente }}">
-    {%- for cod in ("es", "en") %}{% if not loop.first %} · {% endif %}<button type="submit" name="idioma" value="{{ cod }}" lang="{{ cod }}"{% if cod == idioma %} aria-current="true"{% endif %}>{{ t("idioma." ~ cod) }}</button>{% endfor %}
+    <label for="pie-idioma-sel" class="sr">{{ t("idioma.titulo") }}</label>
+    <svg class="ico-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/></svg><select id="pie-idioma-sel" name="idioma">
+      {%- for cod in ("es", "en") %}<option value="{{ cod }}" lang="{{ cod }}"{% if cod == idioma %} selected{% endif %}>{{ t("idioma." ~ cod) }}</option>{% endfor %}</select>
+    <noscript><button type="submit">{{ t("idioma.guardar") }}</button></noscript>
   </form>
   {%- endif %}
 </footer>

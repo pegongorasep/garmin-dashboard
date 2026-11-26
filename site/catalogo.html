@@ -96,7 +96,7 @@ def("Contenedores", "Aviso", "DS.aviso()", "Aviso con fondo: atención, bien o p
 def("Contenedores", "Confirmación", "DS.confirmacion()", "Antes de una acción que borra o pierde datos.",
   DS.confirmacion({ titulo: "¿Rehacer el plan desde la semana 7?", texto: "Las sesiones de esas semanas que editaste a mano se pierden:",
     lista: ["Semana 7 · Z2 #2 (30 min)", "Semana 8 · Intervalos"], nota: "Puedes deshacerlo desde el historial.", confirmar: "Sí, rehacer" }));
-def("Contenedores", "Pie", "DS.pie()", "Aviso médico, fuente de datos y privacidad.", DS.pie({ idiomas: [{ id: "es", texto: "Español" }, { id: "en", texto: "English" }], actual: "es" }));
+def("Contenedores", "Pie", "DS.pie()", "Aviso médico, fuente de datos, privacidad y selector de idioma.", DS.pie({ idiomas: [{ id: "es", texto: "Español" }, { id: "en", texto: "English" }], actual: "es" }));
 def("Contenedores", "Banner de cambio", "DS.bannerCambio()", "Alguien más cambió tu plan: ver o deshacer.",
   DS.bannerCambio({ quien: "Pedro", texto: "cambió tu semana 7", cuando: "hace 2 h" }),
   DS.bannerCambio({ quien: "Tu IA", texto: "agregó la carrera «10K Polanco» y ajustó 3 semanas" }));

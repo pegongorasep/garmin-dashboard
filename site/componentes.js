@@ -36,12 +36,13 @@ const DS = (() => {
   const tarjeta = ({ titulo, clase, tag = "section" } = {}, ...hijos) =>
     h(tag, { class: `card${clase ? ` ${clase}` : ""}` }, titulo ? h("h3", { class: "card-t" }, titulo) : null, ...hijos);
 
-  /** Pie de página. Recibe { aviso, fuente, enlace: {texto, href}, idiomas: [{ id, texto }], actual } (idiomas: enlaces «Español · English»; el actual lleva aria-current). */
+  /** Pie de página. Recibe { aviso, fuente, enlace: {texto, href}, idiomas: [{ id, texto }], actual } (idiomas: selector nativo con globo; el JS de actualizar.js envía el formulario al cambiar). */
   const pie = ({ idiomas = null, actual = "", aviso = T("sitio.ds.pie_aviso"), fuente = T("sitio.ds.pie_fuente"), enlace = { texto: T("sitio.ds.pie_privacidad"), href: "/privacidad" } } = {}) =>
     h("footer", { class: "pie" }, h("p", {}, aviso),
       h("p", {}, fuente, enlace ? " · " : null, enlace ? h("a", { href: enlace.href }, enlace.texto) : null),
       idiomas ? h("form", { class: "pie-idioma", method: "post", action: "/idioma" },
-        ...idiomas.flatMap((l, i) => [i ? " · " : null, h("button", { type: "submit", name: "idioma", value: l.id, lang: l.id, "aria-current": l.id === actual ? "true" : null }, l.texto)])) : null);
+        h("label", { for: "pie-idioma-sel", class: "sr" }, T("sitio.ds.pie_idioma")), ico("globo", 16),
+        h("select", { id: "pie-idioma-sel", name: "idioma" }, ...idiomas.map((l) => h("option", { value: l.id, lang: l.id, selected: l.id === actual }, l.texto)))) : null);
 
   /** Pantalla de carga: el logo se arma. Recibe la frase que va debajo. */
   const cargando = (frase = T("sitio.ds.cargando"), { pagina = false } = {}) => h("div", { class: pagina ? "cargando pagina" : "cargando", role: "status" }, logo(), h("p", { class: "frase" }, frase));
