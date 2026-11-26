@@ -701,15 +701,22 @@ def resumen_semana_pasada(hoy: date, data: dict, config: dict, plan: dict):
                                               rojos, carga, previa, config)}
 
 
+SEMANAS_ANTES_PLAN = 13
+
+
 def build_semanas(hoy: date, data: dict, config: dict, plan: dict):
     """(semanas_hoy, índice de la semana de hoy): las del plan (con repetidas) y, si hoy cae fuera, la de hoy."""
     inicio = monday(date.fromisoformat(config["plan_start"]))
     total = _total_semanas(config, plan)
-    inicios = {inicio + timedelta(weeks=i) for i in range(total)} | {monday(hoy)}
-    inicios = sorted(inicios)
+    # Hasta 13 semanas previas al plan, desde la primera con alguna actividad (solo calendario real, sin plan).
+    previas = [monday(m.day_of(a)) for a in data["activities"]]
+    previas = [x for x in previas if inicio - timedelta(weeks=SEMANAS_ANTES_PLAN) <= x < inicio]
+    antes = {min(previas) + timedelta(weeks=i) for i in range((inicio - min(previas)).days // 7)} if previas else set()
+    inicios = sorted({inicio + timedelta(weeks=i) for i in range(total)} | {monday(hoy)} | antes)
     # Antes de que empiece el plan se muestra la semana 1 como vista previa.
     mostrar = inicio if hoy < date.fromisoformat(config["plan_start"]) else monday(hoy)
-    return [build_semana(i, hoy, data, config, plan) for i in inicios], inicios.index(mostrar)
+    semanas = [{**build_semana(i, hoy, data, config, plan), **({"antes_plan": True} if i in antes else {})} for i in inicios]
+    return semanas, inicios.index(mostrar)
 
 
 def session_names(rows_acts: list, data: dict, config: dict, plan: dict) -> dict:

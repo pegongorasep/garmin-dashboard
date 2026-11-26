@@ -448,6 +448,7 @@
 "sitio.rw.camina": "Walk {c}′",
 "sitio.rw.trote": "Jog {t}′",
 "sitio.sab_dom": "Sat or Sun",
+"sitio.sel.antes": "Before the plan · {r}",
 "sitio.sel.del": "Week of {r}",
 "sitio.sel.semana": "Week {n} · {r}",
 "sitio.sel.semana_de": "Week {n} of {t} · {r}",

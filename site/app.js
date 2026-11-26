@@ -235,13 +235,13 @@ function lineaSemana(st, vacio, extra = []) {
 function resumenSemanaPasada(d) {
   const r = d.hoy.semana_pasada;
   if (!r) return null;
-  const sug = r.sugerencia, hoyIdx = d.semana_hoy_idx ?? 0;
+  const sug = r.sugerencia, idxPasada = semanasHoy(d).findIndex((x) => x.inicio === r.inicio);
   const tiene = r.sesiones_total != null;
   const pct = tiene && r.sesiones_total ? Math.min(100, (r.sesiones_hechas / r.sesiones_total) * 100) : 0;
   const minutos = (r.stats || {}).minutos || 0;
   const bajo = (r.intensidad || {}).bajo;
   const resumen = lineaSemana(r.stats, T("sitio.sin_corridas"), bajo != null ? [T("sitio.sp.bajas", { v: fmt(bajo, 0) })] : []);
-  const verSemana = () => { semIdx = hoyIdx - 1; pintarSemana(d); const x = $("hoy-semana"); if (x && x.firstElementChild) x.firstElementChild.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const verSemana = () => { semIdx = idxPasada; pintarSemana(d); const x = $("hoy-semana"); if (x && x.firstElementChild) x.firstElementChild.scrollIntoView({ behavior: "smooth", block: "start" }); };
   // La línea 2 vive en el summary: tocar «Entendido» no debe abrir ni cerrar el detalle.
   const linea2 = !sug ? null : sug.tipo === "sigue" ? h("p", { class: "sp-sigue" }, sug.texto)
     : avisoCerrable("sugerencia", { clase: "warn", simbolo: "!", extra: "una-linea", texto: sug.titulo || sug.texto });
@@ -254,7 +254,7 @@ function resumenSemanaPasada(d) {
   h("div", { class: "sp-cuerpo" },
     sug && sug.tipo !== "sigue" && sug.titulo ? h("p", { class: "nota" }, sug.texto) : null,
     resumen,
-    hoyIdx > 0 ? DS.boton(T("sitio.sp.ver"), { variante: "texto", chico: true, onclick: verSemana }) : null)));
+    idxPasada >= 0 ? DS.boton(T("sitio.sp.ver"), { variante: "texto", chico: true, onclick: verSemana }) : null)));
 }
 
 // --- semanas navegables: selector, esta semana, calendario ---
@@ -278,6 +278,7 @@ function rangoSemana(s) {
 }
 
 function etiquetaSelector(d, s) {
+  if (s.antes_plan) return T("sitio.sel.antes", { r: rangoSemana(s) });
   const total = ((d.plan || {}).semanas || []).length;
   return s.n !== null && s.n !== undefined
     ? (total ? T("sitio.sel.semana_de", { n: s.n, t: total, r: rangoSemana(s) }) : T("sitio.sel.semana", { n: s.n, r: rangoSemana(s) })) + (s.kind ? ` · ${tipoSemana(s.kind)}` : "")
@@ -295,7 +296,7 @@ function selectorSemana(d) {
 
 function tituloSemana(d, s) {
   if (s.estado === "actual") return T("sitio.tit.actual");
-  return s.estado === "pasada" && semIdx === (d.semana_hoy_idx ?? 0) - 1 ? T("sitio.tit.pasada") : T("sitio.tit.esa");
+  return s.estado === "pasada" && s.inicio === (d.hoy.semana_pasada || {}).inicio ? T("sitio.tit.pasada") : T("sitio.tit.esa");
 }
 
 function comparacion(s) {

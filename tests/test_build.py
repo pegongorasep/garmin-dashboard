@@ -269,24 +269,53 @@ def test_semanas_hoy_escenario_real():
     ahora = datetime(2026, 11, 14, 12, 0, tzinfo=ZoneInfo("America/Merida"))
     out = build.build(build.load_data(), build.load_plan(), cfg, ahora)
     semanas = out["semanas_hoy"]
-    assert len(semanas) == 12
+    previas = [x for x in semanas if x.get("antes_plan")]
+    assert len(semanas) == 12 + len(previas) and len(previas) <= 13 and semanas[:len(previas)] == previas
     s = semanas[out["semana_hoy_idx"]]
     assert s["n"] == 1 and s["estado"] == "actual" and s["stats"]["corridas"] == 1
     assert s["sesiones"][0]["estado"] == "hecha" and s["extras"] == []
     assert s["dias"][3]["corrida"]["sesion_nombre"] == "Z2 #1"
-    futura = semanas[1]
+    futura = semanas[out["semana_hoy_idx"] + 1]
     assert futura["estado"] == "futura" and futura["stats"]["corridas"] == 0
     assert {e["estado"] for e in futura["sesiones"]} == {"pendiente"}
 
 
 def test_semanas_hoy_fuera_del_plan(salida):
     out = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG, AHORA)
-    assert len(out["semanas_hoy"]) == 3                       # 2 del plan de ejemplo + la semana de hoy (sin plan)
+    assert len(out["semanas_hoy"]) == 4      # 2 del plan + hoy + 26 oct, ambas antes del plan
+    assert [s.get("antes_plan") for s in out["semanas_hoy"]] == [True, True, None, None]
     # el plan empieza el 9 nov: se abre en la semana 1 como vista previa
     assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1
     s = next(x for x in out["semanas_hoy"] if x["inicio"] == "2026-11-02")
     assert s["n"] is None and s["plan"] is None and s["sesiones"] == []
     assert s["inicio"] == "2026-11-02" and s["stats"]["corridas"] == 1 and len(s["extras"]) == 1
+
+
+def _antes(actividades, plan_start="2027-01-04", hoy=datetime(2027, 1, 6, 12, 0, tzinfo=ZoneInfo("America/Merida"))):
+    data = fixture()
+    data["activities"] = actividades
+    cfg = {**CONFIG, "plan_start": plan_start}
+    return build.build(data, build.load(ROOT / "plan" / "plan.example.json"), cfg, hoy)
+
+
+def test_semanas_antes_del_plan():
+    # 10 semanas antes del lunes 4 ene 2027: la primera actividad cae el 26 oct 2026 (lunes)
+    out = _antes([_act(1, "2026-10-26", "running"), _act(2, "2026-12-30", "running")])
+    sems = out["semanas_hoy"]
+    previas = [s for s in sems if s.get("antes_plan")]
+    assert len(previas) == 10 and sems[:10] == previas and previas[0]["inicio"] == "2026-10-26"
+    assert all(s["plan"] is None and s["sesiones"] == [] and s["n"] is None for s in previas)
+    assert previas[0]["stats"]["corridas"] == 1 and previas[-1]["stats"]["corridas"] == 1
+    assert sems[out["semana_hoy_idx"]]["inicio"] == "2027-01-04" and not sems[out["semana_hoy_idx"]].get("antes_plan")
+    assert not any(s.get("antes_plan") for s in sems[10:])
+
+
+def test_semanas_antes_del_plan_sin_actividad_y_tope():
+    assert not any(s.get("antes_plan") for s in _antes([_act(1, "2027-01-05", "running")])["semanas_hoy"])
+    out = _antes([_act(1, "2026-01-05", "running"), _act(2, "2026-12-30", "running")])    # muy vieja: fuera de las 13
+    assert not any(s["inicio"] < "2026-10-05" for s in out["semanas_hoy"] if s.get("antes_plan"))
+    out = _antes([_act(1, "2026-10-05", "running")])                                       # justo 13 semanas
+    assert len([s for s in out["semanas_hoy"] if s.get("antes_plan")]) == 13
 
 
 def test_semana_con_cuatro_corridas_trae_un_extra():
