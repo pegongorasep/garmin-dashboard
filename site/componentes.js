@@ -519,11 +519,65 @@ const DS = (() => {
     };
   })();
 
+  // ---------- Grupo ----------
+
+  /** Anillo chico de avance (hechas/total). Recibe { pct (0–100), etiqueta (aria-label) }. */
+  const anilloMini = ({ pct = 0, etiqueta } = {}) => {
+    const C = 2 * Math.PI * 40, p = Math.min(Math.max(pct, 0), 100);
+    return sv("svg", { class: "anillo-mini", viewBox: "0 0 100 100", role: "img", "aria-label": etiqueta || `${Math.round(p)} %` },
+      sv("circle", { class: "f", cx: 50, cy: 50, r: 40 }),
+      sv("circle", { class: "l", cx: 50, cy: 50, r: 40, "stroke-dasharray": C.toFixed(2), "stroke-dashoffset": (C * (1 - p / 100)).toFixed(2) }),
+      sv("text", { x: 50, y: 58 }, `${Math.round(p)}`));
+  };
+
+  /** Barra fina de avance. Recibe { pct (0–100), etiqueta }. */
+  const barraFina = ({ pct = 0, etiqueta } = {}) =>
+    h("div", { class: "barra-fina", role: "img", "aria-label": etiqueta || `${Math.round(pct)} %` }, h("div", { style: `width:${Math.min(Math.max(pct, 0), 100)}%` }));
+
+  /** Puntos de la semana. Recibe { dias: ["hecha"|"libre"|"futuro"], etiqueta }. */
+  const puntosSemana = ({ dias = [], etiqueta } = {}) =>
+    h("div", { class: "puntos-sem", role: "img", "aria-label": etiqueta }, dias.map((d) => h("span", { class: `pt ${d}` })));
+
+  /** Reacción recibida. Recibe { emoji, n, mia, etiqueta, nueva, onclick }; la cuenta solo se ve con n > 1. */
+  const chipReaccion = ({ emoji, n = 1, mia = false, etiqueta, nueva = false, onclick } = {}) =>
+    h("button", { type: "button", class: `reac${mia ? " mia" : ""}${nueva ? " nueva" : ""}`, "aria-label": etiqueta, "aria-pressed": String(!!mia), onclick },
+      h("span", { class: "em", "aria-hidden": "true" }, emoji), n > 1 ? h("span", {}, String(n)) : null);
+
+  /** Botón «＋ Reacción». Recibe { texto, etiqueta, onclick }. */
+  const botonReaccion = ({ texto = T("sitio.gr.reaccion"), etiqueta, onclick } = {}) =>
+    h("button", { type: "button", class: "reac-mas", "aria-label": etiqueta, onclick }, h("span", { "aria-hidden": "true" }, "＋"), texto);
+
+  /** Selector de reacciones: los emojis en una cuadrícula. Recibe { emojis, onElegir(emoji) }. */
+  const selectorReaccion = ({ emojis = [], onElegir } = {}) =>
+    h("div", { class: "reac-pick", role: "group", "aria-label": T("sitio.gr.elegir") },
+      emojis.map((e) => h("button", { type: "button", class: "reac-op", onclick: () => onElegir && onElegir(e) }, e)));
+
+  /** Tarjeta de una persona del grupo, cerrada por defecto. Recibe { nombre, foto, iniciales, color, pct, etiquetaAnillo, insignias:[texto],
+   *  linea (texto), pausa (texto), dias, etiquetaDias, reacciones (nodos), detalle (nodos), abierto, etiquetaAbrir, onAlternar(abierto) }. */
+  const tarjetaMiembro = ({ nombre, foto, iniciales, color = 0, pct = null, etiquetaAnillo, insignias = [], linea, pausa, dias = [], etiquetaDias, reacciones = null,
+    detalle = [], abierto = false, etiquetaAbrir, onAlternar } = {}) => {
+    const cuerpo = h("div", { class: "mi-detalle", hidden: !abierto }, detalle);
+    const cab = h("button", { type: "button", class: "mi-cab", "aria-expanded": String(!!abierto), "aria-label": etiquetaAbrir, onclick: () => {
+      const on = cab.getAttribute("aria-expanded") !== "true";
+      cab.setAttribute("aria-expanded", String(on));
+      cuerpo.hidden = !on;
+      if (onAlternar) onAlternar(on);
+    } },
+      avatar({ iniciales, color, foto }),
+      h("span", { class: "mi-quien" }, h("span", { class: "mi-nombre" }, nombre),
+        insignias.length ? h("span", { class: "mi-ins" }, insignias.map((t) => chip(t, "suave"))) : null),
+      pct === null ? null : anilloMini({ pct, etiqueta: etiquetaAnillo }), ico("flecha-abajo"));
+    return h("article", { class: "card miembro" }, cab,
+      pausa ? h("p", { class: "mi-linea muted" }, pausa) : [h("p", { class: "mi-linea" }, linea), dias.length ? puntosSemana({ dias, etiqueta: etiquetaDias }) : null],
+      reacciones, pausa ? null : cuerpo);
+  };
+
   return {
     animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, dialogoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
+    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */
     silueta: (tramos, { alto = 44, conTip = true, rachas = null, ...rampas } = {}) => siluetaSesion(tramos, alto, conTip, rachas, rampas),
   };

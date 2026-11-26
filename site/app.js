@@ -1,5 +1,5 @@
 // Dashboard: solo pinta lo que recibe de data.json (la lógica vive en dashboard/build.py).
-const VISTAS = ["hoy", "plan", "progreso", "ayuda"];   // Progreso tiene dos subvistas: Corridas (#progreso) y Cuerpo (#progreso/cuerpo)
+const VISTAS = ["hoy", "plan", "progreso", "ayuda", "grupo"];   // Progreso tiene dos subvistas: Corridas (#progreso) y Cuerpo (#progreso/cuerpo)
 let datos = null;
 // Lo que cada vista vuelve a dibujar cuando ya tiene ancho (gráficas) o cambia el tamaño; lo llena su render.
 const PINTAR = { hoy: [], plan: [], progreso: [], cuerpo: [] };   // `cuerpo` = subvista Cuerpo de Progreso

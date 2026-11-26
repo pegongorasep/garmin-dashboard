@@ -165,7 +165,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                               "reacciones": {} if res["tarjetas"][u.id]["estado"] == "pausa" else reacciones_json(reacc.get(u.id), nombres, usuario.id)}
                              for m, u in miembros],
                 "total": res["total"], "insignias": res["insignias"], "novedades": res["novedades"],
-                "emojis": list(EMOJIS), "admin_url": f"/grupos/{gid}"}
+                "emojis": list(EMOJIS), "emoji_cat": grupos_resumen.EMOJI_CATEGORIA, "admin_url": f"/grupos/{gid}"}
 
     @app.get("/grupos/nuevo")
     def nuevo_get(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):

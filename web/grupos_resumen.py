@@ -15,6 +15,9 @@ log = logging.getLogger("web.grupos_resumen")
 CAMPOS = {"usuario_id", "estado", "meta", "etapa_n", "adherencia", "dias", "ultima", "libre",
           "semana", "plan", "progreso", "racha", "carrera"}   # lo único que sale de una tarjeta
 MAX_NOVEDADES = 3
+# Emoji de cada categoría de «otras sesiones» (la pestaña solo pinta). Lo que no esté aquí usa «otra».
+EMOJI_CATEGORIA = {"crossfit": "🔥", "hiit": "🔥", "fuerza": "🏋️", "gym": "🏋️", "pesas": "🏋️", "bici": "🚴", "cardio": "🚴",
+                   "nado": "🏊", "natacion": "🏊", "caminata": "🚶", "walking": "🚶", "movilidad": "🤸", "yoga": "🤸", "otra": "🤸"}
 SEMANAS_ADHERENCIA = 4
 
 

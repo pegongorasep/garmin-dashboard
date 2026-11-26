@@ -42,3 +42,14 @@ def test_sw_espera_y_la_pagina_avisa(web_ctx):
     assert 'data-cuerpo="Actualiza para ver los cambios."' in h and 'data-luego="Ahora no"' in h
     for clave in ("showModal", "dialogo-version", "descartados"):
         assert clave in js.text, clave
+
+
+def test_sw_no_guarda_las_respuestas_de_grupos():
+    """/api/grupos lleva datos de otras personas: el service worker solo deja pasar a la red (PROHIBIDO) y nunca lo lista como estático."""
+    import re
+    from pathlib import Path
+    sw = (Path(__file__).resolve().parent.parent / "site" / "sw.js").read_text()
+    prohibido = re.search(r"PROHIBIDO = /(.+)/;", sw).group(1)
+    assert re.search(prohibido, "/api/grupos") and re.search(prohibido, "/api/grupos/3")
+    assert "/api/grupos" not in sw.split("PROHIBIDO")[0]   # y no está en la lista de estáticos
+    assert "PROHIBIDO.test(url.pathname)) return;" in sw    # sin respondWith: pasa directo a la red

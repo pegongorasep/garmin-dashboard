@@ -683,12 +683,168 @@ function cambiarTema(ev) {
 
 // --- arranque ---
 
+// --- Grupo: la pestaña con la gente de tus grupos (todo lo calcula la web; aquí solo se pinta) ---
+let grupoTurno = 0;   // descarta respuestas viejas si la persona cambia de ruta mientras carga
+const NOV_EMOJI = { semana_completa: "🎉", record_distancia: "🏃", racha: "🔥", carrera_cerca: "🏁" };
+
+const grupoGet = async (url) => {
+  const r = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  return r.json();
+};
+
+const grupoAbiertos = () => { try { return JSON.parse(localStorage.getItem("grupoAbiertos") || "{}"); } catch (e) { return {}; } };
+const grupoGuardarAbierto = (clave, on) => {
+  try { const a = grupoAbiertos(); if (on) a[clave] = 1; else delete a[clave]; localStorage.setItem("grupoAbiertos", JSON.stringify(a)); } catch (e) { /* sin almacenamiento: solo no se recuerda */ }
+};
+
+const grupoTiempo = (min) => {
+  const hh = Math.floor(min / 60), mm = Math.round(min % 60);
+  return hh && mm ? T("sitio.gr.t_hm", { h: hh, m: mm }) : hh ? T("sitio.gr.t_h", { h: hh }) : T("sitio.gr.t_m", { m: mm });
+};
+
+function grupoTextoNovedad(n, nombre) {
+  const d = n.datos || {};
+  if (n.tipo === "semana_completa") return d.total ? T("sitio.gr.nov.semana_completa", { nombre, n: d.n, total: d.total }) : T("sitio.gr.nov.semana_completa_sola", { nombre, n: d.n });
+  if (n.tipo === "record_distancia") return T("sitio.gr.nov.record_distancia", { nombre, km: fmt(d.km, 1) });
+  if (n.tipo === "racha") return T("sitio.gr.nov.racha", { nombre, semanas: d.semanas });
+  if (n.tipo === "carrera_cerca") return d.dias === 0 ? T("sitio.gr.nov.carrera_hoy", { nombre }) : d.dias === 1 ? T("sitio.gr.nov.carrera_manana", { nombre }) : T("sitio.gr.nov.carrera_cerca", { nombre, dias: d.dias });
+  return "";
+}
+
+/** Manda (o quita) una reacción y devuelve las reacciones nuevas de esa persona. El token CSRF va como campo de formulario, nunca en JSON. */
+async function grupoReaccionar(gid, uid, emoji) {
+  const r = await fetch(`/grupos/${gid}/reaccionar/${uid}`, { method: "POST", headers: { Accept: "application/json" },
+    body: new URLSearchParams({ csrf: $("app").dataset.csrf || "", emoji }) });
+  if (!r.ok) throw new Error(String(r.status));
+  return (await r.json()).reacciones || {};
+}
+
+function grupoDialogo(titulo, cuerpo) {
+  const d = DS.dialogo({ titulo, cuerpo });
+  d.addEventListener("close", () => d.remove());
+  document.body.append(d);
+  d.showModal();
+  return d;
+}
+
+function pintarGrupo(g) {
+  const raiz = $("vista-grupo"), yo = g.yo, porId = Object.fromEntries(g.miembros.map((m) => [m.usuario_id, m]));
+  const catEmoji = (c) => (g.emoji_cat || {})[c] || (g.emoji_cat || {}).otra || "🤸";
+  const aviso = h("div", { class: "ancha", "aria-live": "polite" });
+  const error = () => { aviso.replaceChildren(DS.aviso({ clase: "bad", simbolo: "!", texto: T("sitio.gr.err_reaccion") })); };
+
+  const filaReacciones = (m) => {
+    const fila = h("div", { class: "reacciones" });
+    const repintar = (nuevo) => {
+      fila.replaceChildren(
+        ...g.emojis.filter((e) => m.reacciones[e]).map((e) => {
+          const r = m.reacciones[e], quienes = r.quienes.join(", ");
+          return DS.chipReaccion({ emoji: e, n: r.n, mia: r.mia, nueva: e === nuevo,
+            etiqueta: r.mia ? T("sitio.gr.quitar", { emoji: e, quienes }) : T("sitio.gr.ver_quienes", { emoji: e, quienes }),
+            onclick: r.mia ? () => enviar(m, e)
+              : () => grupoDialogo(T("sitio.gr.quienes_t", { emoji: e }), [h("p", {}, T("sitio.gr.quienes", { emoji: e })), h("p", {}, quienes)]) });
+        }),
+        m.usuario_id === yo ? null : DS.botonReaccion({ etiqueta: T("sitio.gr.reaccionar_a", { nombre: m.nombre }), onclick: () => elegir(m) }));
+    };
+    m._pintarReacciones = repintar;
+    repintar();
+    return fila;
+  };
+  const enviar = async (m, emoji) => {
+    try {
+      const antes = !!(m.reacciones[emoji] && m.reacciones[emoji].mia);
+      m.reacciones = await grupoReaccionar(g.grupo.id, m.usuario_id, emoji);
+      aviso.replaceChildren();
+      m._pintarReacciones(antes ? null : emoji);
+    } catch (e) { error(); }
+  };
+  const elegir = (m) => {
+    const d = grupoDialogo(T("sitio.gr.reaccionar_a", { nombre: m.nombre }),
+      [DS.selectorReaccion({ emojis: g.emojis, onElegir: (e) => { d.close(); enviar(m, e); } })]);
+  };
+
+  const tarjeta = (m) => {
+    const t = m.tarjeta, clave = `${g.grupo.id}:${m.usuario_id}`;
+    const pausa = t.estado === "pausa";
+    const ins = g.insignias.filter((i) => i.usuario_ids.includes(m.usuario_id)).map((i) => T(`sitio.gr.ins.${i.clave}`));
+    const partes = [];
+    if (t.semana) {
+      const s = t.semana;
+      if (s.km > 0 || s.minutos > 0) partes.push(`🏃 ${T("sitio.gr.corrida", { km: fmt(s.km, 1), min: fmt(s.minutos, 0) })}`);
+      for (const [c, n] of Object.entries(s.otras || {})) partes.push(`${catEmoji(c)} ${n}`);
+    }
+    const detalle = [];
+    if (t.plan && t.plan.n) {
+      const p = t.progreso;
+      detalle.push(h("p", {}, t.plan.total ? T("sitio.gr.semana_n", { n: t.plan.n, total: t.plan.total }) : T("sitio.gr.semana_sola", { n: t.plan.n })));
+      if (t.plan.total) detalle.push(DS.barraFina({ pct: 100 * t.plan.n / t.plan.total, etiqueta: T("sitio.gr.semana_n", { n: t.plan.n, total: t.plan.total }) }));
+      if (p && !t.semana) detalle.push(h("p", {}, T("sitio.gr.progreso_aria", { hechas: p.hechas, total: p.total })));
+    }
+    if (t.adherencia !== null && t.adherencia !== undefined) detalle.push(h("p", {}, T("sitio.gr.adherencia", { pct: fmt(t.adherencia, 0) })));
+    if (t.carrera) detalle.push(h("p", {}, t.meta || t.carrera.nombre ? T("sitio.gr.carrera", { nombre: t.carrera.nombre || t.meta, dias: t.carrera.dias }) : T("sitio.gr.carrera_sola", { dias: t.carrera.dias })));
+    const racha = t.racha || (t.libre && t.libre.racha) || 0;
+    if (racha > 0) detalle.push(h("p", {}, `🔥 ${T("sitio.gr.racha", { n: racha })}`));
+    if (t.ultima) detalle.push(h("p", {}, T("sitio.gr.ultima", { fecha: fechaCorta(t.ultima) })));
+    const iniciales = m.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
+    return DS.tarjetaMiembro({ nombre: m.nombre, foto: m.foto, iniciales, color: m.usuario_id, insignias: ins,
+      pct: !pausa && t.progreso && t.progreso.total ? 100 * t.progreso.hechas / t.progreso.total : null,
+      etiquetaAnillo: t.progreso ? T("sitio.gr.progreso_aria", { hechas: t.progreso.hechas, total: t.progreso.total }) : null,
+      pausa: pausa ? T("sitio.gr.pausa") : null,
+      linea: partes.length ? partes.join(" · ") : T(t.semana ? "sitio.gr.sin_actividad" : "sitio.gr.sin_datos"),
+      dias: t.dias || [], etiquetaDias: T("sitio.gr.dias_aria", { n: (t.dias || []).filter((d) => d === "hecha").length }),
+      reacciones: pausa ? null : filaReacciones(m), detalle, abierto: !!grupoAbiertos()[clave], etiquetaAbrir: T("sitio.gr.detalle", { nombre: m.nombre }),
+      onAlternar: (on) => grupoGuardarAbierto(clave, on) });
+  };
+
+  const nov = g.novedades.filter((n) => porId[n.usuario_id]);
+  raiz.replaceChildren(
+    h("div", { class: "grupo-cab ancha" }, h("h2", {}, g.grupo.nombre), h("a", { href: g.admin_url }, T("sitio.gr.administrar"))),
+    ui().grupos > 1 ? h("div", { class: "ancha" }, DS.boton(T("sitio.gr.todos"), { variante: "texto", chico: true, onclick: () => { location.hash = "#grupo"; } })) : null,
+    h("p", { class: "grupo-total ancha" }, T("sitio.gr.juntos", { km: fmt(g.total.km, 1), tiempo: grupoTiempo(g.total.minutos) })),
+    nov.length ? DS.tarjeta({ titulo: T("sitio.gr.novedades"), clase: "ancha" }, h("ul", { class: "novedades" }, nov.map((n) => {
+      const m = porId[n.usuario_id];
+      return h("li", { class: "nov-fila" }, h("span", {}, `${NOV_EMOJI[n.tipo] || "•"} ${grupoTextoNovedad(n, m.nombre)}`),
+        m.usuario_id === yo ? null : DS.botonReaccion({ texto: "", etiqueta: T("sitio.gr.reaccionar_a", { nombre: m.nombre }), onclick: () => elegir(m) }));
+    }))) : null,
+    aviso,
+    ...g.miembros.map(tarjeta));
+}
+
+function pintarListaGrupos(lista) {
+  $("vista-grupo").replaceChildren(h("h2", { class: "grupo-cab ancha" }, T("sitio.gr.tus_grupos")),
+    h("div", { class: "grupos-lista ancha" }, lista.map((x) => h("a", { class: "grupo-fila", href: `#grupo/${x.id}` },
+      h("span", {}, x.nombre), h("small", {}, T("sitio.gr.personas", { n: x.miembros_n }))))));
+}
+
+/** Entrar a la pestaña: baja la lista (o el grupo) de la red, siempre fresca; el service worker no toca /api. */
+async function cargarGrupo(id) {
+  const turno = ++grupoTurno, raiz = $("vista-grupo");
+  raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando")));
+  try {
+    let gid = id;
+    if (!gid) {
+      const lista = await grupoGet("/api/grupos");
+      if (turno !== grupoTurno) return;
+      if (lista.length !== 1) { pintarListaGrupos(lista); return; }
+      gid = lista[0].id;
+    }
+    const g = await grupoGet(`/api/grupos/${encodeURIComponent(gid)}`);
+    if (turno !== grupoTurno) return;
+    pintarGrupo(g);
+  } catch (e) {
+    if (turno !== grupoTurno) return;
+    raiz.replaceChildren(DS.errorCarga({ titulo: T("sitio.gr.err_t"), texto: T("sitio.gr.err"), detalle: e && e.message ? e.message : String(e), onReintentar: () => cargarGrupo(id) }));
+  }
+}
+
 // Plan y Hoy redibujan lo suyo; Progreso, solo la subvista visible (las gráficas necesitan ancho).
 const REDIBUJAR = {
   hoy: () => PINTAR.hoy.forEach((f) => f()),
   plan: () => PINTAR.plan.forEach((f) => f()),
   progreso: () => PINTAR[subProgreso === "cuerpo" ? "cuerpo" : "progreso"].forEach((f) => f()),
   ayuda: () => {},
+  grupo: () => {},   // se baja de la red al entrar (cargarGrupo), no al cambiar el tamaño
 };
 let vistaActual = null;
 
@@ -697,7 +853,8 @@ const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
 const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
   ...(ui().sin_plan ? [] : [{ id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" }]),   // sin plan: no hay pestaña Plan (L2 la reemplaza por una tarjeta)
-  { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" }];
+  { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" },
+  ...(ui().grupos > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#grupo" }] : [])];   // solo en la web y con al menos un grupo
 const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
 
 /** Ícono de cada liga del menú ☰ (si ui.menu trae `icono`, gana el suyo). */
@@ -751,7 +908,7 @@ function mostrarVista() {
   const ruta = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
   const [nombre, sub] = (ALIAS_RUTA[ruta] || ruta).split("/");
   const solo = !!ui().solo_cuerpo;   // solo cuerpo: todo cae en Progreso > Cuerpo (la ayuda sigue)
-  const v = solo && nombre !== "ayuda" ? "progreso" : VISTAS.includes(nombre) ? nombre : "hoy";
+  const v = solo && nombre !== "ayuda" ? "progreso" : nombre === "grupo" && !(ui().grupos > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
   subProgreso = solo || (v === "progreso" && sub === "cuerpo") ? "cuerpo" : "corridas";
   if (v !== "ayuda") rutaPrevia = `#${ruta || "hoy"}`;
   vistaActual = v;
@@ -762,6 +919,7 @@ function mostrarVista() {
   }
   mostrarSubvista();
   REDIBUJAR[v]();
+  if (v === "grupo") cargarGrupo(sub || null);
   window.scrollTo(0, 0);
   if (datos && /[?&]abrir\b/.test(location.hash)) {   // para capturas: ?abrir despliega sesiones y "Ver todos los tipos"
     document.querySelectorAll(`#vista-${v} details.fila-ses, #vista-${v} details.todos-tipos`).forEach((x) => { x.open = true; });

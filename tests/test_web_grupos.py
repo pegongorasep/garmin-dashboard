@@ -342,7 +342,7 @@ def test_api_forma_y_lista_blanca(web_ctx):
     from web import grupos_resumen
     a, b, gid, ua, ub = _dos(web_ctx)
     d = a.get(f"/api/grupos/{gid}").json()
-    assert set(d) == {"grupo", "yo", "miembros", "total", "insignias", "novedades", "emojis", "admin_url"}
+    assert set(d) == {"grupo", "yo", "miembros", "total", "insignias", "novedades", "emojis", "emoji_cat", "admin_url"}
     assert d["grupo"] == {"id": gid, "nombre": "Los Fieras"} and d["yo"] == ua and d["admin_url"] == f"/grupos/{gid}"
     assert len(d["emojis"]) == 8
     for m in d["miembros"]:

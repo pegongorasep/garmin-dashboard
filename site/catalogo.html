@@ -70,7 +70,7 @@ const fechaIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
 const semana = (i, desde = new Date(2026, 8, 7)) => { const f = new Date(desde); f.setDate(f.getDate() + 7 * i); return f; };
 
 // --- armado por grupos ---
-const GRUPOS = { "Marca": [], "Contenedores": [], "Controles": [], "Navegación": [], "Datos": [], "Gráficas": [] };
+const GRUPOS = { "Marca": [], "Contenedores": [], "Controles": [], "Navegación": [], "Datos": [], "Gráficas": [], "Grupo": [] };
 /** Una sección del catálogo: grupo, nombre, función de DS, qué es y los ejemplos. */
 function def(grupo, nombre, fn, que, ...ejemplos) {
   GRUPOS[grupo].push(h("section", { class: "comp", id: `c-${fn.toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, "")}` },
@@ -281,6 +281,18 @@ def("Gráficas", "Línea con cruz", "DS.graficaLinea()", "Tendencia con el últi
   DS.tarjeta({ titulo: "FC en reposo" }, DS.graficaLinea({ alto: 160, etiqueta: "FC en reposo por semana", etiquetaFinal: "52",
     serie: fc.map((y, i) => ({ fecha: fechaIso(semana(i)), y })), fmtY: (v) => fmt(v, 0),
     texto: (p) => `Semana del ${fmt(parseFecha(p.fecha).getDate(), 0)} ${MESES[parseFecha(p.fecha).getMonth()]}\n${p.y} lpm` })));
+
+// Grupo
+def("Grupo", "Reacciones", "DS.chipReaccion()", "Reacción recibida: la cuenta solo se ve con más de una; la tuya lleva borde y al tocarla se quita. «＋ Reacción» abre el selector de 8 emojis.",
+  h("div", { class: "reacciones" }, DS.chipReaccion({ emoji: "🔥", n: 1, etiqueta: "🔥" }), DS.chipReaccion({ emoji: "👏", n: 3, mia: true, etiqueta: "👏" }), DS.botonReaccion({ onclick: () => {} })),
+  DS.selectorReaccion({ emojis: ["👏", "🔥", "💪", "🚀", "❤️", "😂", "🫡", "🏆"] }));
+def("Grupo", "Anillo y barra fina", "DS.anilloMini()", "Avance chico: el anillo (sesiones hechas) y la barra fina (semana del plan) más los puntos de la semana.",
+  DS.tarjeta({}, h("div", { style: "display:flex;gap:var(--space-14);align-items:center" }, DS.anilloMini({ pct: 66 }), DS.puntosSemana({ dias: ["hecha", "libre", "hecha", "hecha", "futuro", "futuro", "futuro"] })), DS.barraFina({ pct: 25 })));
+def("Grupo", "Tarjeta de persona", "DS.tarjetaMiembro()", "Una persona del grupo, cerrada por defecto: avatar, insignias, anillo, resumen de la semana, puntos y reacciones; al abrirla, el detalle. En pausa solo dice que pausó.",
+  DS.tarjetaMiembro({ nombre: "Ana López", iniciales: "AL", color: 1, pct: 66, insignias: ["Más constante"], linea: "🏃 12.4 km · 85 min · 🏋️ 2 · 🔥 1",
+    dias: ["hecha", "libre", "hecha", "hecha", "futuro", "futuro", "futuro"], reacciones: h("div", { class: "reacciones" }, DS.chipReaccion({ emoji: "🔥", n: 2, etiqueta: "🔥" }), DS.botonReaccion({ onclick: () => {} })),
+    detalle: [h("p", {}, "Semana 3 de 12"), DS.barraFina({ pct: 25 }), h("p", {}, "85 % de sesiones en las últimas 4 semanas"), h("p", {}, "🔥 Racha de 4 semanas cumplidas")], abierto: true }),
+  DS.tarjetaMiembro({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, pausa: "Pausó lo que comparte" }));
 
 const raiz = document.getElementById("catalogo");
 for (const [grupo, secciones] of Object.entries(GRUPOS)) raiz.append(h("h2", { class: "grupo" }, grupo), ...secciones);
