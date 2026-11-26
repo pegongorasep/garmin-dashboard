@@ -1,7 +1,8 @@
 /* Estilos de la app: solo layout y lo propio de la app que el sistema (componentes.css) no cubre.
    Los colores, espacios, radios y letra salen de tokens.css; los componentes, de componentes.css. */
-body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
-.top, #carga, #app { max-width: 720px; margin-inline: auto; }
+body { display: flex; flex-direction: column; min-height: 100dvh; padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.top, #carga, #app, body > .pie { width: 100%; max-width: 720px; margin-inline: auto; box-sizing: border-box; }
+body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el contenido es corto */
 .top { display: grid; gap: var(--space-8); padding-block: calc(6px + env(safe-area-inset-top, 0px)) 0; }
 .enc-caja { position: relative; }
 .menu-pop { position: absolute; right: 0; top: calc(100% - 4px); z-index: 30; }
@@ -12,7 +13,7 @@ body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bot
 #hoy-semana, .sub { display: contents; }
 .ancha { grid-column: 1 / -1; }
 @media (min-width: 900px) {
-  .top, #carga, #app { max-width: 1080px; }
+  .top, #carga, #app, body > .pie { max-width: 1080px; }
   .vista { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 14px 16px; }
   .semana-pasada { grid-column: 1 / -1; width: calc(50% - 8px); }   /* fila propia arriba (nada se cuela a su lado); la tarjeta mide media columna */
 }

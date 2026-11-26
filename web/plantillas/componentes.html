@@ -98,11 +98,17 @@
 </div>
 {%- endmacro %}
 
-{# Pie de página: aviso médico, fuente de datos y privacidad. #}
-{% macro pie(t=none) -%}
+{# Pie de página: aviso médico, fuente de datos, privacidad e idioma (enlaces «Español · English»; el actual lleva aria-current). #}
+{% macro pie(t=none, idioma=none, csrf=none, siguiente="/") -%}
 <footer class="pie">
   <p>{{ t("pie.consejo") if t else "Esto no es consejo médico: si algo duele, para." }}</p>
   <p>{{ t("pie.datos") if t else "Datos de Garmin" }} · <a href="/privacidad">{{ t("pie.privacidad") if t else "Aviso de privacidad" }}</a></p>
+  {%- if t and idioma and csrf %}
+  <form class="pie-idioma" method="post" action="/idioma">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="siguiente" value="{{ siguiente }}">
+    {%- for cod in ("es", "en") %}{% if not loop.first %} · {% endif %}<button type="submit" name="idioma" value="{{ cod }}" lang="{{ cod }}"{% if cod == idioma %} aria-current="true"{% endif %}>{{ t("idioma." ~ cod) }}</button>{% endfor %}
+  </form>
+  {%- endif %}
 </footer>
 {%- endmacro %}
 

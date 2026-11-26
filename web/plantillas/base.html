@@ -25,7 +25,7 @@
 <main class="caja {% block clase %}{% endblock %}">
 {% block contenido %}{% endblock %}
 </main>
-<div class="caja {% block clase_pie %}{% endblock %}">{{ pie(t) }}</div>
+<div class="caja {% block clase_pie %}{% endblock %}">{{ pie(t, idioma, csrf, request.url.path) }}</div>
 <script src="/actualizar.js" data-texto="{{ t('sitio.version_nueva') }}" data-accion="{{ t('sitio.version_actualizar') }}"></script>
 {% block scripts %}{% endblock %}
 </body>

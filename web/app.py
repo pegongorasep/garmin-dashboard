@@ -33,10 +33,16 @@ ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "ch
                   "icono-192.png": "image/png", "icono-512.png": "image/png", "icono-maskable-512.png": "image/png",
                   "apple-touch-icon.png": "image/png"}
 FUENTES = {"Lexend-latin.woff2"}
-def pie_sitio(idioma: str) -> str:
+def pie_sitio(idioma: str, csrf: str = "", ruta: str = "/") -> str:
     """Pie y registro del service worker que la web agrega al sitio, en el idioma de quien lo ve."""
+    actual = ' aria-current="true"'
+    botones = " · ".join(
+        f'<button type="submit" name="idioma" value="{c}" lang="{c}"{actual if c == idioma else ""}>{i18n.t("idioma." + c, idioma)}</button>'
+        for c in ("es", "en"))
+    form = (f'<form class="pie-idioma" method="post" action="/idioma"><input type="hidden" name="csrf" value="{escape(csrf, quote=True)}">'
+            f'<input type="hidden" name="siguiente" value="{escape(ruta, quote=True)}">{botones}</form>') if csrf else ""
     return (f'<footer class="pie"><p>{i18n.t("pie.consejo", idioma)}</p>'
-            f'<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p></footer>'
+            f'<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p>{form}</footer>'
             f'<script src="/actualizar.js" data-texto="{i18n.t("sitio.version_nueva", idioma)}" data-accion="{i18n.t("sitio.version_actualizar", idioma)}"></script>')
 
 
@@ -256,15 +262,15 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         e = onboarding.estado(db, usuario)
         if not onboarding.completo(db, usuario):
             return RedirectResponse("/bienvenida", 303)
-        html = (SITE / "index.html").read_text().replace("</main>", pie_sitio(request.state.idioma) + "</main>", 1)
-        # Nombre, avisos ya entendidos y token CSRF van solo en esta página (nunca en data.json). Las páginas no se
-        # guardan en el service worker; no-store por si acaso.
-        ocultos = {a.aviso_id: a.huella for a in db.scalars(select(AvisoOculto).where(AvisoOculto.usuario_id == usuario.id))}
         cookie = request.cookies.get(auth.COOKIE_CSRF)
         nueva = cookie is None
         cookie = cookie or secrets.token_urlsafe(24)
-        attrs = {"data-nombre": usuario.nombre or "", "data-avisos-ocultos": json.dumps(ocultos),
-                 "data-csrf": auth.campo_csrf(settings.secret_key, cookie)}
+        campo = auth.campo_csrf(settings.secret_key, cookie)
+        html = (SITE / "index.html").read_text().replace("</main>", "</main>" + pie_sitio(request.state.idioma, campo, "/"), 1)
+        # Nombre, avisos ya entendidos y token CSRF van solo en esta página (nunca en data.json). Las páginas no se
+        # guardan en el service worker; no-store por si acaso.
+        ocultos = {a.aviso_id: a.huella for a in db.scalars(select(AvisoOculto).where(AvisoOculto.usuario_id == usuario.id))}
+        attrs = {"data-nombre": usuario.nombre or "", "data-avisos-ocultos": json.dumps(ocultos), "data-csrf": campo}
         html = html.replace('<main id="app">', '<main id="app" ' + " ".join(f'{k}="{escape(v, quote=True)}"' for k, v in attrs.items()) + ">", 1)
         resp = HTMLResponse(html, headers={"Cache-Control": "no-store"})
         if nueva:
@@ -330,9 +336,16 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         """El mismo sitio, visto por el coach: los archivos van con ruta absoluta y data.json sigue relativo (/a/<id>/data.json)."""
         if not puede_ver(db, usuario, atleta_id):
             raise HTTPException(404)
-        html = (SITE / "index.html").read_text().replace("</main>", pie_sitio(request.state.idioma) + "</main>", 1)
+        cookie = request.cookies.get(auth.COOKIE_CSRF)
+        nueva = cookie is None
+        cookie = cookie or secrets.token_urlsafe(24)
+        pie = pie_sitio(request.state.idioma, auth.campo_csrf(settings.secret_key, cookie), request.url.path)
+        html = (SITE / "index.html").read_text().replace("</main>", "</main>" + pie, 1)
         html = re.sub(r'(href|src)="([\w.-]+\.(?:css|js))"', r'\1="/\2"', html)
-        return HTMLResponse(html)
+        resp = HTMLResponse(html)
+        if nueva:
+            resp.set_cookie(auth.COOKIE_CSRF, cookie, httponly=True, secure=settings.cookie_segura, samesite="lax", path="/")
+        return resp
 
     @app.get("/fuentes/{archivo}")
     def fuente(archivo: str):

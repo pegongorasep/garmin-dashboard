@@ -416,7 +416,7 @@ def test_onboarding_completo(ctx):
     assert "&amp;name=ahilallevas-datos" in p3 and "Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual" in p3
     p4 = cl.get("/bienvenida?paso=4").text
     assert "https://github.com/Yo-Mismo/ahilallevas-datos/settings/secrets/actions/new" in p4 and "PERSONAL_API_KEY" in p4
-    assert "no la pedimos nunca" in p4 and 'type="password"' not in p4 and "<input" not in p4   # ningún campo para la key
+    assert "no la pedimos nunca" in p4 and 'type="password"' not in p4 and not re.search(r'<input(?![^>]*type="hidden")', p4)   # ningún campo para la key
     assert "https://github.com/Yo-Mismo/ahilallevas-datos/actions" in cl.get("/bienvenida?paso=5").text
     # todavía no hay datos: el paso 7 no se abre
     assert "Comprueba que ese repo es tuyo" in cl.get("/bienvenida?paso=7").text
