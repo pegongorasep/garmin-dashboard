@@ -29,6 +29,7 @@ class Usuario(Base):
     sensor: Mapped[str] = mapped_column(sa.String(10), default="banda")   # banda | muñeca
     historial_desde: Mapped[str | None] = mapped_column(sa.String(10))    # pedido pendiente: la siguiente corrida lo baja
     idioma: Mapped[str | None] = mapped_column(sa.String(5))              # es | en; None = el del navegador
+    uso: Mapped[str | None] = mapped_column(sa.String(10))                # None = completo | cuerpo (solo mediciones)
     migrado: Mapped[bool] = mapped_column(default=False)                  # F8: Pages apagado
     borrado: Mapped[datetime | None] = mapped_column()
 

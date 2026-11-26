@@ -246,7 +246,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if usuario is None:
             return render(request, "inicio.html")
         e = onboarding.estado(db, usuario)
-        if not (e["consentimiento"] and e["ajustes"]):
+        if not onboarding.completo(db, usuario):
             return RedirectResponse("/bienvenida", 303)
         html = (SITE / "index.html").read_text().replace("</main>", pie_sitio(request.state.idioma) + "</main>", 1)
         return HTMLResponse(html)

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, tarjeta %}
+{% block titulo %}{{ t("aj.titulo_pagina") }}{% endblock %}
+{% block contenido %}
+<h1 class="pag-t">{{ t("aj.titulo") }}</h1>
+{% call tarjeta() %}
+  <div class="texto">
+  <h2 class="pag-h">{{ t("aj.cuerpo_t") }}</h2>
+  <p>{{ t("aj.cuerpo_a") }}</p>
+  <form class="pila" method="post" action="/ajustes/uso">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ boton(t("aj.cuerpo_activar"), tipo="submit") }}
+  </form>
+  </div>
+{% endcall %}
+<div class="acciones">{{ boton(t("comun.volver"), "sec", href="/") }}</div>
+{% endblock %}

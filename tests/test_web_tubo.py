@@ -403,6 +403,8 @@ def test_onboarding_completo(ctx):
     with ctx.sesiones() as db:
         c = db.query(Consentimiento).one()
         assert c.version_aviso == "2026-12" and c.fecha
+    assert "¿Qué quieres usar?" in cl.get("/bienvenida").text
+    cl.post("/bienvenida/uso", data={"csrf": csrf_de(cl.get("/bienvenida").text), "uso": "completo"})
     assert "usuario de GitHub" in cl.get("/bienvenida").text
     # usuario inválido
     r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "no válido!"})

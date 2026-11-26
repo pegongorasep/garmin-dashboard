@@ -370,3 +370,7 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Menú, acciones del plan y aviso de repo de `web/calculo.py` ahora salen de `web.*` del catálogo; `MENU` y `PLAN_ACCIONES` quedan como la versión en español (las pruebas los comparan).
 - Prueba anti-español (`test_sin_texto_en_espanol_fuera_del_catalogo`): heurística de tildes/ñ/¿¡ en cadenas de plantillas y JS; lista `PERMITIDAS_ESPANOL`. No cubre `catalogo.html` (admin, en español).
 - Siguen en español a propósito: ConfigError, reloj_plan, MCP.
+
+## v5 solo cuerpo
+- C1: `Usuario.uso` (None = completo, "cuerpo"). La pregunta «¿Qué quieres usar?» sale tras el aviso mientras `uso` sea None y no haya usuario de GitHub, repo ni pendiente (cuentas viejas no la ven). Elegir completo guarda `uso="completo"` (equivale a None) para no repetirla.
+- C1: cuerpo no crea fila de `Ajustes` (zona horaria y título quedan en los valores por defecto); así «Activar entrenamiento» solo cambia `uso` y el onboarding retoma desde GitHub. Pendiente C2: `/` de un cuerpo hoy sirve el sitio completo.

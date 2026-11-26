@@ -32,18 +32,19 @@ def estado(db: Session, u: Usuario) -> dict:
                 Consentimiento.usuario_id == u.id, Consentimiento.version_aviso == VERSION_AVISO).limit(1)) is not None,
             "owner": bool(u.github_owner), "vinculado": bool(u.repo_id),
             "datos": tubo.tuvo_subida_ok(db, u.id), "ajustes": db.get(Ajustes, u.id) is not None,
-            "pendiente": tubo.pendiente_vigente(db, u.id) is not None}
+            "pendiente": tubo.pendiente_vigente(db, u.id) is not None, "uso": u.uso or "completo",
+            "uso_elegido": u.uso is not None}
 
 
 def completo(db: Session, u: Usuario) -> bool:
     e = estado(db, u)
-    return bool(e["consentimiento"] and e["ajustes"])
+    return bool(e["consentimiento"] and (e["ajustes"] or e["uso"] == "cuerpo"))
 
 
 def paso_maximo(e: dict) -> int:
     if not e["consentimiento"]:
         return 1
-    if e["ajustes"]:
+    if e["ajustes"] or e["uso"] == "cuerpo":
         return 1   # ya tiene plan: no hay nada más que hacer aquí
     if not e["owner"]:
         return 2
@@ -126,14 +127,17 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if usuario is None:
             return RedirectResponse("/entrar", 303)
         e = estado(db, usuario)
-        if e["ajustes"] and e["consentimiento"]:
+        if completo(db, usuario):
             return RedirectResponse("/", 303)
+        # recién aceptado el aviso y sin elegir: primero «¿Qué quieres usar?»
+        pregunta = (e["consentimiento"] and not e["uso_elegido"] and not e["owner"] and not e["vinculado"]
+                    and not e["pendiente"] and not request.query_params.get("paso"))
         try:
             pedido = int(request.query_params.get("paso", ""))
         except ValueError:
             pedido = paso_inicial(e)
         paso = max(1, min(pedido, paso_maximo(e)))
-        return render(request, "bienvenida.html", paso=paso, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
+        return render(request, "bienvenida.html", paso=paso, pregunta_uso=pregunta, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
                       liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), proximo_lunes=proximo_lunes().isoformat(),
                       zonas=ZONAS, categorias=categorias_por_defecto(), dias=DIAS, niveles=NIVELES,
                       intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS, error=None, valores={})
@@ -146,6 +150,22 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if form.get("acepto") != "on":
             return RedirectResponse("/bienvenida?paso=1", 303)
         db.add(Consentimiento(usuario_id=usuario.id, version_aviso=VERSION_AVISO))
+        db.commit()
+        return RedirectResponse("/bienvenida", 303)
+
+    @app.post("/bienvenida/uso")
+    async def uso(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        """«¿Qué quieres usar?»: completo (Garmin + cuerpo) sigue el paso a paso; cuerpo termina aquí, sin repo ni plan."""
+        form = await formulario(request)
+        if usuario is None:
+            return RedirectResponse("/entrar", 303)
+        if not estado(db, usuario)["consentimiento"]:
+            raise HTTPException(403, request.state.t("err.primero_aviso"))
+        if form.get("uso") == "cuerpo":
+            usuario.uso = "cuerpo"
+            db.commit()
+            return RedirectResponse("/", 303)
+        usuario.uso = "completo"
         db.commit()
         return RedirectResponse("/bienvenida", 303)
 
