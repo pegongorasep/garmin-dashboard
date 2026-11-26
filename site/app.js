@@ -328,12 +328,12 @@ function diaCalendario(x, hoyIso) {
   let marca = [];
   if (x.corrida) {
     const cls = x.corrida.estado === "hecha" ? "" : x.corrida.estado === "incompleta" ? " incompleta" : " extra";
-    marca = [h("span", { class: `circ${cls}${x.corrida.carrera ? " carrera" : ""}`, "aria-hidden": "true" }, fmt(x.corrida.minutos, 0)),
-      h("span", { class: "sn" }, DS.ico(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr")), h("span", {}, x.corrida.sesion_nombre + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
+    marca = [h("span", { class: `circ${cls}${x.corrida.carrera ? " carrera" : ""}`, "aria-hidden": "true" }, parseFecha(x.fecha).getDate()),
+      h("span", { class: "sn" }, DS.ico(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr")), h("span", {}, `${fmt(x.corrida.minutos, 0)}' ${x.corrida.sesion_nombre}` + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, "carrera") : null];
   }
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.esfuerzo != null ? fmt(cf.esfuerzo, 1) : null));
-  return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), hijos: [...marca, ...cfMarca] });
+  return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), numeroEnMarca: marca.length > 0, hijos: [...marca, ...cfMarca] });
 }
 
 function calendarioSemana(d, s) {

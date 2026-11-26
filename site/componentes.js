@@ -245,10 +245,11 @@ const DS = (() => {
       h("div", {}, titulo ? h("p", { class: "prog-t" }, titulo) : null, texto ? h("p", { class: "nota" }, texto) : null));
   };
 
-  /** Un día del calendario de la semana. Recibe { nombre (lun…), numero, hoy, titulo (tooltip y lectores), hijos:[nodos] }. */
-  const diaCal = ({ nombre, numero, hoy, titulo, hijos = [] } = {}) =>
+  /** Un día del calendario de la semana. Recibe { nombre (lun…), numero, hoy, titulo (tooltip y lectores), hijos:[nodos],
+   numeroEnMarca }. Con numeroEnMarca el número del día va dentro del círculo (hijos) y no se repite arriba. */
+  const diaCal = ({ nombre, numero, hoy, titulo, hijos = [], numeroEnMarca = false } = {}) =>
     h("div", { class: `dia${hoy ? " hoy" : ""}`, role: "group", title: titulo, "aria-label": titulo },
-      h("span", { class: "dn" }, nombre), h("span", { class: "df" }, numero), ...hijos);
+      h("span", { class: "dn" }, nombre), numeroEnMarca ? null : h("span", { class: "df" }, numero), ...hijos);
 
   /** Calendario de 7 días. Recibe los días (DS.diaCal). */
   const calendario = (...dias) => h("div", { class: "cal" }, ...dias.flat());
