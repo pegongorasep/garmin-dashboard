@@ -167,6 +167,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         auth.cerrar_sesion(db, request.cookies.get(auth.COOKIE_SESION))
         resp = RedirectResponse("/", 303)
         resp.delete_cookie(auth.COOKIE_SESION, path="/")
+        resp.headers["Clear-Site-Data"] = '"cache"'   # el service worker guarda el último data.json: no dejarlo en un equipo compartido
         return resp
 
     @app.get("/privacidad")

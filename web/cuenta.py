@@ -97,4 +97,5 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         borrar_cuenta(db, usuario)
         resp = render(request, "cuenta_borrada.html")
         resp.delete_cookie(auth.COOKIE_SESION, path="/")
+        resp.headers["Clear-Site-Data"] = '"cache"'
         return resp
