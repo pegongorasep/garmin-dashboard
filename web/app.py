@@ -1,6 +1,7 @@
 """Rutas y arranque de la web. `crear_app()` arma la app (las pruebas le pasan su propia base y su propio correo)."""
 import logging
 import secrets
+import re
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -191,12 +192,12 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             raise HTTPException(404)
         return FileResponse(SITE / "catalogo.html", media_type="text/html")
 
-    def data_de(db, usuario, atleta_id: int) -> Response:
+    def data_de(db, usuario, atleta_id: int, pref: str = "") -> Response:
         if not puede_ver(db, usuario, atleta_id):
             raise HTTPException(404)   # 404 y no 403: no confirma que exista
         atleta = db.get(Usuario, atleta_id)
         try:
-            return JSONResponse(calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None)))
+            return JSONResponse(calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None), pref))
         except calculo.SinConfig:
             raise HTTPException(404)
         except ConfigError as e:
@@ -213,7 +214,16 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
 
     @app.get("/a/{atleta_id}/data.json")
     def data_atleta(atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return data_de(db, usuario, atleta_id)
+        return data_de(db, usuario, atleta_id, "" if usuario is not None and usuario.id == atleta_id else f"/a/{atleta_id}")
+
+    @app.get("/a/{atleta_id}/")
+    def sitio_atleta(atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
+        """El mismo sitio, visto por el coach: los archivos van con ruta absoluta y data.json sigue relativo (/a/<id>/data.json)."""
+        if not puede_ver(db, usuario, atleta_id):
+            raise HTTPException(404)
+        html = (SITE / "index.html").read_text().replace("</main>", PIE_SITIO + "</main>", 1)
+        html = re.sub(r'(href|src)="([\w.-]+\.(?:css|js))"', r'\1="/\2"', html)
+        return HTMLResponse(html)
 
     @app.get("/fuentes/{archivo}")
     def fuente(archivo: str):

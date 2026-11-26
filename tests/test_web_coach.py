@@ -47,3 +47,28 @@ def test_quitar_exige_csrf_y_solo_tus_coaches(web_ctx):
     otro.post(f"/coach/quitar/{fila}", data={"csrf": csrf_de(otro.get("/coach").text)})
     with web_ctx.sesiones() as db:
         assert db.query(Coach).count() == 1   # b no puede quitar el coach de a
+
+
+def test_f5b_coach_ve_y_edita_a_su_atleta_con_via_coach_y_aviso(web_ctx):
+    from web.modelos import Cambio
+    uid_a, atleta = listo(web_ctx, "atleta@x.com")
+    uid_c, coach = listo(web_ctx, "coach@x.com", con_plan=False)
+    uid_o, otro = listo(web_ctx, "otro@x.com")
+    dar(atleta, "coach@x.com")
+    pag = coach.get("/coach").text
+    assert "Mis atletas" in pag and f"/a/{uid_a}/" in pag and "otro@x.com" not in pag
+    assert coach.get(f"/a/{uid_o}/").status_code == 404 and coach.get(f"/a/{uid_o}/data.json").status_code == 404
+    sitio = coach.get(f"/a/{uid_a}/")
+    assert sitio.status_code == 200 and 'src="/app.js"' in sitio.text
+    ui = coach.get(f"/a/{uid_a}/data.json").json()["ui"]
+    assert all(a["url"].startswith(f"/a/{uid_a}/plan") for a in ui["plan_acciones"])
+    assert all(v.startswith(f"/a/{uid_a}/plan/sesion/") for v in ui["editar_urls"].values())
+    assert not any(m["url"] == "/coach" for m in ui["menu"])
+    assert atleta.get("/data.json").json()["ui"]["plan_acciones"][0]["url"].startswith("/plan")
+    r = coach.get(f"/a/{uid_a}/plan/acciones")
+    assert r.status_code == 200
+    r = coach.post(f"/a/{uid_a}/plan/viaje", data={"csrf": csrf_de(r.text), "desde": "2027-03-01", "hasta": "2027-03-05"})
+    with web_ctx.sesiones() as db:
+        c = db.query(Cambio).filter(Cambio.atleta_id == uid_a).order_by(Cambio.id.desc()).first()
+        assert c is not None and c.via == "coach" and c.autor_id == uid_c
+    assert atleta.get("/data.json").json().get("avisos")

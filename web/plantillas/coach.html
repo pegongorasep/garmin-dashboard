@@ -24,4 +24,14 @@
       {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form>
   {% endcall %}
 {% endfor %}
+<h2 class="pag-h">Mis atletas</h2>
+{% if not atletas %}<p class="pag-s">Nadie te ha dado acceso todavía.</p>{% endif %}
+{% for a in atletas %}
+  {% call tarjeta() %}
+    <p><strong>{{ a.nombre }}</strong></p>
+    <p class="pag-s">Datos al: {{ a.datos_al or "sin datos" }} · Semana del plan: {{ a.semana or "-" }} · Semáforo de hoy: {{ a.semaforo or "-" }}</p>
+    <div class="acciones">{{ boton("Ver", "sec", chico=True, href="/a/" ~ a.id ~ "/") }}
+      {{ boton("Ajustes", "sec", chico=True, href="/a/" ~ a.id ~ "/ajustes") }}</div>
+  {% endcall %}
+{% endfor %}
 {% endblock %}

@@ -3,7 +3,7 @@ from fastapi import Depends, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 
-from . import auth
+from . import auth, calculo
 from .modelos import Coach, Usuario
 
 NEUTRO = "Si esa persona tiene cuenta, ya tiene acceso."
@@ -15,8 +15,23 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                            .where(Coach.atleta_id == usuario.id, Usuario.borrado.is_(None)).order_by(Coach.creado)).all()
         return [{"id": c.id, "nombre": u.apodo or u.correo} for c, u in filas]
 
+    def atletas_de(db, usuario):
+        filas = db.execute(select(Coach, Usuario).join(Usuario, Usuario.id == Coach.atleta_id)
+                           .where(Coach.coach_id == usuario.id, Usuario.borrado.is_(None)).order_by(Coach.creado)).all()
+        out = []
+        for _, a in filas:
+            fila = {"id": a.id, "nombre": a.apodo or a.correo, "datos_al": None, "semana": None, "semaforo": None}
+            try:
+                d = calculo.calcular(db, a)
+                fila.update(datos_al=(d.get("datos_al") or "")[:10] or None, semana=(d.get("plan") or {}).get("semana_actual"),
+                            semaforo=(d.get("hoy") or {}).get("semaforo"))
+            except Exception:   # sin ajustes todavía o datos inválidos: se lista igual, sin cifras
+                pass
+            out.append(fila)
+        return out
+
     def pagina(request, usuario, db, status=200, **extra):
-        return render(request, "coach.html", status=status, atleta=usuario, pref="", coaches=coaches_de(db, usuario),
+        return render(request, "coach.html", status=status, atleta=usuario, pref="", coaches=coaches_de(db, usuario), atletas=atletas_de(db, usuario),
                       ok=request.query_params.get("ok"), error=None, **extra)
 
     @app.get("/coach")

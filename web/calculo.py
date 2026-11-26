@@ -109,7 +109,24 @@ def estado_repo(db: Session, usuario: Usuario, ahora_utc: datetime) -> dict | No
                       {"texto": "Renovar mi key de Garmin", "url": LIGA_KEY}]}
 
 
-def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None) -> dict:
+PREFIJABLES = ("/ajustes", "/historial", "/cuerpo", "/plan")   # rutas que existen también bajo /a/<id>
+
+
+def con_prefijo(salida: dict, pref: str) -> dict:
+    """Cuando el coach ve a su atleta: las ligas de edición, el menú y los avisos llevan /a/<id>. Sin Coach en el menú."""
+    def f(url):
+        return pref + url if isinstance(url, str) and url.startswith(PREFIJABLES) else url
+    ui = salida["ui"]
+    ui = {**ui, "menu": [{**m, "url": f(m["url"])} for m in ui.get("menu") or [] if m["url"] != "/coach"],
+          "plan_acciones": [{**a, "url": f(a["url"])} for a in ui.get("plan_acciones") or []],
+          "editar_urls": {k: f(v) for k, v in (ui.get("editar_urls") or {}).items()}}
+    out = {**salida, "ui": ui}
+    if out.get("avisos"):
+        out["avisos"] = [{**a, "url": f(a.get("url"))} for a in out["avisos"]]
+    return out
+
+
+def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, pref: str = "") -> dict:
     """data.json de la persona (con el aviso de repo atrasado, que no se guarda en la caché porque depende de la hora).
     Truena con SinConfig o DataInvalido."""
     base = _calcular_cacheado(db, usuario, ahora_utc)
@@ -122,7 +139,7 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None) -
     if problemas:
         log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)
         raise DataInvalido(problemas)
-    return salida
+    return con_prefijo(salida, pref) if pref else salida
 
 
 def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None = None) -> dict:
