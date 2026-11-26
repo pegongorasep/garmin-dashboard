@@ -143,6 +143,7 @@ function renderPlan(d) {
   const det = d.detalles || {};
   const acciones = ui().plan_acciones || [];
   const guardado = new URLSearchParams(location.search).get("ok") === "plan";   // viene de guardar un formulario del plan
+  if (guardado) history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
   $("vista-plan").replaceChildren(...[
     guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: "Listo", texto: "Guardamos tu plan." }) : null,
     acciones.length ? h("div", { class: "botones" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
