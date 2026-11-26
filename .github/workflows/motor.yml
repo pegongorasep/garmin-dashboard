@@ -102,6 +102,7 @@ jobs:
           path: motor/site
 
       # Solo en repos de amigos: CLAUDE.md y las skills se copian del motor. No toca .github/workflows/.
+      # Ya migrados (publicar_pages=false) o sin config.yaml: `decidir.publicar` es false y este paso se salta.
       # Si el push choca (la persona subió algo a la vez), no frena la publicación: se reintenta en la próxima.
       - name: Dejar al día las instrucciones de Claude
         if: github.repository != 'pegongorasep/garmin-dashboard' && steps.decidir.outputs.publicar == 'true'

@@ -149,7 +149,7 @@ def validar(paquete) -> list:
     desconocidos = set(archivos) - set(ARCHIVOS)
     if desconocidos:
         out.append(f"archivos desconocidos: {', '.join(sorted(map(str, desconocidos)))}")
-    if set(paquete) - {"esquema", "motor", "archivos"}:
+    if set(paquete) - {"esquema", "motor", "archivos", "personales"}:
         out.append("claves desconocidas en el paquete")
     if not isinstance(paquete.get("motor"), str):
         out.append("falta `motor`")
@@ -165,6 +165,30 @@ def validar(paquete) -> list:
                 recorrer(v, f"{ruta}[{i}]", en_detalle)
     for nombre, contenido in archivos.items():
         recorrer(contenido, nombre, nombre == "activity_details")
+    pers = paquete.get("personales")
+    if pers is not None:
+        if not isinstance(pers, dict) or set(pers) - {"config", "plan", "inbody"} or not all(isinstance(v, dict) for v in pers.values()):
+            out.append("`personales` no válido")
+        else:
+            recorrer(pers, "personales", False)
     if len(json.dumps(paquete, separators=(",", ":"))) >= MAX_BYTES:
         out.append("el paquete pesa 10 MB o más")
     return out
+
+
+def personales(carpeta) -> dict:
+    """Los archivos personales opcionales del repo ({config, plan, inbody}; solo los que existen) para la primera subida.
+    La web los importa solo si esa persona aún no tiene ajustes. Nunca revienta: lo que no se pueda leer se salta."""
+    c = Path(carpeta)
+    out = {}
+    try:
+        if (c / "config.yaml").exists():
+            out["config"] = json.loads(json.dumps(ajustes.leer_config_yaml(c / "config.yaml"), default=str))
+        for clave, ruta in (("plan", c / "plan" / "plan.json"), ("inbody", c / "plan" / "inbody.json")):
+            if ruta.exists():
+                v = json.loads(ruta.read_text())
+                if isinstance(v, dict):
+                    out[clave] = v
+    except Exception:   # noqa: BLE001  (un archivo roto no tumba la subida)
+        pass
+    return {k: v for k, v in out.items() if isinstance(v, dict)}

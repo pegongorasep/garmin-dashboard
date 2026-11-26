@@ -16,17 +16,13 @@ def _json_puro(o):
     return json.loads(json.dumps(o, default=str))
 
 
-def importar_carpeta(db: Session, usuario: Usuario, carpeta, salt: str = "importar") -> dict:
-    """config.yaml -> `ajustes` (crudo), plan.json -> `planes`, inbody.json -> `inbody`, data/ -> paquete -> `datos_garmin`.
-    Lo que falte en la carpeta se salta. `salt` debe ser el de su repo (GITHUB_REPOSITORY_ID) para que los ids de las
-    actividades coincidan con los de las subidas futuras."""
-    c = Path(carpeta)
-    hecho, nuevo = {}, {}
-    if (c / "config.yaml").exists():
-        crudo = leer_config_yaml(c / "config.yaml")
-        inbody = None
-        if (c / "plan" / "inbody.json").exists():
-            inbody = json.loads((c / "plan" / "inbody.json").read_text())
+def cambio_de_personales(config, plan, inbody) -> tuple[dict, dict]:
+    """(nuevo, hecho): lo que escribe `cambios.aplicar_cambio` a partir de config crudo, plan e InBody (cualquiera puede
+    ser None). Lo comparten `importar_carpeta` y la primera subida del tubo. Truena si el config no vale."""
+    nuevo, hecho = {}, {}
+    if config is not None:
+        crudo = dict(config)
+        if inbody:
             crudo = {**crudo, **({"inbody_prime": inbody["prime"]} if inbody.get("prime") else {}),
                      **({"inbody_nota": inbody["nota"]} if inbody.get("nota") else {})}
         normalizar_config(crudo)   # que truene aquí si el config no vale
@@ -35,9 +31,21 @@ def importar_carpeta(db: Session, usuario: Usuario, carpeta, salt: str = "import
         if inbody:
             nuevo["inbody"] = list(inbody.get("mediciones") or [])
             hecho["inbody"] = len(nuevo["inbody"])
-    if (c / "plan" / "plan.json").exists():
-        nuevo["plan"] = json.loads((c / "plan" / "plan.json").read_text())
+    if plan is not None:
+        nuevo["plan"] = plan
         hecho["plan"] = True
+    return nuevo, hecho
+
+
+def importar_carpeta(db: Session, usuario: Usuario, carpeta, salt: str = "importar") -> dict:
+    """config.yaml -> `ajustes` (crudo), plan.json -> `planes`, inbody.json -> `inbody`, data/ -> paquete -> `datos_garmin`.
+    Lo que falte en la carpeta se salta. `salt` debe ser el de su repo (GITHUB_REPOSITORY_ID) para que los ids de las
+    actividades coincidan con los de las subidas futuras."""
+    c = Path(carpeta)
+    config = leer_config_yaml(c / "config.yaml") if (c / "config.yaml").exists() else None
+    inbody = json.loads((c / "plan" / "inbody.json").read_text()) if (c / "plan" / "inbody.json").exists() else None
+    plan = json.loads((c / "plan" / "plan.json").read_text()) if (c / "plan" / "plan.json").exists() else None
+    nuevo, hecho = cambio_de_personales(config, plan, inbody)
     if nuevo:   # como todo lo que escribe ajustes, plan o InBody: con historial
         cambios.aplicar_cambio(db, usuario, None, "sistema", "Importado desde los archivos personales", nuevo)
     if (c / "data").exists():

@@ -328,3 +328,5 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Sin Pillow: los PNG se dibujan con `scripts/iconos_pwa.py` (zlib puro) y se commitean en `site/`.
 - El service worker solo guarda estáticos y `data.json` (red primero). Las páginas HTML no se guardan (llevan sesión). Riesgo menor: en un equipo compartido, sin red podría verse el último `data.json` guardado; aceptado.
 - En `site/index.html` los enlaces al manifest/ícono son relativos (sirve también en Pages); el SW solo se registra en las páginas de la web (`base.html`). La vista con sesión (`/`) lo registra por `PIE_SITIO` en `web/app.py`.
+
+- v5 F8b: la primera subida lleva `personales` ({config, plan, inbody}) en el paquete; la web los importa solo si no hay fila en `ajustes` y un config inválido se salta (log) sin tumbar la subida. Se guarda el config crudo como `importar_carpeta`; el data.json público sigue saliendo de la lista blanca. `motor.yml` ya saltaba el paso de CLAUDE.md/skills con `decidir.publicar=false` (migrados), solo se anotó.

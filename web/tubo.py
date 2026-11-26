@@ -22,8 +22,8 @@ from sqlalchemy.orm import Session
 
 import paquete as paquete_mod
 
-from . import datos
-from .modelos import Cambio, Consentimiento, Subida, Usuario, VinculoPendiente, ahora
+from . import cambios, datos, importar
+from .modelos import Ajustes, Cambio, Consentimiento, Subida, Usuario, VinculoPendiente, ahora
 
 log = logging.getLogger("web.tubo")
 ISSUER = "https://token.actions.githubusercontent.com"
@@ -185,6 +185,20 @@ def _descomprimir(cuerpo: bytes, encabezado: str) -> bytes:
     return salida
 
 
+def _importar_personales(db, u, pers) -> None:
+    """Primera subida: si la web aún no tiene ajustes de esta persona, importa su config/plan/InBody. Nunca pisa y nunca
+    tumba la subida (un config inválido se salta y queda en el log)."""
+    if not pers or db.get(Ajustes, u.id) is not None:
+        return
+    try:
+        nuevo, _ = importar.cambio_de_personales(pers.get("config"), pers.get("plan"), pers.get("inbody"))
+        if nuevo:
+            cambios.aplicar_cambio(db, u, None, "sistema", "Importado desde el repo en la primera subida", nuevo)
+    except Exception:   # noqa: BLE001
+        db.rollback()
+        log.warning("no se importaron los archivos personales de %s", u.id, exc_info=True)
+
+
 def montar(app, get_db, settings) -> None:
     def autenticar(request: Request, db: Session) -> Usuario:
         auth = request.headers.get("authorization", "")
@@ -234,6 +248,7 @@ def montar(app, get_db, settings) -> None:
             db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error=type(e).__name__))
             db.commit()
             return JSONResponse({"error": "no se pudo guardar"}, status_code=500)
+        _importar_personales(db, u, pq.get("personales"))
         db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=True))
         u.historial_desde = None   # el pedido pendiente se cumplió con esta subida
         db.commit()

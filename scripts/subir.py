@@ -109,6 +109,9 @@ def subir(data_dir: Path, entorno=os.environ, http=requests, dormir=time.sleep) 
         sys.path.insert(0, str(Path(__file__).parent.parent / "dashboard"))
         import paquete
         pq = paquete.armar(data_dir, salt=entorno.get("GITHUB_REPOSITORY_ID", ""))
+        pers = paquete.personales(data_dir.parent)
+        if pers:
+            pq["personales"] = pers   # la web los importa solo la primera vez
         problemas = paquete.validar(pq)
         if problemas:
             _avisa("el paquete no pasó la lista blanca, no se sube: " + "; ".join(problemas))

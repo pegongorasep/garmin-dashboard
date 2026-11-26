@@ -648,3 +648,41 @@ def test_subir_py_escribe_el_codigo_en_el_resumen_y_no_en_el_log(tmp_path, monke
                      lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
     sub.subir(tmp_path, ENTORNO, http, lambda s: None)
     assert resumen.read_text() == ""
+
+
+# --- primera subida: config/plan/InBody del repo ---
+
+def test_primera_subida_importa_personales_y_la_segunda_no_pisa(ctx):
+    uid = usuario_amigo(ctx, repo_id=777)
+    cl = ctx.cliente()
+    pers = {"config": CONFIG, "plan": {"semanas": []}}
+    assert subir(cl, token(ctx), paquete_chico(personales=pers)).status_code == 200
+    with ctx.sesiones() as db:
+        a = db.get(Ajustes, uid)
+        assert a is not None and a.config["perfil"] == CONFIG["perfil"]
+        assert db.get(Plan, uid) is not None
+    otro = json.loads(json.dumps(CONFIG))
+    otro["perfil"]["fc_max"] = 150
+    assert subir(cl, token(ctx), paquete_chico(personales={"config": otro})).status_code == 200
+    with ctx.sesiones() as db:
+        assert db.get(Ajustes, uid).config["perfil"] == CONFIG["perfil"]
+
+
+def test_subida_sin_personales_o_con_config_roto_sigue_funcionando(ctx):
+    uid = usuario_amigo(ctx, repo_id=777)
+    cl = ctx.cliente()
+    assert subir(cl, token(ctx), paquete_chico()).status_code == 200
+    assert subir(cl, token(ctx), paquete_chico(personales={"config": {"perfil": {}}})).status_code == 200
+    with ctx.sesiones() as db:
+        assert db.get(Ajustes, uid) is None
+        assert db.query(DatoGarmin).filter_by(usuario_id=uid).count() > 0
+    assert subir(cl, token(ctx), paquete_chico(personales=[1])).status_code == 422
+    assert subir(cl, token(ctx), paquete_chico(personales={"config": {"fullName": "X"}})).status_code == 422
+
+
+def test_paquete_personales_lee_archivos(tmp_path):
+    (tmp_path / "plan").mkdir()
+    (tmp_path / "config.yaml").write_text("perfil:\n  zona_horaria: America/Mexico_City\n")
+    (tmp_path / "plan" / "inbody.json").write_text('{"mediciones": []}')
+    assert set(paquete.personales(tmp_path)) == {"config", "inbody"}
+    assert paquete.personales(tmp_path / "nada") == {}
