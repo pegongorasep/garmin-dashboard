@@ -330,3 +330,6 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - En `site/index.html` los enlaces al manifest/ícono son relativos (sirve también en Pages); el SW solo se registra en las páginas de la web (`base.html`). La vista con sesión (`/`) lo registra por `PIE_SITIO` en `web/app.py`.
 
 - v5 F8b: la primera subida lleva `personales` ({config, plan, inbody}) en el paquete; la web los importa solo si no hay fila en `ajustes` y un config inválido se salta (log) sin tumbar la subida. Se guarda el config crudo como `importar_carpeta`; el data.json público sigue saliendo de la lista blanca. `motor.yml` ya saltaba el paso de CLAUDE.md/skills con `decidir.publicar=false` (migrados), solo se anotó.
+
+### v5 F8c
+- `plantilla_v5/` lista en este repo. El repo `pegongorasep/ahi-la-llevas-plantilla` aún NO existe (Opus lo crea con permiso de Pedro). Mientras tanto la web sigue usando `garmin-prueba` (setting `plantilla_repo`, env `PLANTILLA_REPO`); al crear el repo, poner `PLANTILLA_REPO=ahi-la-llevas-plantilla` o cambiar el default a `PLANTILLA_V5_REPO`.

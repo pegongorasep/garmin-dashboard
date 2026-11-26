@@ -10,6 +10,10 @@ Cada persona tiene su propio repo chiquito (creado desde [`template/`](template/
 
 **Para invitar a alguien:** pásale el repo de la plantilla (o el contenido de `template/`) y su [`README`](template/README.md): crea su repo con "Use this template", lo abre con Claude Code y escribe `/setup`. Yo muevo `stable` cuando probé el cambio en mi página (ver [`CLAUDE.md`](CLAUDE.md)).
 
+## Ahí la Llevas (v5)
+
+Web con cuentas por invitación (`web/`, FastAPI): cada persona conecta su repo de GitHub (creado desde [`plantilla_v5/`](plantilla_v5/)), que sube sus datos a la web; la web calcula su dashboard, su plan y su coach. Ver [`CLAUDE.md`](CLAUDE.md) y `docs/PLAN_V5.md`.
+
 Sitio: https://pegongorasep.github.io/garmin-dashboard/
 
 ## Correrlo en local
