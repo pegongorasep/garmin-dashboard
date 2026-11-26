@@ -382,7 +382,7 @@ function filaActividad(a) {
   const datos = [T("sitio.min_n", { n: fmt(a.minutos, 0) }), a.km != null ? T("sitio.km_n", { n: fmt(a.km) }) : null,
     a.fc_prom != null ? `${fmt(a.fc_prom, 0)} ${T("sitio.lpm")}` : null].filter(Boolean).join(" · ");
   const ses = a.sesion ? `${a.sesion.nombre} · ${["hecha", "incompleta", "extra", "no_hecha", "pendiente"].includes(a.sesion.estado) ? T(`sitio.dia.${a.sesion.estado}`) : a.sesion.estado}` : null;
-  const cabeza = [h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre), h("span", {}, datos), ses ? h("span", { class: "nota" }, ses) : null];
+  const cabeza = [h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre), h("span", {}, [ses, datos].filter(Boolean).join(" · "))];
   if (!a.detalle) return h("div", { class: "act-fila" }, ...cabeza);
   return DS.desplegable({ titulo: h("span", { class: "act-fila" }, ...cabeza), clase: "act-det" }, detalleActividad(a.detalle, a));
 }

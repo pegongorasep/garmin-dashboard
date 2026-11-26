@@ -73,7 +73,7 @@ button.dia.dia-sel { box-shadow: inset 0 0 0 2px var(--ink-2); }   /* elegido: a
 .dia-det { display: grid; gap: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--grid); }
 .dia-cab { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-8); }
 .dia-filas { display: grid; gap: var(--space-4); }
-.dia-ranura { min-height: 4.45em; }   /* alto fijo de la tarjeta del día: cabecera + 2 ranuras (4.45em = la fila más alta real: título + datos + nota); en em para que aguante fuentes más grandes */
+.dia-ranura { min-height: 3.25em; }   /* alto fijo de la tarjeta del día (3.25em = la fila más alta real: título + una línea de sesión y datos); en em para que aguante fuentes más grandes */
 .dia-mas { font: 600 13px/19px var(--font-sans); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
 .act-fila { display: grid; gap: 2px; }
 .act-fila .act-t { display: flex; align-items: center; gap: var(--space-8); font: 600 13.5px/19px var(--font-sans); }
