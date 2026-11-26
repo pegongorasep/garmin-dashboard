@@ -6,8 +6,21 @@
 {% include "_nav.html" %}
 <h1 class="pag-t">{{ t("plan.titulo") }}</h1>
 {% if ok == "1" %}{% call aviso("ok") %}{{ t("plan.ok", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
+{% if ok == "rehecho" %}{% call aviso("ok") %}{{ t("plan.rehacer_ok", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
+{% if ok == "sin" %}{% call aviso("warn") %}{{ t("plan.rehacer_sin") }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 <p class="pag-s">{{ t("plan.hoy", hoy=hoy, semana=(t("plan.semana_de", n=n) if n else "")) }}</p>
+
+{% set ns = [] %}{% for n_ in niveles %}{% set _ = ns.append((n_, n_|capitalize)) %}{% endfor %}
+{% set ints = [("solo_z2", t("aj.i_solo")), ("z2_poca_z3", t("aj.i_poca")), ("calidad", t("aj.i_calidad"))] %}
+{% if atleta.sin_plan %}{% call tarjeta(t("aj.sp_t")) %}
+  <p>{{ t("plan.quiero_a") }}</p>
+  <form class="acciones" method="post" action="/ajustes/plan"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ boton(t("aj.sp_quiero"), tipo="submit", nombre="accion", valor="quiero") }}</form>
+{% endcall %}{% endif %}
+
+<h2 class="pag-h" id="cambios">{{ t("plan.cambios_t") }}</h2>
+<p class="pag-s">{{ t("plan.cambios_a") }}</p>
 
 {% if terminado %}
 <div id="siguiente">{% call tarjeta(t("plan.terminó")) %}
@@ -108,4 +121,29 @@
   {% endfor %}
   </div>
 {% endcall %}
+
+<h2 class="pag-h" id="rehacer">{{ t("plan.rehacer_t") }}</h2>
+<form class="pila" method="post" action="{{ pref }}/plan/rehacer">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <p class="pag-s">{{ t("plan.rehacer_a") }}</p>
+  {{ seleccion(t("aj.nivel"), "nivel", ns, valor=v.nivel, error=errores.get("nivel")) }}
+  {{ seleccion(t("aj.intensidad"), "intensidad", ints, valor=v.intensidad, error=errores.get("intensidad")) }}
+  {% call opciones(t("aj.tipos_cal"), t("aj.tipos_cal_n"), error=errores.get("calidad")) %}
+    {% for tq in tipos_calidad %}{{ opcion("calidad", tq, valor=tq, marcado=tq in v.calidad) }}{% endfor %}
+  {% endcall %}
+  {{ opcion("caminatas", t("aj.caminatas"), marcado=v.caminatas) }}
+  {{ opcion("variada", t("aj.variada"), marcado=v.variada) }}
+  {{ campo(t("aj.semanas"), "semanas", tipo="number", valor=v.semanas, extra={"min": 4, "max": 52}, requerido=True) }}
+  {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
+  {{ campo(t("aj.z2"), "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
+  {{ campo(t("aj.larga"), "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
+  <div class="acciones">{{ boton(t("plan.rehacer_b"), tipo="submit") }}</div>
+</form>
+{% if not pref and not atleta.sin_plan %}
+<form class="pila" method="post" action="/ajustes/plan">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <p>{{ t("aj.sp_quitar_a") }}</p>
+  <div class="acciones">{{ boton(t("aj.sp_quitar"), "sec", tipo="submit", nombre="accion", valor="quitar") }}</div>
+</form>
+{% endif %}
 {% endblock %}

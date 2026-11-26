@@ -51,7 +51,7 @@ def test_ajustes_quiero_un_plan_lleva_al_cuestionario(web_ctx):
     cl.post("/bienvenida/uso", data={"csrf": token(cl), "uso": "completo"})
     vincular(web_ctx, uid)
     pagina = cl.get("/ajustes")
-    assert pagina.status_code == 200 and "Quiero un plan de running" in pagina.text
+    assert pagina.status_code == 200 and "Quiero un plan de running" in pagina.text   # sin ajustes: la página de ajustes sin plan
     r = cl.post("/ajustes/plan", data={"csrf": csrf_de(pagina.text), "accion": "quiero"})
     assert r.status_code == 303 and r.headers["location"] == "/bienvenida"
     with web_ctx.sesiones() as db:
@@ -63,15 +63,17 @@ def test_quitar_mi_plan_conserva_el_plan_y_con_plan_no_cambia_nada(web_ctx):
     cl = entrar(web_ctx, web_ctx.cliente(), "p@x.com")
     d = cl.get("/data.json").json()
     assert d["ui"]["sin_plan"] is False and d["plan"]["semanas"]   # el camino con plan sigue igual
-    pagina = cl.get("/ajustes")
-    assert "Quitar mi plan" in pagina.text
+    pagina = cl.get("/plan/acciones")
+    assert "Quitar mi plan" in pagina.text and "Quiero un plan de running" not in pagina.text
+    assert "Quitar mi plan" not in cl.get("/ajustes").text
     r = cl.post("/ajustes/plan", data={"csrf": csrf_de(pagina.text), "accion": "quitar"})
     assert r.status_code == 303 and r.headers["location"] == "/"
     with web_ctx.sesiones() as db:
         assert db.get(Usuario, uid).sin_plan is True and db.get(Ajustes, uid) is not None
     d = cl.get("/data.json").json()
     assert validar.problemas(d) == [] and d["ui"]["sin_plan"] is True and d["plan"]["semanas"] == []
-    pagina = cl.get("/ajustes")
+    pagina = cl.get("/plan/acciones")
+    assert "Quiero un plan de running" in pagina.text and "Quitar mi plan" not in pagina.text
     r = cl.post("/ajustes/plan", data={"csrf": csrf_de(pagina.text), "accion": "quiero"})
     assert r.headers["location"] == "/"   # ya tenía ajustes: vuelve directo
     assert cl.get("/data.json").json()["plan"]["semanas"]

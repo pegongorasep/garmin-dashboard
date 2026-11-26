@@ -408,3 +408,14 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - La FC máx de las zonas sale siempre de Garmin (`maxHeartRateUsed`). Respaldo si Garmin no manda nada: `perfil.fc_max` de la config (los repos viejos de Pages siguen funcionando) y luego `220 - edad`.
 - La web ya no deja editar FC máx ni edad en Ajustes (lo guardado queda intacto, solo respaldo). El onboarding aún las pide como respaldo.
 - Aviso (`aviso_zonas`): sin valor de Garmin explica cómo sacarla; con valor y estimación (pico + 3) mayor, dice que la cambie en Garmin Connect. Nunca manda a editarla en la app.
+
+## v5 ajustar plan
+
+- Ajustes queda solo con lo general (perfil, actividades, cuerpo, idioma); Guardar nunca rehace el plan ni pide confirmación.
+  Los días de pierna siguen ahí, así que cambiarlos no rehace el plan hasta usar «Rehacer mi plan».
+- «Ajustar mi plan» = la página de antes (`/plan/acciones`, mismas rutas `/plan/*`) con dos partes: «Cambios en el camino»
+  (viaje, enfermedad, carrera, repetir, escalón, siguiente bloque) y «Rehacer mi plan» (`POST /plan/rehacer`, reusa la pantalla de
+  confirmación). Escalón, repetidas y carreras ya no están en ese formulario: conservan lo guardado.
+- Ruta vieja: `POST /ajustes` con campos de la corrida (`nivel`) responde 307 a `/plan/rehacer`.
+- «Quitar mi plan» / «Quiero un plan» viven en esa página (siguen usando `POST /ajustes/plan`); la tarjeta del sitio sin plan apunta a ella.
+- Sitio: `ui.liga_ajustar_plan` (default null = sin botón; la web lo pone `/plan/acciones` si hay ajustes y plan). sw v10.

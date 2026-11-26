@@ -32,7 +32,8 @@ def esperado(modo_web: bool):
     cfg = ajustes.cargar_config(ROOT)
     if modo_web:
         cfg = {**cfg, "modo": "web", "menu": calculo.MENU,
-               "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT)), "idioma": "es"}
+               "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT)), "idioma": "es",
+               "liga_ajustar_plan": calculo.LIGA_AJUSTAR_PLAN}
     ahora = AHORA_UTC.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
     return build.build(build.load_data(ROOT), build.load_plan(ROOT), cfg, ahora)
 
@@ -60,7 +61,7 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
     pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
     # las dos mandan "idioma" siempre
     for d in (pages, web_n):
-        for k in ("menu", "plan_acciones", "editar_urls"):
+        for k in ("menu", "plan_acciones", "editar_urls", "liga_ajustar_plan"):
             d["ui"].pop(k)
     assert pages == web_n
 

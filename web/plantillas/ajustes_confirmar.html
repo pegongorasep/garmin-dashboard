@@ -6,12 +6,12 @@
 <h1 class="pag-t">{{ t("conf.titulo") }}</h1>
 {% call confirmacion(t("conf.resumen", cambios=cambios|join(", "), frase=frase)) %}
   <p>{{ t("conf.aviso", liga=pref ~ "/historial")|safe }}</p>
-  <form class="acciones" method="post" action="{{ pref }}/ajustes">
+  <form class="acciones" method="post" action="{{ accion or (pref ~ '/ajustes') }}">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="confirmo" value="1">
     {% for k, val in pares %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
     {{ boton(t("conf.si"), "peligro", tipo="submit") }}
-    {{ boton(t("comun.cancelar"), "sec", href=pref ~ "/ajustes") }}
+    {{ boton(t("comun.cancelar"), "sec", href=volver or (pref ~ "/ajustes")) }}
   </form>
 {% endcall %}
 {% endblock %}

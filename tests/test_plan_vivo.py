@@ -452,7 +452,7 @@ def test_siguiente_bloque_guarda_la_prueba_para_compararla():
 
 def test_viaje_enfermedad_carrera_por_la_web_con_historial_y_deshacer(web_ctx):
     uid, cl = listo(web_ctx)
-    assert "Plan vivo" in cl.get("/plan/acciones").text
+    assert "Ajustar mi plan" in cl.get("/plan/acciones").text
     r = cl.post("/plan/viaje", data={"csrf": tok(cl), "desde": "2026-12-01", "hasta": "2026-12-06", "correr": "no"})
     assert r.status_code == 303
     r = cl.post("/plan/viaje", data={"csrf": tok(cl), "desde": "2026-12-10", "hasta": "2026-12-01", "correr": "si"})

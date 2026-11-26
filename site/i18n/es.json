@@ -327,6 +327,7 @@
 "sitio.patron": "{c} · patrón ≈ {a} / {b}",
 "sitio.plan.act_aria": ", semana actual",
 "sitio.plan.actual": "actual",
+"sitio.plan.ajustar": "Ajustar mi plan",
 "sitio.plan.aria": "Semana {n}, {e}{act}",
 "sitio.plan.bloque": "Bloque {n}",
 "sitio.plan.carga": "carga",

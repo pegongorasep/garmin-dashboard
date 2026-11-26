@@ -89,10 +89,10 @@ def _entero(f, campo: str, nombre: str, vacio_ok: bool = False):
     return n
 
 
-def crudo_desde_form(crudo: dict, f) -> dict:
-    """Crudo nuevo = el actual con lo que cambió el formulario (lo que el formulario no maneja se conserva)."""
+def crudo_general(crudo: dict, f) -> dict:
+    """Parte «general» de Ajustes: perfil, actividades, cuerpo. No toca nada de la corrida (eso es «Ajustar mi plan»)."""
     nuevo = copy.deepcopy(crudo)
-    perfil, corrida, act = (nuevo.setdefault(k, {}) for k in ("perfil", "corrida", "actividades"))
+    perfil, act = (nuevo.setdefault(k, {}) for k in ("perfil", "actividades"))
     zona = str(f.get("zona", "")).strip()
     try:
         ZoneInfo(zona)
@@ -104,25 +104,6 @@ def crudo_desde_form(crudo: dict, f) -> dict:
     if sensor not in SENSORES:
         raise ErrorT("err.sensor", "sensor")
     perfil["sensor"] = sensor
-    corrida["nivel"], corrida["intensidad"] = f.get("nivel", ""), f.get("intensidad", "")
-    corrida["calidad_tipos"] = [t for t in f.getlist("calidad") if t in CALIDAD_TIPOS] if corrida["intensidad"] == "calidad" else []
-    corrida["caminatas"], corrida["variada"] = f.get("caminatas") == "on", f.get("variada") == "on"
-    corrida["semanas"] = _entero(f, "semanas", "semanas")
-    if not 4 <= corrida["semanas"] <= 52:
-        raise ErrorT("err.semanas")
-    corrida["inicio"] = str(f.get("inicio", "")).strip()
-    corrida["base_min"] = {**(corrida.get("base_min") or {}), "z2": _entero(f, "z2", "z2"),
-                           "larga": _entero(f, "larga", "larga")}
-    esc = str(f.get("escalon", "")).strip()
-    if esc:
-        corrida["escalon"] = esc
-    else:
-        corrida.pop("escalon", None)
-    try:
-        corrida["semanas_repetidas"] = [int(x) for x in str(f.get("repetidas", "")).replace(",", " ").split()]
-    except ValueError:
-        raise ErrorT("err.repetidas", "repetidas") from None
-    corrida["carreras"] = [x for x in str(f.get("carreras", "")).replace(",", " ").split()]
     # actividades: categorías elegidas (conserva las personalizadas que ya había) y días de pierna
     elegidas = f.getlist("cats")
     previas = {c["id"]: c for c in (act.get("categorias") or [])}
@@ -135,6 +116,41 @@ def crudo_desde_form(crudo: dict, f) -> dict:
     act["dias_pierna"] = [d for d in f.getlist("pierna") if d in dict(DIAS)]
     nuevo["inbody"] = f.get("inbody") == "on"
     return nuevo
+
+
+def crudo_plan(crudo: dict, f) -> dict:
+    """Parte «Rehacer mi plan»: nivel, intensidad, calidad, caminatas, variada, semanas, inicio, z2, larga. Escalón, repetidas
+    y carreras no están en ese formulario: conservan lo guardado (los cambia «Cambios en el camino»)."""
+    nuevo = copy.deepcopy(crudo)
+    corrida = nuevo.setdefault("corrida", {})
+    corrida["nivel"], corrida["intensidad"] = f.get("nivel", ""), f.get("intensidad", "")
+    corrida["calidad_tipos"] = [t for t in f.getlist("calidad") if t in CALIDAD_TIPOS] if corrida["intensidad"] == "calidad" else []
+    corrida["caminatas"], corrida["variada"] = f.get("caminatas") == "on", f.get("variada") == "on"
+    corrida["semanas"] = _entero(f, "semanas", "semanas")
+    if not 4 <= corrida["semanas"] <= 52:
+        raise ErrorT("err.semanas")
+    corrida["inicio"] = str(f.get("inicio", "")).strip()
+    corrida["base_min"] = {**(corrida.get("base_min") or {}), "z2": _entero(f, "z2", "z2"),
+                           "larga": _entero(f, "larga", "larga")}
+    if "escalon" in f:   # solo clientes viejos (y el MCP) lo mandan
+        esc = str(f.get("escalon", "")).strip()
+        if esc:
+            corrida["escalon"] = esc
+        else:
+            corrida.pop("escalon", None)
+    if "repetidas" in f:
+        try:
+            corrida["semanas_repetidas"] = [int(x) for x in str(f.get("repetidas", "")).replace(",", " ").split()]
+        except ValueError:
+            raise ErrorT("err.repetidas", "repetidas") from None
+    if "carreras" in f:
+        corrida["carreras"] = [x for x in str(f.get("carreras", "")).replace(",", " ").split()]
+    return nuevo
+
+
+def crudo_desde_form(crudo: dict, f) -> dict:
+    """Todo junto (general + plan); lo usa el conector MCP. Lo que el formulario no maneja se conserva."""
+    return crudo_plan(crudo_general(crudo, f), f)
 
 
 def diferencias(viejo: dict, nuevo: dict) -> list[str]:  # etiquetas en español (para el historial y el MCP)
@@ -206,6 +222,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return RedirectResponse("/" if db.get(Ajustes, usuario.id) else "/bienvenida", 303)
 
     async def guardar_ajustes(request: Request, usuario, db, atleta_id):
+        """Guardar los ajustes generales: nunca rehace el plan ni pide confirmación."""
         form = await formulario(request)
         atleta, redir = resolver(db, usuario, atleta_id)
         if redir:
@@ -214,34 +231,22 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if crudo is None:
             return RedirectResponse("/bienvenida", 303)
         pref = prefijo(usuario, atleta)
-        hoy = hoy_de(app.state.reloj, crudo)
+        if "nivel" in form:   # ruta vieja: el formulario de Ajustes traía la corrida; ahora vive en «Ajustar mi plan»
+            return RedirectResponse(f"{pref}/plan/rehacer", 307)
         valores = {k: (form.getlist(k) if k in ("calidad", "cats", "pierna") else form.get(k, "")) for k in form.keys()}
-        for k in ("caminatas", "variada", "inbody"):
+        for k in ("inbody",):
             valores[k] = form.get(k) == "on"
         try:
-            nuevo = crudo_desde_form(crudo, form)
-            cfg_viejo, cfg_nuevo = normalizar_config(crudo), normalizar_config(nuevo)
+            nuevo = crudo_general(crudo, form)
             cambios_txt = diferencias(crudo, nuevo)
             if not cambios_txt:
                 return RedirectResponse(f"{pref}/ajustes?ok=sin", 303)
-            nuevo_plan, desde = None, None
-            if plan_vivo.cambia_plan(cfg_viejo, cfg_nuevo):
-                nuevo_plan, desde = plan_vivo.construir_plan(nuevo, plan_guardado(db, atleta), hoy)
         except (ConfigError, ValueError) as ex:
             msg = texto(ex, request.state.t)
             campo = ex.campo if hasattr(ex, "clave") else campo_del_error(str(ex))
             extra = {"errores": {campo: msg}} if campo else {"error": msg}
-            return render(request, "ajustes.html", status=400, **contexto_ajustes(db, atleta, usuario, crudo, valores, **extra))
-        if nuevo_plan is not None and form.get("confirmo") != "1":
-            tt = request.state.t
-            frase = tt("conf.frase_1") if desde == 1 else tt("conf.frase_n", desde=desde)
-            etiq = {v: k for k, v in ETIQUETAS.items()}
-            return render(request, "ajustes_confirmar.html", atleta=atleta, pref=pref, frase=frase,
-                          cambios=[tt("et." + etiq[c]) for c in cambios_txt],
-                          pares=[(k, v) for k, v in form.multi_items() if k not in ("csrf", "confirmo")])
-        desc = "Ajustes: cambió " + ", ".join(cambios_txt) + (f"; plan rehecho desde la semana {desde}" if nuevo_plan else "")
-        paquete = {"ajustes": nuevo, **({"plan": nuevo_plan} if nuevo_plan else {})}
-        cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), desc, paquete)
+            return render(request, "ajustes.html", status=400, **contexto_ajustes(db, atleta, usuario, crudo, {**valores_form(crudo, atleta), **valores}, **extra))
+        cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), "Ajustes: cambió " + ", ".join(cambios_txt), {"ajustes": nuevo})
         if (nuevo.get("perfil") or {}).get("sensor") in SENSORES and atleta.sensor != nuevo["perfil"]["sensor"]:
             atleta.sensor = nuevo["perfil"]["sensor"]   # copia de consulta rápida; la verdad está en los ajustes
             db.commit()

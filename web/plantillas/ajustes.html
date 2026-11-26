@@ -11,9 +11,6 @@
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% set zs = [] %}{% for z in zonas %}{% set _ = zs.append((z, z)) %}{% endfor %}
 {% set ss = [] %}{% for s in sensores %}{% set _ = ss.append((s, t('aj.banda') if s == 'banda' else t('aj.muneca'))) %}{% endfor %}
-{% set ns = [] %}{% for n in niveles %}{% set _ = ns.append((n, n|capitalize)) %}{% endfor %}
-{% set es = [("", t("aj.auto"))] %}{% for e in escalera %}{% set _ = es.append((e, e ~ (t('aj.continuo') if e == 'continuo' else ''))) %}{% endfor %}
-{% set ints = [("solo_z2", t("aj.i_solo")), ("z2_poca_z3", t("aj.i_poca")), ("calidad", t("aj.i_calidad"))] %}
 <form class="pila" method="post" action="{{ pref }}/ajustes">
   <input type="hidden" name="csrf" value="{{ csrf }}">
 
@@ -21,22 +18,6 @@
   {{ campo(t("aj.t_pagina"), "titulo", valor=v.titulo, extra={"maxlength": 60}) }}
   {{ seleccion(t("aj.zona_h"), "zona", zs, valor=v.zona, error=errores.get("zona")) }}
   {{ seleccion(t("aj.sensor"), "sensor", ss, valor=v.sensor, ayuda=t("aj.sensor_ayuda"), error=errores.get("sensor")) }}
-
-  <h2 class="pag-h">{{ t("aj.corrida") }}</h2>
-  {{ seleccion(t("aj.nivel"), "nivel", ns, valor=v.nivel, error=errores.get("nivel")) }}
-  {{ seleccion(t("aj.intensidad"), "intensidad", ints, valor=v.intensidad, error=errores.get("intensidad")) }}
-  {% call opciones(t("aj.tipos_cal"), t("aj.tipos_cal_n"), error=errores.get("calidad")) %}
-    {% for tq in tipos_calidad %}{{ opcion("calidad", tq, valor=tq, marcado=tq in v.calidad) }}{% endfor %}
-  {% endcall %}
-  {{ opcion("caminatas", t("aj.caminatas"), marcado=v.caminatas) }}
-  {{ seleccion(t("aj.escalon"), "escalon", es, valor=v.escalon or "", ayuda=t("aj.escalon_ayuda"), error=errores.get("escalon")) }}
-  {{ opcion("variada", t("aj.variada"), marcado=v.variada) }}
-  {{ campo(t("aj.semanas"), "semanas", tipo="number", valor=v.semanas, extra={"min": 4, "max": 52}, requerido=True) }}
-  {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
-  {{ campo(t("aj.z2"), "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
-  {{ campo(t("aj.larga"), "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
-  {{ campo(t("aj.repetidas"), "repetidas", valor=v.repetidas, placeholder="3, 5", ayuda=t("aj.rep_ayuda"), error=errores.get("repetidas")) }}
-  {{ campo(t("aj.carreras"), "carreras", valor=v.carreras, placeholder="2026-12-13", ayuda=t("aj.car_ayuda"), error=errores.get("carreras")) }}
 
   <h2 class="pag-h">{{ t("aj.actividades") }}</h2>
   {% call opciones(t("aj.otras"), t("aj.max4"), error=errores.get("cats")) %}
@@ -49,21 +30,10 @@
   <h2 class="pag-h">{{ t("aj.cuerpo") }}</h2>
   {{ opcion("inbody", t("aj.inbody", liga=pref ~ "/cuerpo"), marcado=v.inbody, html=True) }}
 
-  <p class="pag-s">{{ t("aj.rehace") }}</p>
+  <p class="pag-s">{{ t("aj.rehace") }} {{ boton(t("aj.ir_plan"), "texto", chico=True, href=pref ~ "/plan/acciones#rehacer") }}</p>
   <div class="acciones">{{ boton(t("comun.guardar"), tipo="submit") }}</div>
 </form>
 {% if not pref %}
-<form class="pila" method="post" action="/ajustes/plan">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  <h2 class="pag-h">{{ t("aj.sp_t") }}</h2>
-  {% if atleta.sin_plan %}
-  <p>{{ t("aj.sp_a") }}</p>
-  <div class="acciones">{{ boton(t("aj.sp_quiero"), "sec", tipo="submit", nombre="accion", valor="quiero") }}</div>
-  {% else %}
-  <p>{{ t("aj.sp_quitar_a") }}</p>
-  <div class="acciones">{{ boton(t("aj.sp_quitar"), "sec", tipo="submit", nombre="accion", valor="quitar") }}</div>
-  {% endif %}
-</form>
 <form class="pila" method="post" action="/idioma">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="siguiente" value="/ajustes">

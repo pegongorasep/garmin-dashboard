@@ -152,7 +152,7 @@ function renderPlan(d) {
   const guardado = new URLSearchParams(location.search).get("ok") === "plan";   // viene de guardar un formulario del plan
   if (guardado) history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
   if (ui().sin_plan) {   // sin plan: la pestaña no existe, pero la ruta #plan puede abrirse a mano
-    const accion = (ui().menu || []).length ? { texto: T("sitio.sl.quiero"), href: "/ajustes/plan" } : null;
+    const accion = (ui().menu || []).length ? { texto: T("sitio.sl.quiero"), href: "/plan/acciones" } : null;
     $("vista-plan").replaceChildren(DS.tarjeta({ titulo: T("sitio.sl.sin_plan_t") }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.sin_plan_t"), texto: T("sitio.sl.sin_plan_x"), accion })));
     return;
   }
@@ -193,7 +193,8 @@ function tarjetaDoceSemanas(d) {
     h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), (ui().editar_urls || {})[`${w.n}/${s.id}`]
       ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: ui().editar_urls[`${w.n}/${s.id}`] })] } : {}))),
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, T("sitio.plan.repetidas", { l: plan.semanas_repetidas.join(", ") }))] : []),
-    ...listaEventos(plan.eventos));
+    ...listaEventos(plan.eventos),
+    ...(ui().liga_ajustar_plan ? [h("div", { class: "botones" }, DS.boton(T("sitio.plan.ajustar"), { variante: "sec", href: ui().liga_ajustar_plan }))] : []));
   return c;
 }
 

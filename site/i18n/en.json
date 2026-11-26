@@ -327,6 +327,7 @@
 "sitio.patron": "{c} · pattern ≈ {a} / {b}",
 "sitio.plan.act_aria": ", current week",
 "sitio.plan.actual": "current",
+"sitio.plan.ajustar": "Adjust my plan",
 "sitio.plan.aria": "Week {n}, {e}{act}",
 "sitio.plan.bloque": "Block {n}",
 "sitio.plan.carga": "load",

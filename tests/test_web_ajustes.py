@@ -38,17 +38,29 @@ def listo(ctx, correo="a@x.com", con_plan=True):
 
 
 def form_ajustes(**cambia):
+    """Formulario de Ajustes (solo lo general)."""
     base = {"titulo": "Mi entreno", "zona": "America/Merida", "edad": "29", "fc_max": "189", "sensor": "banda",
-            "nivel": "intermedio", "intensidad": "z2_poca_z3", "variada": "", "semanas": "12", "inicio": "2026-11-09",
-            "z2": "20", "larga": "40", "repetidas": "", "carreras": "", "escalon": "", "cats": ["crossfit"],
-            "pierna": [], "inbody": "on"}
+            "cats": ["crossfit"], "pierna": [], "inbody": "on"}
     base.update(cambia)
     return {k: v for k, v in base.items() if v != ""} | {k: "" for k in ("fc_max",) if base[k] == ""}
+
+
+def form_plan(**cambia):
+    """Formulario de «Rehacer mi plan»."""
+    base = {"nivel": "intermedio", "intensidad": "z2_poca_z3", "variada": "", "semanas": "12", "inicio": "2026-11-09",
+            "z2": "20", "larga": "40"}
+    base.update(cambia)
+    return {k: v for k, v in base.items() if v != ""}
 
 
 def guardar(cl, url="/ajustes", **cambia):
     r = cl.get(url)
     return cl.post(url, data={"csrf": csrf_de(r.text), **form_ajustes(**cambia)})
+
+
+def rehacer(cl, url="/plan/rehacer", **cambia):
+    r = cl.get("/plan/acciones" if url == "/plan/rehacer" else url.replace("/plan/rehacer", "/plan/acciones"))
+    return cl.post(url, data={"csrf": csrf_de(r.text), **form_plan(**cambia)})
 
 
 def crudo(ctx, uid):
@@ -64,8 +76,11 @@ def plan_de(ctx, uid):
 def test_ajustes_se_ve_con_los_valores(web_ctx):
     _, cl = listo(web_ctx)
     r = cl.get("/ajustes")
-    assert r.status_code == 200 and 'name="titulo"' in r.text and 'value="2026-11-09"' in r.text
-    assert 'type="password"' not in r.text
+    assert r.status_code == 200 and 'name="titulo"' in r.text and 'type="password"' not in r.text
+    assert 'name="nivel"' not in r.text and 'name="inicio"' not in r.text   # la corrida vive en «Ajustar mi plan»
+    r = cl.get("/plan/acciones")
+    assert 'name="nivel"' in r.text and 'value="2026-11-09"' in r.text and "Rehacer mi plan" in r.text
+    assert 'name="escalon"' not in r.text and 'name="repetidas"' not in r.text and 'name="carreras"' not in r.text
 
 
 def test_cambio_sin_plan_deja_historial_y_se_deshace_exacto(web_ctx):
@@ -96,11 +111,12 @@ def test_cambio_sin_plan_deja_historial_y_se_deshace_exacto(web_ctx):
 def test_cambio_de_plan_pide_confirmacion_y_no_toca_semanas_pasadas(web_ctx):
     uid, cl = listo(web_ctx)
     plan0 = plan_de(web_ctx, uid)
-    r = guardar(cl, z2="30")
+    r = rehacer(cl, z2="30")
     assert r.status_code == 200 and "rehace tu plan desde la semana 3" in r.text and "no cambian" in r.text
+    assert 'action="/plan/rehacer"' in r.text
     assert crudo(web_ctx, uid)["corrida"]["base_min"]["z2"] == 20   # todavía no se guardó
-    r = guardar(cl, z2="30", confirmo="1")
-    assert r.status_code == 303
+    r = rehacer(cl, z2="30", confirmo="1")
+    assert r.status_code == 303 and r.headers["location"].startswith("/plan/acciones?ok=rehecho")
     assert crudo(web_ctx, uid)["corrida"]["base_min"]["z2"] == 30
     plan1 = plan_de(web_ctx, uid)
     assert plan1["weeks"][:2] == plan0["weeks"][:2]        # semanas 1-2 (ya pasadas) iguales
@@ -116,21 +132,21 @@ def test_cambio_de_plan_pide_confirmacion_y_no_toca_semanas_pasadas(web_ctx):
 
 def test_cambiar_el_inicio_rehace_todo_y_lo_dice(web_ctx):
     uid, cl = listo(web_ctx)
-    r = guardar(cl, inicio="2026-12-07")
+    r = rehacer(cl, inicio="2026-12-07")
     assert "semana 1" in r.text
-    guardar(cl, inicio="2026-12-07", confirmo="1")
+    rehacer(cl, inicio="2026-12-07", confirmo="1")
     assert plan_de(web_ctx, uid)["start"] == "2026-12-07"
 
 
 def test_errores_junto_al_campo(web_ctx):
     uid, cl = listo(web_ctx)
-    r = guardar(cl, inicio="2026-11-10")
+    r = rehacer(cl, inicio="2026-11-10")
     assert r.status_code == 400 and "debe ser lunes" in r.text and 'class="error-t"' in r.text
     r = guardar(cl, zona="Marte/Base")
     assert r.status_code == 400 and "zona" in r.text
     r = guardar(cl, cats=[])
     assert r.status_code == 400
-    r = guardar(cl, repetidas="tres")
+    r = rehacer(cl, repetidas="tres")
     assert r.status_code == 400
     assert crudo(web_ctx, uid) == CONFIG
     with web_ctx.sesiones() as db:
@@ -140,6 +156,8 @@ def test_errores_junto_al_campo(web_ctx):
 def test_sin_cambios_no_guarda_nada(web_ctx):
     uid, cl = listo(web_ctx)
     r = guardar(cl)
+    assert r.status_code == 303 and "ok=sin" in r.headers["location"]
+    r = rehacer(cl)
     assert r.status_code == 303 and "ok=sin" in r.headers["location"]
     with web_ctx.sesiones() as db:
         assert db.query(Cambio).count() == 0 and db.get(Ajustes, uid).version == 1
@@ -312,15 +330,17 @@ def test_ajustes_de_pedro_sin_tocar_no_cambian_nada(web_ctx):
         db.commit()
         u = db.get(Usuario, uid)
         v = aw.valores_form(pedro, u)
-    datos = {"csrf": tok(cl), "titulo": v["titulo"], "zona": v["zona"], "edad": str(v["edad"]), "fc_max": str(v["fc_max"]),
-             "sensor": v["sensor"], "nivel": v["nivel"], "intensidad": v["intensidad"], "semanas": str(v["semanas"]),
-             "inicio": v["inicio"], "z2": str(v["z2"]), "larga": str(v["larga"]), "repetidas": v["repetidas"],
-             "escalon": v["escalon"], "carreras": v["carreras"], "cats": v["cats"], "pierna": v["pierna"], "calidad": v["calidad"]}
-    for k in ("caminatas", "variada", "inbody"):
+    general = {"csrf": tok(cl), "titulo": v["titulo"], "zona": v["zona"], "sensor": v["sensor"], "cats": v["cats"], "pierna": v["pierna"]}
+    plan = {"csrf": tok(cl), "nivel": v["nivel"], "intensidad": v["intensidad"], "semanas": str(v["semanas"]),
+            "inicio": v["inicio"], "z2": str(v["z2"]), "larga": str(v["larga"]), "calidad": v["calidad"]}
+    for k in ("caminatas", "variada"):
         if v[k]:
-            datos[k] = "on"
-    r = cl.post("/ajustes", data=datos)
-    assert r.status_code == 303 and r.headers["location"] == "/ajustes?ok=sin", r.text[:500]
+            plan[k] = "on"
+    if v["inbody"]:
+        general["inbody"] = "on"
+    for url, datos in (("/ajustes", general), ("/plan/rehacer", plan)):
+        r = cl.post(url, data=datos)
+        assert r.status_code == 303 and "ok=sin" in r.headers["location"], r.text[:500]
     assert crudo(web_ctx, uid) == pedro
 
 
@@ -345,3 +365,39 @@ def test_ajustes_ya_no_edita_fc_max_ni_edad(web_ctx):
     assert 'name="titulo"' in html and 'name="fc_max"' not in html and 'name="edad"' not in html
     assert guardar(cl, edad="", fc_max="").status_code in (200, 302, 303)
     assert crudo(web_ctx, uid)["perfil"].get("fc_max") == 189   # lo guardado se conserva
+
+
+def test_guardar_ajustes_nunca_rehace_el_plan(web_ctx):
+    """Guardar en Ajustes no pide confirmación ni toca el plan, ni siquiera con días de pierna distintos."""
+    uid, cl = listo(web_ctx)
+    plan0 = plan_de(web_ctx, uid)
+    r = guardar(cl, pierna=["lun", "jue"], titulo="Otro")
+    assert r.status_code == 303 and r.headers["location"] == "/ajustes?ok=1"
+    assert plan_de(web_ctx, uid) == plan0 and crudo(web_ctx, uid)["perfil"]["titulo"] == "Otro"
+
+
+def test_ruta_vieja_de_ajustes_con_la_corrida_redirige_a_rehacer(web_ctx):
+    uid, cl = listo(web_ctx)
+    r = cl.post("/ajustes", data={"csrf": tok(cl), **form_ajustes(), **form_plan(z2="30")})
+    assert r.status_code == 307 and r.headers["location"] == "/plan/rehacer"
+    assert crudo(web_ctx, uid)["corrida"]["base_min"]["z2"] == 20
+
+
+def test_rehacer_conserva_escalon_repetidas_y_carreras(web_ctx):
+    uid, cl = listo(web_ctx)
+    with web_ctx.sesiones() as db:
+        a = db.get(Ajustes, uid)
+        a.config = {**a.config, "corrida": {**a.config["corrida"], "escalon": "5/1", "semanas_repetidas": [3], "carreras": ["2027-01-10"]}}
+        db.commit()
+    rehacer(cl, z2="30", confirmo="1")
+    c = crudo(web_ctx, uid)["corrida"]
+    assert c["base_min"]["z2"] == 30 and c["escalon"] == "5/1" and c["semanas_repetidas"] == [3] and c["carreras"] == ["2027-01-10"]
+
+
+def test_plan_acciones_tiene_las_dos_partes_y_el_sitio_la_liga(web_ctx):
+    uid, cl = listo(web_ctx)
+    h = cl.get("/plan/acciones").text
+    assert "Ajustar mi plan" in h and "Cambios en el camino" in h and "Cambian tu plan sin rehacerlo." in h and "Quitar mi plan" in h
+    assert "Plan vivo" not in h
+    d = cl.get("/data.json").json()
+    assert d["ui"]["liga_ajustar_plan"] == "/plan/acciones" and validar.problemas(d) == []
