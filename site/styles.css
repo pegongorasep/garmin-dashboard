@@ -14,7 +14,7 @@ body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bot
 @media (min-width: 900px) {
   .top, #carga, #app { max-width: 1080px; }
   .vista { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 14px 16px; }
-  .semana-pasada { grid-column: 1; }   /* media columna: la semana pasada no necesita todo el ancho */
+  .semana-pasada { grid-column: 1 / -1; width: calc(50% - 8px); }   /* fila propia arriba (nada se cuela a su lado); la tarjeta mide media columna */
 }
 
 /* Hoy: saludo grande de dos líneas; la segunda siempre ocupa su lugar (elegir no cambia el alto) */
@@ -49,7 +49,6 @@ body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bot
 
 /* Calendario de la semana: lo que el sistema no trae (extras, carrera, categorías) */
 .circ.extra { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink-2); }
-.circ.planeado { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--accent); }
 .circ.carrera { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); margin-bottom: 5px; }
 .dia { min-width: 0; text-align: center; }
 .sn { display: flex; flex-direction: column; align-items: center; gap: 1px; max-width: 100%; line-height: 1.15; overflow-wrap: anywhere; }

@@ -360,7 +360,6 @@ function diaCalendario(x, hoyIso, seleccionado, alTocar) {
       h("span", { class: "sn" }, DS.ico(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr")), h("span", {}, `${fmt(x.corrida.minutos, 0)}' ${x.corrida.sesion_nombre}` + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, T("sitio.dia.carrera")) : null];
   }
-  if (!marca.length && x.planeado) marca = [h("span", { class: "circ planeado", "aria-hidden": "true" }, parseFecha(x.fecha).getDate())];   // corrida planeada, aún sin hacer
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.esfuerzo != null ? fmt(cf.esfuerzo, 1) : null));
   return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), numeroEnMarca: marca.length > 0, hijos: [...marca, ...cfMarca], seleccionado, alTocar });
 }
