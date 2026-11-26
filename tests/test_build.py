@@ -853,3 +853,33 @@ def test_dia_agrupa_actividades_por_dia_con_sesion_y_dia_de_descanso():
     assert all(set(a) >= {"cat", "nombre", "icono", "minutos", "km", "fc_prom", "carrera", "sesion"}
                for d in dias.values() for a in d["actividades"])
     revisar_privacidad(out)
+
+
+def test_curva_fc_baja_a_120_puntos_o_menos_y_sin_gps():
+    serie = [[i, i * 3, 100 + i % 60] for i in range(1800)]
+    c = build.curva_fc(serie)
+    assert len(c["fc"]) == 120 and c["seg"] == 1799 and all(100 <= v <= 160 for v in c["fc"])
+    assert len(build.curva_fc(serie[:30])["fc"]) == 30      # serie corta: no se inventan puntos
+    assert build.curva_fc([]) is None and build.curva_fc([[0, 0, None], [5, 9, None]]) is None
+
+
+def test_detalle_de_actividad_campos_zonas_curva_y_sin_claves_prohibidas():
+    fx = fixture()
+    fx["activities"][1].update(calories=250.0, elevationGain=12.0, movingDuration=1700.0, aerobicTrainingEffect=2.6,
+                               anaerobicTrainingEffect=0.0, trainingEffectLabel="AEROBIC_BASE", trainingEffectMessage="MENSAJE_GARMIN",
+                               averageRunningCadenceInStepsPerMinute=158.4)
+    fx["details"]["2"]["serie"] = [[i, i * 3, 120 + i % 30] for i in range(0, 1800, 5)]
+    out = build.build(fx, build.load(ROOT / "plan" / "plan.example.json"), CONFIG_CORREDOR, AHORA)
+    dias = {d["fecha"]: d for s in out["semanas_hoy"] for d in s["dias"]}
+    run = next(a for a in dias["2026-11-03"]["actividades"] if a["cat"] == "run")
+    dt = run["detalle"]
+    assert dt["km"] == 4.5 and dt["ritmo_s"] == round(1700 / 4.5) and dt["fc_prom"] == 140 and dt["fc_max"] == 180
+    assert dt["kcal"] == 250 and dt["desnivel_m"] == 12 and dt["cadencia"] == 158 and dt["te_aerobico"] == 2.6
+    assert dt["te_anaerobico"] is None and dt["te_etiqueta"] == "Base aeróbica" and dt["vel_kmh"] is None
+    assert dt["zonas"]["minutos"]["Z2"] == 15.0 and dt["zonas"]["bajo"] > 60
+    assert len(dt["curva_fc"]["fc"]) <= 120
+    otra = next(a for a in dias["2026-11-03"]["actividades"] if a["cat"] != "run")["detalle"]
+    assert otra["ritmo_s"] is None and otra["curva_fc"] is None and otra["cadencia"] is None
+    texto = json.dumps(out, ensure_ascii=False)
+    assert "MENSAJE_GARMIN" not in texto
+    revisar_privacidad(out)

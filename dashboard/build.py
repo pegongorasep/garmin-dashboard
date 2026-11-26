@@ -357,7 +357,7 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
     return {"fecha": d.isoformat(), "dia_semana": i18n.csv("motor.dias_cortos")[d.weekday()],
             "luz": light_on(d, data, config)["color"] if d <= hoy else None,
             "corrida": corrida, "corridas_n": len(del_dia), "otras": otras,
-            "actividades": actividades_del_dia(d, acts or [], config, sesiones)}
+            "actividades": actividades_del_dia(d, acts or [], config, sesiones, data["details"])}
 
 
 def marcar_planeados(dias: list, sesiones: list, hoy: date, pasada: bool) -> None:
@@ -388,7 +388,55 @@ def intensidad_semana(acts: list, ini: date) -> dict:
             "alto": r1(d["alto"])}
 
 
-def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None) -> list:
+TE_ETIQUETAS = ("aerobic_base", "tempo", "recovery", "anaerobic_capacity", "vo2max", "speed", "lactate_threshold")
+CURVA_PUNTOS = 120
+
+
+def curva_fc(serie, n: int = CURVA_PUNTOS):
+    """FC de una actividad bajada a ≤ n puntos (promedio por tramo de tiempo igual): {"seg": duración, "fc": [lpm]}.
+    `serie` es [[seg, m, fc]] (sin GPS que salga de aquí). None si no hay FC suficiente."""
+    pts = [(p[0], p[2]) for p in serie or [] if len(p) >= 3 and p[2]]
+    if len(pts) < 2 or pts[-1][0] <= 0:
+        return None
+    total = pts[-1][0]
+    cubos = [[] for _ in range(min(n, len(pts)))]
+    for seg, fc in pts:
+        cubos[min(int(seg / total * len(cubos)), len(cubos) - 1)].append(fc)
+    medias = [round(sum(c) / len(c)) for c in cubos if c]
+    return {"seg": round(total), "fc": medias}
+
+
+def detalle_actividad(a: dict, details: dict, config: dict) -> dict:
+    """Lo que se ve al abrir una actividad: tiempos, distancia, ritmo o velocidad, FC, calorías, desnivel, tiempo por zona,
+    efecto de entrenamiento (números y etiqueta del catálogo), y en corridas cadencia y ritmo por km. Todo calculado aquí;
+    nunca nombres, IDs, GPS ni textos de Garmin. Cada dato que falte va como None."""
+    det = details.get(str(m.id_de(a))) or {}
+    corrida = m.classify(a, config) == "run"
+    km = (a.get("distance") or 0) / 1000
+    seg = a.get("movingDuration") or a["duration"]
+    zm = m.zone_minutes(a)
+    total = sum(zm.values())
+    bajo, limbo, alto = (sum(zm[z] for z in zs) for zs in (("Z1", "Z2"), ("Z3",), ("Z4", "Z5")))
+    zonas = ({"minutos": {z: r1(v) for z, v in zm.items()}, "bajo": r1(bajo / total * 100), "limbo": r1(limbo / total * 100),
+              "alto": r1(alto / total * 100)} if total > 0 else None)
+    etiqueta = str(a.get("trainingEffectLabel") or "").lower()
+    ae, an = a.get("aerobicTrainingEffect"), a.get("anaerobicTrainingEffect")
+    ritmos = det.get("ritmos_km") if corrida else None
+    return {"duracion_min": r1(a["duration"] / 60), "km": r2(km) if km >= 0.05 else None,
+            "ritmo_s": round(seg / km) if corrida and km >= 0.1 else None,
+            "vel_kmh": r1(km / (seg / 3600)) if not corrida and km >= 0.1 and seg else None,
+            "fc_prom": round(a["averageHR"]) if a.get("averageHR") else None, "fc_max": round(a["maxHR"]) if a.get("maxHR") else None,
+            "kcal": round(a["calories"]) if a.get("calories") else None,
+            "desnivel_m": round(a["elevationGain"]) if a.get("elevationGain") else None,
+            "zonas": zonas,
+            "te_aerobico": r1(ae) if ae else None, "te_anaerobico": r1(an) if an else None,
+            "te_etiqueta": tt(f"motor.te.{etiqueta}") if etiqueta in TE_ETIQUETAS else None,
+            "cadencia": round(a["averageRunningCadenceInStepsPerMinute"]) if corrida and a.get("averageRunningCadenceInStepsPerMinute") else None,
+            "ritmos_km": [round(x) for x in ritmos] if ritmos else None,
+            "curva_fc": curva_fc(det.get("serie"))}
+
+
+def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None, details=None) -> list:
     """Todo lo que se hizo un día, una fila por actividad: tipo (texto del catálogo), minutos, km, FC prom. y, en
     corridas, la sesión del plan que cumplió. `acts` ya viene sin repetidas. Nunca nombres, IDs ni GPS."""
     nombres = {"run": (tt("motor.entreno.run"), "correr"), "carrera": (tt("motor.entreno.carrera"), "medalla"),
@@ -403,7 +451,8 @@ def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None) -> lis
         km = (a.get("distance") or 0) / 1000
         out.append({"cat": c, "nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(a["duration"] / 60),
                     "km": r2(km) if km >= 0.05 else None, "fc_prom": round(a["averageHR"]) if a.get("averageHR") else None,
-                    "carrera": carrera, "sesion": {"nombre": e["name"], "estado": e["estado"]} if e else None})
+                    "carrera": carrera, "sesion": {"nombre": e["name"], "estado": e["estado"]} if e else None,
+                    "detalle": detalle_actividad(a, details or {}, config)})
     return out
 
 
@@ -424,7 +473,7 @@ def build_semana_libre(hoy: date, data: dict, config: dict) -> dict:
     dias = []
     for i in range(7):
         d = ini + timedelta(days=i)
-        items = actividades_del_dia(d, esta, config)
+        items = actividades_del_dia(d, esta, config, details=data["details"])
         dias.append({"fecha": d.isoformat(), "dia_semana": i18n.csv("motor.dias_cortos")[i], "hoy": d == hoy,
                      "futuro": d > hoy, "actividades": items})
     prev = [totales(de_semana(ini - timedelta(weeks=k))) for k in range(1, 5)]

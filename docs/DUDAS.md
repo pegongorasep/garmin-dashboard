@@ -426,3 +426,12 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
   actividades del día (tipo del catálogo, minutos, km, FC prom., y la sesión del plan con su estado). Día elegido: hoy; en otra
   semana, el último con actividad. Sin actividad: «Día de descanso» (o «corrida planeada» / «todavía no llega»).
   Python arma `dias[].actividades` (`build.actividades_del_dia`), también en `semana_libre`, donde el calendario reemplaza la lista de texto.
+- **Actividad: detalle.** Al tocar una actividad del día se abre su detalle (DS.desplegable, sin página nueva): duración, km,
+  ritmo (corridas) o velocidad, FC prom./máx., calorías, desnivel, cadencia (corridas), tiempo por zona (`hrTimeInZone_*`, barra Z1–Z5),
+  efecto de entrenamiento (números + etiqueta del catálogo `motor.te.*`; nunca los mensajes de Garmin) y la curva de FC
+  (`curva_fc`, ≤120 puntos promediados en Python; la clave `serie` sigue prohibida). Ritmo por km solo si hay `ritmos_km`
+  (hoy solo carreras, 1 actividad); los tramos trote/caminata (`splits`) no se publican. Solo entran las semanas que ya van en data.json:
+  data.json de Pedro 158.5 → 172.6 KB (8 actividades en esas semanas, 5 con curva; 16 de 38 tienen serie en total).
+- **Web:** el paquete ahora sube también `calories`, `movingDuration`, TE (números y `trainingEffectLabel`) de cada actividad, y
+  la web ya recibía `activity_details` (con `serie`), así que calcula las mismas claves, curva incluida. Paquetes viejos sin esos
+  campos solo dejan huecos (cada dato falta como `null` y no se pinta).

@@ -72,7 +72,8 @@ def _daily(d: dict) -> dict:
 
 
 _ACTIVIDAD = ["startTimeLocal", ("activityType", ["typeKey"]), ("eventType", ["typeKey"]), "averageHR", "maxHR",
-              "averageRunningCadenceInStepsPerMinute", "distance", "duration", "elevationGain",
+              "averageRunningCadenceInStepsPerMinute", "distance", "duration", "elevationGain", "movingDuration", "calories",
+              "aerobicTrainingEffect", "anaerobicTrainingEffect", "trainingEffectLabel",
               "hrTimeInZone_1", "hrTimeInZone_2", "hrTimeInZone_3", "hrTimeInZone_4", "hrTimeInZone_5"]
 
 

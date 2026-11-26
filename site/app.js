@@ -333,13 +333,30 @@ function diaCalendario(x, hoyIso, seleccionado, alTocar) {
   return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), numeroEnMarca: marca.length > 0, hijos: [...marca, ...cfMarca], seleccionado, alTocar });
 }
 
-/** Una actividad del día: tipo, minutos, km y FC prom.; en corridas, la sesión del plan y si se hizo. */
+/** El detalle de una actividad (todo viene calculado de Python; lo que falta no se pinta). */
+function detalleActividad(dt, a) {
+  const tile = (k, valor, unidad) => (valor == null ? null : DS.tile({ k: T(`sitio.act.${k}`), valor, unidad }));
+  const ritmo = dt.ritmo_s != null ? tile("ritmo", mmss(dt.ritmo_s), "/km") : tile("vel", dt.vel_kmh != null ? fmt(dt.vel_kmh, 1) : null, "km/h");
+  const tiles = [tile("duracion", fmt(dt.duracion_min, 0), T("sitio.sl.min")), tile("dist", dt.km != null ? fmt(dt.km) : null, "km"), ritmo,
+    tile("fc", dt.fc_prom != null ? fmt(dt.fc_prom, 0) : null, T("sitio.lpm")), tile("fcmax", dt.fc_max != null ? fmt(dt.fc_max, 0) : null, T("sitio.lpm")),
+    tile("kcal", dt.kcal != null ? fmt(dt.kcal, 0) : null, "kcal"), tile("desnivel", dt.desnivel_m != null ? fmt(dt.desnivel_m, 0) : null, "m"),
+    tile("cadencia", dt.cadencia != null ? fmt(dt.cadencia, 0) : null, T("sitio.act.ppm"))].filter(Boolean);
+  const te = dt.te_aerobico != null || dt.te_anaerobico != null
+    ? h("p", {}, T("sitio.act.te", { a: dt.te_aerobico != null ? fmt(dt.te_aerobico, 1) : "—", n: dt.te_anaerobico != null ? fmt(dt.te_anaerobico, 1) : "—" }) + (dt.te_etiqueta ? ` · ${dt.te_etiqueta}` : "")) : null;
+  return h("div", { class: "act-cuerpo" }, DS.tiles({ etiqueta: a.nombre, clase: "act-tiles" }, ...tiles),
+    dt.zonas ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.zonas")), DS.barraZonas(dt.zonas, { etiquetas: true })) : null, te,
+    dt.ritmos_km ? h("p", { class: "nota" }, `${T("sitio.act.por_km")}: ${dt.ritmos_km.map(mmss).join(" · ")}`) : null,
+    dt.curva_fc ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.curva_t")), DS.curvaFc(dt.curva_fc)) : null);
+}
+
+/** Una actividad del día: tipo, minutos, km y FC prom.; en corridas, la sesión del plan y si se hizo. Al tocarla se abre su detalle. */
 function filaActividad(a) {
   const datos = [T("sitio.min_n", { n: fmt(a.minutos, 0) }), a.km != null ? T("sitio.km_n", { n: fmt(a.km) }) : null,
     a.fc_prom != null ? `${fmt(a.fc_prom, 0)} ${T("sitio.lpm")}` : null].filter(Boolean).join(" · ");
   const ses = a.sesion ? `${a.sesion.nombre} · ${["hecha", "incompleta", "extra", "no_hecha", "pendiente"].includes(a.sesion.estado) ? T(`sitio.dia.${a.sesion.estado}`) : a.sesion.estado}` : null;
-  return h("div", { class: "act-fila" }, h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre), h("span", {}, datos),
-    ses ? h("span", { class: "nota" }, ses) : null);
+  const cabeza = [h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre), h("span", {}, datos), ses ? h("span", { class: "nota" }, ses) : null];
+  if (!a.detalle) return h("div", { class: "act-fila" }, ...cabeza);
+  return DS.desplegable({ titulo: h("span", { class: "act-fila" }, ...cabeza), clase: "act-det" }, detalleActividad(a.detalle, a));
 }
 
 /** Tarjeta del día tocado: una fila por actividad; sin nada, «día de descanso» (o «corrida planeada» / «aún no»). */

@@ -74,7 +74,9 @@ def datos_falsos(tmp_path):
         "activityId": 99, "activityName": "Carrera de la Calle Secreta", "activityUUID": "u", "ownerDisplayName": "Yo",
         "startLatitude": 1.0, "locationName": "Casa", "startTimeLocal": "2026-11-01 07:00:00", "distance": 5000.0,
         "duration": 1800.0, "averageHR": 150, "activityType": {"typeKey": "running", "typeId": 1},
-        "eventType": {"typeKey": "uncategorized"}, "fastestSplit_1000": 300.0}]))
+        "eventType": {"typeKey": "uncategorized"}, "fastestSplit_1000": 300.0, "calories": 300.0,
+        "movingDuration": 1700.0, "aerobicTrainingEffect": 2.5, "anaerobicTrainingEffect": 0.1,
+        "trainingEffectLabel": "TEMPO", "aerobicTrainingEffectMessage": "MENSAJE_GARMIN"}]))
     (d / "activity_details.json").write_text(json.dumps({"99": {
         "rpe": 5.0, "feel": 50, "serie": [[0, 0, 100]], "splits": [{"tipo": "RWD_RUN", "seg": 1, "m": 2, "fc": 3, "n": 1, "x": 1}]}}))
     (d / "profile.json").write_text(json.dumps({"displayName": "Pedro"}))
@@ -86,6 +88,7 @@ def test_armar_suelta_nombres_ids_y_gps(tmp_path):
     a = pq["archivos"]["activities"][0]
     assert a["es_carrera"] is True and "activityName" not in a and "activityId" not in a and "startLatitude" not in a
     assert a["id"] == paquete.id_opaco("s", 99) and len(a["id"]) == 16
+    assert a["calories"] == 300.0 and a["trainingEffectLabel"] == "TEMPO" and "aerobicTrainingEffectMessage" not in a   # detalle de la actividad en la web
     assert list(pq["archivos"]["activity_details"]) == [a["id"]]
     det = pq["archivos"]["activity_details"][a["id"]]
     assert "feel" not in det and det["serie"] == [[0, 0, 100]] and "x" not in det["splits"][0]

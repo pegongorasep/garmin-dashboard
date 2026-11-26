@@ -261,6 +261,26 @@ const DS = (() => {
       : h("div", { class: clase, role: "group", title: titulo, "aria-label": titulo }, ...partes);
   };
 
+  /**
+   * Curva de frecuencia cardiaca de una actividad. Recibe { seg (duración total en segundos), fc:[lpm] (≤120 puntos, ya
+   * bajados en Python) }. Línea simple en SVG, con rejilla y los minutos en el eje x.
+   */
+  const curvaFc = ({ seg, fc } = {}) => {
+    const v = (fc || []).filter((x) => x != null);
+    if (v.length < 2 || !seg) return null;
+    const W = 300, H = 110, ml = 30, mr = 6, mt = 8, mb = 20;
+    let lo = Math.min(...v), hi = Math.max(...v);
+    const ticks = ticksNice(lo - 2, hi + 2, 3);
+    lo = Math.min(lo - 2, ticks[0]); hi = Math.max(hi + 2, ticks[ticks.length - 1]);
+    const x = (i) => ml + (i / (fc.length - 1)) * (W - ml - mr), y = (f) => mt + ((hi - f) / (hi - lo)) * (H - mt - mb);
+    const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": T("sitio.act.curva", { a: Math.round(Math.min(...v)), b: Math.round(Math.max(...v)) }) });
+    for (const t of ticks) svg.append(sv("line", { class: "rej", x1: ml, x2: W - mr, y1: y(t), y2: y(t) }), sv("text", { x: ml - 5, y: y(t) + 4, "text-anchor": "end" }, fmt(t, 0)));
+    svg.append(sv("line", { class: "eje", x1: ml, x2: W - mr, y1: H - mb, y2: H - mb }));
+    [0, 0.5, 1].forEach((f, i) => svg.append(sv("text", { x: ml + f * (W - ml - mr), y: H - 5, "text-anchor": i === 0 ? "start" : i === 2 ? "end" : "middle" }, T("sitio.min_n", { n: fmt((seg * f) / 60, 0) }))));
+    svg.append(sv("polyline", { class: "ln", points: fc.map((f, i) => (f == null ? null : `${x(i).toFixed(1)},${y(f).toFixed(1)}`)).filter(Boolean).join(" ") }));
+    return h("div", { class: "graf curva-fc" }, svg);
+  };
+
   /** Calendario de 7 días. Recibe los días (DS.diaCal). */
   const calendario = (...dias) => h("div", { class: "cal" }, ...dias.flat());
 
@@ -417,7 +437,7 @@ const DS = (() => {
     ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, campo, opciones, chip, copiar, formulario, filaCampos, insignia, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
-    leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
+    leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */
     silueta: (tramos, { alto = 44, conTip = true, rachas = null, ...rampas } = {}) => siluetaSesion(tramos, alto, conTip, rachas, rampas),
   };
