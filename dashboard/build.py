@@ -786,7 +786,7 @@ def build_ui(config: dict, plan: dict) -> dict:
     repo = os.environ.get("GITHUB_REPOSITORY") if config.get("modo") != "web" else None   # en la web la liga la pone quien llama
     acciones = config.get("acciones_url") or (f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None)
     return {
-        "titulo": config["titulo"],
+        "titulo": i18n.tt("sitio.titulo_defecto") if config["titulo"] == "Mi entreno" else config["titulo"],   # el título de fábrica, traducido
         "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase", "icono")} for c in cats],
         "nombre_intensa": nombre,
         "acciones_url": acciones,

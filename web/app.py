@@ -30,9 +30,13 @@ ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "ch
                   "icono-192.png": "image/png", "icono-512.png": "image/png", "icono-maskable-512.png": "image/png",
                   "apple-touch-icon.png": "image/png"}
 FUENTES = {"Lexend-latin.woff2"}
-PIE_SITIO = ('<footer class="pie"><p>Esto no es consejo médico: si algo duele, para.</p>'
-             '<p>Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p></footer>'
-             '<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});</script>')
+def pie_sitio(idioma: str) -> str:
+    """Pie y registro del service worker que la web agrega al sitio, en el idioma de quien lo ve."""
+    return (f'<footer class="pie"><p>{i18n.t("pie.consejo", idioma)}</p>'
+            f'<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p></footer>'
+            '<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});</script>')
+
+
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
@@ -244,7 +248,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         e = onboarding.estado(db, usuario)
         if not (e["consentimiento"] and e["ajustes"]):
             return RedirectResponse("/bienvenida", 303)
-        html = (SITE / "index.html").read_text().replace("</main>", PIE_SITIO + "</main>", 1)
+        html = (SITE / "index.html").read_text().replace("</main>", pie_sitio(request.state.idioma) + "</main>", 1)
         return HTMLResponse(html)
 
     @app.get("/diseno")
@@ -285,11 +289,11 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         return RedirectResponse(f"/a/{atleta_id}/", 308)
 
     @app.get("/a/{atleta_id}/")
-    def sitio_atleta(atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    def sitio_atleta(atleta_id: int, request: Request, usuario=Depends(actual), db=Depends(get_db)):
         """El mismo sitio, visto por el coach: los archivos van con ruta absoluta y data.json sigue relativo (/a/<id>/data.json)."""
         if not puede_ver(db, usuario, atleta_id):
             raise HTTPException(404)
-        html = (SITE / "index.html").read_text().replace("</main>", PIE_SITIO + "</main>", 1)
+        html = (SITE / "index.html").read_text().replace("</main>", pie_sitio(request.state.idioma) + "</main>", 1)
         html = re.sub(r'(href|src)="([\w.-]+\.(?:css|js))"', r'\1="/\2"', html)
         return HTMLResponse(html)
 
