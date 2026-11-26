@@ -703,10 +703,9 @@ def test_resumen_de_la_semana_pasada():
     out = build.build(fixture(), plan, CONFIG_FIXTURE, ahora)
     r = out["hoy"]["semana_pasada"]
     assert r["inicio"] == "2026-11-02" and r["fin"] == "2026-11-08"
-    assert r["sesiones_total"] == 3 and r["sesiones_hechas"] == 1 and r["minutos"] == 30
-    assert r["dias_verdes"] + r["dias_rojos"] + r["dias_sin_datos"] <= 7 and r["dias_verdes"] >= 1
+    assert r["sesiones_total"] == 3 and r["sesiones_hechas"] == 1 and r["stats"]["minutos"] == 30
     assert r["sugerencia"]["tipo"] == "repetir"                # solo 1 sesión hecha
-    assert {"carga", "carga_anterior", "intensidad", "intensidad_anterior", "minutos_anterior", "km_anterior", "ritmo_ref_s"} <= set(r)
+    assert {"stats", "intensidad"} <= set(r) and not {"carga", "dias_verdes", "minutos_anterior", "ritmo_ref_s"} & set(r)
     assert "plan_vs_real" not in r and out["ui"]["avisos"]["sugerencia"]
     revisar_privacidad(out)
     vacia = build.build({**fixture(), "activities": []}, plan, CONFIG_FIXTURE, datetime(2026, 12, 20, 12, 0, tzinfo=ZoneInfo("America/Merida")))

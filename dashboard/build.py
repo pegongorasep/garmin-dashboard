@@ -684,30 +684,19 @@ def prueba_resultado(data: dict, config: dict, plan: dict):
 
 
 def resumen_semana_pasada(hoy: date, data: dict, config: dict, plan: dict):
-    """Resumen de la semana pasada (lun–dom antes de la de hoy) para Hoy, sin Claude: sesiones hechas, minutos, km,
-    % trote, días verdes, 80/20, carga, minutos, km y ritmo a FC ref contra la anterior y una
-    sugerencia por reglas. None si esa semana no tuvo corridas ni plan."""
+    """Resumen de la semana pasada (lun–dom antes de la de hoy) para Hoy, sin Claude: sesiones hechas, las mismas stats
+    que Esta semana (corridas, minutos, km, % trote), la intensidad y una sugerencia por reglas. None si esa semana no tuvo corridas ni plan."""
     ini = monday(hoy) - timedelta(days=7)
     s = build_semana(ini, hoy, data, config, plan)
     if not s["stats"]["corridas"] and not s["plan"]:
         return None
-    luces = [light_on(ini + timedelta(days=i), data, config)["color"] for i in range(7)]
-    verdes, rojos, sin_datos = (luces.count(c) for c in ("verde", "rojo", "sin_datos"))
+    rojos = [light_on(ini + timedelta(days=i), data, config)["color"] for i in range(7)].count("rojo")
     acts, det = data["activities"], data["details"]
     carga, previa = (m.week_load(acts, det, i, config)["total"] for i in (ini, ini - timedelta(days=7)))
-    ritmo = lambda i: m.promedio([f["ritmo_ref_s"] for f in _semana_corridas(i, i + timedelta(days=6), acts, det, config)])  # noqa: E731
-    ahora_r, antes_r = ritmo(ini), ritmo(ini - timedelta(days=7))
     plan_s = s["plan"]
-    ant = build_semana(ini - timedelta(days=7), hoy, data, config, plan)
     return {"inicio": s["inicio"], "fin": s["fin"], "n": s["n"],
             "sesiones_hechas": plan_s["hechas"] if plan_s else None, "sesiones_total": plan_s["total"] if plan_s else None,
-            "minutos": s["stats"]["minutos"], "minutos_anterior": ant["stats"]["minutos"],
-            "km": s["stats"]["km"], "km_anterior": ant["stats"]["km"],
-            "dias_verdes": verdes, "dias_rojos": rojos, "dias_sin_datos": sin_datos,
-            "intensidad": s["intensidad"], "intensidad_anterior": ant["intensidad"],
-            "carga": r1(carga), "carga_anterior": r1(previa),
-            "ritmo_ref_s": None if ahora_r is None else round(ahora_r),
-            "ritmo_ref_anterior_s": None if antes_r is None else round(antes_r),
+            "stats": s["stats"], "intensidad": s["intensidad"],
             "sugerencia": m.sugerencia_semana(plan_s["hechas"] if plan_s else 0, plan_s["total"] if plan_s else None,
                                               rojos, carga, previa, config)}
 
