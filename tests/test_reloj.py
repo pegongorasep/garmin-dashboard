@@ -1,3 +1,4 @@
+import pytest
 import json
 import sys
 from datetime import date
@@ -89,6 +90,7 @@ def test_clasificar():
 
 
 def test_reloj_acepta_plan_por_ruta():
+    pytest.importorskip("garminconnect")   # reloj.py lo importa al inicio; en CI no está instalado
     import subprocess
     r = subprocess.run([sys.executable, str(ROOT / "reloj.py"), "semana", "--help"], capture_output=True, text=True)
     assert "--plan" in r.stdout
