@@ -120,6 +120,30 @@ def test_evento_invalido():
 
 # --- viaje con correr / carrera: solo cambian sus semanas ---
 
+def test_viaje_sigo_igual_no_cambia_el_plan_ni_pausa():
+    c = plan_vivo.agregar_evento(CONFIG, "viaje", fecha_semana(5, 1), fecha_semana(5, 4), modo="igual")
+    cfg, base = cfg_de(c), plan_base()
+    p = plan_vivo.plan_efectivo(base, cfg)
+    assert cfg["pausas"] == [] and cfg["eventos"][0]["correr"] is False
+    assert all(a["kind"] == b["kind"] and a["sessions"] == b["sessions"] for a, b in zip(base["weeks"], p["weeks"]))
+    assert p["weeks"][4]["evento"] == "viaje_igual"
+
+
+def test_config_vieja_con_correr_true_sigue_siendo_menos():
+    crudo = {**CONFIG, "corrida": {**(CONFIG.get("corrida") or {}), "eventos": [
+        {"id": "x", "tipo": "viaje", "desde": fecha_semana(5, 1), "hasta": fecha_semana(5, 4), "correr": True}]}}
+    cfg, base = cfg_de(crudo), plan_base()
+    assert cfg["eventos"][0]["modo"] == "menos"
+    w = plan_vivo.plan_efectivo(base, cfg)["weeks"][4]
+    assert [s["id"] for s in w["sessions"]] == ["z2a", "z2b"]
+
+
+def test_carrera_en_domingo_marca_la_semana_como_carrera():
+    from dashboard import build
+    c = plan_vivo.agregar_carrera(CONFIG, fecha_semana(6, 6), 10, "Mi 10K")
+    p = plan_vivo.plan_efectivo(plan_base(), cfg_de(c))
+    assert build.convert_week(p["weeks"][5], [])["etiqueta"] == "carrera"
+
 def semanas_distintas(a, b):
     return [x["n"] for x, y in zip(a["weeks"], b["weeks"]) if x != y]
 
@@ -478,7 +502,7 @@ def test_el_coach_agrega_un_viaje_y_el_atleta_se_entera(web_ctx):
     r = cl_c.post(f"/a/{uid_a}/plan/viaje", data={"csrf": tok(cl_c), "desde": "2026-12-01", "hasta": "2026-12-06", "correr": "si"})
     assert r.status_code == 303 and r.headers["location"] == f"/a/{uid_a}/plan/acciones?ok=1"
     assert "Estás editando a" in cl_c.get(f"/a/{uid_a}/plan/acciones").text
-    assert crudo(web_ctx, uid_a)["corrida"]["eventos"][0]["correr"] is True
+    assert crudo(web_ctx, uid_a)["corrida"]["eventos"][0]["modo"] == "menos"
     d = cl_a.get("/data.json").json()
     assert "Agregó un viaje" in d["avisos"][0]["texto"]
     assert cl_a.get("/plan/acciones").status_code == 200

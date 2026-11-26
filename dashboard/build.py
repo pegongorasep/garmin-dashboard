@@ -165,7 +165,9 @@ def convert_session(s: dict, zonas: list) -> dict:
 
 def convert_week(w: dict, zonas: list) -> dict:
     extra = {"evento": w["evento"]} if w.get("evento") else {}   # semana que un viaje o una carrera cambió (solo la web)
-    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "focus": w["focus"], **extra,
+    etiqueta = {"carrera": "carrera", "viaje": "viaje", "viaje_igual": "viaje"}.get(w.get("evento")) or (
+        "descarga" if w["kind"] == "descarga" else "carga")   # lo que dice la cuadrícula de 12 semanas
+    return {"n": w["n"], "block": w["block"], "kind": w["kind"], "etiqueta": etiqueta, "focus": w["focus"], **extra,
             "sessions": [convert_session(s, zonas) for s in w["sessions"]]}
 
 
@@ -782,7 +784,7 @@ def build_ui(config: dict, plan: dict) -> dict:
 def eventos_plan(config: dict) -> dict:
     """`plan.eventos` (viajes, enfermedades, carreras con fecha) para el calendario del Plan. Sin eventos ni metas la
     clave no existe (así el data.json de quien no los usa queda idéntico)."""
-    out = [{"tipo": e["tipo"], "desde": e["desde"], "hasta": e["hasta"], "correr": e["correr"]}
+    out = [{"tipo": e["tipo"], "desde": e["desde"], "hasta": e["hasta"], "correr": e["correr"], "modo": e["modo"]}
            for e in config.get("eventos") or []]
     out += [{"tipo": "carrera", "desde": x["fecha"], "hasta": x["fecha"], "nombre": x["nombre"],
              "distancia_km": x["distancia_km"]} for x in config.get("metas") or []]

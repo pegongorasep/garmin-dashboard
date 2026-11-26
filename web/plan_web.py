@@ -108,10 +108,12 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
 
     def viaje(db, atleta, crudo, cfg, plan, f, hoy):
         desde, hasta = _fecha(f.get("desde"), "salida"), _fecha(f.get("hasta"), "regreso")
-        correr = f.get("correr") == "si"
-        nuevo = plan_vivo.agregar_evento(crudo, "viaje", desde, hasta, correr)
+        modo = f.get("modo") or ("menos" if f.get("correr") == "si" else "pausa")
+        if modo not in ("pausa", "menos", "igual"):
+            raise ConfigError("Elige cómo será el viaje.")
+        nuevo = plan_vivo.agregar_evento(crudo, "viaje", desde, hasta, modo=modo)
         return nuevo, None, (f"Agregó un viaje del {lindo(desde)} al {lindo(hasta)} "
-                             f"({'semana ligera: 2 Z2 cortas' if correr else 'sin correr: el plan espera'})")
+                             f"({ {'menos': 'semana ligera: 2 Z2 cortas', 'igual': 'sigo entrenando igual', 'pausa': 'sin correr: el plan espera'}[modo] })")
 
     def enfermo(db, atleta, crudo, cfg, plan, f, hoy):
         tipo = f.get("tipo", "enfermedad")
@@ -176,6 +178,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     con_id("evento/{ident}/cerrar", lambda c, i, hoy: plan_vivo.cerrar_evento(c, i, hoy.isoformat()),
            "Marcó que ya estás bien: el plan se reanuda")
     con_id("evento/{ident}/quitar", lambda c, i, hoy: plan_vivo.quitar_evento(c, i), "Quitó un evento del plan")
+    for m_, txt in (("igual", "sigo entrenando igual"), ("menos", "voy a correr menos"), ("pausa", "no voy a correr")):
+        con_id(f"evento/{{ident}}/modo-{m_}", lambda c, i, hoy, m_=m_: plan_vivo.cambiar_modo_viaje(c, i, m_),
+               f"Cambió el viaje a: {txt}")
     con_id("meta/{ident}/quitar", lambda c, i, hoy: plan_vivo.quitar_meta(c, i), "Quitó una carrera del plan")
 
     # ---------- editor de sesión ----------

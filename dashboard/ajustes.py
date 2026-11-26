@@ -97,6 +97,7 @@ PRUEBAS_TIPOS = ("fc_fija", "trote_continuo", "5k")
 ESCALERA = ["3/1", "5/1", "8/1", "12/1", "continuo"]   # trote/caminata (minutos de trote por 1' de caminata) hasta correr continuo
 SENSORES = ("banda", "muñeca")
 EVENTOS_TIPOS = ("viaje", "enfermedad", "lesion")
+MODOS_VIAJE = ("pausa", "menos", "igual")   # viaje: no corro / corro menos (2 Z2 cortas) / sigo igual (solo se ve en el calendario)
 
 
 def _metas(brutas: list) -> list:
@@ -131,8 +132,11 @@ def _eventos(brutos: list) -> list:
             raise ConfigError("corrida.eventos: un viaje necesita fecha de regreso")
         if hasta and hasta < desde:
             raise ConfigError("corrida.eventos: la fecha final es anterior a la inicial")
+        modo = x.get("modo") if x.get("modo") in MODOS_VIAJE else ("menos" if x.get("correr") else "pausa")
+        if tipo != "viaje":
+            modo = "pausa"
         out.append({"id": str(x.get("id") or f"e{i + 1}"), "tipo": tipo, "desde": desde, "hasta": hasta,
-                    "correr": bool(x.get("correr", False)) if tipo == "viaje" else False})
+                    "modo": modo, "correr": modo == "menos"})   # `correr` = «menos» (config vieja)
     return sorted(out, key=lambda x: (x["desde"], x["id"]))
 
 

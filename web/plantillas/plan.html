@@ -24,10 +24,12 @@
   {% for e in cfg.eventos %}
     <p><strong>{{ {'viaje': 'Viaje', 'enfermedad': 'Enfermedad', 'lesion': 'Lesión'}[e.tipo] }}</strong>
       · {{ e.desde }}{% if e.hasta %} al {{ e.hasta }}{% else %} · sigue{% endif %}
-      {% if e.tipo == 'viaje' %}· {{ 'semana ligera (2 Z2 cortas)' if e.correr else 'sin correr: el plan espera' }}{% else %}· el plan espera{% endif %}</p>
+      {% if e.tipo == 'viaje' %}· {{ {'menos': 'semana ligera (2 Z2 cortas)', 'igual': 'sigo entrenando igual', 'pausa': 'sin correr: el plan espera'}[e.modo] }}{% else %}· el plan espera{% endif %}</p>
     <div class="acciones">
       {% if not e.hasta %}<form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/cerrar"><input type="hidden" name="csrf" value="{{ csrf }}">
         {{ boton("Ya estoy bien", chico=True, tipo="submit") }}</form>{% endif %}
+      {% if e.tipo == 'viaje' and e.modo != 'igual' %}<form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/modo-igual"><input type="hidden" name="csrf" value="{{ csrf }}">
+        {{ boton("Cambiar a: sigo igual", "sec", chico=True, tipo="submit") }}</form>{% endif %}
       <form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
         {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form>
     </div>
@@ -45,9 +47,10 @@
     <input type="hidden" name="csrf" value="{{ csrf }}">
     {{ campo("Salgo el", "desde", tipo="date", requerido=True) }}
     {{ campo("Regreso el", "hasta", tipo="date", requerido=True) }}
-    {% call opciones("¿Podrás correr?") %}
-      {{ opcion("correr", "Sí: esa semana serán 2 Z2 cortas", valor="si", tipo="radio") }}
-      {{ opcion("correr", "No: el plan espera y sigo al volver", valor="no", tipo="radio", marcado=True) }}
+    {% call opciones("¿Cómo entrenarás?") %}
+      {{ opcion("modo", "No voy a correr: el plan espera y sigo al volver", valor="pausa", tipo="radio", marcado=True) }}
+      {{ opcion("modo", "Voy a correr menos: esa semana serán 2 Z2 cortas", valor="menos", tipo="radio") }}
+      {{ opcion("modo", "Sigo entrenando igual: el viaje solo se ve en el calendario", valor="igual", tipo="radio") }}
     {% endcall %}
     <div class="acciones">{{ boton("Agregar viaje", tipo="submit") }}</div>
   </form>

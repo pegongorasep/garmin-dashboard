@@ -71,7 +71,7 @@ def _fin_evento(e: dict, hoy: date) -> date:
 
 
 def pausa_el_plan(e: dict) -> bool:
-    return e["tipo"] in ("enfermedad", "lesion") or (e["tipo"] == "viaje" and not e["correr"])
+    return e["tipo"] in ("enfermedad", "lesion") or (e["tipo"] == "viaje" and e["modo"] == "pausa")
 
 
 def semanas_de(e: dict, hoy: date) -> list[date]:
@@ -122,13 +122,14 @@ def _suavizada(w: dict) -> list:
 def plan_efectivo(plan: dict, cfg: dict) -> dict:
     """El plan guardado con las carreras y los viajes aplicados a sus semanas. `cfg` ya trae `pausas`. Sin metas ni
     eventos devuelve el mismo plan (idéntico)."""
-    if not cfg["metas"] and not any(e["tipo"] == "viaje" and e["correr"] for e in cfg["eventos"]):
+    if not cfg["metas"] and not any(e["tipo"] == "viaje" and e["modo"] != "pausa" for e in cfg["eventos"]):
         return plan
     inicio = date.fromisoformat(cfg["plan_start"])
     sec = m.secuencia_semanas(inicio, cfg["semanas_repetidas"], cfg["plan_semanas"], cfg.get("pausas", []))
     carrera = {}       # n -> meta
     previa = set()     # n de la semana anterior a una carrera
-    ligera = set()     # n de semanas de viaje con correr
+    ligera = set()     # n de semanas de viaje con correr menos
+    igual = set()      # n de semanas de viaje «sigo igual»: solo se marcan, el plan no cambia
     tipo = {w["n"]: w["kind"] for w in plan["weeks"]}
     for meta in cfg["metas"]:
         i = (lunes(date.fromisoformat(meta["fecha"])) - inicio).days // 7
@@ -138,11 +139,11 @@ def plan_efectivo(plan: dict, cfg: dict) -> dict:
             if i > 0 and sec[i - 1] is not None and not (i > 1 and tipo.get(sec[i - 2]) == "descarga"):
                 previa.add(sec[i - 1])
     for e in cfg["eventos"]:
-        if e["tipo"] == "viaje" and e["correr"]:
+        if e["tipo"] == "viaje" and e["modo"] != "pausa":
             for d in semanas_de(e, date.fromisoformat(e["hasta"])):
                 i = (d - inicio).days // 7
                 if 0 <= i < len(sec) and sec[i] is not None:
-                    ligera.add(sec[i])
+                    (ligera if e["modo"] == "menos" else igual).add(sec[i])
     semanas = []
     for w in plan["weeks"]:
         n = w["n"]
@@ -154,6 +155,8 @@ def plan_efectivo(plan: dict, cfg: dict) -> dict:
         elif n in ligera:
             w = {**w, "kind": "descarga", "evento": "viaje", "focus": "Viaje · 2 Z2 cortas",
                  "sessions": _z2_cortas(w, max(10, gen_plan.suave(_minutos_z2(w))), cfg)}
+        elif n in igual and n not in previa:
+            w = {**w, "evento": "viaje_igual"}
         elif n in previa:
             if w["kind"] == "descarga":
                 w = {**w, "evento": "descarga_carrera"}
@@ -197,10 +200,21 @@ def quitar_meta(crudo: dict, meta_id: str) -> dict:
     return _validado(nuevo)
 
 
-def agregar_evento(crudo: dict, tipo: str, desde: str, hasta: str | None, correr: bool = False) -> dict:
+def agregar_evento(crudo: dict, tipo: str, desde: str, hasta: str | None, correr: bool = False, modo: str | None = None) -> dict:
     nuevo, c = _corrida(crudo)
     c["eventos"] = normalizar_config(crudo)["eventos"] + [
-        {"id": _id_nuevo(), "tipo": tipo, "desde": desde, "hasta": hasta or None, "correr": correr}]
+        {"id": _id_nuevo(), "tipo": tipo, "desde": desde, "hasta": hasta or None,
+         "modo": modo or ("menos" if correr else "pausa")}]
+    return _validado(nuevo)
+
+
+def cambiar_modo_viaje(crudo: dict, evento_id: str, modo: str) -> dict:
+    """Cambia cómo afecta un viaje al plan: pausa, menos o igual."""
+    nuevo, c = _corrida(crudo)
+    eventos = normalizar_config(crudo)["eventos"]
+    if modo not in ("pausa", "menos", "igual") or not any(e["id"] == evento_id and e["tipo"] == "viaje" for e in eventos):
+        raise ConfigError("Ese viaje ya no existe.")
+    c["eventos"] = [{**e, "modo": modo} if e["id"] == evento_id else e for e in eventos]
     return _validado(nuevo)
 
 
