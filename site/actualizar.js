@@ -10,7 +10,8 @@
   const texto = yo && yo.dataset.texto, accion = yo && yo.dataset.accion;
   let pidio = false, recargando = false, linea = null;
 
-  const cuerpo = yo && yo.dataset.cuerpo, luego = yo && yo.dataset.luego;
+  const cuerpo = yo && yo.dataset.cuerpo, luego = yo && yo.dataset.luego, haciendo = yo && yo.dataset.actualizando;
+  let registro = null;   // el registro del service worker: su .waiting es siempre el worker vigente
   const descartados = new WeakSet();   // «Ahora no»: no se vuelve a mostrar en esta sesión de la página para ese mismo worker
 
   function ofrecer(worker) {
@@ -24,7 +25,15 @@
     const no = document.createElement("button"); no.type = "button"; no.className = "boton texto"; no.textContent = luego || "";
     const fila = document.createElement("div"); fila.className = "dv-botones"; fila.append(no, si);
     d.append(t, p, fila);
-    si.addEventListener("click", () => { pidio = true; si.disabled = true; no.disabled = true; worker.postMessage("SKIP_WAITING"); });
+    si.addEventListener("click", () => {
+      pidio = true; si.disabled = true; no.disabled = true;
+      if (haciendo) si.textContent = haciendo;
+      // Al worker que espera AHORA (el capturado pudo quedar redundante si salió otra versión); si no hay, al capturado.
+      const vigente = (registro && registro.waiting) || worker;
+      try { vigente.postMessage("SKIP_WAITING"); } catch (_) {}
+      // Si el cambio de controlador no llega en 3 s, recarga igual (una sola vez).
+      setTimeout(recargar, 3000);
+    });
     // «Ahora no», Esc (evento close) o tocar afuera: cierra y no vuelve a salir para este worker en esta página.
     const soltar = () => { if (!pidio) descartados.add(worker); if (linea === d) linea = null; d.remove(); };   // idempotente
     no.addEventListener("click", () => { d.close(); soltar(); });
@@ -37,19 +46,22 @@
   }
 
   // Solo recarga si la persona pidió actualizar (así la primera instalación, que también "toma el control", no recarga) y una sola vez.
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
+  function recargar() {
     if (!pidio || recargando) return;
     recargando = true;
     location.reload();
-  });
+  }
+  navigator.serviceWorker.addEventListener("controllerchange", recargar);
 
   navigator.serviceWorker.register("/sw.js").then((reg) => {
+    registro = reg;
     const hayPrevio = () => !!navigator.serviceWorker.controller;   // sin controlador previo = primera instalación: no se avisa nada
     if (reg.waiting && hayPrevio()) ofrecer(reg.waiting);
     reg.addEventListener("updatefound", () => {
       const nuevo = reg.installing;
       if (!nuevo) return;
-      nuevo.addEventListener("statechange", () => { if (nuevo.state === "installed" && hayPrevio()) ofrecer(nuevo); });
+      nuevo.addEventListener("statechange", () => { if (nuevo.state === "installed" && hayPrevio()) ofrecer(nuevo);   // con el diálogo abierto no duplica; el clic usa siempre reg.waiting, o sea el más nuevo
+       });
     });
     // iOS casi nunca revisa solo: al volver a la app, preguntar.
     document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });

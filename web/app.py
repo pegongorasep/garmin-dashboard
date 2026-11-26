@@ -45,7 +45,8 @@ def pie_sitio(idioma: str, csrf: str = "", ruta: str = "/") -> str:
     return (f'<footer class="pie"><p>{i18n.t("pie.consejo", idioma)}</p>'
             f'<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p>{form}</footer>'
             f'<script src="/actualizar.js" data-texto="{i18n.t("sitio.version_nueva", idioma)}" data-accion="{i18n.t("sitio.version_actualizar", idioma)}" '
-            f'data-cuerpo="{i18n.t("sitio.version_cuerpo", idioma)}" data-luego="{i18n.t("sitio.version_luego", idioma)}"></script>')
+            f'data-cuerpo="{i18n.t("sitio.version_cuerpo", idioma)}" data-luego="{i18n.t("sitio.version_luego", idioma)}" '
+            f'data-actualizando="{i18n.t("sitio.version_actualizando", idioma)}"></script>')
 
 
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
