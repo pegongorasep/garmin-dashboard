@@ -16,11 +16,11 @@ def token_para(web_ctx, uid):
         return t["access_token"]
 
 
-def rpc(cl, token, metodo, params=None, id_=1):
+def rpc(cl, token, metodo, params=None, id_=1, ruta="/mcp"):   # la URL tal cual la usan Claude y ChatGPT
     h = dict(HEAD)
     if token:
         h["Authorization"] = f"Bearer {token}"
-    r = cl.post("/mcp/", headers=h, json={"jsonrpc": "2.0", "id": id_, "method": metodo, "params": params or {}})
+    r = cl.post(ruta, headers=h, json={"jsonrpc": "2.0", "id": id_, "method": metodo, "params": params or {}})
     return r
 
 
@@ -51,6 +51,7 @@ def test_lecturas_propias_sin_serie_y_descripciones_en_espanol(web_ctx):
     uid, _ = listo(web_ctx, "a@x.com")
     tok = token_para(web_ctx, uid)
     with web_ctx.cliente() as cl:
+        assert rpc(cl, tok, "tools/list", ruta="/mcp/").status_code == 200   # con diagonal también
         tools = cuerpo(rpc(cl, tok, "tools/list"))["result"]["tools"]
         nombres = {t["name"] for t in tools}
         assert nombres == {"resumen_hoy", "semana", "plan", "corridas_recientes", "progreso", "ver_ajustes", "historial", "mis_atletas"} | {"cambiar_ajustes", "agregar_carrera", "agregar_evento", "editar_sesion", "repetir_semana", "subir_escalon", "registrar_inbody", "deshacer"}

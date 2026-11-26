@@ -382,3 +382,12 @@ def montar(app, settings) -> None:
 
     app.router.lifespan_context = vida
     app.mount("/mcp", con_token)
+
+    class _Exacta:   # Claude y ChatGPT llaman a BASE_URL/mcp sin diagonal; el Mount solo atiende /mcp/…
+        async def __call__(self, scope, receive, send):
+            raiz = scope.get("root_path", "")
+            await con_token(dict(scope, path=raiz + "/mcp/", raw_path=(raiz + "/mcp/").encode(), root_path=raiz + "/mcp"),
+                            receive, send)
+
+    from starlette.routing import Route
+    app.router.routes.insert(0, Route("/mcp", _Exacta()))
