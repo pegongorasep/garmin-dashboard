@@ -254,12 +254,13 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             raise HTTPException(404)
         return FileResponse(SITE / "catalogo.html", media_type="text/html")
 
-    def data_de(db, usuario, atleta_id: int, pref: str = "") -> Response:
+    def data_de(request: Request, db, usuario, atleta_id: int, pref: str = "") -> Response:
         if not puede_ver(db, usuario, atleta_id):
             raise HTTPException(404)   # 404 y no 403: no confirma que exista
         atleta = db.get(Usuario, atleta_id)
         try:
-            return JSONResponse(calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None), pref))
+            salida = calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None), pref)
+            return JSONResponse({**salida, "idioma": request.state.idioma})   # el sitio se pinta en el idioma de quien lo ve
         except calculo.SinConfig:
             raise HTTPException(404)
         except ConfigError as e:
@@ -269,14 +270,14 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             return JSONResponse({"error": "No se pudo preparar tu información."}, status_code=500)
 
     @app.get("/data.json")
-    def data_json(usuario=Depends(actual), db=Depends(get_db)):
+    def data_json(request: Request, usuario=Depends(actual), db=Depends(get_db)):
         if usuario is None:
             return JSONResponse({"error": "Entra primero."}, status_code=401)
-        return data_de(db, usuario, usuario.id)
+        return data_de(request, db, usuario, usuario.id)
 
     @app.get("/a/{atleta_id}/data.json")
-    def data_atleta(atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return data_de(db, usuario, atleta_id, "" if usuario is not None and usuario.id == atleta_id else f"/a/{atleta_id}")
+    def data_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
+        return data_de(request, db, usuario, atleta_id, "" if usuario is not None and usuario.id == atleta_id else f"/a/{atleta_id}")
 
     @app.get("/a/{atleta_id}")
     def sitio_atleta_sin_slash(atleta_id: int):
@@ -297,6 +298,15 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             raise HTTPException(404)
         return FileResponse(SITE / "fuentes" / archivo, media_type="font/woff2",
                             headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+    @app.get("/i18n/{archivo}")
+    @app.get("/a/{atleta_id}/i18n/{archivo}")   # el sitio del coach pide los textos con ruta relativa
+    def textos_sitio(archivo: str, atleta_id: int | None = None):
+        """Los textos del sitio (JS) en un idioma: salen del catálogo, nunca atrasados. Son públicos (no llevan datos)."""
+        idioma = archivo[:-5] if archivo.endswith(".json") else ""
+        if idioma not in i18n.idiomas():
+            raise HTTPException(404)
+        return JSONResponse(i18n.catalogo_sitio(idioma), headers={"Cache-Control": "no-cache"})
 
     @app.get("/{archivo}")   # siempre al final: el resto del sitio, solo la lista de arriba
     def sitio(archivo: str):

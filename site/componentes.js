@@ -37,18 +37,18 @@ const DS = (() => {
     h(tag, { class: `card${clase ? ` ${clase}` : ""}` }, titulo ? h("h3", { class: "card-t" }, titulo) : null, ...hijos);
 
   /** Pie de página. Recibe { aviso, fuente, enlace: {texto, href} }. */
-  const pie = ({ aviso = "Esto no es consejo médico: si algo duele, para.", fuente = "Datos de Garmin", enlace = { texto: "Aviso de privacidad", href: "/privacidad" } } = {}) =>
+  const pie = ({ aviso = T("sitio.ds.pie_aviso"), fuente = T("sitio.ds.pie_fuente"), enlace = { texto: T("sitio.ds.pie_privacidad"), href: "/privacidad" } } = {}) =>
     h("footer", { class: "pie" }, h("p", {}, aviso),
       h("p", {}, fuente, enlace ? " · " : null, enlace ? h("a", { href: enlace.href }, enlace.texto) : null));
 
   /** Pantalla de carga: el logo se arma. Recibe la frase que va debajo. */
-  const cargando = (frase = "Cargando…") => h("div", { class: "cargando", role: "status" }, logo(), h("p", { class: "frase" }, frase));
+  const cargando = (frase = T("sitio.ds.cargando")) => h("div", { class: "cargando", role: "status" }, logo(), h("p", { class: "frase" }, frase));
 
   /** Error de carga. Recibe { titulo, texto, detalle, onReintentar }. */
-  const errorCarga = ({ titulo = "No pudimos cargar tus datos", texto = "", detalle = "", onReintentar } = {}) =>
+  const errorCarga = ({ titulo = T("sitio.ds.error_t"), texto = "", detalle = "", onReintentar } = {}) =>
     h("div", { class: "error-carga", role: "alert" }, logo("logo-quieto"), h("p", { class: "ec-t" }, titulo), h("p", { class: "ec-x" }, texto),
-      h("button", { class: "boton", type: "button", onclick: onReintentar }, "Volver a intentar"),
-      detalle ? h("details", {}, h("summary", {}, "Detalle"), h("code", {}, detalle)) : null);
+      h("button", { class: "boton", type: "button", onclick: onReintentar }, T("sitio.ds.reintentar")),
+      detalle ? h("details", {}, h("summary", {}, T("sitio.ds.detalle")), h("code", {}, detalle)) : null);
 
   /** Estado vacío. Recibe { icono (null = sin ícono), titulo, texto, accion: {texto, href} }; se pone dentro de una tarjeta. */
   const estadoVacio = ({ icono: nombre, titulo, texto, accion } = {}) =>
@@ -61,10 +61,10 @@ const DS = (() => {
       simbolo ? h("div", { class: "estado" }, insignia(clase, simbolo), h("span", {}, texto)) : texto);
 
   /** Aviso del coach (cuando ves a otra persona). Recibe el nombre. */
-  const avisoCoach = (nombre) => h("p", { class: "coach-aviso" }, insignia("warn", "!"), h("span", {}, "Estás viendo a ", h("b", {}, nombre), " como su coach."));
+  const avisoCoach = (nombre) => h("p", { class: "coach-aviso" }, insignia("warn", "!"), h("span", {}, T("sitio.ds.viendo"), h("b", {}, nombre), T("sitio.ds.como_coach")));
 
   /** Confirmación antes de borrar o perder datos. Recibe { titulo, texto, lista:[], nota, confirmar, cancelar, onConfirmar, onCancelar }. */
-  const confirmacion = ({ titulo, texto, lista = [], nota, confirmar = "Sí, continuar", cancelar = "Cancelar", onConfirmar, onCancelar } = {}) => {
+  const confirmacion = ({ titulo, texto, lista = [], nota, confirmar = T("sitio.ds.si"), cancelar = T("sitio.ds.cancelar"), onConfirmar, onCancelar } = {}) => {
     const id = uid("cf");
     return h("div", { class: "confirmacion", role: "alertdialog", "aria-labelledby": id },
       h("p", { class: "cf-t", id }, insignia("bad", "!"), titulo),
@@ -75,18 +75,18 @@ const DS = (() => {
   };
 
   /** Banner «alguien más cambió tu plan». Recibe { quien, texto, cuando, verHref, verTexto, onDeshacer } (sin onDeshacer no hay botón). */
-  const bannerCambio = ({ quien, texto, cuando, verHref = "#", verTexto = "Ver", onDeshacer } = {}) =>
+  const bannerCambio = ({ quien, texto, cuando, verHref = "#", verTexto = T("sitio.ds.ver"), onDeshacer } = {}) =>
     h("div", { class: "banner-cambio", role: "status" },
       h("span", { class: "bc-t" }, quien ? h("b", {}, quien) : null, `${quien ? " " : ""}${texto}${cuando ? ` · ${cuando}` : ""}`),
       h("span", { class: "bc-acc" }, h("a", { class: "boton texto chico", href: verHref }, verTexto),
-        onDeshacer ? boton("Deshacer", { variante: "sec", chico: true, ico: "deshacer", onclick: onDeshacer }) : null));
+        onDeshacer ? boton(T("sitio.ds.deshacer"), { variante: "sec", chico: true, ico: "deshacer", onclick: onDeshacer }) : null));
 
   /** Lista de cambios del plan. Recibe [{ quien, cuando, origen, texto, nuevo, deshecho, onDeshacer }]. */
   const filaHistorial = (items = []) => h("ul", { class: "historial" }, items.map((it) =>
     h("li", { class: `${it.nuevo ? "nuevo" : ""}${it.deshecho ? " deshecho" : ""}`.trim() || null },
       h("p", { class: "fh-q" }, h("b", {}, it.quien), ` · ${it.cuando}`, it.origen ? " · " : null, it.origen ? chip(it.origen, "neutro") : null),
       h("p", { class: "fh-d" }, it.texto),
-      it.deshecho ? null : boton("Deshacer", { variante: "sec", chico: true, ico: "deshacer", onclick: it.onDeshacer }))));
+      it.deshecho ? null : boton(T("sitio.ds.deshacer"), { variante: "sec", chico: true, ico: "deshacer", onclick: it.onDeshacer }))));
 
   // ---------- controles ----------
 
@@ -132,12 +132,12 @@ const DS = (() => {
   const chip = (texto, variante) => h("span", { class: `chip${variante ? ` ${variante}` : ""}` }, texto);
 
   /** Texto que se copia con un toque. Recibe { texto, etiqueta, aviso, copiado } (`copiado` = pintarlo ya en «Copiado»). */
-  const copiar = ({ texto, etiqueta, aviso: etiquetaBoton = "Copiar código", copiado = false } = {}) => {
+  const copiar = ({ texto, etiqueta, aviso: etiquetaBoton = T("sitio.ds.copiar_codigo"), copiado = false } = {}) => {
     const btn = h("button", { type: "button", class: copiado ? "listo" : null, "aria-label": copiado ? null : etiquetaBoton, "aria-live": copiado ? "polite" : null });
     const pintar = (listo) => {
       btn.className = listo ? "listo" : "";
       if (listo) btn.setAttribute("aria-live", "polite");
-      btn.replaceChildren(ico(listo ? "check" : "copiar"), listo ? "Copiado" : "Copiar");
+      btn.replaceChildren(ico(listo ? "check" : "copiar"), listo ? T("sitio.ds.copiado") : T("sitio.ds.copiar"));
     };
     pintar(copiado);
     btn.addEventListener("click", () => {
@@ -173,14 +173,14 @@ const DS = (() => {
   const encabezado = ({ nombre, actualizado, tema = "oscuro", conAyuda = true, conMenu = false, menuAbierto = false, onAyuda, onTema, onMenu } = {}) =>
     h("header", { class: "encabezado" },
       h("div", { class: "encabezado-fila" }, marca(nombre),
-        conAyuda ? botonIco("ayuda", "Ayuda", { onclick: onAyuda }) : null,
-        botonIco(tema === "oscuro" ? "sol" : "luna", `Cambiar a tema ${tema === "oscuro" ? "claro" : "oscuro"}`, { onclick: onTema }),
-        conMenu ? botonIco("menu", "Menú", { expandido: menuAbierto, onclick: onMenu }) : null),
+        conAyuda ? botonIco("ayuda", T("sitio.ds.ayuda"), { onclick: onAyuda }) : null,
+        botonIco(tema === "oscuro" ? "sol" : "luna", T(tema === "oscuro" ? "sitio.ds.tema_claro" : "sitio.ds.tema_oscuro"), { onclick: onTema }),
+        conMenu ? botonIco("menu", T("sitio.ds.menu"), { expandido: menuAbierto, onclick: onMenu }) : null),
       actualizado ? h("p", { class: "act" }, actualizado) : null);
 
   /** Menú del ☰. Recibe { quien, items:[{texto, icono, href, actual, onclick} | {separador:true}] } (sin href = botón). */
   const menu = ({ quien, items = [] } = {}) =>
-    h("nav", { class: "menu", "aria-label": "Cuenta" }, quien ? h("p", { class: "menu-quien" }, quien) : null,
+    h("nav", { class: "menu", "aria-label": T("sitio.ds.cuenta") }, quien ? h("p", { class: "menu-quien" }, quien) : null,
       items.map((it) => {
         if (it.separador) return h("hr");
         const hijos = [it.icono ? ico(it.icono) : null, it.texto];
@@ -191,7 +191,7 @@ const DS = (() => {
 
   /** Avance del onboarding. Recibe { pasos:[nombres], actual (índice desde 0), texto }. Devuelve la lista y su texto. */
   const pasos = ({ pasos: nombres = [], actual = 0, texto } = {}) => fragmento(
-    h("ol", { class: "pasos", "aria-label": "Avance" }, nombres.map((n, i) =>
+    h("ol", { class: "pasos", "aria-label": T("sitio.ds.avance") }, nombres.map((n, i) =>
       h("li", { class: i < actual ? "hecho" : i === actual ? "actual" : null, "aria-current": i === actual ? "step" : null }, n))),
     texto ? h("p", { class: "pasos-t" }, texto) : null);
 
@@ -224,15 +224,15 @@ const DS = (() => {
 
   /** Barra de navegación inferior. Recibe { items:[{id, texto, icono, href}], actual (id) }. */
   const tabs = ({ items = [], actual } = {}) =>
-    h("nav", { class: "tabs", "aria-label": "Secciones" }, items.map((it) =>
+    h("nav", { class: "tabs", "aria-label": T("sitio.ds.secciones") }, items.map((it) =>
       h("a", { href: it.href, "data-tab": it.id, "aria-current": it.id === actual ? "page" : null }, ico(it.icono), it.texto)));
 
   /** Selector de semana. Recibe { texto, onAnterior, onSiguiente, sinAnterior, sinSiguiente }. */
   const selectorSemana = ({ texto, onAnterior, onSiguiente, sinAnterior, sinSiguiente } = {}) =>
     h("div", { class: "sel" },
-      h("button", { type: "button", "aria-label": "Semana anterior", disabled: !!sinAnterior, onclick: onAnterior }, "‹"),
+      h("button", { type: "button", "aria-label": T("sitio.ds.sem_ant"), disabled: !!sinAnterior, onclick: onAnterior }, "‹"),
       h("span", { "aria-live": "polite" }, texto),
-      h("button", { type: "button", "aria-label": "Semana siguiente", disabled: !!sinSiguiente, onclick: onSiguiente }, "›"));
+      h("button", { type: "button", "aria-label": T("sitio.ds.sem_sig"), disabled: !!sinSiguiente, onclick: onSiguiente }, "›"));
 
   /** Anillo de avance del plan. Recibe { pct (0–100), titulo, texto, etiqueta (aria-label del anillo) }. */
   const anilloPlan = ({ pct = 0, titulo, texto, etiqueta } = {}) => {
@@ -274,17 +274,17 @@ const DS = (() => {
     if (total <= 0) return null;
     const pct = (k) => (dist.minutos[k] / total) * 100;
     const wrap = h("div", { class: `zbar-w${compacta ? " compacta" : ""}${etiquetas ? " con-etiquetas" : ""}` });
-    const barra = h("div", { class: "zbar", role: "img", "aria-label": `Bajo ${fmt(dist.bajo, 0)} %, limbo ${fmt(dist.limbo, 0)} %, alto ${fmt(dist.alto, 0)} %` });
+    const barra = h("div", { class: "zbar", role: "img", "aria-label": T("sitio.zb.aria", { b: fmt(dist.bajo, 0), l: fmt(dist.limbo, 0), a: fmt(dist.alto, 0) }) });
     const tip = h("div", { class: "tip zb-tip", hidden: true, role: "status" });
     const mostrar = (seg, k) => {
-      tip.replaceChildren(h("b", {}, `${k} · ${fmt(dist.minutos[k])} min · ${fmt(pct(k), 0)} %`));
+      tip.replaceChildren(h("b", {}, T("sitio.zb.tip", { k, m: fmt(dist.minutos[k]), p: fmt(pct(k), 0) })));
       tip.hidden = false;
       const r = seg.getBoundingClientRect(), w = wrap.getBoundingClientRect();
       tip.style.left = `${Math.min(Math.max(r.left - w.left + r.width / 2, 60), w.width - 60)}px`;
     };
     for (const k of z) {
       const seg = h("div", { style: `flex:${Math.max(dist.minutos[k], 0)} 1 0;background:${ZONA_VAR[k]}`, tabindex: "0",
-        "aria-label": `${k}: ${fmt(dist.minutos[k])} minutos, ${fmt(pct(k), 0)} %` });
+        "aria-label": T("sitio.zb.seg", { k, m: fmt(dist.minutos[k]), p: fmt(pct(k), 0) }) });
       if (dist.minutos[k] <= 0) seg.style.display = "none";
       if (etiquetas) seg.append(h("span", { class: "zb-t", "aria-hidden": "true" }, h("span", { class: "zb-z" }, k), h("span", {}, `${fmt(pct(k), 0)} %`)));
       seg.addEventListener("pointerenter", () => mostrar(seg, k));
@@ -301,7 +301,7 @@ const DS = (() => {
         return h("div", { style: `flex:${m} 1 0;${m <= 0 ? "display:none" : ""}` });
       })));
     }
-    wrap.append(h("div", { class: "meta80", "aria-hidden": "true" }, compacta ? null : h("i", {}, "meta 80 %")));
+    wrap.append(h("div", { class: "meta80", "aria-hidden": "true" }, compacta ? null : h("i", {}, T("sitio.zb.meta"))));
     if (etiquetas) {
       wrap.append(h("div", { class: "leyenda zb-ley" }, z.filter((k) => dist.minutos[k] > 0).map((k) =>
         h("span", {}, h("i", { style: `background:${ZONA_VAR[k]}`, "aria-hidden": "true" }), k))));
@@ -331,7 +331,7 @@ const DS = (() => {
   const ranking = ({ marcas = [], carreras = [] } = {}) => fragmento(
     h("div", { class: "marcas" }, marcas.map((m) =>
       h("div", { class: "marca-t", role: "group", "aria-label": m.etiqueta || `${m.nombre}: ${m.valor}, ${m.fecha}` },
-        h("span", { class: "mt-n" }, ico(m.icono || "medalla"), m.nombre, m.nueva ? chip("NUEVO") : null),
+        h("span", { class: "mt-n" }, ico(m.icono || "medalla"), m.nombre, m.nueva ? chip(T("sitio.ds.nuevo")) : null),
         h("span", { class: "mt-v" }, m.valor), h("span", { class: "mt-f" }, m.fecha)))),
     carreras.length ? h("div", { class: "carreras" }, carreras.map((c) =>
       h("details", { class: "desplegable", open: !!c.abierta },
@@ -353,11 +353,11 @@ const DS = (() => {
   /** Puntuación InBody y grasa visceral en dos cuadros. Recibe { puntuacion:{valor, delta, deltaClase}, visceral:{valor, rango, clase, simbolo, texto} } (cualquiera puede faltar). */
   const ibPuntuacion = ({ puntuacion, visceral } = {}) =>
     h("div", { class: "ib-punt" },
-      puntuacion ? h("div", { class: "tile" }, h("span", { class: "k" }, "Puntuación InBody"),
+      puntuacion ? h("div", { class: "tile" }, h("span", { class: "k" }, T("sitio.ds.ib_punt")),
         h("span", { class: "big" }, puntuacion.valor, h("small", {}, "/100")),
         puntuacion.delta ? h("span", { class: `delta${puntuacion.deltaClase ? ` ${puntuacion.deltaClase}` : ""}` }, puntuacion.delta) : null) : null,
-      visceral ? h("div", { class: "tile" }, h("span", { class: "k" }, "Grasa visceral"),
-        h("span", { class: "big" }, visceral.valor, h("small", {}, ` · rango ${visceral.rango}`)), estado(visceral.clase, visceral.simbolo, visceral.texto)) : null);
+      visceral ? h("div", { class: "tile" }, h("span", { class: "k" }, T("sitio.ds.visceral")),
+        h("span", { class: "big" }, visceral.valor, h("small", {}, T("sitio.ds.rango", { r: visceral.rango }))), estado(visceral.clase, visceral.simbolo, visceral.texto)) : null);
 
   /** Hoja InBody: un grupo de barras y, debajo, la puntuación. Recibe lo de ibGrupo más { puntuacion, visceral }. */
   const hojaInBody = ({ franja = [], filas = [], puntuacion, visceral } = {}) => fragmento(
@@ -370,18 +370,18 @@ const DS = (() => {
   const filaSesion = ({ nombre, minutos, sub, hoy, abierta, estado: est, silueta: sil, titulo, cuerpo = [], id } = {}) =>
     h("details", { class: `fila-ses${hoy ? " hoy" : ""}`, open: !!abierta, id },
       h("summary", {},
-        h("span", { class: "fs-n" }, hoy ? chip("HOY") : null, nombre, sub || minutos != null ? " " : null,
-          sub || minutos != null ? h("small", {}, `· ${sub || `${minutos} min`}`) : null),
+        h("span", { class: "fs-n" }, hoy ? chip(T("sitio.ds.hoy")) : null, nombre, sub || minutos != null ? " " : null,
+          sub || minutos != null ? h("small", {}, `· ${sub || T("sitio.min_n", { n: minutos })}`) : null),
         est ? h("span", { class: "estado" }, insignia(est.clase, est.simbolo), est.texto) : null,
         sil ? h("span", { class: "fs-sil" }, titulo ? h("span", { class: "titulo-sil" }, titulo) : null, sil) : null),
       cuerpo.length ? h("div", { class: "fs-cuerpo" }, ...cuerpo) : null);
 
   /** Barra de minutos trotando contra caminando. Recibe { trote, caminata, nota } en minutos. */
   const barraTroteCaminata = ({ trote = 0, caminata = 0, nota } = {}) => fragmento(
-    h("div", { class: "barra-rw", role: "img", "aria-label": `Trote ${trote} min, caminata ${caminata} min` },
+    h("div", { class: "barra-rw", role: "img", "aria-label": T("sitio.rw.aria", { t: trote, c: caminata }) },
       h("i", { class: "trote", style: `flex:${trote} 1 0` }), h("i", { class: "camina", style: `flex:${caminata} 1 0` })),
-    h("div", { class: "leyenda" }, h("span", {}, h("i", { class: "trote", "aria-hidden": "true" }), `Trote ${trote}′`),
-      h("span", {}, h("i", { class: "camina", "aria-hidden": "true" }), `Caminata ${caminata}′`)),
+    h("div", { class: "leyenda" }, h("span", {}, h("i", { class: "trote", "aria-hidden": "true" }), T("sitio.rw.trote", { t: trote })),
+      h("span", {}, h("i", { class: "camina", "aria-hidden": "true" }), T("sitio.rw.camina", { c: caminata }))),
     nota ? h("p", { class: "nota" }, nota) : null);
 
   // ---------- gráficas ----------

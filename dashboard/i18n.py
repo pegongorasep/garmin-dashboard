@@ -63,3 +63,23 @@ def elegir(accept_language: str | None) -> str | None:
         if base in disponibles:
             return base
     return None
+
+
+PREFIJO_SITIO = "sitio."
+
+
+def catalogo_sitio(idioma: str) -> dict:
+    """Las claves `sitio.*` de un idioma (lo que usa el JS del sitio); lo que falte se completa con `es`."""
+    base = {k: v for k, v in cargar(DEFECTO).items() if k.startswith(PREFIJO_SITIO)}
+    if idioma not in idiomas():
+        return base
+    return {**base, **{k: v for k, v in cargar(idioma).items() if k.startswith(PREFIJO_SITIO)}}
+
+
+def escribir_json(destino: Path) -> None:
+    """Escribe <destino>/<idioma>.json con `catalogo_sitio` de cada idioma."""
+    import json
+    destino.mkdir(parents=True, exist_ok=True)
+    for idioma in idiomas():
+        (destino / f"{idioma}.json").write_text(
+            json.dumps(catalogo_sitio(idioma), ensure_ascii=False, indent=0, sort_keys=True) + "\n", encoding="utf-8")

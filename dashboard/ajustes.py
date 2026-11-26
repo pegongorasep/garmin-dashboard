@@ -221,6 +221,7 @@ def normalizar_config(crudo: dict) -> dict:
     desde = perfil.get("fc_max_correa_desde")
     return {
         "modo": modo,
+        "idioma": _idioma(cfg.get("idioma")),   # es | en; None = el del navegador (el sitio lo decide)
         "menu": list(cfg.get("menu") or []),   # solo la web: [{texto, url}] para ui.menu
         "acciones_url": cfg.get("acciones_url"),
         "plan_acciones": [{"texto": str(i["texto"]), "url": str(i["url"])} for i in cfg.get("plan_acciones") or []],   # solo la web
@@ -241,6 +242,12 @@ def normalizar_config(crudo: dict) -> dict:
         "inbody": bool(cfg.get("inbody", True)),
         "tipos_con_detalle": umbrales["run_types"] + [t for c in categorias for t in c["tipos"]],
     }
+
+
+def _idioma(v) -> str | None:
+    import i18n
+    v = str(v or "").strip().lower()[:2]
+    return v if v in i18n.idiomas() else None
 
 
 def cargar_config(user_dir=None) -> dict:

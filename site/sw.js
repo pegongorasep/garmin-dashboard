@@ -1,8 +1,8 @@
-/* Service worker mínimo: guarda lo estático; data.json primero de la red y, sin red, la última copia.
+/* Service worker mínimo: guarda lo estático; data.json y los textos (i18n/*.json) primero de la red y, sin red, la última copia.
    Nunca toca POST ni /api, /oauth, /mcp, /admin, ni las páginas (llevan datos de la sesión). */
-const VERSION = "v1";
+const VERSION = "v2";
 const ESTATICOS = ["/tokens.css", "/componentes.css", "/styles.css", "/base.js", "/app.js", "/charts.js", "/iconos.js",
-  "/componentes.js", "/vistas.js", "/fuentes/Lexend-latin.woff2", "/icono-192.png", "/icono-512.png"];
+  "/componentes.js", "/vistas.js", "/i18n/es.json", "/i18n/en.json", "/fuentes/Lexend-latin.woff2", "/icono-192.png", "/icono-512.png"];
 const PROHIBIDO = /^\/(api|oauth|mcp|admin)(\/|$)/;
 
 self.addEventListener("install", (e) => {
@@ -15,7 +15,7 @@ self.addEventListener("fetch", (e) => {
   const r = e.request;
   const url = new URL(r.url);
   if (r.method !== "GET" || url.origin !== location.origin || PROHIBIDO.test(url.pathname)) return;
-  if (url.pathname.endsWith("/data.json")) {
+  if (url.pathname.endsWith("/data.json") || /\/i18n\/\w+\.json$/.test(url.pathname)) {   // los textos, como data.json: red primero
     e.respondWith(fetch(r).then((resp) => {
       if (resp.ok) { const copia = resp.clone(); caches.open(VERSION).then((c) => c.put(r, copia)); }
       return resp;

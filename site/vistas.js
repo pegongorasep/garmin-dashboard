@@ -8,11 +8,11 @@ function fechaLarga(iso) {
 
 function horasMin(hh) {
   const min = Math.floor(hh * 60 + 1e-6);
-  return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")} min`;
+  return T("sitio.h_min", { h: Math.floor(min / 60), m: String(min % 60).padStart(2, "0") });
 }
 
 /** «Ver como tabla»: desplegable con una tabla (la primera columna a la izquierda, las demás a la derecha). */
-function tablaDatos(cabeza, filas, titulo = "Ver como tabla") {
+function tablaDatos(cabeza, filas, titulo = T("sitio.ver_tabla")) {
   return DS.desplegable({ titulo, liga: true }, DS.tabla({ etiqueta: titulo,
     columnas: cabeza.map((texto, i) => ({ texto, num: i > 0 })), filas: filas.map((celdas) => ({ celdas })) }));
 }
@@ -48,22 +48,22 @@ function tarjetaConVistas(vista, titulo, resumen, vistas, opts = {}) {
 let periodo = 8;
 let planSel = null;
 
-const NUMEROS = {
-  corridas: ["Corridas por semana", (v) => fmt(v, 1), ""], minutos: ["Minutos por semana", (v) => fmt(v, 0), "min"],
-  km: ["Km por semana", (v) => fmt(v, 1), "km"], ritmo_ref: ["Ritmo a FC ref", (v) => mmss(v), "/km"], pct_trote: ["% trote", (v) => fmt(v, 0), "%"],
-};
+const NUMEROS = () => ({
+  corridas: [T("sitio.num.corridas"), (v) => fmt(v, 1), ""], minutos: [T("sitio.num.minutos"), (v) => fmt(v, 0), "min"],
+  km: [T("sitio.num.km"), (v) => fmt(v, 1), "km"], ritmo_ref: [T("sitio.num.ritmo_ref"), (v) => mmss(v), "/km"], pct_trote: [T("sitio.num.pct_trote"), (v) => fmt(v, 0), "%"],
+});
 
 /** Fila de números del periodo (ya calculados en Python) con el cambio contra el periodo anterior. */
 function filaNumeros(d) {
   const prog = d.progreso || {};
   const items = ((prog.numeros || {}).periodos || {})[String(periodo)] || [];
-  return DS.tiles({ etiqueta: `Números de las últimas ${periodo} semanas`, clase: "ancha" }, ...items.map((x) => {
-    let [nombre, fv, unidad] = NUMEROS[x.id] || [x.id, (v) => fmt(v, 1), ""];
-    if (x.id === "ritmo_ref" && prog.fc_ref) nombre = `Ritmo a ${prog.fc_ref} lpm`;
-    const cambio = x.valor == null ? "Sin corridas"
-      : x.anterior == null ? "Sin periodo anterior"
-        : x.delta === 0 || x.delta == null ? "= igual que el periodo anterior"
-          : `${x.delta > 0 ? "▲" : "▼"} ${fv(Math.abs(x.delta))}${x.id === "ritmo_ref" ? "/km" : unidad && unidad !== "/km" ? " " + unidad : ""} vs periodo anterior`;
+  return DS.tiles({ etiqueta: T("sitio.num.etiqueta", { n: periodo }), clase: "ancha" }, ...items.map((x) => {
+    let [nombre, fv, unidad] = NUMEROS()[x.id] || [x.id, (v) => fmt(v, 1), ""];
+    if (x.id === "ritmo_ref" && prog.fc_ref) nombre = T("sitio.mej.ritmo", { fc: prog.fc_ref });
+    const cambio = x.valor == null ? T("sitio.num.sin_corridas")
+      : x.anterior == null ? T("sitio.num.sin_anterior")
+        : x.delta === 0 || x.delta == null ? T("sitio.num.igual")
+          : T("sitio.num.vs", { f: x.delta > 0 ? "▲" : "▼", v: fv(Math.abs(x.delta)), u: x.id === "ritmo_ref" ? "/km" : unidad && unidad !== "/km" ? " " + unidad : "" });
     return DS.tile({ k: nombre, valor: x.valor == null ? "—" : fv(x.valor), unidad: x.valor != null && unidad ? unidad : null, delta: cambio, deltaClase: x.bueno ? "" : "neutro" });
   }));
 }
@@ -72,8 +72,8 @@ let subProgreso = "corridas";   // "corridas" | "cuerpo", lo decide la ruta (#pr
 
 /** Control segmentado Corridas | Cuerpo. Cambia la ruta; mostrarVista hace el resto. */
 function selectorProgreso() {
-  return DS.segmento({ id: "prog-subtabs", clase: "ancha", etiqueta: "Progreso", activo: subProgreso,
-    opciones: [{ id: "corridas", texto: "Corridas" }, { id: "cuerpo", texto: "Cuerpo" }],
+  return DS.segmento({ id: "prog-subtabs", clase: "ancha", etiqueta: T("sitio.prog.titulo"), activo: subProgreso,
+    opciones: [{ id: "corridas", texto: T("sitio.prog.corridas") }, { id: "cuerpo", texto: T("sitio.prog.cuerpo") }],
     onCambio: (id) => { location.hash = id === "cuerpo" ? "#progreso/cuerpo" : "#progreso"; } });
 }
 
@@ -84,7 +84,7 @@ function renderProgreso(d) {
   const prog = d.progreso || {};
   raiz.replaceChildren(selectorProgreso(),
     h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...[
-      DS.segmento({ etiqueta: "Periodo", modo: "grupo", clase: "ancha", activo: periodo, opciones: [4, 8, 12].map((n) => ({ id: n, texto: `${n} semanas` })),
+      DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodo, opciones: [4, 8, 12].map((n) => ({ id: n, texto: T("sitio.prog.n_sem", { n }) })),
         onCambio: (n) => { periodo = Number(n); renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }),
       filaNumeros(d),
       tarjetaMejora(d),
@@ -113,8 +113,8 @@ function mostrarSubvista() {
 
 /** Tarjetita del catálogo: silueta en tinta (sin color ni tooltip), nombre y descripción. */
 function tipoCard(t, enPlan) {
-  return h("div", { class: "tipo" }, siluetaForma(t.forma, 48, `Forma de ${t.nombre}`),
-    enPlan ? h("div", {}, DS.chip("EN TU PLAN", "suave")) : null, h("h3", {}, t.nombre), h("p", {}, t.descripcion));
+  return h("div", { class: "tipo" }, siluetaForma(t.forma, 48, T("sitio.tipo.forma", { n: t.nombre })),
+    enPlan ? h("div", {}, DS.chip(T("sitio.tipo.en_plan"), "suave")) : null, h("h3", {}, t.nombre), h("p", {}, t.descripcion));
 }
 
 function tarjetaTipos(d) {
@@ -122,13 +122,13 @@ function tarjetaTipos(d) {
   if (!tp || !(tp.catalogo || []).length) return null;
   const enPlan = new Set(tp.en_plan || []);
   const nombreGrupo = Object.fromEntries((tp.grupos || []).map((g) => [g.id, g.nombre]));
-  const c = DS.tarjeta({ titulo: "Tipos de entreno", clase: "ancha" },
-    h("p", { class: "nota" }, "Así sube y baja tu esfuerzo en cada tipo de sesión. La Larga es un continuo más largo."));
+  const c = DS.tarjeta({ titulo: T("sitio.tipo.titulo"), clase: "ancha" },
+    h("p", { class: "nota" }, T("sitio.tipo.nota")));
   const suyos = tp.catalogo.filter((t) => enPlan.has(t.id));
   if (suyos.length) c.append(h("div", { class: "tipos" }, suyos.map((t) => tipoCard(t, true))));
   const resto = tp.catalogo.filter((t) => !enPlan.has(t.id));
   if (resto.length) {
-    const det = DS.desplegable({ titulo: suyos.length ? "Ver todos los tipos" : "Ver los tipos", liga: true, clase: "todos-tipos" });
+    const det = DS.desplegable({ titulo: T(suyos.length ? "sitio.tipo.ver_todos" : "sitio.tipo.ver"), liga: true, clase: "todos-tipos" });
     for (const g of tp.grupos || []) {
       const del = resto.filter((t) => t.grupo === g.id);
       if (del.length) det.append(h("h3", { class: "tipos-grupo" }, nombreGrupo[g.id] || g.id), h("div", { class: "tipos" }, del.map((t) => tipoCard(t, false))));
@@ -145,7 +145,7 @@ function renderPlan(d) {
   const guardado = new URLSearchParams(location.search).get("ok") === "plan";   // viene de guardar un formulario del plan
   if (guardado) history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
   $("vista-plan").replaceChildren(...[
-    guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: "Listo", texto: "Guardamos tu plan." }) : null,
+    guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: T("sitio.plan.listo"), texto: T("sitio.plan.guardado") }) : null,
     acciones.length ? h("div", { class: "botones" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
@@ -156,8 +156,8 @@ function renderPlan(d) {
 function tarjetaDoceSemanas(d) {
   const plan = d.plan || {};
   const semanas = plan.semanas || [];
-  const c = DS.tarjeta({ titulo: "12 semanas", clase: "ancha" });
-  if (!semanas.length) { c.append(DS.estadoVacio({ icono: null, titulo: "Aún no hay plan cargado." })); return c; }
+  const c = DS.tarjeta({ titulo: T("sitio.plan.doce"), clase: "ancha" });
+  if (!semanas.length) { c.append(DS.estadoVacio({ icono: null, titulo: T("sitio.plan.sin_plan") })); return c; }
   const actual = plan.semana_actual ?? null;
   if (planSel === null || !semanas.some((w) => w.n === planSel)) planSel = actual ?? semanas[0].n;
   const w = semanas.find((x) => x.n === planSel);
@@ -165,34 +165,35 @@ function tarjetaDoceSemanas(d) {
   for (const bloque of [1, 2, 3]) {
     const del = semanas.filter((x) => x.block === bloque);
     if (!del.length) continue;
-    linea.append(h("div", { class: "bloque" }, h("div", { class: "nota" }, `Bloque ${bloque}`),
+    linea.append(h("div", { class: "bloque" }, h("div", { class: "nota" }, T("sitio.plan.bloque", { n: bloque })),
       h("div", { class: "semanas" }, del.map((x) =>
         h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""}`,
           "aria-pressed": x.n === planSel ? "true" : "false",
-          "aria-label": `Semana ${x.n}, ${x.etiqueta || x.kind}${x.n === actual ? ", semana actual" : ""}`,
+          "aria-label": T("sitio.plan.aria", { n: x.n, e: x.etiqueta || tipoSemana(x.kind), act: x.n === actual ? T("sitio.plan.act_aria") : "" }),
           onclick: () => { planSel = x.n; c.replaceWith(tarjetaDoceSemanas(d)); } },
-          h("strong", {}, x.n), h("span", { class: "con-ico" }, x.etiqueta === "carrera" ? DS.ico("medalla") : x.etiqueta === "viaje" ? DS.ico("avion") : null, x.etiqueta || (x.kind === "descarga" ? "descarga" : "carga")), x.n === actual ? h("em", {}, "actual") : null)))));
+          h("strong", {}, x.n), h("span", { class: "con-ico" }, x.etiqueta === "carrera" ? DS.ico("medalla") : x.etiqueta === "viaje" ? DS.ico("avion") : null, x.etiqueta || (x.kind === "descarga" ? T("sitio.plan.descarga") : T("sitio.plan.carga"))), x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null)))));
   }
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,
-    h("p", { class: "nota" }, `${ui().textos.descarga || "Las semanas de descarga (línea punteada) bajan la carga."} Toca una semana para ver sus sesiones.`),
-    h("h3", { class: "titular" }, `Semana ${w.n} · bloque ${w.block} · ${w.kind}`),
+    h("p", { class: "nota" }, T("sitio.plan.nota", { d: ui().textos.descarga || T("sitio.plan.descarga_nota") })),
+    h("h3", { class: "titular" }, T("sitio.plan.titulo_sem", { n: w.n, b: w.block, k: tipoSemana(w.kind) })),
     h("p", { class: "nota" }, w.focus || ""),
     h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), (ui().editar_urls || {})[`${w.n}/${s.id}`]
-      ? { cuerpo: [...cuerpoPlan(s), DS.boton("Editar", { variante: "sec", chico: true, href: ui().editar_urls[`${w.n}/${s.id}`] })] } : {}))),
-    ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, `Semanas repetidas: ${plan.semanas_repetidas.join(", ")}.`)] : []),
+      ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: ui().editar_urls[`${w.n}/${s.id}`] })] } : {}))),
+    ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, T("sitio.plan.repetidas", { l: plan.semanas_repetidas.join(", ") }))] : []),
     ...listaEventos(plan.eventos));
   return c;
 }
 
-const NOMBRE_EVENTO = { viaje: "Viaje", enfermedad: "Enfermedad", lesion: "Lesión", carrera: "Carrera" };
+const nombreEvento = (t) => (["viaje", "enfermedad", "lesion", "carrera"].includes(t) ? T(`sitio.ev.${t}`) : t);
+const tipoSemana = (k) => (k === "descarga" || k === "carga" ? T(`sitio.plan.${k}`) : k);
 
 /** Viajes, enfermedades y carreras con fecha (plan.eventos, solo en la web); nada si no hay. */
 function listaEventos(eventos) {
   if (!(eventos || []).length) return [];
-  return [h("h3", { class: "titular" }, "Eventos"),
+  return [h("h3", { class: "titular" }, T("sitio.ev.titulo")),
     ...eventos.map((e) => h("p", { class: "nota" },
-      `${NOMBRE_EVENTO[e.tipo] || e.tipo}${e.nombre ? ` «${e.nombre}»` : ""} · ${e.desde}${e.hasta && e.hasta !== e.desde ? ` al ${e.hasta}` : e.hasta ? "" : " · sigue"}${e.distancia_km ? ` · ${e.distancia_km} km` : ""}`))];
+      `${nombreEvento(e.tipo)}${e.nombre ? ` «${e.nombre}»` : ""} · ${e.desde}${e.hasta && e.hasta !== e.desde ? T("sitio.ev.al", { h: e.hasta }) : e.hasta ? "" : T("sitio.ev.sigue")}${e.distancia_km ? ` · ${e.distancia_km} km` : ""}`))];
 }
 
 /** Contexto del periodo elegido: corridas al aire libre dentro del periodo y el dominio del eje x. */
@@ -209,19 +210,19 @@ function graficaCorridas(d, ancho, id) {
   const ref = prog.fc_ref;
   const cfg = {
     ritmo: { filtro: (r) => r.ritmo_ref_s != null, y: (r) => r.ritmo_ref_s, prom: (r) => r.ritmo_ref_prom_s,
-      nota: `Cada corrida llevada a ${ref} lpm (la mitad de tu Z2): arriba = más rápido. La línea es el promedio de 4 corridas. El calor sube la FC: mira la tendencia, no una corrida suelta. Solo al aire libre, sin carreras.`,
-      extra: { fmtY: mmss, invertir: true, etiqueta: `Ritmo a ${ref} lpm por corrida` },
-      vacio: "Aún no hay corridas al aire libre con el trote en Z2 en este periodo.",
-      texto: (r) => `${fechaLarga(r.fecha)} · ${mmss(r.ritmo_ref_s)} /km a ${ref} lpm${r.fc_trote ? ` (trotaste a ${fmt(r.fc_trote, 0)} lpm)` : ""}` },
+      nota: T("sitio.gc.ritmo_nota", { ref }),
+      extra: { fmtY: mmss, invertir: true, etiqueta: T("sitio.gc.ritmo_et", { ref }) },
+      vacio: T("sitio.gc.ritmo_vacio"),
+      texto: (r) => T("sitio.gc.ritmo_txt", { f: fechaLarga(r.fecha), r: mmss(r.ritmo_ref_s), ref, fc: r.fc_trote ? T("sitio.gc.trotaste", { v: fmt(r.fc_trote, 0) }) : "" }) },
     deriva: { filtro: (r) => r.deriva_pct != null, y: (r) => r.deriva_pct, all: true,
-      nota: "Cuánto cae tu eficiencia (velocidad ÷ FC) de la primera mitad a la segunda, sin los primeros 10 min. Menos de 5 % (la raya) es buena base. Solo corridas de 40 min o más, casi sin caminar, a ritmo parejo y casi toda en Z2.",
-      extra: { fmtY: (v) => fmt(v, 0), ref: { y: 5, etiqueta: "5 %" }, etiqueta: "Deriva cardiaca por corrida, con raya en 5 %" },
-      vacio: "Aún no hay corridas que cumplan (40 min o más, casi sin caminar, a ritmo parejo y casi toda en Z2) en este periodo.",
-      texto: (r) => `${fechaLarga(r.fecha)} · deriva ${fmt(r.deriva_pct, 1)} % ${r.deriva_ok ? "✓" : "⚠"}` },
-    pct: { filtro: (r) => r.pct_trote != null, y: (r) => r.pct_trote, nota: "Porcentaje del tiempo de la corrida que fue trote. Solo al aire libre.",
-      extra: { fmtY: (v) => fmt(v, 0), etiqueta: "Porcentaje del tiempo trotando por corrida" },
-      vacio: "Aún no hay corridas al aire libre en este periodo.",
-      texto: (r) => `${fechaLarga(r.fecha)} · ${fmt(r.pct_trote, 0)} % trotando · trote ${fmt(r.trote_min, 0)}' / caminata ${fmt(r.camina_min, 0)}'` },
+      nota: T("sitio.gc.deriva_nota"),
+      extra: { fmtY: (v) => fmt(v, 0), ref: { y: 5, etiqueta: "5 %" }, etiqueta: T("sitio.gc.deriva_et") },
+      vacio: T("sitio.gc.deriva_vacio"),
+      texto: (r) => T("sitio.gc.deriva_txt", { f: fechaLarga(r.fecha), v: fmt(r.deriva_pct, 1), ok: r.deriva_ok ? "✓" : "⚠" }) },
+    pct: { filtro: (r) => r.pct_trote != null, y: (r) => r.pct_trote, nota: T("sitio.gc.pct_nota"),
+      extra: { fmtY: (v) => fmt(v, 0), etiqueta: T("sitio.gc.pct_et") },
+      vacio: T("sitio.gc.pct_vacio"),
+      texto: (r) => T("sitio.gc.pct_txt", { f: fechaLarga(r.fecha), v: fmt(r.pct_trote, 0), t: fmt(r.trote_min, 0), c: fmt(r.camina_min, 0) }) },
   }[id];
   const base = cfg.all ? (prog.corridas || []).filter((r) => parseFecha(r.fecha).getTime() > dominio[0] - 86400000) : aire;
   const pts = base.filter(cfg.filtro).map((r) => ({ fecha: r.fecha, y: cfg.y(r), r }));
@@ -235,56 +236,56 @@ function graficaVolumen(d, ancho) {
   const prog = d.progreso || {};
   const semanas = (prog.semanas || []).slice(-periodo);
   const hay = semanas.some((s) => (s.minutos || 0) > 0 || s.plan_min);
-  if (!hay) return DS.estadoVacio({ icono: null, titulo: "Sin corridas en este periodo." });
+  if (!hay) return DS.estadoVacio({ icono: null, titulo: T("sitio.vol.sin") });
   const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [s.min_trote || 0, s.min_camina || 0], meta: s.plan_min || 0, s }));
-  return h("div", {}, h("p", { class: "nota" }, "Minutos de reloj por semana (lun–dom); la raya marca el plan y arriba van tus entrenos de la semana."),
-    barChart({ ancho, semanas: barras, clases: ["s1", "walk"], etiqueta: "Volumen semanal: trote y caminata con raya del plan y un ícono por entreno",
+  return h("div", {}, h("p", { class: "nota" }, T("sitio.vol.nota")),
+    barChart({ ancho, semanas: barras, clases: ["s1", "walk"], etiqueta: T("sitio.vol.et"),
       entrenos: semanas.some((s) => (s.entrenos || []).length) ? (b) => b.s.entrenos || [] : null,
-      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.minutos, 0)}'${b.s.plan_min ? ` (plan ${b.s.plan_min}')` : ""} · ${fmt(b.s.km)} km · trote ${fmt(b.s.min_trote, 0)}'${textoEntrenos(b.s.entrenos)}` }),
-    leyendaIconos(semanas, [[COLOR_CLASE.s1, "Trote"], [COLOR_CLASE.walk, "Caminata"], ["raya", "Plan"]]),
-    tablaDatos(["Semana", "Min", "Plan", "Km", "Trote", "Caminata"], semanas.slice().reverse().map((s) =>
-      [fechaLarga(s.inicio), fmt(s.minutos, 0), s.plan_min ?? "—", fmt(s.km), fmt(s.min_trote, 0), fmt(s.min_camina, 0)]), "Ver semanas como tabla"));
+      texto: (b) => T("sitio.vol.txt", { f: fechaLarga(b.inicio), m: fmt(b.s.minutos, 0), plan: b.s.plan_min ? T("sitio.vol.plan", { p: b.s.plan_min }) : "", k: fmt(b.s.km), t: fmt(b.s.min_trote, 0), e: textoEntrenos(b.s.entrenos) }) }),
+    leyendaIconos(semanas, [[COLOR_CLASE.s1, T("sitio.vol.trote")], [COLOR_CLASE.walk, T("sitio.vol.camina")], ["raya", T("sitio.vol.plan_l")]]),
+    tablaDatos(T("sitio.vol.cols").split(","), semanas.slice().reverse().map((s) =>
+      [fechaLarga(s.inicio), fmt(s.minutos, 0), s.plan_min ?? "—", fmt(s.km), fmt(s.min_trote, 0), fmt(s.min_camina, 0)]), T("sitio.vol.tabla")));
 }
 
 function graficaKm(d, ancho) {
   const semanas = ((d.progreso || {}).semanas || []).slice(-periodo);
-  if (!semanas.some((s) => (s.km || 0) > 0)) return DS.estadoVacio({ icono: null, titulo: "Sin corridas en este periodo." });
-  return h("div", {}, h("p", { class: "nota" }, "Kilómetros por semana (lun–dom), trote y caminata."),
+  if (!semanas.some((s) => (s.km || 0) > 0)) return DS.estadoVacio({ icono: null, titulo: T("sitio.vol.sin") });
+  return h("div", {}, h("p", { class: "nota" }, T("sitio.km.nota")),
     barChart({ ancho, semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.km || 0], s })), clases: ["s1"],
-      etiqueta: "Kilómetros por semana",
-      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · ${fmt(b.s.km)} km` }),
-    tablaDatos(["Semana", "Km"], semanas.slice().reverse().map((s) => [fechaLarga(s.inicio), fmt(s.km)]), "Ver semanas como tabla"));
+      etiqueta: T("sitio.km.et"),
+      texto: (b) => T("sitio.km.txt", { f: fechaLarga(b.inicio), k: fmt(b.s.km) }) }),
+    tablaDatos(T("sitio.km.cols").split(","), semanas.slice().reverse().map((s) => [fechaLarga(s.inicio), fmt(s.km)]), T("sitio.vol.tabla")));
 }
 
 function tarjetaCorridasProgreso(d) {
   const prog = d.progreso || {};
   const hayCaminatas = ((prog.numeros || {}).caminatas || {})[String(periodo)];
   const hayDeriva = (prog.corridas || []).some((r) => r.deriva_pct != null);
-  const vistas = [{ etiqueta: "Volumen", pintar: (a) => graficaVolumen(d, a) },
-    { etiqueta: "Km", pintar: (a) => graficaKm(d, a) },
-    { etiqueta: "Ritmo", pintar: (a) => graficaCorridas(d, a, "ritmo") },
-    ...(hayDeriva ? [{ etiqueta: "Deriva", pintar: (a) => graficaCorridas(d, a, "deriva") }] : []),
-    ...(hayCaminatas ? [{ etiqueta: "% trote", pintar: (a) => graficaCorridas(d, a, "pct") }] : [])];
-  return tarjetaConVistas("progreso", "Corridas", `Últimas ${periodo} semanas`, vistas, { clase: "ancha", pie: tablaCorridas(prog.corridas || []) });
+  const vistas = [{ etiqueta: T("sitio.cp.volumen"), pintar: (a) => graficaVolumen(d, a) },
+    { etiqueta: T("sitio.cp.km"), pintar: (a) => graficaKm(d, a) },
+    { etiqueta: T("sitio.cp.ritmo"), pintar: (a) => graficaCorridas(d, a, "ritmo") },
+    ...(hayDeriva ? [{ etiqueta: T("sitio.cp.deriva"), pintar: (a) => graficaCorridas(d, a, "deriva") }] : []),
+    ...(hayCaminatas ? [{ etiqueta: T("sitio.cp.pct"), pintar: (a) => graficaCorridas(d, a, "pct") }] : [])];
+  return tarjetaConVistas("progreso", T("sitio.cp.titulo"), T("sitio.cp.ult", { n: periodo }), vistas, { clase: "ancha", pie: tablaCorridas(prog.corridas || []) });
 }
 
 function tablaCorridas(corridas) {
   const orden = corridas.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
-  const celdas = (r) => [fechaLarga(r.fecha), h("span", { class: "con-ico" }, DS.ico(r.icono || (r.carrera ? "medalla" : "correr")), `${r.sesion || "—"}${r.carrera ? " · carrera" : ""}`), fmt(r.minutos, 0), fmt(r.km),
+  const celdas = (r) => [fechaLarga(r.fecha), h("span", { class: "con-ico" }, DS.ico(r.icono || (r.carrera ? "medalla" : "correr")), `${r.sesion || "—"}${r.carrera ? T("sitio.tc.carrera") : ""}`), fmt(r.minutos, 0), fmt(r.km),
     r.pct_trote == null ? "—" : `${fmt(r.pct_trote, 0)} %`,
-    r.caminadora ? "cam." : r.ritmo_trote_s == null ? "—" : mmss(r.ritmo_trote_s),
+    r.caminadora ? T("sitio.tc.cam") : r.ritmo_trote_s == null ? "—" : mmss(r.ritmo_trote_s),
     r.ritmo_ref_s == null ? "—" : mmss(r.ritmo_ref_s), r.deriva_pct == null ? "—" : `${fmt(r.deriva_pct, 1)} %`,
     r.fc_prom == null ? "—" : fmt(r.fc_prom, 0), textoEsfuerzo(r) || "—"];
-  const cab = ["Fecha", "Sesión", "Min", "Km", "% trote", "Ritmo trote", "Ritmo a FC ref", "Deriva", "FC", "Esfuerzo"];
-  return [DS.desplegable({ titulo: "Ver cada corrida como tabla", liga: true },
-    orden.length ? DS.tabla({ etiqueta: "Corridas", columnas: cab.map((texto, i) => ({ texto, num: i > 1 })), filas: orden.map((r) => ({ celdas: celdas(r) })) })
-      : DS.estadoVacio({ icono: null, titulo: "Aún no hay corridas registradas." }),
-    orden.some((r) => r.caminadora) ? h("p", { class: "nota" }, "cam. = caminadora (su ritmo no se compara).") : null)];
+  const cab = T("sitio.tc.cab").split(",");
+  return [DS.desplegable({ titulo: T("sitio.tc.ver"), liga: true },
+    orden.length ? DS.tabla({ etiqueta: T("sitio.cp.titulo"), columnas: cab.map((texto, i) => ({ texto, num: i > 1 })), filas: orden.map((r) => ({ celdas: celdas(r) })) })
+      : DS.estadoVacio({ icono: null, titulo: T("sitio.tc.sin") }),
+    orden.some((r) => r.caminadora) ? h("p", { class: "nota" }, T("sitio.tc.nota")) : null)];
 }
 
 // --- intensidad por semana (80/20) ---
 
-const INT_GRUPOS = [["bajo", "Bajo Z1–Z2", "z1"], ["limbo", "Limbo Z3", "z3"], ["alto", "Alto Z4–Z5", "z4"]];
+const intGrupos = () => [["bajo", T("sitio.ig.bajo"), "z1"], ["limbo", T("sitio.ig.limbo"), "z3"], ["alto", T("sitio.ig.alto"), "z4"]];
 
 /** Barras apiladas al 100 % por semana (Bajo / Limbo / Alto) con la raya de la meta de 80 % bajo. Sigue el selector 4/8/12. */
 function tarjetaIntensidadSemanas(d) {
@@ -297,19 +298,19 @@ function tarjetaIntensidadSemanas(d) {
     if (!ancho) return;
     const sem = todas.slice(-periodo);
     const con = sem.filter((x) => Object.values(x.minutos || {}).some((v) => v > 0));
-    if (!con.length) { caja.replaceChildren(DS.estadoVacio({ icono: null, titulo: "Sin minutos en zonas en este periodo." })); pie.replaceChildren(); return; }
+    if (!con.length) { caja.replaceChildren(DS.estadoVacio({ icono: null, titulo: T("sitio.ig.sin") })); pie.replaceChildren(); return; }
     caja.replaceChildren(barChart({
-      ancho, alto: 130, tope: 100, ref: { y: 80, etiqueta: "meta 80 % bajo" }, clases: INT_GRUPOS.map((g) => g[2]),
-      etiqueta: "Intensidad por semana: porcentaje bajo, limbo y alto, con meta de 80 % bajo",
-      semanas: sem.map((x) => ({ inicio: x.inicio, valores: INT_GRUPOS.map(([k]) => x[k] || 0), x })),
-      texto: (b) => `Semana del ${fechaLarga(b.inicio)} · Bajo ${fmt(b.x.bajo, 0)} % · Limbo ${fmt(b.x.limbo, 0)} % · Alto ${fmt(b.x.alto, 0)} %`,
+      ancho, alto: 130, tope: 100, ref: { y: 80, etiqueta: T("sitio.ig.meta_ref") }, clases: intGrupos().map((g) => g[2]),
+      etiqueta: T("sitio.ig.et"),
+      semanas: sem.map((x) => ({ inicio: x.inicio, valores: intGrupos().map(([k]) => x[k] || 0), x })),
+      texto: (b) => T("sitio.ig.txt", { f: fechaLarga(b.inicio), b: fmt(b.x.bajo, 0), l: fmt(b.x.limbo, 0), a: fmt(b.x.alto, 0) }),
     }));
-    pie.replaceChildren(DS.leyenda([...INT_GRUPOS.map(([, n, c]) => [COLOR_CLASE[c], n]), ["raya-disc", "Meta: 80 % bajo (la raya punteada)"]]),
-      tablaDatos(["Semana", "Bajo %", "Limbo %", "Alto %"], con.slice().reverse().map((x) => [fechaLarga(x.inicio), fmt(x.bajo, 0), fmt(x.limbo, 0), fmt(x.alto, 0)])));
+    pie.replaceChildren(DS.leyenda([...intGrupos().map(([, n, c]) => [COLOR_CLASE[c], n]), ["raya-disc", T("sitio.ig.leyenda")]]),
+      tablaDatos(T("sitio.ig.cols").split(","), con.slice().reverse().map((x) => [fechaLarga(x.inicio), fmt(x.bajo, 0), fmt(x.limbo, 0), fmt(x.alto, 0)])));
   };
   PINTAR.progreso.push(pintar);
-  return DS.tarjeta({ titulo: "Intensidad por semana", clase: "ancha" },
-    h("p", { class: "nota" }, `Últimas ${periodo} semanas: qué parte del tiempo en zonas fue suave (Z1–Z2), media (Z3) o fuerte (Z4–Z5), con tus corridas y actividades. Solo referencia.`),
+  return DS.tarjeta({ titulo: T("sitio.ig.titulo"), clase: "ancha" },
+    h("p", { class: "nota" }, T("sitio.ig.nota", { n: periodo })),
     caja, pie);
 }
 
@@ -327,7 +328,7 @@ function datosMarcas(d) {
     const fecha = fechaConAnio(x.fecha, d.generado);
     return { icono: x.icono || "medalla", nombre: x.nombre, nueva: !!x.nuevo, valor: larga ? `${fmt(x.distancia_km, 2)} km` : tiempoLargo(x.tiempo_s),
       fecha: larga ? `${tiempoLargo(x.tiempo_s)} · ${fecha}` : fecha,
-      etiqueta: `${x.nombre}: ${larga ? `${fmt(x.distancia_km, 2)} km en ${tiempoLargo(x.tiempo_s)}` : tiempoLargo(x.tiempo_s)}, ${fecha}${x.nuevo ? ", nueva" : ""}` };
+      etiqueta: T("sitio.mc.etiqueta", { n: x.nombre, v: larga ? T("sitio.mc.km_en", { d: fmt(x.distancia_km, 2), t: tiempoLargo(x.tiempo_s) }) : tiempoLargo(x.tiempo_s), f: fecha, nueva: x.nuevo ? T("sitio.mc.nueva") : "" }) };
   });
 }
 
@@ -341,12 +342,12 @@ function barrasKm(c) {
   const km = c.km || [];
   if (!km.length) return null;
   const rapido = Math.min(...km), lento = Math.max(...km);
-  return h("div", { class: "ritmos-km" }, h("h3", {}, "Ritmo por km"),
-    h("div", { role: "list" }, km.map((s, i) => h("div", { class: "rk", role: "listitem", "aria-label": `Km ${i + 1}: ${mmss(s)} por km` },
+  return h("div", { class: "ritmos-km" }, h("h3", {}, T("sitio.rk.titulo")),
+    h("div", { role: "list" }, km.map((s, i) => h("div", { class: "rk", role: "listitem", "aria-label": T("sitio.rk.aria", { i: i + 1, p: mmss(s) }) },
       h("span", { class: "rk-n" }, i + 1),
       h("span", { class: "rk-barra" }, h("i", { style: `width:${Math.round(55 + 45 * (lento === rapido ? 1 : (lento - s) / (lento - rapido)))}%`, class: s === rapido ? "rapido" : "" })),
       h("span", { class: `rk-v${s === rapido ? " rapido" : ""}` }, mmss(s))))),
-    h("p", { class: "nota" }, "Barra más larga = km más rápido."));
+    h("p", { class: "nota" }, T("sitio.rk.nota")));
 }
 
 function zonasCarrera(c) {
@@ -354,7 +355,7 @@ function zonasCarrera(c) {
   if (!z) return null;
   const ks = ["Z1", "Z2", "Z3", "Z4", "Z5"], total = ks.reduce((a, k) => a + z[k], 0);
   if (total <= 0) return null;
-  return h("div", {}, h("h3", {}, "Minutos por zona"),
+  return h("div", {}, h("h3", {}, T("sitio.zc.titulo")),
     h("div", { class: "zbar", role: "img", "aria-label": ks.map((k) => `${k} ${fmt(z[k], 0)} min`).join(", ") },
       ks.filter((k) => z[k] > 0).map((k) => h("div", { style: `flex:${z[k]} 1 0;background:var(--${k.toLowerCase()})` }))),
     DS.leyenda(ks.map((k) => [`var(--${k.toLowerCase()})`, `${k} ${fmt(z[k], 0)}'`])));
@@ -364,23 +365,23 @@ function comparacionCarrera(c) {
   const k = c.comparacion;
   if (!k) return null;
   const rel = (v, unidad, menosBueno) => (v === 0 || v == null ? null : `${unidad(Math.abs(v))} ${v < 0 ? menosBueno[0] : menosBueno[1]}`);
-  const partes = [rel(k.dif_tiempo_s, tiempoLargo, ["más rápido", "más lento"]), rel(k.dif_ritmo_s, (s) => `${mmss(s)} /km`, ["menos por km", "más por km"]),
-    rel(k.dif_fc, (v) => `${fmt(v, 0)} lpm`, ["menos de FC", "más de FC"])].filter(Boolean);
-  return h("div", {}, h("h3", {}, "Contra tu carrera anterior"),
-    h("p", { class: "nota" }, `${fechaConAnio(k.fecha)} · ${fmt(k.distancia_km, 2)} km en ${tiempoLargo(k.tiempo_s)}`),
-    h("p", {}, partes.length ? `Ahora: ${partes.join(" · ")}` : "Igual que la anterior"));
+  const partes = [rel(k.dif_tiempo_s, tiempoLargo, [T("sitio.cc.mas_rapido"), T("sitio.cc.mas_lento")]), rel(k.dif_ritmo_s, (s) => `${mmss(s)} /km`, [T("sitio.cc.menos_km"), T("sitio.cc.mas_km")]),
+    rel(k.dif_fc, (v) => `${fmt(v, 0)} ${T("sitio.lpm")}`, [T("sitio.cc.menos_fc"), T("sitio.cc.mas_fc")])].filter(Boolean);
+  return h("div", {}, h("h3", {}, T("sitio.cc.titulo")),
+    h("p", { class: "nota" }, T("sitio.cc.en", { f: fechaConAnio(k.fecha), d: fmt(k.distancia_km, 2), t: tiempoLargo(k.tiempo_s) })),
+    h("p", {}, partes.length ? T("sitio.cc.ahora", { p: partes.join(" · ") }) : T("sitio.cc.igual")));
 }
 
 /** Una carrera como entrada de DS.ranking: fecha, resumen, filas de datos y, abajo, ritmo por km, zonas y comparación. */
 function carreraDetalle(c, abierta) {
   return { icono: c.icono || "medalla", fecha: fechaLarga(c.fecha), resumen: `${fmt(c.distancia_km, 2)} km · ${tiempoLargo(c.tiempo_s)}`, abierta,
     filas: [
-      filaStat("Distancia", `${fmt(c.distancia_km, 2)} km`), filaStat("Tiempo", tiempoLargo(c.tiempo_s)),
-      filaStat("Ritmo promedio", c.ritmo_s ? `${mmss(c.ritmo_s)} /km` : null),
-      filaStat("FC promedio / máxima", c.fc_prom != null ? `${fmt(c.fc_prom, 0)} / ${c.fc_max != null ? fmt(c.fc_max, 0) : "—"} lpm` : null),
-      filaStat("Km más rápido", c.km_mas_rapido_s ? `${mmss(c.km_mas_rapido_s)} /km` : null),
-      filaStat("Cadencia", c.cadencia ? `${c.cadencia} pasos/min` : null),
-      filaStat("Desnivel", c.desnivel_m != null ? `+${c.desnivel_m} m` : null)].filter(Boolean),
+      filaStat(T("sitio.cd.dist"), `${fmt(c.distancia_km, 2)} km`), filaStat(T("sitio.cd.tiempo"), tiempoLargo(c.tiempo_s)),
+      filaStat(T("sitio.cd.ritmo"), c.ritmo_s ? `${mmss(c.ritmo_s)} /km` : null),
+      filaStat(T("sitio.cd.fc"), c.fc_prom != null ? `${fmt(c.fc_prom, 0)} / ${c.fc_max != null ? fmt(c.fc_max, 0) : "—"} ${T("sitio.lpm")}` : null),
+      filaStat(T("sitio.cd.km_rapido"), c.km_mas_rapido_s ? `${mmss(c.km_mas_rapido_s)} /km` : null),
+      filaStat(T("sitio.cd.cadencia"), c.cadencia ? T("sitio.cd.pasos", { c: c.cadencia }) : null),
+      filaStat(T("sitio.cd.desnivel"), c.desnivel_m != null ? `+${c.desnivel_m} m` : null)].filter(Boolean),
     cuerpo: [barrasKm(c), zonasCarrera(c), comparacionCarrera(c)].filter(Boolean) };
 }
 
@@ -390,21 +391,22 @@ function tarjetaMarcasYCarreras(d) {
   if (!marcas.length && !cs.length) return null;
   const r = DS.ranking({ marcas, carreras: cs.map((x, i) => carreraDetalle(x, i === 0 && abrirCarrera)) });
   const lista = r.querySelector(".carreras");
-  if (lista) { lista.id = "prog-carreras"; lista.before(h("h3", { class: "sub-carreras" }, "Carreras")); }
-  return DS.tarjeta({ titulo: "Marcas y carreras", clase: "ancha" }, r);
+  if (lista) { lista.id = "prog-carreras"; lista.before(h("h3", { class: "sub-carreras" }, T("sitio.mr.carreras"))); }
+  return DS.tarjeta({ titulo: T("sitio.mr.titulo"), clase: "ancha" }, r);
 }
 
 // --- Composición corporal estilo InBody ---
 
-const ZONA_TXT = { bajo: ["▼", "bajo"], normal: ["✓", "normal"], alto: ["▲", "alto"] };
+const ZONA_SIM = { bajo: "▼", normal: "✓", alto: "▲" };
+const zonaTxt = (z) => [ZONA_SIM[z], T(`sitio.ib.zona_${z}`)];
 const fechaMes = (iso) => { const f = parseFecha(iso); return `${f.getDate()} ${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}`; };
 const kg1 = (v) => fmt(v, 1);
 
 /** Una barra de la hoja como fila de DS.ibGrupo: la barra llega a `pos` y su valor va al final. */
 function filaInbody(f) {
   const txt = f.estimado ? `≈${fmt(f.valor, 1)}` : fmt(f.valor, 1);
-  const [simbolo, zona] = ZONA_TXT[f.zona];
-  const etiqueta = `${f.nombre}: ${fmt(f.valor, 1)} ${f.unidad}${f.pct != null ? `, ${f.pct} % del valor estándar` : ""}${f.estimado ? " (estimado)" : ""}, zona ${zona}`;
+  const [simbolo, zona] = zonaTxt(f.zona);
+  const etiqueta = T("sitio.ib.aria", { n: f.nombre, v: fmt(f.valor, 1), u: f.unidad, pct: f.pct != null ? T("sitio.ib.aria_pct", { p: f.pct }) : "", est: f.estimado ? T("sitio.ib.aria_est") : "", z: zona });
   return { nombre: f.nombre, unidad: f.unidad, zona: f.zona, textoZona: `${simbolo} ${zona}`, aria: etiqueta,
     normal: [f.normal_pos[0] * 100, (f.normal_pos[1] - f.normal_pos[0]) * 100], barra: f.pos * 100, valor: txt, dentro: f.pos > 0.8,
     ticks: f.escala.map((v, i) => [(i / (f.escala.length - 1)) * 100, fmt(v, v % 1 ? 1 : 0)]) };
@@ -413,7 +415,7 @@ function filaInbody(f) {
 function grupoInbody(titulo, filas) {
   if (!filas || !filas.length) return null;
   const n = filas[0].normal_pos;
-  return DS.ibGrupo({ titulo, franja: [{ texto: "Bajo", pct: n[0] * 100 }, { texto: "Normal", pct: (n[1] - n[0]) * 100, normal: true }, { texto: "Alto", pct: (1 - n[1]) * 100 }],
+  return DS.ibGrupo({ titulo, franja: [{ texto: T("sitio.ib.f_bajo"), pct: n[0] * 100 }, { texto: T("sitio.ib.f_normal"), pct: (n[1] - n[0]) * 100, normal: true }, { texto: T("sitio.ib.f_alto"), pct: (1 - n[1]) * 100 }],
     filas: filas.map(filaInbody) });
 }
 
@@ -422,20 +424,20 @@ function historialInbody(c) {
   if (!hist.length) return null;
   const caja = h("div", { class: "ib-hist" });
   const primeIdx = hist.findIndex((x) => x.es_prime);
-  const defs = [["Peso (kg)", "peso_kg", "neutro"], ["MME (kg)", "mme_kg", "s1"], ["PGC (%)", "pgc", "s2"]];
+  const defs = [[T("sitio.ib.peso"), "peso_kg", "neutro"], [T("sitio.ib.mme"), "mme_kg", "s1"], [T("sitio.ib.pgc"), "pgc", "s2"]];
   const pintar = () => {
     const ancho = caja.clientWidth;
     if (!ancho) return;
     caja.replaceChildren(...defs.map(([nombre, campo, clase], k) => h("div", { class: "ib-mini" }, h("h3", {}, nombre),
       miniLinea({ ancho, valores: hist.map((x) => x[campo]), clase, prime: primeIdx >= 0 ? primeIdx : null, fmt: kg1,
-        fechas: k === defs.length - 1 ? hist.map((x) => fechaMes(x.fecha)) : null, etiqueta: `Historial de ${nombre}`,
-        textos: hist.map((x) => `${fechaMes(x.fecha)} · ${kg1(x[campo])}${x.es_prime ? " · prime" : ""}`) }))));
+        fechas: k === defs.length - 1 ? hist.map((x) => fechaMes(x.fecha)) : null, etiqueta: T("sitio.ib.hist_de", { n: nombre }),
+        textos: hist.map((x) => `${fechaMes(x.fecha)} · ${kg1(x[campo])}${x.es_prime ? T("sitio.ib.prime") : ""}`) }))));
   };
   PINTAR.cuerpo.push(pintar);
   const meta = c.meta || {};
-  return h("div", { class: "ib-grupo" }, h("h3", {}, "Historial de composición corporal"), caja,
-    h("p", { class: "titular" }, meta.faltan_pgc > 0 ? `Te faltan ${fmt(meta.faltan_pgc, 1)} % de grasa para tu prime` : "Ya superaste tu prime en grasa ✓"),
-    meta.mme_ok ? h("p", { class: "nota" }, "Tu músculo ya está arriba del de tu prime ✓") : h("p", { class: "nota" }, `Te faltan ${fmt(meta.faltan_mme, 1)} kg de músculo para tu prime`));
+  return h("div", { class: "ib-grupo" }, h("h3", {}, T("sitio.ib.hist_titulo")), caja,
+    h("p", { class: "titular" }, meta.faltan_pgc > 0 ? T("sitio.ib.faltan_pgc", { v: fmt(meta.faltan_pgc, 1) }) : T("sitio.ib.super_pgc")),
+    meta.mme_ok ? h("p", { class: "nota" }, T("sitio.ib.mme_ok")) : h("p", { class: "nota" }, T("sitio.ib.faltan_mme", { v: fmt(meta.faltan_mme, 1) })));
 }
 
 function puntuacionInbody(c) {
@@ -446,7 +448,7 @@ function puntuacionInbody(c) {
   return h("div", { class: "ib-grupo" }, DS.ibPuntuacion({
     puntuacion: ult ? { valor: fmt(ult.puntos, 0), delta: ult.delta != null ? `${ult.delta > 0 ? "▲" : ult.delta < 0 ? "▼" : "="}${Math.abs(ult.delta)}` : null, deltaClase: ult.delta > 0 ? "" : "neutro" } : null,
     visceral: v ? { valor: fmt(v.valor, 0), rango: `${v.rango[0]}–${v.rango[1]}`, clase, simbolo,
-      texto: v.zona === "normal" ? "Dentro del rango" : v.zona === "alto" ? "Por encima del rango" : "Por debajo del rango" } : null }),
+      texto: T(v.zona === "normal" ? "sitio.ib.dentro" : v.zona === "alto" ? "sitio.ib.encima" : "sitio.ib.debajo") } : null }),
     ult ? miniPuntuacion(pts) : null);
 }
 
@@ -457,52 +459,52 @@ function miniPuntuacion(pts) {
     const ancho = caja.clientWidth;
     if (!ancho) return;
     const graf = miniLinea({ ancho, valores: pts.map((p) => p.puntos), clase: "s1", prime: null, fmt: (v) => fmt(v, 0),
-      fechas: pts.map((p) => fechaMes(p.fecha)), etiqueta: "Historial de la puntuación InBody" });
+      fechas: pts.map((p) => fechaMes(p.fecha)), etiqueta: T("sitio.ib.hist_punt") });
     const con = pts.filter((p) => p.puntos != null).length;
-    caja.replaceChildren(graf, ...(con === 1 ? [h("p", { class: "nota" }, "Se llena con tus próximas mediciones.")]
-      : con < pts.length ? [h("p", { class: "nota" }, "— = esa medición no tiene la hoja con puntuación.")] : []));
+    caja.replaceChildren(graf, ...(con === 1 ? [h("p", { class: "nota" }, T("sitio.ib.se_llena"))]
+      : con < pts.length ? [h("p", { class: "nota" }, T("sitio.ib.sin_hoja"))] : []));
   });
   return caja;
 }
 
-const SEGMENTOS = [["brazo_izq", "Brazo izq."], ["brazo_der", "Brazo der."], ["tronco", "Tronco"], ["pierna_izq", "Pierna izq."], ["pierna_der", "Pierna der."]];
+const segmentos = () => { const n = T("sitio.ib.seg").split(","); return ["brazo_izq", "brazo_der", "tronco", "pierna_izq", "pierna_der"].map((k, i) => [k, n[i]]); };
 
 function hojaCompleta(c) {
   const hoja = c.hoja;
   if (!hoja) return null;
-  const tabla = (cabeza, filas) => DS.tabla({ etiqueta: cabeza.filter(Boolean).join(", ") || "Hoja InBody",
+  const tabla = (cabeza, filas) => DS.tabla({ etiqueta: cabeza.filter(Boolean).join(", ") || T("sitio.ib.hoja"),
     columnas: cabeza.map((texto, i) => ({ texto, num: i > 0 })), filas: filas.map((celdas) => ({ celdas })) });
-  const zonaTxt = (z) => `${ZONA_TXT[z][0]} ${ZONA_TXT[z][1]}`;
+  const zonaStr = (z) => zonaTxt(z).join(" ");
   const bloques = [];
   const barras = [...(hoja.musculo_grasa || []), ...(hoja.obesidad || [])];
-  if (barras.length) bloques.push(h("h3", {}, "Análisis músculo-grasa y de obesidad"),
-    tabla(["", "Valor", "% estándar", "Normal", "Zona"], barras.map((f) => [f.nombre, `${f.estimado ? "≈" : ""}${fmt(f.valor, 1)} ${f.unidad}`,
-      f.pct != null ? `${f.pct} %` : "—", `${fmt(f.normal[0], 1)}–${fmt(f.normal[1], 1)}${f.pct != null ? " %" : ""}`, zonaTxt(f.zona)])));
+  if (barras.length) bloques.push(h("h3", {}, T("sitio.ib.mg_ob")),
+    tabla(T("sitio.ib.cols_mg").split(","), barras.map((f) => [f.nombre, `${f.estimado ? "≈" : ""}${fmt(f.valor, 1)} ${f.unidad}`,
+      f.pct != null ? `${f.pct} %` : "—", `${fmt(f.normal[0], 1)}–${fmt(f.normal[1], 1)}${f.pct != null ? " %" : ""}`, zonaStr(f.zona)])));
   const cp = hoja.control_peso;
-  if (cp) bloques.push(h("h3", {}, "Control de peso"), tabla(["", "kg"], [["Peso ideal", fmt(cp.peso_ideal_kg, 1)], ["Control de peso", fmt(cp.control_peso_kg, 1)],
-    ["Control de grasa", fmt(cp.control_grasa_kg, 1)], ["Control de músculo", fmt(cp.control_musculo_kg, 1)]]));
+  if (cp) bloques.push(h("h3", {}, T("sitio.ib.cp")), tabla(["", "kg"], [[T("sitio.ib.cp_ideal"), fmt(cp.peso_ideal_kg, 1)], [T("sitio.ib.cp_ctl"), fmt(cp.control_peso_kg, 1)],
+    [T("sitio.ib.cp_grasa"), fmt(cp.control_grasa_kg, 1)], [T("sitio.ib.cp_musculo"), fmt(cp.control_musculo_kg, 1)]]));
   const grupos = [...new Set((hoja.rangos || []).map((r) => r.grupo))];
-  for (const g of grupos) bloques.push(h("h3", {}, g), tabla(["", "Valor", "Rango", "Zona"], hoja.rangos.filter((r) => r.grupo === g).map((r) =>
-    [r.nombre, `${fmt(r.valor, 2)}${r.unidad ? " " + r.unidad : ""}`, `${fmt(r.min, 2)}–${fmt(r.max, 2)}`, zonaTxt(r.zona)])));
+  for (const g of grupos) bloques.push(h("h3", {}, g), tabla(T("sitio.ib.cols_rango").split(","), hoja.rangos.filter((r) => r.grupo === g).map((r) =>
+    [r.nombre, `${fmt(r.valor, 2)}${r.unidad ? " " + r.unidad : ""}`, `${fmt(r.min, 2)}–${fmt(r.max, 2)}`, zonaStr(r.zona)])));
   if (hoja.segmental_magra || hoja.segmental_grasa) {
     const f = (o, k) => (o && o[k] ? [`${fmt(o[k][0], 2)} kg`, `${fmt(o[k][1], 0)} %`] : ["—", "—"]);
-    bloques.push(h("h3", {}, "Análisis segmental"), tabla(["", "Magra", "% ideal", "Grasa", "% ideal"],
-      SEGMENTOS.map(([k, n]) => [n, ...f(hoja.segmental_magra, k), ...f(hoja.segmental_grasa, k)])));
+    bloques.push(h("h3", {}, T("sitio.ib.segmental")), tabla(T("sitio.ib.cols_seg").split(","),
+      segmentos().map(([k, n]) => [n, ...f(hoja.segmental_magra, k), ...f(hoja.segmental_grasa, k)])));
   }
   const meds = c.mediciones || [];
-  bloques.push(h("h3", {}, "Mediciones"), tabla(["Fecha", "Peso", "% grasa", "Grasa kg", "MME", "Punt.", "Visc."], meds.slice().reverse().map((x) =>
-    [fechaMes(x.fecha) + (x.fecha === c.prime.fecha ? " ★ prime" : ""), ...[x.peso_kg, x.pgc, x.masa_grasa_kg, x.mme_kg].map((v) => (v == null ? "—" : v.toFixed(1))),
+  bloques.push(h("h3", {}, T("sitio.ib.mediciones")), tabla(T("sitio.ib.cols_med").split(","), meds.slice().reverse().map((x) =>
+    [fechaMes(x.fecha) + (x.fecha === c.prime.fecha ? T("sitio.ib.star_prime") : ""), ...[x.peso_kg, x.pgc, x.masa_grasa_kg, x.mme_kg].map((v) => (v == null ? "—" : v.toFixed(1))),
       x.puntuacion == null ? "—" : fmt(x.puntuacion, 0), x.grasa_visceral == null ? "—" : fmt(x.grasa_visceral, 0)])),
-  h("p", { class: "nota" }, "MME = masa muscular esquelética. Visc. = grasa visceral. — = sin dato. ≈ = estimado de la barra."));
-  return DS.desplegable({ titulo: "Ver hoja completa", liga: true, clase: "ib-hoja" }, ...bloques);
+  h("p", { class: "nota" }, T("sitio.ib.leyenda_tabla")));
+  return DS.desplegable({ titulo: T("sitio.ib.ver_hoja"), liga: true, clase: "ib-hoja" }, ...bloques);
 }
 
 /** Tarjeta única «Composición corporal · fecha» en el orden de la hoja InBody. Sin InBody no hay tarjeta. */
 function tarjetaComposicion(c) {
   if (!c || !(c.mediciones || []).length) return null;
   const hoja = c.hoja || {};
-  return DS.tarjeta({ titulo: `Composición corporal · ${fechaMes(hoja.fecha || c.ultima.fecha)}`, clase: "ancha ib" },
-    grupoInbody("Análisis músculo-grasa", hoja.musculo_grasa), grupoInbody("Análisis de obesidad", hoja.obesidad),
+  return DS.tarjeta({ titulo: T("sitio.ib.comp", { f: fechaMes(hoja.fecha || c.ultima.fecha) }), clase: "ancha ib" },
+    grupoInbody(T("sitio.ib.mg"), hoja.musculo_grasa), grupoInbody(T("sitio.ib.ob"), hoja.obesidad),
     historialInbody(c), puntuacionInbody(c), hojaCompleta(c));
 }
 
@@ -514,29 +516,29 @@ function graficaRecuperacion(d, ancho, id) {
   const dias = (prog.dias || []).slice(-84);
   const umbral = ((d.detalles || {}).umbrales || {}).sleep_min_hours;
   const def = {
-    hrv: { campo: "hrv", prom: "hrv_7d", unidad: "ms", fmtV: (v) => fmt(v, 0), nombre: "HRV por noche", extra: { banda: dias.map((x) => ({ lo: x.hrv_base_baja, hi: x.hrv_base_alta })), fmtY: (v) => fmt(v, 0) } },
-    rhr: { campo: "rhr", prom: "rhr_7d", unidad: "lpm", fmtV: (v) => fmt(v, 0), nombre: "FC en reposo por día", extra: { fmtY: (v) => fmt(v, 0) } },
-    sueno: { campo: "sueño_h", prom: "sueño_7d", unidad: "", fmtV: horasMin, nombre: "Horas de sueño", extra: { ref: umbral != null ? { y: umbral, etiqueta: null } : null, fmtY: (v) => fmt(v, 1) } },
+    hrv: { campo: "hrv", prom: "hrv_7d", unidad: "ms", fmtV: (v) => fmt(v, 0), nombre: T("sitio.rec.hrv"), extra: { banda: dias.map((x) => ({ lo: x.hrv_base_baja, hi: x.hrv_base_alta })), fmtY: (v) => fmt(v, 0) } },
+    rhr: { campo: "rhr", prom: "rhr_7d", unidad: T("sitio.lpm"), fmtV: (v) => fmt(v, 0), nombre: T("sitio.rec.rhr"), extra: { fmtY: (v) => fmt(v, 0) } },
+    sueno: { campo: "sueño_h", prom: "sueño_7d", unidad: "", fmtV: horasMin, nombre: T("sitio.rec.sueno"), extra: { ref: umbral != null ? { y: umbral, etiqueta: null } : null, fmtY: (v) => fmt(v, 1) } },
   }[id];
   const dom = dias.length ? [parseFecha(dias[0].fecha).getTime(), parseFecha(dias[dias.length - 1].fecha).getTime()] : [0, 1];
   const s = dias.map((x) => ({ fecha: x.fecha, y: x[def.campo], p: x[def.prom], lo: x.hrv_base_baja, hi: x.hrv_base_alta }));
   const ult = s.slice().reverse().find((p) => p.p != null);
   const u = def.unidad ? " " + def.unidad : "";
-  let sub = ult ? `Promedio 7 días: ${def.fmtV(ult.p)}${u} · ${fechaLarga(ult.fecha)}` : "Aún no hay promedio de 7 días (faltan datos).";
-  if (id === "sueno" && umbral != null) sub += ` · la raya marca ${horasMin(umbral)}`;
+  let sub = ult ? T("sitio.rec.prom", { v: def.fmtV(ult.p), u, f: fechaLarga(ult.fecha) }) : T("sitio.rec.sin_prom");
+  if (id === "sueno" && umbral != null) sub += T("sitio.rec.raya", { h: horasMin(umbral) });
   const filas = s.filter((p) => p.y != null).reverse().map((p) => [fechaLarga(p.fecha), def.fmtV(p.y), p.p == null ? "—" : def.fmtV(p.p)]);
   return h("div", {}, h("p", { class: "nota" }, sub),
     lineChart({ ancho, serie: s, dominio: dom, puntos: true, promedio: s.map((p) => p.p), etiqueta: def.nombre, ...def.extra,
-      texto: (p, prom) => `${fechaLarga(p.fecha)} · ${def.fmtV(p.y)}${u}${prom != null ? ` · prom. 7 d ${def.fmtV(prom)}` : ""}${def.extra.banda && p.lo != null ? ` · base ${p.lo}–${p.hi}` : ""}` }),
-    DS.leyenda([["pto", "Diario"], ["rayaln", "Promedio 7 días"], ...(id === "hrv" && dias.some((x) => x.hrv_base_alta != null) ? [["banda-sw", "Rango base (HRV)"]] : [])]),
-    filas.length ? tablaDatos(["Fecha", def.unidad || "Sueño", "Prom. 7 d"], filas) : "");
+      texto: (p, prom) => T("sitio.rec.txt", { f: fechaLarga(p.fecha), v: def.fmtV(p.y), u, prom: prom != null ? T("sitio.rec.txt_prom", { v: def.fmtV(prom) }) : "", base: def.extra.banda && p.lo != null ? T("sitio.rec.txt_base", { a: p.lo, b: p.hi }) : "" }) }),
+    DS.leyenda([["pto", T("sitio.rec.diario")], ["rayaln", T("sitio.rec.prom_l")], ...(id === "hrv" && dias.some((x) => x.hrv_base_alta != null) ? [["banda-sw", T("sitio.rec.rango")]] : [])]),
+    filas.length ? tablaDatos(T("sitio.rec.cols", { u: def.unidad || T("sitio.rec.sueno_col") }).split(","), filas) : "");
 }
 
 function tarjetaRecuperacion(d) {
-  return tarjetaConVistas("cuerpo", "Recuperación", "Últimas 12 semanas", [
-    { etiqueta: "HRV", pintar: (a) => graficaRecuperacion(d, a, "hrv") },
-    { etiqueta: "FC reposo", pintar: (a) => graficaRecuperacion(d, a, "rhr") },
-    { etiqueta: "Sueño", pintar: (a) => graficaRecuperacion(d, a, "sueno") }], { clase: "ancha" });
+  return tarjetaConVistas("cuerpo", T("sitio.rec.titulo"), T("sitio.rec.12"), [
+    { etiqueta: T("sitio.rec.t_hrv"), pintar: (a) => graficaRecuperacion(d, a, "hrv") },
+    { etiqueta: T("sitio.rec.t_rhr"), pintar: (a) => graficaRecuperacion(d, a, "rhr") },
+    { etiqueta: T("sitio.rec.t_sueno"), pintar: (a) => graficaRecuperacion(d, a, "sueno") }], { clase: "ancha" });
 }
 
 // --- Plan: zonas y reglas · Progreso: carga ---
@@ -549,18 +551,18 @@ function tarjetaFcMax(d) {
   const ses = f.sesiones || [];
   const faltan = Math.max(0, 2 - (f.semanas_medidas || 0));
   const cuerpo = !ses.length
-    ? [h("p", { class: "nota" }, ui().textos.fcmax_vacia || "Aún no hay sesiones medidas con correa.")]
-    : [h("div", { class: "kv" }, h("span", {}, "Clases medidas"), h("span", {}, ses.length)),
-      h("div", { class: "kv" }, h("span", {}, "Pico"), h("span", {}, `${fmt(f.pico, 0)} lpm`)),
-      h("div", { class: "kv" }, h("span", {}, `FC máx estimada (pico + 3, mín ${fmt(u.max_hr_floor, 0)})`), h("span", {}, `${fmt(f.estimacion, 0)} lpm`)),
-      f.listo ? DS.estado("ok", "✓", "Medición lista", "listo") : DS.estado("nd", "—", `Faltan ${faltan} ${faltan === 1 ? "semana" : "semanas"} de medición`, "en curso"),
-      f.revisar ? DS.aviso({ clase: "warn", simbolo: "!", texto: `La estimación pasa de ${fmt(u.max_hr_review_above, 0)} lpm: revísala antes de usarla.` }) : null];
+    ? [h("p", { class: "nota" }, ui().textos.fcmax_vacia || T("sitio.fcm.vacia"))]
+    : [h("div", { class: "kv" }, h("span", {}, T("sitio.fcm.clases")), h("span", {}, ses.length)),
+      h("div", { class: "kv" }, h("span", {}, T("sitio.fcm.pico")), h("span", {}, `${fmt(f.pico, 0)} ${T("sitio.lpm")}`)),
+      h("div", { class: "kv" }, h("span", {}, T("sitio.fcm.est", { m: fmt(u.max_hr_floor, 0) })), h("span", {}, `${fmt(f.estimacion, 0)} ${T("sitio.lpm")}`)),
+      f.listo ? DS.estado("ok", "✓", T("sitio.fcm.lista"), T("sitio.fcm.lista_e")) : DS.estado("nd", "—", Tn("sitio.fcm.faltan", faltan), T("sitio.fcm.en_curso")),
+      f.revisar ? DS.aviso({ clase: "warn", simbolo: "!", texto: T("sitio.fcm.revisar", { v: fmt(u.max_hr_review_above, 0) }) }) : null];
   const zonas = d.zonas || [];
-  return DS.tarjeta({ titulo: "FC máxima y zonas" }, ...cuerpo,
-    zonas.length ? h("div", { class: "zonas-fc" }, h("p", { class: "nota" }, `FC máx en uso: ${fmt(f.config, 0)} lpm (${f.fuente === "reloj" ? "del reloj" : "respaldo, el reloj no la dio"}) · reposo promedio 7 días: ${fmt(d.rhr_promedio_7d, 0)} lpm (Karvonen)`),
-      DS.tabla({ etiqueta: "Zonas de FC", columnas: [{ texto: "Zona" }, { texto: "Rango (lpm)", num: true }],
+  return DS.tarjeta({ titulo: T("sitio.fcz.titulo") }, ...cuerpo,
+    zonas.length ? h("div", { class: "zonas-fc" }, h("p", { class: "nota" }, T("sitio.fcz.uso", { v: fmt(f.config, 0), f: T(f.fuente === "reloj" ? "sitio.fcz.reloj" : "sitio.fcz.respaldo"), r: fmt(d.rhr_promedio_7d, 0) })),
+      DS.tabla({ etiqueta: T("sitio.fcz.tabla"), columnas: [{ texto: T("sitio.fcz.zona") }, { texto: T("sitio.fcz.rango"), num: true }],
         filas: zonas.map((z) => ({ celdas: [h("span", { class: "zchip" }, h("i", { style: `background:var(--${z.zona.toLowerCase()})`, "aria-hidden": "true" }), z.zona), `${z.piso}–${z.techo}`] })) }))
-      : DS.estadoVacio({ icono: null, titulo: "Sin zonas calculadas." }));
+      : DS.estadoVacio({ icono: null, titulo: T("sitio.fcz.sin") }));
 }
 
 // --- ayuda (#ayuda): bloques ya armados en Python con la config de cada persona ---
@@ -569,19 +571,19 @@ let rutaPrevia = "#hoy";   // a dónde regresa «← Volver»
 
 function renderAyuda(d) {
   const bloques = d.ayuda || [];
-  const volver = h("div", { class: "ancha" }, DS.boton("← Volver", { variante: "texto", onclick: () => { location.hash = rutaPrevia; } }));
+  const volver = h("div", { class: "ancha" }, DS.boton(T("sitio.ay.volver"), { variante: "texto", onclick: () => { location.hash = rutaPrevia; } }));
   const tarjeta = (b) => DS.tarjeta({ titulo: b.titulo, clase: "ancha ayuda-bloque" },
     ...(b.parrafos || []).map((p) => h("p", {}, p)),
     (b.lista || []).length ? h("ul", { class: "reglas" }, b.lista.map((i) => h("li", {}, i.t ? h("strong", {}, `${i.t}: `) : null, i.x))) : null);
-  $("vista-ayuda").replaceChildren(volver, h("h2", { class: "titular ancha" }, "Ayuda"),
-    ...(bloques.length ? bloques.map(tarjeta) : [DS.estadoVacio({ icono: null, titulo: "Aún no hay ayuda disponible." })]));
+  $("vista-ayuda").replaceChildren(volver, h("h2", { class: "titular ancha" }, T("sitio.ay.titulo")),
+    ...(bloques.length ? bloques.map(tarjeta) : [DS.estadoVacio({ icono: null, titulo: T("sitio.ay.sin") })]));
 }
 
 function tarjetaCarga(det) {
   PINTAR.progreso.push(dibujarDetalles);
   const c = bloqueCarga(det);
   DET.carga = { sub: h("p", { class: "nota" }), chart: h("div", { class: "chart-wrap" }), extra: h("div", { class: "pie-graf" }) };
-  c.append(h("h3", { class: "titular" }, "Últimas 12 semanas"), DET.carga.sub, DET.carga.chart, DET.carga.extra);
+  c.append(h("h3", { class: "titular" }, T("sitio.carga.12")), DET.carga.sub, DET.carga.chart, DET.carga.extra);
   c.classList.add("ancha");
   return c;
 }
@@ -593,16 +595,16 @@ function dibujarDetalles() {
   const t = DET.carga;
   const semanas = ((datos.detalles || {}).carga_semanas || []);
   const cats = ui().categorias, clases = [...cats.map((c) => c.clase), "s2"];
-  const nombres = [...cats.map((c) => c.nombre), "Corrida"];
+  const nombres = [...cats.map((c) => c.nombre), T("sitio.carga.corrida")];
   const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [...cats.map((c) => (s.cargas || {})[c.id] || 0), s.carga_corrida || 0] }));
   const suma = (s) => s.valores.reduce((a, v) => a + v, 0);
-  t.sub.textContent = "Esfuerzo × minutos por semana (lun–dom). La fuerza con la FC baja da poca carga. Solo referencia.";
+  t.sub.textContent = T("sitio.carga.nota");
   t.chart.replaceChildren(barChart({
-    ancho, semanas: barras, etiqueta: "Carga semanal apilada", clases,
-    texto: (s) => `Semana del ${fechaLarga(s.inicio)} · ${nombres.map((n, i) => `${n} ${fmt(s.valores[i], 0)}`).join(" · ")} · Total ${fmt(suma(s), 0)}`,
+    ancho, semanas: barras, etiqueta: T("sitio.carga.et"), clases,
+    texto: (s) => T("sitio.carga.txt", { f: fechaLarga(s.inicio), n: nombres.map((n, i) => `${n} ${fmt(s.valores[i], 0)}`).join(" · "), t: fmt(suma(s), 0) }),
   }));
   t.extra.replaceChildren(DS.leyenda(clases.map((c, i) => [COLOR_CLASE[c], nombres[i]])),
-    barras.length ? tablaDatos(["Semana", ...nombres], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), ...s.valores.map((v) => fmt(v, 0))])) : "");
+    barras.length ? tablaDatos([T("sitio.vol.cols").split(",")[0], ...nombres], barras.slice().reverse().map((s) => [fechaLarga(s.inicio), ...s.valores.map((v) => fmt(v, 0))])) : "");
 }
 
 // --- tema ---
@@ -631,8 +633,9 @@ let vistaActual = null;
 // Rutas viejas que siguen sirviendo.
 const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
-const TABS = [{ id: "hoy", texto: "Hoy", icono: "hoy", href: "#hoy" }, { id: "plan", texto: "Plan", icono: "plan", href: "#plan" },
-  { id: "progreso", texto: "Progreso", icono: "progreso", href: "#progreso" }];
+const tabsDef = () => [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" }, { id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" },
+  { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" }];
+const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
 
 /** Ícono de cada liga del menú ☰ (si ui.menu trae `icono`, gana el suyo). */
 const ICONO_MENU = { "/ajustes": "editar", "/plan": "plan", "/cuerpo": "progreso", "/historial": "deshacer", "/coach": "medalla", "/privacidad": "check", "/salir": "flecha", "/diseno": "hoy" };
@@ -641,7 +644,7 @@ let menuAbierto = false;
 
 /** Abre o cierra el menú ☰: Esc y tocar fuera lo cierran, y el foco regresa al botón. */
 function ponerMenu(abrir, foco = true) {
-  const pop = $("menu-pop"), btn = document.querySelector("#encabezado [aria-label=\"Menú\"]");
+  const pop = $("menu-pop"), btn = document.querySelector(selBotonMenu());
   menuAbierto = abrir;
   pop.hidden = !abrir;
   if (btn) btn.setAttribute("aria-expanded", String(abrir));
@@ -657,9 +660,9 @@ function pintarEncabezado() {
   const u = ui(), items = u.menu || [];
   if (u.titulo) document.title = `Garmin · ${u.titulo}`;
   const act = h("span", { id: "actualizado", "aria-live": "polite" });
-  const enc = DS.encabezado({ nombre: u.titulo || "Mi entreno", tema: temaActual() === "light" ? "claro" : "oscuro", conAyuda: !!(datos && (datos.ayuda || []).length),
+  const enc = DS.encabezado({ nombre: u.titulo || T("sitio.titulo_defecto"), tema: temaActual() === "light" ? "claro" : "oscuro", conAyuda: !!(datos && (datos.ayuda || []).length),
     conMenu: items.length > 0, menuAbierto, actualizado: [act, ...(u.acciones_url ? [" · ", h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener",
-      title: "En GitHub toca «Run workflow»; en 1–2 min recarga esta página" }, "Jalar datos de Garmin ↗")] : [])],
+      title: T("sitio.enc.acciones_tip") }, T("sitio.enc.jalar"))] : [])],
     onAyuda: () => { location.hash = "#ayuda"; }, onTema: cambiarTema, onMenu: () => ponerMenu(!menuAbierto) });
   $("encabezado").replaceChildren(enc);
   if (!items.length) ponerMenu(false, false);
@@ -671,14 +674,14 @@ function pintarEncabezado() {
   // Avisos de cambios del coach o de tu IA (data.avisos, solo en la web): ver y deshacer en el historial.
   const av = $("avisos-web"), lista = (datos && datos.avisos) || [];
   av.hidden = !lista.length;
-  av.replaceChildren(...lista.map((a) => DS.bannerCambio({ texto: a.texto, verHref: a.url, verTexto: "Ver y deshacer" })));
+  av.replaceChildren(...lista.map((a) => DS.bannerCambio({ texto: a.texto, verHref: a.url, verTexto: T("sitio.enc.ver_deshacer") })));
 }
 
 function actualizarEncabezado() {
   const iso = datos && (datos.datos_al || datos.generado);
   const hace = haceCuanto(iso);
   const act = $("actualizado");
-  if (act) act.textContent = hace ? `Actualizado ${hace}` : "";
+  if (act) act.textContent = hace ? T("sitio.enc.actualizado", { h: hace }) : "";
 }
 
 function mostrarVista() {
@@ -715,10 +718,11 @@ function aviso(id, msg) {
 }
 
 async function iniciar() {
-  $("tabs").replaceChildren(DS.tabs({ items: TABS, actual: null }));
+  await cargarIdioma(idiomaInicial());   // el último idioma visto o el del navegador; con data.json se corrige si hace falta
+  $("tabs").replaceChildren(DS.tabs({ items: tabsDef(), actual: null }));
   pintarEncabezado();
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && menuAbierto) ponerMenu(false); });
-  document.addEventListener("pointerdown", (ev) => { if (menuAbierto && !ev.target.closest("#menu-pop, #encabezado [aria-label=\"Menú\"]")) ponerMenu(false, false); });
+  document.addEventListener("pointerdown", (ev) => { if (menuAbierto && !ev.target.closest(`#menu-pop, ${selBotonMenu()}`)) ponerMenu(false, false); });
   leerSemanaInicial();
   window.addEventListener("hashchange", mostrarVista);
   let resizeT;
@@ -726,13 +730,19 @@ async function iniciar() {
   mostrarVista();
   // Mientras llega data.json: el logo que se arma; si falla, el error con «Volver a intentar».
   $("app").hidden = true;
-  $("carga").replaceChildren(DS.cargando("Armando tu semana…"));
+  $("carga").replaceChildren(DS.cargando(T("sitio.carga_frase")));
   try {
     const resp = await fetch("data.json", { cache: "no-cache" });
     if (!resp.ok) throw new Error(`data.json: ${resp.status}`);
     datos = await resp.json();
+    // Idioma: el de data.json (la web lo manda; en Pages, el de config.yaml `idioma`); sin él, el del navegador.
+    const idioma = idiomaDe(datos.idioma || navigator.language);
+    if (idioma !== IDIOMA) {
+      await cargarIdioma(idioma);
+      $("tabs").replaceChildren(DS.tabs({ items: tabsDef(), actual: null }));
+    }
   } catch (e) {
-    $("carga").replaceChildren(DS.errorCarga({ texto: "Revisa tu conexión y vuelve a intentar. Si sigue igual, puede que tu repo no haya subido datos hoy.",
+    $("carga").replaceChildren(DS.errorCarga({ texto: T("sitio.err.texto"),
       detalle: e && e.message ? e.message : String(e), onReintentar: () => location.reload() }));
     return;
   }
@@ -742,7 +752,7 @@ async function iniciar() {
   setInterval(actualizarEncabezado, 60000);
   const vistas = { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
   for (const [id, fn] of Object.entries(vistas)) {
-    try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, "No se pudo mostrar esta sección con los datos actuales."); }
+    try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, T("sitio.err.vista")); }
   }
   mostrarVista();
 }

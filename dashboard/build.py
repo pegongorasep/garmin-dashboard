@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import i18n
 import metrics as m
 import tipos
 from ajustes import USER_DIR, cargar_config
@@ -897,6 +898,7 @@ def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": build_ui(config, plan),
+        **({"idioma": config["idioma"]} if config.get("idioma") else {}),   # sin él, el sitio usa el idioma del navegador
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
         "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),
         "detalles": build_details(hoy, data, config, fc_max, reloj),
@@ -922,6 +924,7 @@ def main() -> None:
     destino = Path(args.out) if args.out else ROOT / "site" / "data.json"
     destino.parent.mkdir(exist_ok=True)
     destino.write_text(json.dumps(out, ensure_ascii=False, indent=1))
+    i18n.escribir_json(destino.parent / "i18n")   # los textos del sitio (es.json, en.json) junto al data.json
     print(f"OK: {destino} ({destino.stat().st_size / 1024:.1f} KB)")
 
 

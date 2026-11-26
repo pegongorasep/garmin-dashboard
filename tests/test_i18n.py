@@ -71,3 +71,45 @@ def test_bienvenida_y_sesion_en_ingles(web_ctx):
         r = c.get(f"/bienvenida?paso={paso}")
         assert r.status_code == 200, paso
         assert "Todavía" not in r.text and "Continuar" not in r.text, paso
+
+
+# --- sitio (Hoy/Plan/Progreso): textos en JSON, idioma en data.json ---
+
+def test_json_del_sitio_al_dia_y_con_todas_las_claves_del_js():
+    import json
+    import re
+    from pathlib import Path
+    site = Path(__file__).parent.parent / "site"
+    for idioma in i18n.idiomas():
+        assert json.loads((site / "i18n" / f"{idioma}.json").read_text(encoding="utf-8")) == i18n.catalogo_sitio(idioma), \
+            "site/i18n/*.json desactualizado: corre dashboard/build.py"
+    es = i18n.catalogo_sitio("es")
+    usadas = set()
+    for f in [*site.glob("*.js"), site / "catalogo.html"]:
+        usadas |= {k for k in re.findall(r"sitio\.[\w.]*\w", f.read_text(encoding="utf-8"))}
+    base = {k[:-2] for k in es if k.endswith(("_1", "_n"))}
+    # claves armadas con plantilla (`sitio.semaforo.${id}`) o con Tn(): se revisan por prefijo
+    faltan = {k for k in usadas if k not in es and k not in base and not any(x.startswith(k) for x in es)}
+    assert not faltan, faltan
+
+
+def test_idioma_en_data_json_solo_si_esta_en_config():
+    from datetime import datetime
+    import build
+    import ajustes
+    cfg = ajustes.config_por_defecto()
+    assert cfg["idioma"] is None
+    assert ajustes.normalizar_config({"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}, "idioma": "en-US"})["idioma"] == "en"
+    assert ajustes.normalizar_config({"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}, "idioma": "xx"})["idioma"] is None
+
+
+def test_web_sirve_textos_del_sitio_e_idioma_en_data_json(web_ctx):
+    from test_web_ajustes import listo
+    uid, c = listo(web_ctx)
+    r = c.get("/i18n/en.json")
+    assert r.status_code == 200 and r.json()["sitio.tab.hoy"] == "Today"
+    assert c.get("/i18n/xx.json").status_code == 404
+    c.cookies.set("idioma", "en")
+    r = c.get("/data.json")
+    if r.status_code == 200:
+        assert r.json()["idioma"] == "en"

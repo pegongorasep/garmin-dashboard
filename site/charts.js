@@ -55,7 +55,7 @@ function lineChart(cfg) {
   const x = (ms) => ml + (t1 === t0 ? (W - ml - mr) / 2 : ((ms - t0) / (t1 - t0)) * (W - ml - mr));
   const prom = cfg.promedio || [];
   const ys = [...serie.map((p) => p.y), ...prom, ...(cfg.extra || []).flatMap((e) => e.y)].filter((v) => v !== null && v !== undefined);
-  if (!ys.length) return h("p", { class: "vacio" }, "Sin datos en este periodo.");
+  if (!ys.length) return h("p", { class: "vacio" }, T("sitio.ch.sin_datos"));
   const extra = [];
   (cfg.banda || []).forEach((b) => { if (b && b.lo != null) extra.push(b.lo, b.hi); });
   if (cfg.ref) extra.push(cfg.ref.y);
@@ -67,7 +67,7 @@ function lineChart(cfg) {
   const y = (v) => mt + (cfg.invertir ? (v - lo) : (hi - v)) / (hi - lo) * (H - mt - mb);
   const fmtY = cfg.fmtY || ((v) => fmt(v, 1));
 
-  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Gráfica" });
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || T("sitio.ch.grafica") });
   for (const v of ticks) {
     svg.append(sv("line", { class: "rej", x1: ml, x2: W - mr, y1: y(v), y2: y(v) }),
       sv("text", { x: ml - 6, y: y(v) + 4, "text-anchor": "end" }, fmtY(v)));
@@ -142,7 +142,7 @@ function lineChart(cfg) {
   const cruz = sv("line", { class: "cruz", y1: mt, y2: H - mb, visibility: "hidden" });
   const punto = sv("circle", { class: `pt ${cl}`, r: 4.5, visibility: "hidden" });
   const capa = sv("rect", { class: "capa", x: ml, y: 0, width: W - ml - mr, height: H, tabindex: 0,
-    "aria-label": "Recorre los puntos con las flechas" });
+    "aria-label": T("sitio.ch.flechas") });
   svg.append(cruz, punto, capa);
   cont.append(svg);
   const tip = tooltipEn(cont);
@@ -192,13 +192,13 @@ function barChart(cfg) {
   const total = (s) => s.valores.reduce((a, v) => a + v, 0);
   const clases = cfg.clases || ["s1", "s2"];
   const max = cfg.tope || Math.max(...semanas.map((s) => Math.max(total(s), s.meta || 0)), 0);
-  if (max <= 0) return h("p", { class: "vacio" }, "Sin carga registrada en este periodo.");
+  if (max <= 0) return h("p", { class: "vacio" }, T("sitio.ch.sin_carga"));
   // `tope`: eje fijo 0–tope (p. ej. 100 %); `entero`: marcas en números enteros (conteos de sesiones)
   const ticks = cfg.tope ? [0, cfg.tope / 2, cfg.tope]
     : cfg.entero ? Array.from({ length: Math.ceil(max / Math.ceil(max / 3)) + 1 }, (_, i) => i * Math.ceil(max / 3)) : ticksNice(0, max * 1.08, 3);
   const hi = ticks[ticks.length - 1];
   const y = (v) => mt + (1 - v / hi) * (H - mt - mb);
-  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Barras" });
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || T("sitio.ch.barras") });
   for (const v of ticks) {
     svg.append(sv("line", { class: "rej", x1: ml, x2: W - mr, y1: y(v), y2: y(v) }),
       sv("text", { x: ml - 6, y: y(v) + 4, "text-anchor": "end" }, fmt(v, 0)));
@@ -273,7 +273,7 @@ function miniLinea(cfg) {
   const n = valores.length, lo = Math.min(...hay), hi = Math.max(...hay);
   const x = (i) => (n === 1 ? W / 2 : pad + (i * (W - 2 * pad)) / (n - 1));
   const y = (v) => mt + (hi === lo ? 14 : ((hi - v) / (hi - lo)) * 28);
-  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || "Historial" });
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.etiqueta || T("sitio.ch.historial") });
   svg.append(sv("line", { class: "eje", x1: 4, x2: W - 4, y1: H - mb + 6, y2: H - mb + 6 }));
   if (hay.length > 1) svg.append(sv("polyline", { class: `ln ${clase}`,
     points: valores.map((v, i) => (v == null ? null : `${x(i)},${y(v)}`)).filter(Boolean).join(" ") }));
@@ -361,7 +361,7 @@ function silueta(tramos, opts = {}) {
   const lpm = {};
   for (const r of opts.rachas || []) if (r.lpm && !lpm[r.zona]) lpm[r.zona] = `${r.lpm[0]}–${r.lpm[1]}`;
   const resumen = tramos.map(([m, z]) => `${fmt(m, 1)} min ${z}`).join(", ");
-  const etiqueta = opts.etiqueta || `Silueta de la sesión: ${opts.conCal ? "" : "5 min de calentamiento, "}${resumen}${opts.conEnf ? "" : " y 5 min de enfriamiento"}`;
+  const etiqueta = opts.etiqueta || T("sitio.sil.resumen", { cal: opts.conCal ? "" : T("sitio.sil.cal"), r: resumen, enf: opts.conEnf ? "" : T("sitio.sil.enf") });
   const cont = h("div", { class: "slt-w", style: `min-height:${alto}px` });
   if (!tramos.length) return cont;
   alAncho(cont, (W) => {
@@ -385,11 +385,11 @@ function silueta(tramos, opts = {}) {
 
     // etiquetas: rampas y etiqueta grande (fijas), corchetes de repeticiones y minutos sueltos con guía de color
     const items = [];
-    if (!opts.conCal) items.push({ c: x(Ri / 2), top: `${fmt(Ri, 0)} min`, sub: "calentar", fija: true });
+    if (!opts.conCal) items.push({ c: x(Ri / 2), top: `${fmt(Ri, 0)} min`, sub: T("sitio.sil.calentar"), fija: true });
     if (una) {
       const [m, z, opc] = tramos[0];
       items.push({ c: x(Ri + m / 2), top: `${fmt(m, 1)} min ${z}`, fija: true,
-        sub: [lpm[z] ? `${lpm[z]} lpm` : null, opc ? "opcional" : null].filter(Boolean).join(" · ") });
+        sub: [lpm[z] ? `${lpm[z]} ${T("sitio.lpm")}` : null, opc ? T("sitio.sil.opc") : null].filter(Boolean).join(" · ") });
     } else {
       for (const g of grupos) {
         const a = pos[g.i].a, b = pos[g.i + g.n - 1].b;
@@ -402,7 +402,7 @@ function silueta(tramos, opts = {}) {
         }
       }
     }
-    if (!opts.conEnf) items.push({ c: W - x(Rf / 2), top: `${fmt(Rf, 0)} min`, sub: "enfriar", fija: true });
+    if (!opts.conEnf) items.push({ c: W - x(Rf / 2), top: `${fmt(Rf, 0)} min`, sub: T("sitio.sil.enfriar"), fija: true });
 
     const niveles = [];
     let techo = 0;
@@ -465,7 +465,7 @@ function silueta(tramos, opts = {}) {
     if (opts.conTip === false) return;
     const tip = tooltipEn(caja);
     pos.forEach(({ t: [m, z, opc], a, b }) => {
-      const texto = `${minTxt(m)} · ${z}${opc ? " (opcional)" : ""}${lpm[z] ? `\n${lpm[z]} lpm` : ""}`;
+      const texto = `${minTxt(m)} · ${z}${opc ? T("sitio.sil.opc_par") : ""}${lpm[z] ? `\n${lpm[z]} ${T("sitio.lpm")}` : ""}`;
       capaTip(svg, tip, { x: x(a), y: 0, width: Math.max(x(b) - x(a), 1), height: alto, "aria-label": texto.replace("\n", " · ") },
         () => tip.mostrar(texto, x((a + b) / 2), y(nivelZona(z)) + 2));
     });
@@ -481,7 +481,7 @@ function siluetaForma(forma, alto = 48, etiqueta) {
     const caja = h("div", { class: "slt", style: "margin-top:6px" });
     cont.replaceChildren(caja);
     const y = (n) => alto - pad - n * (alto - 2 * pad);
-    const svg = sv("svg", { width: W, height: alto, viewBox: `0 0 ${W} ${alto}`, role: "img", "aria-label": etiqueta || "Forma de la sesión" });
+    const svg = sv("svg", { width: W, height: alto, viewBox: `0 0 ${W} ${alto}`, role: "img", "aria-label": etiqueta || T("sitio.sil.forma") });
     const pts = [];
     let x0 = 0;
     for (const [d, n, n2] of forma) {

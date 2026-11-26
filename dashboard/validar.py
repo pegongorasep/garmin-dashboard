@@ -11,7 +11,7 @@ ROOT = Path(__file__).parent.parent
 # Claves de primer nivel que puede tener data.json (lista blanca).
 CLAVES = {"generado", "datos_al", "zonas", "rhr_promedio_7d", "aviso_zonas", "hoy", "ultima_corrida", "semana",
           "semanas_hoy", "semana_hoy_idx", "plan", "progreso", "composicion", "detalles", "ui",
-          "carreras", "mejores_marcas", "tipos", "ayuda",
+          "carreras", "mejores_marcas", "tipos", "ayuda", "idioma",
           "avisos"}   # avisos: solo la web, [{id, texto, fecha, url relativa}]
 # Los de site/iconos.js: los del sistema de diseño (diseno/iconos) más los de siempre por si falta la carpeta.
 ICONOS = {"correr", "medalla", "mancuerna", "rayo", "bici", "nadar", "caminar", "yoga", "punto"} | {
