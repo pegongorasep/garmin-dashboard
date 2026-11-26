@@ -387,6 +387,46 @@ def intensidad_semana(acts: list, ini: date) -> dict:
             "alto": r1(d["alto"])}
 
 
+def build_semana_libre(hoy: date, data: dict, config: dict) -> dict:
+    """«Tu semana» (modo sin plan): actividades por día, minutos y km contra el promedio de las 4 semanas anteriores,
+    zonas, recuperación y racha de semanas activas. Nunca nombres, IDs ni GPS: solo tipo y minutos."""
+    ini = monday(hoy)
+    acts = m.sin_repetidas(data["activities"], config)
+    nombres = {"run": (tt("motor.entreno.run"), "correr"), "carrera": (tt("motor.entreno.carrera"), "medalla"),
+               **{c["id"]: (c["nombre"], c["icono"]) for c in config["categorias"]}}
+
+    def de_semana(i):
+        a, b = i, i + timedelta(days=7)
+        return [x for x in acts if m.classify(x, config) and a <= m.day_of(x) < b]
+
+    def totales(lista):
+        return (r1(sum(x["duration"] for x in lista) / 60),
+                r1(sum((x.get("distance") or 0) for x in lista if m.classify(x, config) == "run") / 1000))
+    esta = de_semana(ini)
+    dias = []
+    for i in range(7):
+        d = ini + timedelta(days=i)
+        items = []
+        for x in esta:
+            if m.day_of(x) == d:
+                c = m.classify(x, config)
+                k = ("carrera" if m.es_carrera(x, config) else "run") if c == "run" else c
+                items.append({"nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(x["duration"] / 60)})
+        dias.append({"fecha": d.isoformat(), "dia_semana": i18n.csv("motor.dias_cortos")[i], "hoy": d == hoy,
+                     "futuro": d > hoy, "actividades": items})
+    prev = [totales(de_semana(ini - timedelta(weeks=k))) for k in range(1, 5)]
+    min_s, km_s = totales(esta)
+    rec = next(iter(reversed(build_days(hoy, data))), {})
+    recuperacion = {k: rec.get(k) for k in ("hrv_7d", "rhr_7d", "sueño_7d") if rec.get(k) is not None}
+    racha, k = 0, 0 if esta else 1
+    while k < 52 and de_semana(ini - timedelta(weeks=k)):
+        racha, k = racha + 1, k + 1
+    return {"dias": dias, "actividades": len(esta), "minutos": min_s, "km": km_s,
+            "promedio_minutos": r1(sum(p[0] for p in prev) / 4), "promedio_km": r1(sum(p[1] for p in prev) / 4),
+            "intensidad": intensidad_semana(data["activities"], ini) if esta else None,
+            "recuperacion": recuperacion or None, "racha_semanas": racha}
+
+
 def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> dict:
     """Una semana calendario (lun–dom) de la vista Hoy: stats de todas las corridas, calendario, sesiones y extras."""
     fin = ini + timedelta(days=6)
@@ -886,6 +926,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "ultima_corrida": last_run(data, config, plan),
         "semana": build_week(hoy, data, config, estado, plan),
         "semanas_hoy": semanas_hoy, "semana_hoy_idx": semana_hoy_idx,
+        **({"semana_libre": build_semana_libre(hoy, data, config)} if config.get("sin_plan") else {}),
         "plan": {"inicio": plan["start"], "semana_actual": n, "semanas_repetidas": repetidas,
                  **eventos_plan(config),
                  "semanas": [convert_week(w, zonas) for w in plan["weeks"]],

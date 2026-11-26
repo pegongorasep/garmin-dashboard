@@ -178,7 +178,7 @@ def test_tarjeta_con_plan_solo_campos_permitidos(web_ctx, monkeypatch):
     assert c["dias"][1] == "hecha" and c["dias"][2] == "libre" and c["dias"][4] == "futuro"
     pag = a.get(f"/grupos/{gid}").text
     assert "10K" in pag and "Semana 5" in pag and "Adherencia 67%" in pag and "2026-11-24" in pag
-    assert "150" not in pag   # la FC no sale
+    assert not re.search(r"\b150\b", pag)   # la FC no sale (\b: un token CSRF al azar puede llevar "150" dentro)
 
 
 def test_reacciones(web_ctx):

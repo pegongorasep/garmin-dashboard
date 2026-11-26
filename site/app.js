@@ -496,8 +496,34 @@ function tarjetaCarreraHoy(c) {
     h("a", { class: "liga", href: "#progreso", onclick: () => { abrirCarrera = true; } }, T("sitio.carr.ver")));
 }
 
+/** Sin plan: «tu semana». Python ya calculó todo (`semana_libre`); aquí solo se pinta. */
+function renderHoySinPlan(d) {
+  const sl = d.semana_libre || {};
+  const dif = (v, prom, unidad) => (prom ? [[T("sitio.sl.vs", { p: fmt(prom, 0), u: unidad }), "neutro"]] : [[T("sitio.sl.sin_prom"), "neutro"]]);
+  const dias = (sl.dias || []).map((x) => h("div", { class: "kv" }, h("span", {}, x.dia_semana + (x.hoy ? ` · ${T("sitio.sl.hoy")}` : "")),
+    h("span", {}, x.actividades.length ? x.actividades.map((a) => `${a.nombre} ${T("sitio.min_n", { n: fmt(a.minutos, 0) })}`).join(" · ") : (x.futuro ? "" : "—"))));
+  const rec = sl.recuperacion;
+  const racha = sl.racha_semanas || 0;
+  $("vista-hoy").replaceChildren(...[
+    bannerHoy(d),
+    DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
+      sl.actividades ? DS.tiles({ etiqueta: T("sitio.sl.titulo") },
+        DS.tile({ k: T("sitio.sl.minutos"), valor: fmt(sl.minutos, 0), unidad: T("sitio.sl.min"), deltas: dif(sl.minutos, sl.promedio_minutos, T("sitio.sl.min")) }),
+        DS.tile({ k: T("sitio.sl.km"), valor: fmt(sl.km, 1), unidad: "km", deltas: dif(sl.km, sl.promedio_km, "km") }),
+        DS.tile({ k: T("sitio.sl.racha"), valor: String(racha), unidad: T(racha === 1 ? "sitio.sl.semana_1" : "sitio.sl.semana_n") }))
+        : DS.estadoVacio({ icono: null, titulo: T("sitio.sl.vacia") }),
+      h("div", {}, ...dias)),
+    sl.intensidad ? zonaBar(sl.intensidad) : null,
+    rec ? DS.tarjeta({ titulo: T("sitio.sl.recup") },
+      rec.hrv_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.hrv")), h("span", {}, `${fmt(rec.hrv_7d, 0)} ms`)) : null,
+      rec.rhr_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.rhr")), h("span", {}, `${fmt(rec.rhr_7d, 0)} ${T("sitio.lpm")}`)) : null,
+      rec["sueño_7d"] != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.sueno")), h("span", {}, T("sitio.sl.horas", { n: fmt(rec["sueño_7d"], 1) }))) : null) : null,
+    d.aviso_zonas ? DS.aviso({ clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
+}
+
 function renderHoy(d) {
   PINTAR.hoy = [];
+  if (ui().sin_plan && d.semana_libre) return renderHoySinPlan(d);
   const sems = semanasHoy(d);
   if (semIdx === null) semIdx = Math.min(Math.max((d.semana_hoy_idx ?? 0) + semInicial, 0), Math.max(sems.length - 1, 0));
   $("vista-hoy").replaceChildren(...[

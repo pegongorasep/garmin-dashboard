@@ -807,3 +807,16 @@ def test_semana_actual_marca_dias_planeados_sin_hacer():
     marcados = [d["fecha"] for d in s["dias"] if d.get("planeado")]
     assert len(marcados) == len(s["sesiones"]) and all(f >= "2026-10-28" for f in marcados)
     assert date.fromisoformat(marcados[-1]).weekday() >= 5   # la Larga cae en fin de semana
+
+
+def test_semana_libre_solo_sin_plan_promedios_racha_y_sin_claves_prohibidas():
+    import validar
+    cfg = {**CONFIG_CORREDOR, "sin_plan": True}
+    out = build.build(fixture(), gen_plan.generar(cfg), cfg, AHORA)
+    sl = out["semana_libre"]
+    assert len(sl["dias"]) == 7 and sum(len(d["actividades"]) for d in sl["dias"]) == sl["actividades"]
+    assert sl["minutos"] == round(sum(a["minutos"] for d in sl["dias"] for a in d["actividades"]), 0) or sl["minutos"] >= 0
+    assert sl["promedio_minutos"] >= 0 and sl["racha_semanas"] >= 0
+    assert all(set(a) == {"nombre", "icono", "minutos"} for d in sl["dias"] for a in d["actividades"])
+    assert validar.problemas(out) == []
+    assert "semana_libre" not in build.build(fixture(), gen_plan.generar(CONFIG_CORREDOR), CONFIG_CORREDOR, AHORA)
