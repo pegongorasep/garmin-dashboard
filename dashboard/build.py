@@ -966,7 +966,7 @@ def huella(contenido) -> str:
     return hashlib.sha1(str(contenido).encode("utf-8")).hexdigest()[:10]
 
 
-def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n, sugerencia=None) -> dict:
+def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n, sugerencia=None, semana_inicio=None) -> dict:
     """{id: huella} de los avisos que hoy están activos (los que el sitio puede cerrar con «Entendido»). Sin aviso, sin clave."""
     out = {}
     if tarjeta.get("aviso"):
@@ -978,7 +978,7 @@ def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, sem
     if semaforo.get("repetir_semana"):
         out["repetir"] = huella(semana_n)
     if sugerencia and sugerencia.get("tipo") != "sigue":   # «sigue así» no es aviso: no se cierra
-        out["sugerencia"] = huella(sugerencia["tipo"])   # el tipo, no el texto: en la web y en el sitio el texto cambia de forma
+        out["sugerencia"] = huella(f"{sugerencia['tipo']}|{semana_inicio}")   # tipo + semana, no el texto: en la web y en el sitio el texto cambia de forma
     return out
 
 
@@ -1117,7 +1117,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": {**build_ui(config, plan), "avisos": huellas_avisos(
             tarjeta, m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
-            fc_max, luz, n, (sem_pasada or {}).get("sugerencia"))},
+            fc_max, luz, n, (sem_pasada or {}).get("sugerencia"), (sem_pasada or {}).get("inicio"))},
         "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
         "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),

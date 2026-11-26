@@ -943,3 +943,11 @@ def test_huella_de_avisos_estable_y_cambia_con_el_contenido():
     assert set(a) == {"hoy", "zonas", "fcmax", "repetir"}
     assert build.huellas_avisos({"aviso": "x"}, None, {"revisar": False}, {}, 3) == {"hoy": a["hoy"]}
     assert build.huellas_avisos({}, None, {"revisar": True, "estimacion": 191}, {}, 3)["fcmax"] != a["fcmax"]
+
+
+def test_huella_de_sugerencia_depende_de_la_semana():
+    sug = {"tipo": "repetir"}
+    a = build.huellas_avisos({}, None, {}, {}, 3, sug, "2026-11-16")
+    assert a == build.huellas_avisos({}, None, {}, {}, 3, sug, "2026-11-16")
+    assert a["sugerencia"] != build.huellas_avisos({}, None, {}, {}, 3, sug, "2026-11-23")["sugerencia"]
+    assert "sugerencia" not in build.huellas_avisos({}, None, {}, {}, 3, {"tipo": "sigue"}, "2026-11-16")
