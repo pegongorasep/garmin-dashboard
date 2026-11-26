@@ -1,65 +1,56 @@
-{% extends "base_legado.html" %}
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso %}
 {% block titulo %}Ajustes · Ahí la Llevas{% endblock %}
 {% block clase %}ancha{% endblock %}
-{% macro err(campo) %}{% if errores.get(campo) %}<small class="error-campo" role="alert">{{ errores[campo] }}</small>{% endif %}{% endmacro %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1>Ajustes</h1>
-{% if ok == "1" %}<p class="ok" role="status">Guardado ✔. Si te equivocas, deshazlo en el <a href="{{ pref }}/historial">historial</a>.</p>{% endif %}
-{% if ok == "sin" %}<p class="aviso" role="status">No cambiaste nada.</p>{% endif %}
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-<form method="post" action="{{ pref }}/ajustes">
+<h1 class="pag-t">Ajustes</h1>
+{% if ok == "1" %}{% call aviso("ok") %}Guardado ✔. Si te equivocas, deshazlo en el <a href="{{ pref }}/historial">historial</a>.{% endcall %}{% endif %}
+{% if ok == "sin" %}{% call aviso("warn") %}No cambiaste nada.{% endcall %}{% endif %}
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+{% set zs = [] %}{% for z in zonas %}{% set _ = zs.append((z, z)) %}{% endfor %}
+{% set ss = [] %}{% for s in sensores %}{% set _ = ss.append((s, 'Banda de pecho' if s == 'banda' else 'Muñeca')) %}{% endfor %}
+{% set ns = [] %}{% for n in niveles %}{% set _ = ns.append((n, n|capitalize)) %}{% endfor %}
+{% set es = [("", "Automático (sube con los bloques)")] %}{% for e in escalera %}{% set _ = es.append((e, e ~ (' (correr continuo)' if e == 'continuo' else ''))) %}{% endfor %}
+{% set ints = [("solo_z2", "Solo zona 2"), ("z2_poca_z3", "Zona 2 con unos picos opcionales de zona 3"), ("calidad", "Zona 2 y una sesión de calidad por semana")] %}
+<form class="pila" method="post" action="{{ pref }}/ajustes">
   <input type="hidden" name="csrf" value="{{ csrf }}">
 
-  <h2>Perfil</h2>
-  <label class="campo"><span>Título de la página</span><input type="text" name="titulo" value="{{ v.titulo }}" maxlength="60"></label>
-  <label class="campo"><span>Zona horaria</span>
-    <select name="zona">{% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == v.zona }}>{{ z }}</option>{% endfor %}</select>{{ err("zona") }}</label>
-  <label class="campo"><span>Edad</span><input type="number" name="edad" value="{{ v.edad }}" min="10" max="99">{{ err("edad") }}</label>
-  <label class="campo"><span>FC máxima (opcional)</span><input type="number" name="fc_max" value="{{ v.fc_max }}" min="120" max="230">
-    <small>Si la dejas vacía se usa 220 − edad y tu reloj la corrige solo.</small>{{ err("fc_max") }}</label>
-  <label class="campo"><span>Sensor de pulso</span>
-    <select name="sensor">{% for s in sensores %}<option value="{{ s }}" {{ 'selected' if s == v.sensor }}>{{ 'Banda de pecho' if s == 'banda' else 'Muñeca' }}</option>{% endfor %}</select>
-    <small>Con pulso de muñeca no se muestran las métricas que dependen de banda (la deriva cardiaca).</small>{{ err("sensor") }}</label>
+  <h2 class="pag-h">Perfil</h2>
+  {{ campo("Título de la página", "titulo", valor=v.titulo, extra={"maxlength": 60}) }}
+  {{ seleccion("Zona horaria", "zona", zs, valor=v.zona, error=errores.get("zona")) }}
+  {{ campo("Edad", "edad", tipo="number", valor=v.edad, extra={"min": 10, "max": 99}, error=errores.get("edad")) }}
+  {{ campo("FC máxima", "fc_max", tipo="number", valor=v.fc_max, opcional="opcional", ayuda="Si la dejas vacía se usa 220 − edad y tu reloj la corrige solo.", extra={"min": 120, "max": 230}, error=errores.get("fc_max")) }}
+  {{ seleccion("Sensor de pulso", "sensor", ss, valor=v.sensor, ayuda="Con pulso de muñeca no se muestran las métricas que dependen de banda (la deriva cardiaca).", error=errores.get("sensor")) }}
 
-  <h2>Corrida</h2>
-  <label class="campo"><span>Nivel</span>
-    <select name="nivel">{% for n in niveles %}<option value="{{ n }}" {{ 'selected' if n == v.nivel }}>{{ n|capitalize }}</option>{% endfor %}</select>{{ err("nivel") }}</label>
-  <label class="campo"><span>Intensidad</span>
-    <select name="intensidad">
-      <option value="solo_z2" {{ 'selected' if v.intensidad == 'solo_z2' }}>Solo zona 2</option>
-      <option value="z2_poca_z3" {{ 'selected' if v.intensidad == 'z2_poca_z3' }}>Zona 2 con unos picos opcionales de zona 3</option>
-      <option value="calidad" {{ 'selected' if v.intensidad == 'calidad' }}>Zona 2 y una sesión de calidad por semana</option>
-    </select>{{ err("intensidad") }}</label>
-  <fieldset class="campo"><legend><strong>Tipos de calidad</strong> (solo con intensidad «calidad»; si no eliges, rotan)</legend>
-    {% for t in tipos_calidad %}<label class="check"><input type="checkbox" name="calidad" value="{{ t }}" {{ 'checked' if t in v.calidad }}><span>{{ t }}</span></label>{% endfor %}
-    {{ err("calidad") }}</fieldset>
-  <label class="check"><input type="checkbox" name="caminatas" {{ 'checked' if v.caminatas }}><span>Sesiones de trote y caminata</span></label>
-  <label class="campo"><span>Escalón de trote/caminata</span>
-    <select name="escalon"><option value="" {{ 'selected' if not v.escalon }}>Automático (sube con los bloques)</option>
-      {% for e in escalera %}<option value="{{ e }}" {{ 'selected' if e == v.escalon }}>{{ e }}{{ ' (correr continuo)' if e == 'continuo' }}</option>{% endfor %}</select>
-    <small>Minutos de trote por 1' de caminata. También lo subes con un botón en <a href="{{ pref }}/plan">Plan vivo</a>.</small>{{ err("escalon") }}</label>
-  <label class="check"><input type="checkbox" name="variada" {{ 'checked' if v.variada }}><span>Corrida variada (la segunda Z2 cambia de forma cada semana)</span></label>
-  <label class="campo"><span>Semanas del plan</span><input type="number" name="semanas" value="{{ v.semanas }}" min="4" max="52" required></label>
-  <label class="campo"><span>Fecha de inicio (un lunes)</span><input type="date" name="inicio" value="{{ v.inicio }}" required>{{ err("inicio") }}</label>
-  <label class="campo"><span>Minutos de una corrida Z2 cómoda</span><input type="number" name="z2" value="{{ v.z2 }}" min="5" max="120" required></label>
-  <label class="campo"><span>Minutos de tu corrida más larga</span><input type="number" name="larga" value="{{ v.larga }}" min="5" max="240" required></label>
-  <label class="campo"><span>Semanas repetidas</span><input type="text" name="repetidas" value="{{ v.repetidas }}" placeholder="3, 5">
-    <small>Números de semana del plan, separados por comas. Más fácil: botón «Repetir esta semana» en Plan vivo.</small>{{ err("repetidas") }}</label>
-  <label class="campo"><span>Fechas de carreras ya hechas o por hacer</span><input type="text" name="carreras" value="{{ v.carreras }}" placeholder="2026-12-13">
-    <small>AAAA-MM-DD separadas por comas. Para una carrera con fecha futura usa «Agregar carrera» en Plan vivo.</small>{{ err("carreras") }}</label>
+  <h2 class="pag-h">Corrida</h2>
+  {{ seleccion("Nivel", "nivel", ns, valor=v.nivel, error=errores.get("nivel")) }}
+  {{ seleccion("Intensidad", "intensidad", ints, valor=v.intensidad, error=errores.get("intensidad")) }}
+  {% call opciones("Tipos de calidad", "(solo con intensidad «calidad»; si no eliges, rotan)", error=errores.get("calidad")) %}
+    {% for t in tipos_calidad %}{{ opcion("calidad", t, valor=t, marcado=t in v.calidad) }}{% endfor %}
+  {% endcall %}
+  {{ opcion("caminatas", "Sesiones de trote y caminata", marcado=v.caminatas) }}
+  {{ seleccion("Escalón de trote/caminata", "escalon", es, valor=v.escalon or "", ayuda="Minutos de trote por 1' de caminata. También lo subes con un botón en «Plan vivo» (menú Plan).", error=errores.get("escalon")) }}
+  {{ opcion("variada", "Corrida variada (la segunda Z2 cambia de forma cada semana)", marcado=v.variada) }}
+  {{ campo("Semanas del plan", "semanas", tipo="number", valor=v.semanas, extra={"min": 4, "max": 52}, requerido=True) }}
+  {{ campo("Fecha de inicio (un lunes)", "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
+  {{ campo("Minutos de una corrida Z2 cómoda", "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
+  {{ campo("Minutos de tu corrida más larga", "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
+  {{ campo("Semanas repetidas", "repetidas", valor=v.repetidas, placeholder="3, 5", ayuda="Números de semana del plan, separados por comas. Más fácil: botón «Repetir esta semana» en Plan vivo.", error=errores.get("repetidas")) }}
+  {{ campo("Fechas de carreras ya hechas o por hacer", "carreras", valor=v.carreras, placeholder="2026-12-13", ayuda="AAAA-MM-DD separadas por comas. Para una carrera con fecha futura usa «Agregar carrera» en Plan vivo.", error=errores.get("carreras")) }}
 
-  <h2>Actividades</h2>
-  <fieldset class="campo"><legend><strong>¿Qué otras actividades haces?</strong> (máximo 4)</legend>
-    {% for c in categorias %}<label class="check"><input type="checkbox" name="cats" value="{{ c.id }}" {{ 'checked' if c.id in v.cats }}><span>{{ c.nombre }}{{ ' (intensa)' if c.intensa }}</span></label>{% endfor %}
-    {{ err("cats") }}</fieldset>
-  <fieldset class="campo"><legend><strong>Días de pierna</strong> (para no poner la larga o la calidad al día siguiente)</legend>
-    {% for clave, nombre in dias %}<label class="check"><input type="checkbox" name="pierna" value="{{ clave }}" {{ 'checked' if clave in v.pierna }}><span>{{ nombre }}</span></label>{% endfor %}</fieldset>
+  <h2 class="pag-h">Actividades</h2>
+  {% call opciones("¿Qué otras actividades haces?", "(máximo 4)", error=errores.get("cats")) %}
+    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (" (intensa)" if c.intensa else ""), valor=c.id, marcado=c.id in v.cats) }}{% endfor %}
+  {% endcall %}
+  {% call opciones("Días de pierna", "(para no poner la larga o la calidad al día siguiente)") %}
+    {% for clave, nombre in dias %}{{ opcion("pierna", nombre, valor=clave, marcado=clave in v.pierna) }}{% endfor %}
+  {% endcall %}
 
-  <h2>Cuerpo</h2>
-  <label class="check"><input type="checkbox" name="inbody" {{ 'checked' if v.inbody }}><span>Tengo mediciones InBody (captúralas en <a href="{{ pref }}/cuerpo">Cuerpo</a>)</span></label>
+  <h2 class="pag-h">Cuerpo</h2>
+  {{ opcion("inbody", 'Tengo mediciones InBody (captúralas en <a href="' ~ pref ~ '/cuerpo">Cuerpo</a>)', marcado=v.inbody, html=True) }}
 
-  <p class="muted">Si cambias nivel, intensidad, caminatas, semanas, inicio o minutos base, tu plan se rehace desde la semana de hoy (te avisamos antes de guardar; las semanas ya pasadas no cambian).</p>
-  <button class="btn" type="submit">Guardar</button>
+  <p class="pag-s">Si cambias nivel, intensidad, caminatas, semanas, inicio o minutos base, tu plan se rehace desde la semana de hoy (te avisamos antes de guardar; las semanas ya pasadas no cambian).</p>
+  <div class="acciones">{{ boton("Guardar", tipo="submit") }}</div>
 </form>
 {% endblock %}

@@ -1,19 +1,21 @@
-{% extends "base_legado.html" %}
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, aviso %}
 {% block titulo %}Medición InBody · Ahí la Llevas{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1>{{ 'Editar' if editando else 'Nueva' }} medición InBody</h1>
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-<p class="muted">Cópialos de tu hoja InBody. Lo único obligatorio es la fecha y el peso; para que salga en el dashboard hacen falta también el % de grasa y el músculo. ¿Tu IA lee la foto de la hoja? Pídele que lo capture con el conector.</p>
-<form method="post" action="{{ pref }}/cuerpo/{{ (orig ~ '/editar') if editando else 'nuevo' }}">
+<h1 class="pag-t">{{ 'Editar' if editando else 'Nueva' }} medición InBody</h1>
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+<p class="pag-s">Cópialos de tu hoja InBody. Lo único obligatorio es la fecha y el peso; para que salga en el dashboard hacen falta también el % de grasa y el músculo. ¿Tu IA lee la foto de la hoja? Pídele que lo capture con el conector.</p>
+<form class="pila" method="post" action="{{ pref }}/cuerpo/{{ (orig ~ '/editar') if editando else 'nuevo' }}">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label class="campo"><span>Fecha</span><input type="date" name="fecha" value="{{ med.get('fecha', '') }}" required></label>
-  <label class="campo"><span>Hora (opcional)</span><input type="text" name="hora" value="{{ med.get('hora', '') }}" placeholder="08:34" maxlength="5"></label>
+  {{ campo("Fecha", "fecha", tipo="date", valor=med.get('fecha', ''), requerido=True) }}
+  {{ campo("Hora", "hora", valor=med.get('hora', ''), opcional="opcional", placeholder="08:34", extra={"maxlength": 5}) }}
   {% for clave, nombre, obligatorio, lo, hi in campos %}
-  <label class="campo"><span>{{ nombre }}{{ ' *' if obligatorio }}</span>
-    <input type="text" inputmode="decimal" name="{{ clave }}" value="{{ med.get(clave, '') }}" {{ 'required' if obligatorio }}></label>
+  {{ campo(nombre ~ (' *' if obligatorio else ''), clave, valor=med.get(clave, ''), requerido=obligatorio, extra={"inputmode": "decimal"}) }}
   {% endfor %}
-  <button class="btn" type="submit">Guardar</button>
-  <a class="btn sec" href="{{ pref }}/cuerpo">Cancelar</a>
+  <div class="acciones">
+    {{ boton("Guardar", tipo="submit") }}
+    {{ boton("Cancelar", "sec", href=pref ~ "/cuerpo") }}
+  </div>
 </form>
 {% endblock %}

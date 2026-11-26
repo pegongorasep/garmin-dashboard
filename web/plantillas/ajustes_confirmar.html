@@ -1,17 +1,17 @@
-{% extends "base_legado.html" %}
+{% extends "base.html" %}
+{% from "componentes.html" import boton, confirmacion %}
 {% block titulo %}Confirmar · Ahí la Llevas{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1>¿Rehacemos tu plan?</h1>
-<div class="aviso" role="alert">
-  <p>Cambiaste {{ cambios|join(", ") }}. Esto <strong>{{ frase }}</strong>.</p>
+<h1 class="pag-t">¿Rehacemos tu plan?</h1>
+{% call confirmacion("Cambiaste " ~ cambios|join(", ") ~ ". Esto " ~ frase ~ ".") %}
   <p>Las sesiones de esas semanas que hayas editado a mano se pierden. Después puedes deshacerlo desde el <a href="{{ pref }}/historial">historial</a>.</p>
-</div>
-<form method="post" action="{{ pref }}/ajustes">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  <input type="hidden" name="confirmo" value="1">
-  {% for k, val in pares %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
-  <button class="btn" type="submit">Sí, rehacer mi plan</button>
-  <a class="btn sec" href="{{ pref }}/ajustes">Cancelar</a>
-</form>
+  <form class="acciones" method="post" action="{{ pref }}/ajustes">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="confirmo" value="1">
+    {% for k, val in pares %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
+    {{ boton("Sí, rehacer mi plan", "peligro", tipo="submit") }}
+    {{ boton("Cancelar", "sec", href=pref ~ "/ajustes") }}
+  </form>
+{% endcall %}
 {% endblock %}

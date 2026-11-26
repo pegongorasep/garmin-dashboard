@@ -1,9 +1,10 @@
-<nav class="nav-web" aria-label="Secciones">
-  <a href="/">← Dashboard</a>
-  <a href="{{ pref }}/ajustes">Ajustes</a>
-  <a href="{{ pref }}/plan">Plan</a>
-  <a href="{{ pref }}/cuerpo">Cuerpo</a>
-  <a href="{{ pref }}/historial">Historial</a>
-  {% if not pref and atleta and atleta.es_admin %}<a href="/diseno">Sistema de diseño</a>{% endif %}
+{% from "componentes.html" import boton, aviso %}
+<nav class="acciones" aria-label="Secciones">
+  {{ boton("← Dashboard", "texto", chico=True, href="/") }}
+  {{ boton("Ajustes", "texto", chico=True, href=pref ~ "/ajustes") }}
+  {{ boton("Plan", "texto", chico=True, href=pref ~ "/plan") }}
+  {{ boton("Cuerpo", "texto", chico=True, href=pref ~ "/cuerpo") }}
+  {{ boton("Historial", "texto", chico=True, href=pref ~ "/historial") }}
+  {% if not pref and atleta and atleta.es_admin %}{{ boton("Sistema de diseño", "texto", chico=True, href="/diseno") }}{% endif %}
 </nav>
-{% if pref %}<p class="aviso">Estás editando a <strong>{{ atleta.apodo or atleta.correo }}</strong> como su coach.</p>{% endif %}
+{% if pref %}{% call aviso("warn") %}Estás editando a <strong>{{ atleta.apodo or atleta.correo }}</strong> como su coach.{% endcall %}{% endif %}

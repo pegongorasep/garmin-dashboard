@@ -1,27 +1,26 @@
-{% extends "base_legado.html" %}
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso, tarjeta %}
 {% block titulo %}Historial · Ahí la Llevas{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1>Historial de cambios</h1>
-{% if ok == "deshecho" %}<p class="ok" role="status">Listo: volvió a como estaba.</p>{% endif %}
-{% if ok == "visto" %}<p class="ok" role="status">Avisos marcados como vistos.</p>{% endif %}
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<h1 class="pag-t">Historial de cambios</h1>
+{% if ok == "deshecho" %}{% call aviso("ok") %}Listo: volvió a como estaba.{% endcall %}{% endif %}
+{% if ok == "visto" %}{% call aviso("ok") %}Avisos marcados como vistos.{% endcall %}{% endif %}
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% if hay_nuevos %}
-<form method="post" action="{{ pref }}/historial/visto"><input type="hidden" name="csrf" value="{{ csrf }}">
-  <button class="btn sec" type="submit">Marcar todo como visto</button></form>
+<form class="acciones" method="post" action="{{ pref }}/historial/visto"><input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ boton("Marcar todo como visto", "sec", tipo="submit") }}</form>
 {% endif %}
-{% if not filas %}<p class="muted">Todavía no hay cambios.</p>{% endif %}
-<ul class="historial">
+{% if not filas %}<p class="pag-s">Todavía no hay cambios.</p>{% endif %}
 {% for f in filas %}
-  <li class="{{ 'nuevo' if not f.c.visto }}{{ ' deshecho' if f.c.deshecho_por }}">
-    <p><strong>{{ f.quien }}</strong> · {{ f.cuando }} · <span class="muted">{{ {'web': 'web', 'ia': 'IA', 'coach': 'coach', 'sistema': 'sistema'}[f.via] }}</span></p>
-    <p>{{ f.c.descripcion }}{% if f.c.deshecho_por %} <em class="muted">(deshecho)</em>{% endif %}</p>
+  {% call tarjeta(clase=("nuevo" if not f.c.visto else "") ~ (" deshecho" if f.c.deshecho_por else "")) %}
+    <p><strong>{{ f.quien }}</strong> · {{ f.cuando }} · <span class="pag-s">{{ {'web': 'web', 'ia': 'IA', 'coach': 'coach', 'sistema': 'sistema'}[f.via] }}</span></p>
+    <p>{{ f.c.descripcion }}{% if f.c.deshecho_por %} <em class="pag-s">(deshecho)</em>{% endif %}</p>
     {% if f.puede %}
-    <form method="post" action="{{ pref }}/historial/{{ f.c.id }}/deshacer"><input type="hidden" name="csrf" value="{{ csrf }}">
-      <button class="btn sec" type="submit">Deshacer</button></form>
+    <form class="acciones" method="post" action="{{ pref }}/historial/{{ f.c.id }}/deshacer"><input type="hidden" name="csrf" value="{{ csrf }}">
+      {{ boton("Deshacer", "sec", chico=True, tipo="submit") }}</form>
     {% endif %}
-  </li>
+  {% endcall %}
 {% endfor %}
-</ul>
 {% endblock %}

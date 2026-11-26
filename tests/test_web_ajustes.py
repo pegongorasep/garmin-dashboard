@@ -125,7 +125,7 @@ def test_cambiar_el_inicio_rehace_todo_y_lo_dice(web_ctx):
 def test_errores_junto_al_campo(web_ctx):
     uid, cl = listo(web_ctx)
     r = guardar(cl, inicio="2026-11-10")
-    assert r.status_code == 400 and "debe ser lunes" in r.text and 'class="error-campo"' in r.text
+    assert r.status_code == 400 and "debe ser lunes" in r.text and 'class="error-t"' in r.text
     r = guardar(cl, zona="Marte/Base")
     assert r.status_code == 400 and "zona" in r.text
     r = guardar(cl, edad="", fc_max="")

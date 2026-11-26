@@ -1,110 +1,106 @@
-{% extends "base_legado.html" %}
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso, tarjeta %}
 {% block titulo %}Plan vivo · Ahí la Llevas{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1>Plan vivo</h1>
-{% if ok == "1" %}<p class="ok" role="status">Listo ✔. Si te equivocas, deshazlo en el <a href="{{ pref }}/historial">historial</a>.</p>{% endif %}
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-<p class="muted">Hoy es {{ hoy }}{% if n %} · semana {{ n }} de tu plan{% endif %}. Los cambios se ven al instante en el dashboard.</p>
+<h1 class="pag-t">Plan vivo</h1>
+{% if ok == "1" %}{% call aviso("ok") %}Listo ✔. Si te equivocas, deshazlo en el <a href="{{ pref }}/historial">historial</a>.{% endcall %}{% endif %}
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+<p class="pag-s">Hoy es {{ hoy }}{% if n %} · semana {{ n }} de tu plan{% endif %}. Los cambios se ven al instante en el dashboard.</p>
 
 {% if terminado %}
-<section class="tarjeta" id="siguiente">
-  <h2>Tu plan terminó</h2>
+<div id="siguiente">{% call tarjeta("Tu plan terminó") %}
   {% if prueba and prueba.valor is not none %}<p>Tu prueba quedó guardada para compararla con la del siguiente bloque.</p>{% endif %}
   <p>El siguiente bloque usa tus mismos ajustes y empieza el lunes {{ inicio_siguiente }}.</p>
-  <form method="post" action="{{ pref }}/plan/siguiente-bloque"><input type="hidden" name="csrf" value="{{ csrf }}">
-    <button class="btn" type="submit">Armar siguiente bloque</button></form>
-</section>
+  <form class="acciones" method="post" action="{{ pref }}/plan/siguiente-bloque"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ boton("Armar siguiente bloque", tipo="submit") }}</form>
+{% endcall %}</div>
 {% endif %}
 
-<section class="tarjeta">
-  <h2>Eventos y carreras</h2>
+{% call tarjeta("Eventos y carreras") %}
   {% set hay = cfg.eventos or cfg.metas %}
-  {% if not hay %}<p class="muted">No hay eventos ni carreras con fecha. Sin ellos tu plan es base aeróbica, como siempre.</p>{% endif %}
-  <ul class="historial">
+  {% if not hay %}<p class="pag-s">No hay eventos ni carreras con fecha. Sin ellos tu plan es base aeróbica, como siempre.</p>{% endif %}
   {% for e in cfg.eventos %}
-    <li><p><strong>{{ {'viaje': 'Viaje', 'enfermedad': 'Enfermedad', 'lesion': 'Lesión'}[e.tipo] }}</strong>
+    <p><strong>{{ {'viaje': 'Viaje', 'enfermedad': 'Enfermedad', 'lesion': 'Lesión'}[e.tipo] }}</strong>
       · {{ e.desde }}{% if e.hasta %} al {{ e.hasta }}{% else %} · sigue{% endif %}
       {% if e.tipo == 'viaje' %}· {{ 'semana ligera (2 Z2 cortas)' if e.correr else 'sin correr: el plan espera' }}{% else %}· el plan espera{% endif %}</p>
-      {% if not e.hasta %}<form class="en-linea" method="post" action="{{ pref }}/plan/evento/{{ e.id }}/cerrar"><input type="hidden" name="csrf" value="{{ csrf }}">
-        <button class="btn" type="submit">Ya estoy bien</button></form>{% endif %}
-      <form class="en-linea" method="post" action="{{ pref }}/plan/evento/{{ e.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
-        <button class="btn sec" type="submit">Quitar</button></form></li>
+    <div class="acciones">
+      {% if not e.hasta %}<form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/cerrar"><input type="hidden" name="csrf" value="{{ csrf }}">
+        {{ boton("Ya estoy bien", chico=True, tipo="submit") }}</form>{% endif %}
+      <form method="post" action="{{ pref }}/plan/evento/{{ e.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
+        {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form>
+    </div>
   {% endfor %}
   {% for x in cfg.metas %}
-    <li><p><strong>Carrera «{{ x.nombre }}»</strong> · {{ x.fecha }}{% if x.distancia_km %} · {{ x.distancia_km }} km{% endif %}</p>
-      <form class="en-linea" method="post" action="{{ pref }}/plan/meta/{{ x.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
-        <button class="btn sec" type="submit">Quitar</button></form></li>
+    <p><strong>Carrera «{{ x.nombre }}»</strong> · {{ x.fecha }}{% if x.distancia_km %} · {{ x.distancia_km }} km{% endif %}</p>
+    <div class="acciones"><form method="post" action="{{ pref }}/plan/meta/{{ x.id }}/quitar"><input type="hidden" name="csrf" value="{{ csrf }}">
+      {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form></div>
   {% endfor %}
-  </ul>
-  <p class="muted">Cuando termina un evento, el plan se reanuda en la semana donde iba (equivale a repetirla).</p>
-</section>
+  <p class="pag-s">Cuando termina un evento, el plan se reanuda en la semana donde iba (equivale a repetirla).</p>
+{% endcall %}
 
-<section class="tarjeta" id="viaje">
-  <h2>Voy de viaje</h2>
-  <form method="post" action="{{ pref }}/plan/viaje">
+<div id="viaje">{% call tarjeta("Voy de viaje") %}
+  <form class="pila" method="post" action="{{ pref }}/plan/viaje">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <label class="campo"><span>Salgo el</span><input type="date" name="desde" required></label>
-    <label class="campo"><span>Regreso el</span><input type="date" name="hasta" required></label>
-    <fieldset class="campo"><legend><strong>¿Podrás correr?</strong></legend>
-      <label class="check"><input type="radio" name="correr" value="si"><span>Sí: esa semana serán 2 Z2 cortas</span></label>
-      <label class="check"><input type="radio" name="correr" value="no" checked><span>No: el plan espera y sigo al volver</span></label></fieldset>
-    <button class="btn" type="submit">Agregar viaje</button>
+    {{ campo("Salgo el", "desde", tipo="date", requerido=True) }}
+    {{ campo("Regreso el", "hasta", tipo="date", requerido=True) }}
+    {% call opciones("¿Podrás correr?") %}
+      {{ opcion("correr", "Sí: esa semana serán 2 Z2 cortas", valor="si", tipo="radio") }}
+      {{ opcion("correr", "No: el plan espera y sigo al volver", valor="no", tipo="radio", marcado=True) }}
+    {% endcall %}
+    <div class="acciones">{{ boton("Agregar viaje", tipo="submit") }}</div>
   </form>
-</section>
+{% endcall %}</div>
 
-<section class="tarjeta" id="enfermo">
-  <h2>Estoy enfermo o lastimado</h2>
-  <form method="post" action="{{ pref }}/plan/enfermedad">
+<div id="enfermo">{% call tarjeta("Estoy enfermo o lastimado") %}
+  <form class="pila" method="post" action="{{ pref }}/plan/enfermedad">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <label class="campo"><span>¿Qué pasó?</span><select name="tipo"><option value="enfermedad">Enfermedad</option><option value="lesion">Lesión</option></select></label>
-    <label class="campo"><span>Desde</span><input type="date" name="desde" value="{{ hoy }}"></label>
-    <p class="muted">Las sesiones de esas semanas quedan en pausa. Si algo duele, para; esto no es consejo médico. Cuando estés bien, toca «Ya estoy bien» arriba y el plan sigue donde iba.</p>
-    <button class="btn" type="submit">Pausar mi plan</button>
+    {{ seleccion("¿Qué pasó?", "tipo", [("enfermedad", "Enfermedad"), ("lesion", "Lesión")]) }}
+    {{ campo("Desde", "desde", tipo="date", valor=hoy) }}
+    <p class="pag-s">Las sesiones de esas semanas quedan en pausa. Si algo duele, para; esto no es consejo médico. Cuando estés bien, toca «Ya estoy bien» arriba y el plan sigue donde iba.</p>
+    <div class="acciones">{{ boton("Pausar mi plan", tipo="submit") }}</div>
   </form>
-</section>
+{% endcall %}</div>
 
-<section class="tarjeta" id="carrera">
-  <h2>Agregar carrera</h2>
-  <form method="post" action="{{ pref }}/plan/carrera">
+<div id="carrera">{% call tarjeta("Agregar carrera") %}
+  <form class="pila" method="post" action="{{ pref }}/plan/carrera">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <label class="campo"><span>Nombre</span><input type="text" name="nombre" maxlength="60" placeholder="10K de enero"></label>
-    <label class="campo"><span>Fecha</span><input type="date" name="fecha" required></label>
-    <label class="campo"><span>Distancia (km, opcional)</span><input type="text" inputmode="decimal" name="distancia_km"></label>
-    <p class="muted">La semana de la carrera serán 2 Z2 cortas al 60 % más la carrera, y la semana anterior baja la carga.</p>
-    <button class="btn" type="submit">Agregar carrera</button>
+    {{ campo("Nombre", "nombre", placeholder="10K de enero", extra={"maxlength": 60}) }}
+    {{ campo("Fecha", "fecha", tipo="date", requerido=True) }}
+    {{ campo("Distancia (km)", "distancia_km", opcional="opcional", extra={"inputmode": "decimal"}) }}
+    <p class="pag-s">La semana de la carrera serán 2 Z2 cortas al 60 % más la carrera, y la semana anterior baja la carga.</p>
+    <div class="acciones">{{ boton("Agregar carrera", tipo="submit") }}</div>
   </form>
-</section>
+{% endcall %}</div>
 
-<section class="tarjeta">
-  <h2>Repetir esta semana</h2>
+{% call tarjeta("Repetir esta semana") %}
   <p>{% if n %}Si no te sentiste listo, repite la semana {{ n }}: el resto del plan se recorre una semana.{% else %}Hoy no hay una semana del plan para repetir.{% endif %}</p>
-  {% if n %}<form method="post" action="{{ pref }}/plan/repetir"><input type="hidden" name="csrf" value="{{ csrf }}">
-    <button class="btn" type="submit">Repetir la semana {{ n }}</button></form>{% endif %}
-</section>
+  {% if n %}<form class="acciones" method="post" action="{{ pref }}/plan/repetir"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ boton("Repetir la semana " ~ n, tipo="submit") }}</form>{% endif %}
+{% endcall %}
 
 {% if esc %}
-<section class="tarjeta">
-  <h2>Escalera de trote y caminata</h2>
+{% call tarjeta("Escalera de trote y caminata") %}
   <p>Escalón actual: <strong>{{ esc_nombre or esc }}</strong>.</p>
-  {% if sugerido %}<p class="ok">Llevas dos semanas completas sin días rojos: ya puedes subir a {{ nombre_escalon[sugerido] }}. Es solo una sugerencia.</p>{% endif %}
+  {% if sugerido %}{% call aviso("ok") %}Llevas dos semanas completas sin días rojos: ya puedes subir a {{ nombre_escalon[sugerido] }}. Es solo una sugerencia.{% endcall %}{% endif %}
   {% if esc_siguiente %}
-  <form method="post" action="{{ pref }}/plan/escalon/subir"><input type="hidden" name="csrf" value="{{ csrf }}">
-    <p class="muted">Subir a {{ nombre_escalon[esc_siguiente] }} rehace tu plan desde la semana de hoy.</p>
-    <button class="btn sec" type="submit">Subir escalón</button></form>
-  {% else %}<p class="muted">Ya estás en el último escalón.</p>{% endif %}
-</section>
+  <form class="pila" method="post" action="{{ pref }}/plan/escalon/subir"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <p class="pag-s">Subir a {{ nombre_escalon[esc_siguiente] }} rehace tu plan desde la semana de hoy.</p>
+    <div class="acciones">{{ boton("Subir escalón", "sec", tipo="submit") }}</div></form>
+  {% else %}<p class="pag-s">Ya estás en el último escalón.</p>{% endif %}
+{% endcall %}
 {% endif %}
 
-<section class="tarjeta">
-  <h2>Sesiones del plan</h2>
-  <p class="muted">Edita los pasos de una sesión (trote, caminata, zona, repeticiones). Solo Z2, Larga y variadas.</p>
+{% call tarjeta("Sesiones del plan") %}
+  <p class="pag-s">Edita los pasos de una sesión (trote, caminata, zona, repeticiones). Solo Z2, Larga y variadas.</p>
+  <div class="filas">
   {% for w in plan.weeks %}
-  <details {{ 'open' if w.n == n }}><summary>Semana {{ w.n }} · {{ w.focus }}</summary>
-    <ul>{% for s in w.sessions %}
-      <li>{{ s.name }} · {{ s.minutes }}'{% if s.tipo in editables %} · <a href="{{ pref }}/plan/sesion/{{ w.n }}/{{ s.id }}">Editar</a>{% endif %}</li>
-    {% endfor %}</ul></details>
+  <details class="fila-ses{{ ' hoy' if w.n == n }}" {{ 'open' if w.n == n }}><summary><span class="fs-n">Semana {{ w.n }} · {{ w.focus }}</span></summary>
+    <div class="fs-cuerpo">{% for s in w.sessions %}
+      <p>{{ s.name }} · {{ s.minutes }}'{% if s.tipo in editables %} · <a href="{{ pref }}/plan/sesion/{{ w.n }}/{{ s.id }}">Editar</a>{% endif %}</p>
+    {% endfor %}</div></details>
   {% endfor %}
-</section>
+  </div>
+{% endcall %}
 {% endblock %}

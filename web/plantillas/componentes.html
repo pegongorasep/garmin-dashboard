@@ -26,14 +26,17 @@
 {%- endmacro %}
 
 {# Lista desplegable con etiqueta. opciones: lista de (valor, texto); valor: el elegido. #}
-{% macro seleccion(etiqueta, nombre, opciones, valor="", ayuda=None) -%}
-<label class="campo">
+{% macro seleccion(etiqueta, nombre, opciones, valor="", ayuda=None, error=None) -%}
+<label class="campo{% if error %} error{% endif %}">
   <span class="campo-t">{{ etiqueta }}</span>
   <select name="{{ nombre }}">
     {%- for v, t in opciones %}
     <option value="{{ v }}"{% if v == valor %} selected{% endif %}>{{ t }}</option>
     {%- endfor %}
   </select>
+  {%- if error %}
+  <span class="error-t" role="alert"><span class="badge bad">✕</span>{{ error }}</span>
+  {%- endif %}
   {%- if ayuda %}
   <span class="ayuda">{{ ayuda }}</span>
   {%- endif %}
@@ -41,18 +44,21 @@
 {%- endmacro %}
 
 {# Casillas con título (fieldset). Las opciones van en el bloque {% call opciones("Título") %}{{ opcion(...) }}{% endcall %}. #}
-{% macro opciones(titulo, pista=None) -%}
+{% macro opciones(titulo, pista=None, error=None) -%}
 <fieldset class="opciones">
   <legend class="campo-t">{{ titulo }}{% if pista %} <small>{{ pista }}</small>{% endif %}</legend>
   {{ caller() if caller else "" }}
+  {%- if error %}
+  <span class="error-t" role="alert"><span class="badge bad">✕</span>{{ error }}</span>
+  {%- endif %}
 </fieldset>
 {%- endmacro %}
 
-{# Una casilla (o radio). texto puede llevar HTML marcado como seguro; nota: línea chica debajo. #}
-{% macro opcion(nombre, texto, valor=None, nota=None, marcado=False, requerido=False, tipo="checkbox") -%}
+{# Una casilla (o radio). html=True deja pasar HTML (solo para texto fijo de la plantilla, nunca datos de personas); nota: línea chica debajo. #}
+{% macro opcion(nombre, texto, valor=None, nota=None, marcado=False, requerido=False, tipo="checkbox", html=False) -%}
 <label class="opcion">
   <input type="{{ tipo }}" name="{{ nombre }}"{% if valor is not none %} value="{{ valor }}"{% endif %}{% if marcado %} checked{% endif %}{% if requerido %} required{% endif %}>
-  <span>{{ texto }}{% if nota %}<small>{{ nota }}</small>{% endif %}</span>
+  <span>{{ texto|safe if html else texto }}{% if nota %}<small>{{ nota }}</small>{% endif %}</span>
 </label>
 {%- endmacro %}
 

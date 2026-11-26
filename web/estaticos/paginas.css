@@ -13,3 +13,11 @@ form.pila { display: grid; gap: var(--space-12); }
 .caja a:not(.boton) { color: var(--accent); }
 .caja .pie { padding-inline: 0; }
 .texto h2 { margin-top: var(--space-16); }
+
+/* Ajustes, historial, cuerpo y plan (D3b-3). */
+.caja form.acciones, .acciones form { display: block; margin: 0; }
+.filas-pasos td .campo { min-width: 5.5em; }
+.filas-pasos td .campo input[type="text"] { min-width: 9em; }
+.card.nuevo { box-shadow: var(--shadow-card), inset 4px 0 0 var(--accent); }
+.card.deshecho { opacity: .65; }
+.caja details > .fs-cuerpo p { margin: 0; }

@@ -1,37 +1,42 @@
-{% extends "base_legado.html" %}
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso %}
 {% block titulo %}Editar sesión · Ahí la Llevas{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
-<h1>{{ s.name }} · semana {{ n }}</h1>
-<p class="muted">Suma hoy: {{ minutos }}'. Cada fila es un paso. Para repetir (por ejemplo 8' trote + 1' caminata × 6), pon las dos filas en el mismo grupo y escribe cuántas veces.</p>
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<h1 class="pag-t">{{ s.name }} · semana {{ n }}</h1>
+<p class="pag-s">Suma hoy: {{ minutos }}'. Cada fila es un paso. Para repetir (por ejemplo 8' trote + 1' caminata × 6), pon las dos filas en el mismo grupo y escribe cuántas veces.</p>
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% if not puede %}
-<p class="aviso">Esta sesión no se edita a mano.</p>
+{% call aviso("warn") %}Esta sesión no se edita a mano.{% endcall %}
 {% else %}
-<form method="post" action="{{ pref }}/plan/sesion/{{ n }}/{{ s.id }}">
+<form class="pila" method="post" action="{{ pref }}/plan/sesion/{{ n }}/{{ s.id }}">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="filas" value="{{ filas|length }}">
-  <div style="overflow-x:auto"><table class="filas-pasos">
+  <div class="tabla-scroll"><table class="tabla filas-pasos">
     <thead><tr><th>#</th><th>Tipo</th><th>Minutos</th><th>Zona</th><th>Grupo</th><th>Nota</th></tr></thead>
     <tbody>
     {% for f in filas %}{% set i = loop.index %}
     <tr>
       <td>{{ i }}<input type="hidden" name="opc_{{ i }}" value="{{ '1' if f.opcional else '' }}"></td>
-      <td><select name="tipo_{{ i }}" aria-label="Tipo del paso {{ i }}"><option value="trote" {{ 'selected' if f.tipo == 'trote' }}>Trote</option><option value="caminata" {{ 'selected' if f.tipo == 'caminata' }}>Caminata</option></select></td>
-      <td><input type="number" name="min_{{ i }}" value="{{ f.min }}" min="1" max="240" aria-label="Minutos del paso {{ i }}"></td>
-      <td><select name="zona_{{ i }}" aria-label="Zona del paso {{ i }}">{% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == f.zona }}>{{ z }}</option>{% endfor %}</select></td>
-      <td><select name="grupo_{{ i }}" aria-label="Grupo del paso {{ i }}"><option value="0">—</option>{% for g in grupos %}<option value="{{ g }}" {{ 'selected' if f.grupo == g }}>{{ g }}</option>{% endfor %}</select></td>
-      <td><input type="text" name="nota_{{ i }}" value="{{ f.nota }}" maxlength="60" aria-label="Nota del paso {{ i }}"></td>
+      <td><div class="campo"><select name="tipo_{{ i }}" aria-label="Tipo del paso {{ i }}"><option value="trote" {{ 'selected' if f.tipo == 'trote' }}>Trote</option><option value="caminata" {{ 'selected' if f.tipo == 'caminata' }}>Caminata</option></select></div></td>
+      <td><div class="campo"><input type="number" name="min_{{ i }}" value="{{ f.min }}" min="1" max="240" aria-label="Minutos del paso {{ i }}"></div></td>
+      <td><div class="campo"><select name="zona_{{ i }}" aria-label="Zona del paso {{ i }}">{% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == f.zona }}>{{ z }}</option>{% endfor %}</select></div></td>
+      <td><div class="campo"><select name="grupo_{{ i }}" aria-label="Grupo del paso {{ i }}"><option value="0">—</option>{% for g in grupos %}<option value="{{ g }}" {{ 'selected' if f.grupo == g }}>{{ g }}</option>{% endfor %}</select></div></td>
+      <td><div class="campo"><input type="text" name="nota_{{ i }}" value="{{ f.nota }}" maxlength="60" aria-label="Nota del paso {{ i }}"></div></td>
     </tr>
     {% endfor %}
     </tbody>
   </table></div>
-  <fieldset class="campo"><legend><strong>Repeticiones de cada grupo</strong></legend>
-    {% for g in grupos %}<label>Grupo {{ g }}: <input type="number" name="veces_{{ g }}" value="{{ veces.get(g, '') }}" min="2" max="30" style="width:5em"> veces</label> {% endfor %}</fieldset>
-  <p class="muted">Las filas vacías se ignoran. Para agregar más pasos, guarda y vuelve a abrir esta página.</p>
-  <button class="btn" type="submit">Guardar sesión</button>
-  <a class="btn sec" href="{{ pref }}/plan">Cancelar</a>
+  {% if grupos %}
+  <fieldset class="opciones"><legend class="campo-t">Repeticiones de cada grupo</legend>
+    {% for g in grupos %}<label class="campo corto"><span class="campo-t">Grupo {{ g }}: veces</span><input type="number" name="veces_{{ g }}" value="{{ veces.get(g, '') }}" min="2" max="30"></label>{% endfor %}</fieldset>
+  {% endif %}
+  <p class="pag-s">Las filas vacías se ignoran. Para agregar más pasos, guarda y vuelve a abrir esta página.</p>
+  <div class="acciones">
+    {{ boton("Guardar sesión", tipo="submit") }}
+    {{ boton("Cancelar", "sec", href=pref ~ "/plan") }}
+  </div>
 </form>
 {% endif %}
 {% endblock %}
