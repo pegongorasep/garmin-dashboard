@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, aviso %}
-{% block titulo %}Invitación · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("invitacion.titulo_pagina") }}{% endblock %}
 {% block contenido %}
-<h1 class="pag-t">Te invitaron a Ahí la Llevas</h1>
+<h1 class="pag-t">{{ t("invitacion.titulo") }}</h1>
 {% if mensaje %}
 {% include "_codigo.html" %}
 {% elif no_valida %}
-{% call aviso("bad", rol="alert") %}Esta invitación ya se usó o venció. Pídele a Pedro una nueva.{% endcall %}
+{% call aviso("bad", rol="alert") %}{{ t("invitacion.no_valida") }}{% endcall %}
 {% else %}
-{% if nota %}<p class="pag-s">Invitación: {{ nota }}</p>{% endif %}
+{% if nota %}<p class="pag-s">{{ t("invitacion.nota", nota=nota) }}</p>{% endif %}
 {% if settings.google_client_id %}
-{{ boton("Continuar con Google", href="/entrar/google?inv=" ~ token) }}
-<p class="pag-s">o con un correo:</p>
+{{ boton(t("comun.continuar_google"), href="/entrar/google?inv=" ~ token) }}
+<p class="pag-s">{{ t("comun.o_correo") }}</p>
 {% endif %}
-<p>Escribe tu correo para crear tu cuenta. Te mandamos un código de 6 dígitos para entrar; no hay contraseñas.</p>
+<p>{{ t("invitacion.explicacion") }}</p>
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 <form class="pila" method="post">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Correo", "correo", tipo="email", requerido=True, extra={"autocomplete": "email", "autofocus": true}) }}
-  {{ boton("Crear mi cuenta", tipo="submit") }}
+  {{ campo(t("comun.correo"), "correo", tipo="email", requerido=True, extra={"autocomplete": "email", "autofocus": true}) }}
+  {{ boton(t("invitacion.crear"), tipo="submit") }}
 </form>
 {% endif %}
 {% endblock %}

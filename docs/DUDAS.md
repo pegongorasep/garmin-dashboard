@@ -355,3 +355,8 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Tras entrar (Google o código) sin cookie del conector y con onboarding completo (consentimiento y plan) se va a `/instalar?siguiente=/`; si falta onboarding, a `/` (que ya manda a `/bienvenida`).
 - `siguiente` solo acepta rutas relativas del sitio (`oauth.ruta_relativa`); si no, `/`. El ícono `compartir` no existe en iconos.js: las instrucciones de iPhone van solo con texto.
 - «Ahora no» se recuerda en localStorage (`instalar_ahora_no`); la app ya instalada (standalone) se salta la página.
+
+## v5 idiomas
+- I1: el selector de idioma vive en `/ajustes` (solo para uno mismo, no en `/a/<id>/ajustes`); `POST /idioma` guarda en la cuenta y en la cookie.
+- I1: `auth.MENSAJE_LIGA` se queda en español (lo usan pruebas); la web usa `entrar.mensaje_liga` en el idioma de la petición.
+- I1: `pie()` en `componentes.html` recibe `t` opcional; sin él cae al español (el catálogo `/diseno` aún lo llama sin `t`).

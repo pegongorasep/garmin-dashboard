@@ -5,6 +5,10 @@ import pytest
 
 import web  # noqa: F401,E402  (pone dashboard/ y plan/ en sys.path)
 
+import i18n  # noqa: E402
+
+i18n.ESTRICTO = True   # en pruebas, una clave que falta lanza error
+
 ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))

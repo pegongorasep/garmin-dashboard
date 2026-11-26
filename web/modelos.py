@@ -28,6 +28,7 @@ class Usuario(Base):
     google_sub: Mapped[str | None] = mapped_column(sa.String(64), unique=True)   # login con Google
     sensor: Mapped[str] = mapped_column(sa.String(10), default="banda")   # banda | muñeca
     historial_desde: Mapped[str | None] = mapped_column(sa.String(10))    # pedido pendiente: la siguiente corrida lo baja
+    idioma: Mapped[str | None] = mapped_column(sa.String(5))              # es | en; None = el del navegador
     migrado: Mapped[bool] = mapped_column(default=False)                  # F8: Pages apagado
     borrado: Mapped[datetime | None] = mapped_column()
 

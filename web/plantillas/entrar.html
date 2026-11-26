@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, campo, aviso %}
-{% block titulo %}Entrar · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("entrar.titulo_pagina") }}{% endblock %}
 {% block contenido %}
-<h1 class="pag-t">Entrar</h1>
+<h1 class="pag-t">{{ t("entrar.titulo") }}</h1>
 {% if mensaje %}
 {% include "_codigo.html" %}
 {% else %}
 {% if settings.google_client_id %}
-{{ boton("Continuar con Google", href="/entrar/google") }}
-<p class="pag-s">o con un correo:</p>
+{{ boton(t("comun.continuar_google"), href="/entrar/google") }}
+<p class="pag-s">{{ t("comun.o_correo") }}</p>
 {% endif %}
-<p>Te mandamos un código de 6 dígitos a tu correo; no hay contraseñas.</p>
+<p>{{ t("entrar.explicacion") }}</p>
 <form class="pila" method="post" action="/entrar">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo("Correo", "correo", tipo="email", requerido=True, extra={"autocomplete": "email", "autofocus": true}) }}
-  {{ boton("Mandar código", tipo="submit") }}
+  {{ campo(t("comun.correo"), "correo", tipo="email", requerido=True, extra={"autocomplete": "email", "autofocus": true}) }}
+  {{ boton(t("entrar.mandar_codigo"), tipo="submit") }}
 </form>
 {% endif %}
 {% endblock %}

@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+import i18n
 from ajustes import ConfigError
 
 from . import ROOT, admin, ajustes_web, auth, calculo, coach, correo, cuenta, google, mcp_servidor, oauth, onboarding, plan_web, tubo
@@ -48,6 +49,25 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     app.mount("/estaticos", StaticFiles(directory=str(WEB / "estaticos")), name="estaticos")
 
     @app.middleware("http")
+    async def idioma_de_la_peticion(request: Request, call_next):
+        """Idioma: cuenta (si hay sesión) > cookie `idioma` > Accept-Language > es."""
+        disp = i18n.idiomas()
+        elegido = None
+        if request.cookies.get(auth.COOKIE_SESION):
+            db = sesiones()
+            try:
+                u = auth.usuario_de_sesion(db, request.cookies.get(auth.COOKIE_SESION))
+                elegido = u.idioma if u and u.idioma in disp else None
+            finally:
+                db.close()
+        if elegido is None and request.cookies.get("idioma") in disp:
+            elegido = request.cookies["idioma"]
+        elegido = elegido or i18n.elegir(request.headers.get("accept-language")) or i18n.DEFECTO
+        request.state.idioma = elegido
+        request.state.t = lambda clave, **vars: i18n.t(clave, elegido, **vars)
+        return await call_next(request)
+
+    @app.middleware("http")
     async def cabeceras(request: Request, call_next):
         resp = await call_next(request)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -75,6 +95,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         nueva = cookie is None
         cookie = cookie or secrets.token_urlsafe(24)
         resp = plantillas.TemplateResponse(request, nombre, {"csrf": auth.campo_csrf(settings.secret_key, cookie),
+                                                             "t": request.state.t, "idioma": request.state.idioma,
                                                              "settings": settings, **ctx}, status_code=status)
         if nueva:
             resp.set_cookie(auth.COOKIE_CSRF, cookie, httponly=True, secure=settings.cookie_segura,
@@ -92,12 +113,11 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         resp.set_cookie(auth.COOKIE_SESION, valor, max_age=auth.DIAS_SESION * 86400, httponly=True,
                         secure=settings.cookie_segura, samesite="lax", path="/")
 
-    def mandar_codigo(db, usuario) -> None:
+    def mandar_codigo(db, usuario, idioma: str = "es") -> None:
         codigo = auth.crear_codigo(db, settings.secret_key, usuario)
         if codigo:
-            enviar(settings, usuario.correo, "Tu código para entrar a Ahí la Llevas",
-                   f"Tu código para entrar a Ahí la Llevas: {codigo} (vale 10 minutos)\n\n"
-                   "Si no lo pediste tú, ignora este correo.")
+            enviar(settings, usuario.correo, i18n.t("correo.codigo_asunto", idioma),
+                   i18n.t("correo.codigo_texto", idioma, codigo=codigo))
 
     # --- salud ---
 
@@ -118,8 +138,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         form = await formulario(request)
         u = auth.buscar_por_correo(db, str(form.get("correo", "")))
         if u:
-            mandar_codigo(db, u)
-        return render(request, "entrar.html", mensaje=auth.MENSAJE_LIGA, correo=auth.normalizar_correo(str(form.get("correo", ""))))   # siempre lo mismo
+            mandar_codigo(db, u, u.idioma or request.state.idioma)
+        return render(request, "entrar.html", mensaje=request.state.t("entrar.mensaje_liga"), correo=auth.normalizar_correo(str(form.get("correo", ""))))   # siempre lo mismo
 
     @app.post("/entrar/codigo")
     async def entrar_codigo(request: Request, db=Depends(get_db)):
@@ -127,8 +147,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         correo_in = str(form.get("correo", ""))
         u = auth.gastar_codigo(db, settings.secret_key, correo_in, str(form.get("codigo", "")))
         if u is None:
-            return render(request, "entrar.html", status=400, mensaje=auth.MENSAJE_LIGA,
-                          correo=auth.normalizar_correo(correo_in), error="Código incorrecto o vencido. Pide uno nuevo si hace falta.")
+            return render(request, "entrar.html", status=400, mensaje=request.state.t("entrar.mensaje_liga"),
+                          correo=auth.normalizar_correo(correo_in), error=request.state.t("entrar.codigo_mal"))
         resp = RedirectResponse(oauth.destino_login(request.cookies.get(oauth.COOKIE_VOLVER, ""), onboarding.completo(db, u)), 303)
         poner_sesion(resp, auth.crear_sesion(db, u))
         resp.delete_cookie(oauth.COOKIE_VOLVER, path="/")
@@ -163,11 +183,25 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if auth.invitacion_vigente(db, token) is None:
             return render(request, "invitacion.html", status=400, no_valida=True)
         if not auth.correo_valido(correo_in):
-            return render(request, "invitacion.html", status=400, nota=None, token=token, error="Escribe un correo válido.")
+            return render(request, "invitacion.html", status=400, nota=None, token=token, error=request.state.t("invitacion.correo_invalido"))
         u = auth.aceptar_invitacion(db, token, correo_in) or auth.buscar_por_correo(db, correo_in)
         if u:
-            mandar_codigo(db, u)
-        return render(request, "invitacion.html", mensaje=auth.MENSAJE_LIGA, correo=auth.normalizar_correo(correo_in))   # igual exista o no la cuenta
+            mandar_codigo(db, u, u.idioma or request.state.idioma)
+        return render(request, "invitacion.html", mensaje=request.state.t("entrar.mensaje_liga"), correo=auth.normalizar_correo(correo_in))   # igual exista o no la cuenta
+
+    @app.post("/idioma")
+    async def cambiar_idioma(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        form = await formulario(request)
+        nuevo = str(form.get("idioma", ""))
+        if nuevo not in i18n.idiomas():
+            raise HTTPException(400, "Idioma no válido")
+        if usuario:
+            usuario.idioma = nuevo
+            db.commit()
+        destino = str(form.get("siguiente", "/"))
+        resp = RedirectResponse(destino if destino.startswith("/") and not destino.startswith("//") else "/", 303)
+        resp.set_cookie("idioma", nuevo, max_age=365 * 86400, httponly=True, secure=settings.cookie_segura, samesite="lax", path="/")
+        return resp
 
     @app.get("/salir")
     def salir_form(request: Request):

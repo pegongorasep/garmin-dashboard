@@ -99,9 +99,9 @@
 {%- endmacro %}
 
 {# Pie de página: aviso médico, fuente de datos y privacidad. #}
-{% macro pie() -%}
+{% macro pie(t=none) -%}
 <footer class="pie">
-  <p>Esto no es consejo médico: si algo duele, para.</p>
-  <p>Datos de Garmin · <a href="/privacidad">Aviso de privacidad</a></p>
+  <p>{{ t("pie.consejo") if t else "Esto no es consejo médico: si algo duele, para." }}</p>
+  <p>{{ t("pie.datos") if t else "Datos de Garmin" }} · <a href="/privacidad">{{ t("pie.privacidad") if t else "Aviso de privacidad" }}</a></p>
 </footer>
 {%- endmacro %}

@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 {% from "componentes.html" import boton, tarjeta %}
-{% block titulo %}Instalar app · Ahí la Llevas{% endblock %}
+{% block titulo %}{{ t("instalar.titulo_pagina") }}{% endblock %}
 {% block contenido %}
-<h1 class="pag-t">Instala la app</h1>
-<p>Ábrela desde tu pantalla de inicio, como cualquier otra app.</p>
-{% call tarjeta("En Android") %}
-<p>Toca el botón para instalarla.</p>
-<div class="acciones"><span id="inst-android" hidden>{{ boton("Instalar app", "", tipo="button", nombre="instalar") }}</span></div>
-<p id="inst-nota-android" class="nota">Si no ves el botón, abre el menú del navegador y elige «Instalar app».</p>
+<h1 class="pag-t">{{ t("instalar.titulo") }}</h1>
+<p>{{ t("instalar.intro") }}</p>
+{% call tarjeta(t("instalar.android")) %}
+<p>{{ t("instalar.android_toca") }}</p>
+<div class="acciones"><span id="inst-android" hidden>{{ boton(t("instalar.boton"), "", tipo="button", nombre="instalar") }}</span></div>
+<p id="inst-nota-android" class="nota">{{ t("instalar.android_nota") }}</p>
 {% endcall %}
-{% call tarjeta("En iPhone") %}
-<p>Toca Compartir y luego «Agregar a pantalla de inicio».</p>
+{% call tarjeta(t("instalar.iphone")) %}
+<p>{{ t("instalar.iphone_toca") }}</p>
 {% endcall %}
-<div class="acciones">{{ boton("Ahora no", "sec", href=siguiente) }}</div>
+<div class="acciones">{{ boton(t("instalar.ahora_no"), "sec", href=siguiente) }}</div>
 {% endblock %}
 {% block scripts %}<script src="/estaticos/instalar.js" data-siguiente="{{ siguiente }}"></script>{% endblock %}

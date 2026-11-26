@@ -77,7 +77,7 @@ def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
         return cache["datos"]
 
     def rechazo(request, msg, status=400):
-        return render(request, "mensaje.html", status=status, titulo="No pudimos entrar con Google", texto=msg)
+        return render(request, "mensaje.html", status=status, titulo=request.state.t("google.no_entrar"), texto=msg)
 
     @app.get("/entrar/google")
     def empezar(request: Request, inv: str = "", ligar: str = "", usuario=Depends(actual)):

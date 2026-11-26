@@ -7,6 +7,8 @@ from datetime import timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+import i18n
+
 from .modelos import CodigoLogin, Invitacion, LigaLogin, Sesion, Usuario, ahora
 
 COOKIE_SESION = "sesion"
@@ -17,7 +19,7 @@ DIAS_SESION = 60
 LIGAS_POR_HORA = 5
 MIN_CODIGO = 10
 INTENTOS_CODIGO = 5
-MENSAJE_LIGA = "Si tu correo está registrado, te llegó un código de 6 dígitos."
+MENSAJE_LIGA = i18n.t("entrar.mensaje_liga")   # en español; la web lo pide en el idioma de la persona
 
 
 def hash_token(token: str) -> str:
