@@ -54,13 +54,20 @@ jobs:
 
       - name: Desplegar en Cloud Run
         run: |
+          # Entrar con Google: solo si existe la variable del repo GOOGLE_CLIENT_ID (el secreto vive en Secret Manager)
+          SECRETOS="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,RESEND_API_KEY=RESEND_API_KEY:latest"
+          VARS="BASE_URL=https://ahilallevas.com,ADMIN_CORREO=${{ vars.ADMIN_CORREO }}"
+          if [ -n "${{ vars.GOOGLE_CLIENT_ID }}" ]; then
+            SECRETOS="${SECRETOS},GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest"
+            VARS="${VARS},GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}"
+          fi
           gcloud run deploy "${SERVICIO}" \
             --project "${{ vars.GCP_PROYECTO }}" --region "${REGION}" --image "${IMAGEN}" \
             --min-instances 0 --max-instances 1 --memory 512Mi \
             --service-account "servidor-web@${{ vars.GCP_PROYECTO }}.iam.gserviceaccount.com" \
             --allow-unauthenticated \
-            --set-secrets "SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,RESEND_API_KEY=RESEND_API_KEY:latest" \
-            --set-env-vars "BASE_URL=https://ahilallevas.com,ADMIN_CORREO=${{ vars.ADMIN_CORREO }}"
+            --set-secrets "${SECRETOS}" \
+            --set-env-vars "${VARS}"
 
       # Comandos de admin (invitar, crear-admin): un Cloud Run Job con la misma imagen y los mismos secretos, para que
       # nadie copie la cadena de la base a su compu. Uso: gcloud run jobs execute ahi-cli --args="invitar,--nota,Adrián"
