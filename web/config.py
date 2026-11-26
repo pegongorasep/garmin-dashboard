@@ -53,7 +53,8 @@ PLANTILLA_V5_URL = f"https://github.com/pegongorasep/{PLANTILLA_V5_REPO}"
 
 
 def desde_entorno() -> Settings:
-    e = os.environ
+    # Los secretos pegados en Secret Manager suelen traer un salto de línea al final
+    e = {k: v.strip() for k, v in os.environ.items()}
     return Settings(database_url=e.get("DATABASE_URL", ""), secret_key=e.get("SECRET_KEY", ""),
                     base_url=e.get("BASE_URL", "http://localhost:8000"), resend_api_key=e.get("RESEND_API_KEY", ""),
                     correo_de=e.get("CORREO_DE", "Ahí la Llevas <entrar@ahilallevas.com>"),
