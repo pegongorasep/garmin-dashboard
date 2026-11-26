@@ -373,7 +373,7 @@ function filaCorrida(estado, titulo, c, extra = {}) {
   const datos = [c.minutos != null ? `${fmt(c.minutos, 0)}'` : null, c.km != null ? `${fmt(c.km)} km` : null,
     c.pct_trote != null ? `${fmt(c.pct_trote, 0)} % trote` : null,
     c.ritmo_trote_s ? `${mmss(c.ritmo_trote_s)} /km${c.caminadora ? " (caminadora)" : ""}` : null, textoEsfuerzo(c) || null].filter(Boolean);
-  return DS.filaSesion({ nombre: titulo, estado, abierta: true, ...extra, cuerpo: [
+  return DS.filaSesion({ nombre: titulo, estado, ...extra, cuerpo: [
     c.carrera ? DS.chip("CARRERA", "neutro") : null,
     datos.length ? h("p", {}, datos.join(" · ")) : null,
     c.plan_vs_real ? lineasPlanVsReal(c.plan_vs_real) : null,
@@ -393,7 +393,7 @@ function filaNoHecha(e, s) {
   return DS.filaSesion({ nombre: e.name, sub: s ? `${s.minutes} min` : null, estado: { clase: "nd", simbolo: "✗", texto: "No hecha", etiqueta: "no hecha" } });
 }
 
-function filaHoy(e, s, t) {
+function filaHoy(e, s, t, abierta) {
   const suave = t.version === "suave";
   const ses = s && suave ? s.easy : s;
   const cuerpo = [];
@@ -402,24 +402,29 @@ function filaHoy(e, s, t) {
   else if (ses) cuerpo.push(...[bloqueSilueta(ses), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
   if (t.aviso) cuerpo.push(DS.aviso({ clase: "warn", simbolo: "!", texto: t.aviso }));
   return DS.filaSesion({ nombre: t.version === "descanso" ? e.name : `${e.name}${suave ? " (versión suave)" : ""}`, minutos: t.version === "descanso" || !ses ? null : ses.minutes,
-    hoy: true, abierta: true, cuerpo });
+    hoy: true, abierta, estado: { clase: "nd", simbolo: "—", texto: "Pendiente", etiqueta: "pendiente" }, cuerpo });
 }
 
-function filaPendiente(e, s) {
+function filaPendiente(e, s, abierta) {
   const larga = e.tipo === "larga";
-  return DS.filaSesion({ nombre: e.name, sub: `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}` || null,
-    silueta: silFila(s), titulo: s && s.titulo, cuerpo: s ? cuerpoPlan(s) : [] });
+  return DS.filaSesion({ nombre: e.name, sub: `${s ? `${s.minutes} min` : ""}${larga ? `${s ? " · " : ""}sáb o dom` : ""}` || null, abierta,
+    estado: { clase: "nd", simbolo: "—", texto: "Pendiente", etiqueta: "pendiente" },
+    cuerpo: s ? [bloqueSilueta(s), ...cuerpoPlan(s)].filter(Boolean) : [] });
 }
 
 function tarjetaTusCorridas(d, s, ancha) {
   const plan = d.plan || {}, t = d.hoy.tarjeta;
   const w = s.n != null ? (plan.semanas || []).find((x) => x.n === s.n) : null;
+  const esHoy = (e) => s.estado === "actual" && t.tipo === "sesion" && t.sesion_id === e.id && e.estado !== "hecha" && e.estado !== "incompleta" && e.estado !== "no_hecha";
+  const pend = (e) => e.estado !== "hecha" && e.estado !== "incompleta" && e.estado !== "no_hecha";
+  // Solo se abre la que sigue: la de hoy si está pendiente; si no, la primera pendiente. Si no hay, todas cerradas.
+  const sig = (s.sesiones || []).find(esHoy) || (s.sesiones || []).find(pend);
   const filas = (s.sesiones || []).map((e) => {
     const ses = w ? (w.sessions || []).find((x) => x.id === e.id) : null;
     if (e.estado === "hecha" || e.estado === "incompleta") return filaHecha(e);
     if (e.estado === "no_hecha") return filaNoHecha(e, ses);
-    if (s.estado === "actual" && t.tipo === "sesion" && t.sesion_id === e.id) return filaHoy(e, t.sesion || ses, t);
-    return filaPendiente(e, ses);
+    if (s.estado === "actual" && t.tipo === "sesion" && t.sesion_id === e.id) return filaHoy(e, t.sesion || ses, t, e === sig);
+    return filaPendiente(e, ses, e === sig);
   });
   filas.push(...(s.extras || []).map(filaExtra));
   return DS.tarjeta({ titulo: "Tus corridas", clase: `filas${ancha ? " ancha" : ""}` },
