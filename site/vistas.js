@@ -696,7 +696,7 @@ function pintarEncabezado() {
   $("encabezado").replaceChildren(enc);
   if (!items.length) ponerMenu(false, false);
   actualizarEncabezado();
-  // Aviso de repo atrasado (lo decide Python: ui.repo_estado = {texto, ligas}); no existe en GitHub Pages.
+  // Aviso de repo atrasado (lo decide Python: ui.repo_estado = {texto, ligas}).
   const re = $("repo-estado"), est = u.repo_estado;
   re.hidden = !est;
   re.replaceChildren(...(est ? [DS.aviso({ clase: "warn", simbolo: "!", texto: [est.texto, " ", ...(est.ligas || []).map((l) => h("a", { href: l.url, target: "_blank", rel: "noopener" }, `${l.texto} `))] })] : []));
@@ -765,7 +765,7 @@ async function iniciar() {
     const resp = await fetch("data.json", { cache: "no-cache" });
     if (!resp.ok) throw new Error(`data.json: ${resp.status}`);
     datos = await resp.json();
-    // Idioma: el de data.json (la web lo manda; en Pages, el de config.yaml `idioma`); sin él, el del navegador.
+    // Idioma: el de data.json (lo manda la web); sin él, el del navegador.
     const idioma = idiomaDe(datos.idioma || navigator.language);
     if (idioma !== IDIOMA) {
       await cargarIdioma(idioma);

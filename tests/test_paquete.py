@@ -29,7 +29,7 @@ def escribir_paquete(pq: dict, destino: Path) -> Path:
 
 
 def sin_menu(d: dict) -> dict:
-    """ui.menu es nuevo en v5 (lista vacía en Pages)."""
+    """ui.menu es nuevo en v5 (lista vacía fuera de la web)."""
     d = json.loads(json.dumps(d))
     d["ui"].pop("menu", None)
     return d

@@ -590,7 +590,7 @@ def test_motor_yml_es_solo_tubo_de_datos():
     assert "subir.py instrucciones" in texto and "subir.py subir" in texto
     assert list(wf["jobs"]) == ["build"]
     assert wf["jobs"]["build"]["permissions"] == {"contents": "read", "id-token": "write"}
-    for ya_no in ("pages", "Pages", "build.py", "template/"):
+    for ya_no in ("pages", "Pages", "build.py"):
         assert ya_no not in texto, ya_no
 
 

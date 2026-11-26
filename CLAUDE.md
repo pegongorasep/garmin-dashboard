@@ -2,7 +2,8 @@
 
 Este repo es la **fuente de verdad del código** (`dashboard/`, `plan/gen_plan.py`, `garmin_connect.py`, `site/`,
 workflows) y además guarda los archivos personales de Pedro (`config.yaml`, `plan/plan.json`, `plan/inbody.json`).
-Otras personas usan `template/` (su propio repo chiquito) y reciben este código con la etiqueta `stable`.
+Las demás personas usan la web (Ahí la Llevas); su repo (creado desde `plantilla_v5/`) es solo el tubo de datos y corre
+`motor.yml` con la etiqueta `stable`. Ya no existe GitHub Pages (retirado 2026-11-26).
 
 ## Flujo de trabajo
 
@@ -18,7 +19,8 @@ Otras personas usan `template/` (su propio repo chiquito) y reciben este código
 - Plan: `.venv/bin/python plan/gen_plan.py [--config …] [--out …]`. Validar privacidad: `.venv/bin/python dashboard/validar.py`.
 - Reloj (solo Pedro): `.venv/bin/python reloj.py semana` simula; `--si` manda la semana del plan al reloj. Login una vez en la Terminal (`reloj.py login`); en Claude, `/reloj`.
 - En local: `./run_local.sh` (baja datos, construye y sirve en http://localhost:8000).
-- Deploy: push a `main` y `gh workflow run deploy.yml`; seguirlo con `gh run watch`.
+- Deploy de la web: push a `main` y `gh workflow run web.yml`; seguirlo con `gh run watch`. `deploy.yml` es el tubo de datos
+  de Pedro (corre `motor.yml`: baja Garmin y sube a la web); no publica ningún sitio.
 - Antes de un push: `git pull --rebase`.
 - Dependencias nuevas: instalarlas en `.venv` y fijarlas en `requirements.txt`.
 
@@ -32,8 +34,9 @@ Otras personas usan `template/` (su propio repo chiquito) y reciben este código
 
 ## La etiqueta `stable`
 
-Los repos de amigos publican con el código de `stable`; Pedro publica con `main` (su commit). Se mueve **solo después
-de ver bien la página de Pedro publicada** con ese commit:
+`stable` = el código del motor que usan los repos-tubo de las personas (`motor.yml`, `scripts/subir.py`,
+`garmin_connect.py`, `dashboard/paquete.py`). Pedro corre con `main` (su commit). Se mueve **solo después de un despliegue
+exitoso de la web**, y solo si cambió alguno de esos archivos:
 
 ```sh
 git tag -f stable <sha> && git push -f origin stable
@@ -43,16 +46,11 @@ git tag -f stable <sha> && git push -f origin stable
 
 El motor debe seguir funcionando con configs viejas: **toda clave nueva de `config.yaml` o de `data.json` lleva un
 valor por defecto** (en `dashboard/defaults.yaml` o en `ajustes.cargar_config`) y el sitio tolera claves ausentes.
-Los amigos reciben cada cambio sin tocar nada.
+Los repos-tubo reciben cada cambio de `stable` sin tocar nada.
 
-## Template
+## Plantilla de repos nuevos
 
-`template/` es lo que recibe cada amigo (`CLAUDE.md`, skills `/setup` `/ajustar` `/revision`, `config.example.yaml`,
-workflows). Su `CLAUDE.md` y `.claude/skills/` los copia `motor.yml` desde `stable` en cada publicación: cambiar
-instrucciones aquí las actualiza en todos los repos.
-
-Los amigos nuevos crean su repo desde `pegongorasep/garmin-dashboard-template` (Actions apagado ahí). Si cambió
-`template/`, después de mover `stable` corre `scripts/sync_template.sh` para dejar la plantilla igual.
+Vive en `plantilla_v5/` (solo el tubo de datos; ver más abajo). `template/` y Pages ya no existen.
 
 ## Web "Ahí la Llevas" (v5, carpeta `web/`)
 
@@ -60,7 +58,7 @@ FastAPI + SQLAlchemy/Alembic; reutiliza `dashboard/` y `plan/`. Cada persona tie
 de GitHub es el tubo de datos (`motor.yml` → `scripts/subir.py` → `/api/tubo/*` con token OIDC) y la web calcula su
 `data.json`. Planes: `docs/REQUISITOS_V5.md`, `docs/PLAN_V5.md`; decisiones: `docs/DUDAS.md` (sección v5).
 
-- Dependencias de la web: `web/requirements.txt` (no van en `requirements.txt`, que instalan los repos de amigos).
+- Dependencias de la web: `web/requirements.txt` (no van en `requirements.txt`, que instalan los repos-tubo).
 - En local: `.venv/bin/alembic -c web/alembic.ini upgrade head`, luego `.venv/bin/python -m uvicorn web.app:app --port 8000`
   (SQLite en `web/dev.db`; sin `RESEND_API_KEY` las ligas de entrada salen en la consola).
 - Admin: `python -m web.cli crear-admin <correo>`, `invitar [--nota X]`, `importar <correo> <carpeta> [--repo-id N]`.

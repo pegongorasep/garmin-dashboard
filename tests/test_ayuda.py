@@ -17,8 +17,8 @@ ZONAS = [("Z1", 125, 138), ("Z2", 138, 150), ("Z3", 150, 163), ("Z4", 163, 176),
 
 
 def config_de(tmp_path, **corrida):
-    """Config del template/config.example.yaml con cambios en `corrida`, cargada con el motor."""
-    c = yaml.safe_load((ROOT / "template" / "config.example.yaml").read_text())
+    """Config de tests/fixtures/config_ejemplo.yaml con cambios en `corrida`, cargada con el motor."""
+    c = yaml.safe_load((ROOT / "tests" / "fixtures" / "config_ejemplo.yaml").read_text())
     c["corrida"].update({"inicio": "2026-11-09", **corrida})
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(c, allow_unicode=True))
     return cargar_config(tmp_path)

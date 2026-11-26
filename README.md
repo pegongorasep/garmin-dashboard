@@ -2,19 +2,15 @@
 
 Dashboard personal que une mi CrossFit con 3 corridas por semana para construir base aeróbica, con un plan de 12 semanas. Lee los datos de la API personal de Garmin Connect (solo lectura) y publica un sitio estático con el semáforo de recuperación, la semana, el plan y las tendencias.
 
-## Motor y plantilla (para otras personas)
+## Motor
 
-Este repo es el **motor**: el código del dashboard, el generador de plan por nivel (novato, intermedio, corredor) y el workflow reutilizable `.github/workflows/motor.yml`. Mi configuración vive en `config.yaml` y `plan/`.
-
-Cada persona tiene su propio repo chiquito (creado desde [`template/`](template/)) con su `config.yaml`, su plan y su propio GitHub Pages. Su workflow llama a `motor.yml` con la etiqueta `stable`, así que recibe las mejoras sin tocar nada.
-
-**Para invitar a alguien:** pásale el repo de la plantilla (o el contenido de `template/`) y su [`README`](template/README.md): crea su repo con "Use this template", lo abre con Claude Code y escribe `/setup`. Yo muevo `stable` cuando probé el cambio en mi página (ver [`CLAUDE.md`](CLAUDE.md)).
+Este repo es el **motor**: el código del dashboard, el generador de plan por nivel (novato, intermedio, corredor), la web y el workflow reutilizable `.github/workflows/motor.yml` (el tubo de datos: baja Garmin y sube a la web). Mi configuración vive en `config.yaml` y `plan/`. GitHub Pages ya no se usa (retirado 2026-11-26).
 
 ## Ahí la Llevas (v5)
 
 Web con cuentas por invitación (`web/`, FastAPI): cada persona conecta su repo de GitHub (creado desde [`plantilla_v5/`](plantilla_v5/)), que sube sus datos a la web; la web calcula su dashboard, su plan y su coach. Ver [`CLAUDE.md`](CLAUDE.md) y `docs/PLAN_V5.md`.
 
-Sitio: https://pegongorasep.github.io/garmin-dashboard/
+Sitio: https://ahilallevas.com
 
 ## Correrlo en local
 

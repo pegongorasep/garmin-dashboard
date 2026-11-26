@@ -8,7 +8,7 @@ on:
     - cron: "0 1 * * *"
 
 concurrency:
-  group: pages
+  group: tubo
   cancel-in-progress: false
 
 jobs:
@@ -17,6 +17,5 @@ jobs:
     secrets:
       PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
     permissions:
-      contents: write
-      pages: write
+      contents: read
       id-token: write
