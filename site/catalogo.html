@@ -217,7 +217,7 @@ def("Datos", "Anillo del plan", "DS.anilloPlan()", "Avance de la semana contra e
   DS.tarjeta({ titulo: "Esta semana" }, DS.anilloPlan({ pct: 62, titulo: "56 / 90 min · 62 %", texto: "Plan: 1 de 3 sesiones" })));
 def("Datos", "Curva de FC", "DS.curvaFc()", "Frecuencia cardiaca de una actividad: línea simple con rejilla y minutos. Recibe { seg, fc:[lpm] } con ≤120 puntos ya bajados en Python.",
   DS.tarjeta({}, DS.curvaFc({ seg: 1800, fc: [112, 128, 136, 141, 144, 146, 143, 147, 150, 148, 145, 139, 131, 122] })));
-def("Datos", "Calendario", "DS.calendario()", "Los 7 días con la corrida (círculo con los minutos), otras actividades y el día de hoy. Con alTocar cada día es un botón (aria-pressed) y abajo va la tarjeta del día.",
+def("Datos", "Calendario", "DS.calendario()", "Los 7 días con la corrida (círculo con los minutos), otras actividades y el día de hoy. Con alTocar cada día es un botón (aria-pressed) y abajo va la tarjeta del día. Regla de altura: elegir no cambia la altura (la tarjeta del día tiene alto fijo: cabecera + 2 ranuras); solo expandir/colapsar.",
   DS.tarjeta({}, DS.calendario(
     DS.diaCal({ nombre: "lun", numero: 23, titulo: "lunes 23 nov: CrossFit 60 min", hijos: [h("span", { class: "cf" }, DS.ico("rayo"), h("span", {}, "7.5"))] }),
     DS.diaCal({ nombre: "mar", numero: 24, numeroEnMarca: true, titulo: "martes 24 nov: corrida de 24 min", hijos: [h("span", { class: "circ" }, "24"), h("span", { class: "sn" }, DS.ico("correr"), h("span", {}, "Z2 #1"))] }),

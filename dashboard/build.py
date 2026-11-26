@@ -367,6 +367,8 @@ def marcar_planeados(dias: list, sesiones: list, hoy: date, pasada: bool) -> Non
     if pasada or not any(d["fecha"] <= hoy.isoformat() for d in dias):
         return
     pendientes = [s for s in sesiones if s["estado"] == "pendiente"]
+    for d in dias:
+        d["plan_ses"] = ""   # semana en curso: "" = el plan no pone sesión ese día (descanso)
     libres = [d for d in dias if d["fecha"] >= hoy.isoformat() and d["corrida"] is None]
     for s in sorted(pendientes, key=lambda s: s.get("tipo") not in ("larga", "prueba")):
         if not libres:
@@ -378,6 +380,7 @@ def marcar_planeados(dias: list, sesiones: list, hoy: date, pasada: bool) -> Non
         else:
             d = next((d for d in libres if date.fromisoformat(d["fecha"]).weekday() < 5), libres[0])
         d["planeado"] = True
+        d["plan_ses"] = s["name"]
         libres.remove(d)
 
 

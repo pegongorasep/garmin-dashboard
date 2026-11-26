@@ -361,12 +361,33 @@ function filaActividad(a) {
   return DS.desplegable({ titulo: h("span", { class: "act-fila" }, ...cabeza), clase: "act-det" }, detalleActividad(a.detalle, a));
 }
 
-/** Tarjeta del día tocado: una fila por actividad; sin nada, «día de descanso» (o «corrida planeada» / «aún no»). */
+/** Texto del día sin actividad: [título, línea]. Los textos vienen de Python (`plan_ses`: nombre de la sesión, "" = descanso, ausente = sin plan). */
+function vacioDia(x, hoyIso) {
+  const futuro = x.fecha >= hoyIso, ses = x.plan_ses;
+  if (ses === undefined || ses === null) return [T("sitio.dia.sin_act"), null];
+  if (ses) return futuro ? [T("sitio.dia.toca", { s: ses }), null] : [T("sitio.dia.sin_act"), T("sitio.dia.plan_era", { s: ses })];
+  return [T("sitio.dia.vacio_descanso"), futuro ? T("sitio.dia.toca_descanso") : T("sitio.dia.plan_descanso")];
+}
+
+/** Tarjeta del día tocado, de alto fijo: cabecera + 2 espacios de fila (`.dia-ranura`). Con 3 o más actividades, la segunda ranura dice
+ *  «+N más» y al tocarla se abren todas (crecer ahí es explícito). Sin actividad, un estado que llena las mismas ranuras. */
 function tarjetaDia(x, hoyIso) {
   const acts = x.actividades || [];
-  const vacio = x.planeado ? T("sitio.dia.planeada") : x.fecha > hoyIso ? T("sitio.dia.por_venir") : T("sitio.dia.descanso");
-  return h("div", { class: "dia-det", "aria-live": "polite" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)),
-    ...(acts.length ? acts.map(filaActividad) : [h("p", { class: "nota" }, vacio)]));
+  const ranura = (...hijos) => h("div", { class: "dia-ranura" }, ...hijos);
+  let filas;
+  if (!acts.length) {
+    const [t, sub] = vacioDia(x, hoyIso);
+    filas = [ranura(h("div", { class: "act-fila" }, h("span", { class: "act-t" }, t), sub ? h("span", { class: "nota" }, sub) : null)), ranura()];
+  } else if (acts.length <= 2) {
+    filas = [...acts.map((a) => ranura(filaActividad(a))), ...(acts.length < 2 ? [ranura()] : [])];
+  } else {
+    const caja = h("div", { class: "dia-filas" });
+    const mas = h("button", { type: "button", class: "dia-mas", onclick: () => caja.replaceChildren(...acts.map((a) => ranura(filaActividad(a)))) },
+      T("sitio.dia.mas", { n: acts.length - 1 }));
+    caja.append(ranura(filaActividad(acts[0])), ranura(mas));
+    return h("div", { class: "dia-det", "aria-live": "polite" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)), caja);
+  }
+  return h("div", { class: "dia-det", "aria-live": "polite" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)), h("div", { class: "dia-filas" }, ...filas));
 }
 
 /** Calendario de 7 días tocables + la tarjeta del día elegido (hoy; en otra semana, el último con actividad). `mk(x, sel, alTocar)` pinta cada día. */
@@ -440,7 +461,7 @@ function filaNoHecha(e, s) {
 }
 
 /** Hoy con selector de versión (normal / suave / descanso). Solo pinta: Python manda `opciones` y `recomendada`.
- *  El cuerpo se arma al elegir, con la fila ya visible, para que la silueta mida su ancho. No se guarda la elección. */
+ *  Todas las versiones viven en la misma celda (alto fijo); elegir solo cambia cuál se ve. No se guarda la elección. */
 function filaHoyElegir(e, s, t, abierta) {
   const rec = t.recomendada, ops = t.opciones;
   const sesDe = (v) => (v === "suave" ? s.easy : s);
@@ -454,14 +475,15 @@ function filaHoyElegir(e, s, t, abierta) {
     return t.motivo ? T(`sitio.hoy.rec_${rec}_m`, { m: t.motivo }) : T(`sitio.hoy.rec_${rec}`);
   };
   const nom = h("span", {}, nombreDe(rec)), mi = h("small", {}, minDe(rec));
-  const por = h("p", { class: "nota" }, textoPor(rec));
-  const cont = h("div", {}, ...cuerpoDe(rec));
+  const por = h("p", { class: "nota hoy-por" }, textoPor(rec));   // ranura reservada de 2 líneas: elegir no cambia el alto
+  // Todas las versiones en la misma celda: el alto es el de la más alta y no cambia al elegir; solo se ve la activa.
+  const vers = Object.fromEntries(ops.map((v) => [v, h("div", { class: "hoy-ver", "aria-hidden": String(v !== rec) }, ...cuerpoDe(v))]));
+  const mostrar = (v) => { for (const [k, el] of Object.entries(vers)) { el.classList.toggle("oculta", k !== v); el.setAttribute("aria-hidden", String(k !== v)); } };
+  mostrar(rec);
+  const cont = h("div", { class: "hoy-vers" }, ...Object.values(vers));
   const seg = DS.segmento({ etiqueta: T("sitio.hoy.aria"), modo: "botones", activo: rec,
     opciones: ops.map((v) => ({ id: v, texto: v === "descanso" ? T("sitio.hoy.v_descanso") : T(`sitio.hoy.v_${v}`, { min: sesDe(v).minutes }) })),
-    onCambio: (v) => {
-      nom.textContent = nombreDe(v); mi.textContent = minDe(v); por.textContent = textoPor(v);
-      cont.replaceChildren(...cuerpoDe(v));
-    } });
+    onCambio: (v) => { nom.textContent = nombreDe(v); mi.textContent = minDe(v); por.textContent = textoPor(v); mostrar(v); } });
   const cuerpo = [seg, por, cont];
   if (t.aviso) cuerpo.push(DS.aviso({ clase: "warn", simbolo: "!", texto: t.aviso }));
   return DS.filaSesion({ nombre: h("span", {}, nom, " ", mi), hoy: true, abierta,

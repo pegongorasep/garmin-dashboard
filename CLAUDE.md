@@ -69,6 +69,7 @@ de GitHub es el tubo de datos (`motor.yml` → `scripts/subir.py` → `/api/tubo
   (en Google Secret Manager; nunca en el repo ni en el chat).
 - Seguridad: cookies HttpOnly/Secure/SameSite=Lax, CSRF en todo POST, tokens solo como hash, `permisos.puede_ver/puede_editar`
   en toda consulta de datos de una persona. La web no tiene ni pide la key de Garmin.
+- Diseño: elegir no cambia la altura; solo expandir/colapsar (ranuras reservadas en `em`/`lh`, nunca cambios de `font-weight` al elegir).
 - Rutas: `/admin` (invitaciones), `/mcp` (conector del coach para Claude), `/diseno` (catálogo). La plantilla de repos nuevos está en `plantilla_v5/` (`scripts/sync_template.sh` no la toca; repo destino `PLANTILLA_V5_URL` en `web/config.py`).
 - Despliegue: `gh workflow run web.yml` (pruebas → imagen → Cloud Run, Workload Identity Federation).
 - Respaldo: `respaldo.yml` (diario 09:00 UTC) deja `gs://<bucket>/respaldos/AAAA-MM-DD.sql.gz`. **Restaurar:**
