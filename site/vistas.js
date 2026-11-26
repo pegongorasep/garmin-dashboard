@@ -158,7 +158,7 @@ function renderPlan(d) {
   }
   $("vista-plan").replaceChildren(...[
     guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: T("sitio.plan.listo"), texto: T("sitio.plan.guardado") }) : null,
-    acciones.length ? h("div", { class: "botones" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
+    acciones.length ? h("div", { class: "botones ancha" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
