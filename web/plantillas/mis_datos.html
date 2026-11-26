@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, aviso, tarjeta %}
+{% block titulo %}Mis datos · Ahí la Llevas{% endblock %}
+{% block clase %}ancha{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1 class="pag-t">Mis datos</h1>
+<p>Tus derechos sobre tus datos, según el <a href="/privacidad">aviso de privacidad</a>.</p>
+
+{% call tarjeta("Descargar mis datos") %}
+<p>Un ZIP con archivos JSON: tus ajustes, tu plan, InBody, los datos de Garmin guardados, el historial de cambios,
+tus consentimientos, los accesos de coach y tus conexiones de IA (solo nombre y fecha).</p>
+<div class="acciones">{{ boton("Descargar mis datos", href="/privacidad/mis-datos/descargar") }}</div>
+{% endcall %}
+
+{% call tarjeta("Borrar mi cuenta") %}
+{% if error %}{% call aviso("bad") %}{{ error }}{% endcall %}{% endif %}
+<p>Se borra todo lo tuyo de la web: ajustes, plan, datos, historial, accesos de coach, conexiones de IA y sesiones.
+No se puede deshacer. <strong>Tu repo de GitHub es tuyo: bórralo o quita la key si ya no lo usarás.</strong></p>
+<form class="pila" method="post" action="/privacidad/mis-datos/borrar">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ campo("Para confirmar, escribe " ~ palabra, "confirmar", requerido=True, extra={"autocomplete": "off"}) }}
+  <div class="acciones">{{ boton("Borrar mi cuenta", tipo="submit") }}</div>
+</form>
+{% endcall %}
+{% endblock %}

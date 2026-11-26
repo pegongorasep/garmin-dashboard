@@ -197,3 +197,10 @@ class TokenOAuth(Base):
     expira_acceso: Mapped[datetime] = mapped_column()
     expira_refresh: Mapped[datetime] = mapped_column()
     ultimo_uso: Mapped[datetime | None] = mapped_column()
+
+
+class CuentaBorrada(Base):
+    """F7a: registro anónimo de una cuenta borrada: solo la fecha, ningún dato de la persona."""
+    __tablename__ = "cuentas_borradas"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    fecha: Mapped[datetime] = mapped_column(default=ahora)

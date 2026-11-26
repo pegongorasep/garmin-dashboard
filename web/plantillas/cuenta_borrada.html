@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton %}
+{% block titulo %}Cuenta borrada · Ahí la Llevas{% endblock %}
+{% block contenido %}
+<h1 class="pag-t">Tu cuenta se borró</h1>
+<p>Ya no guardamos nada tuyo. Tu repo de GitHub es tuyo: bórralo o quita la key si ya no lo usarás.</p>
+<div class="acciones">{{ boton("Ir al inicio", "sec", href="/") }}</div>
+{% endblock %}

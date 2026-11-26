@@ -311,3 +311,9 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - `cambiar_ajustes` solo toca: nivel, intensidad, caminatas, variada, semanas, z2_min, larga_min, calidad_tipos (lo más simple y seguro; reutiliza la validación del formulario). Si cambia el plan, lo rehace desde la semana en curso sin pedir confirmación (queda deshacible en el historial).
 - `/conexiones` es solo de la cuenta propia (sin versión `/a/<id>`); revocar borra la fila del token, así que el acceso y el refresh dejan de servir.
 - Los cambios hechos por una IA quedan con `via="ia"` y `visto=False`, así aparecen como aviso nuevo en el historial.
+
+### v5 F7a (mis datos y borrar cuenta)
+- Registro anónimo: tabla nueva `cuentas_borradas` (id, fecha), migración 0004. La fila de `usuarios` se borra por completo (el correo queda libre para una invitación nueva); la columna `borrado` (borrado suave) no se usa aquí.
+- Al borrar: las invitaciones que creó se borran; en las que usó, `usada_por` queda en NULL; los cambios que hizo en datos de otras personas siguen, con `autor_id` NULL. No existen "tokens del tubo" en la base (usa OIDC), así que no hay nada más que borrar.
+- El ZIP no incluye correos ni datos de otras personas: los accesos de coach solo llevan dirección y fecha. La descarga es un GET con sesión (sin CSRF, no cambia nada).
+- Mis datos tiene botón en el menú (_nav) además del enlace desde /privacidad.
