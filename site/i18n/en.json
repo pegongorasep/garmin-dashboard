@@ -225,6 +225,8 @@
 "sitio.hace_momento": "just now",
 "sitio.hoy.aria": "Session version",
 "sitio.hoy.elegiste": "You chose {e}; I suggested {r}. Listen to your body.",
+"sitio.hoy.hola": "Hi {nombre}, let's go",
+"sitio.hoy.hola_sin": "Hi, let's go",
 "sitio.hoy.l_descanso": "resting",
 "sitio.hoy.l_normal": "the normal one",
 "sitio.hoy.l_suave": "the easy one",

@@ -386,3 +386,15 @@ def test_dias_de_pierna_se_cambian_en_rehacer(web_ctx):
     r = rehacer(cl, pierna=["lun", "jue"])
     assert r.status_code == 303 and "ok=rehecho" in r.headers["location"]
     assert crudo(web_ctx, uid)["actividades"]["dias_pierna"] == ["lun", "jue"] and plan_de(web_ctx, uid) == plan0
+
+
+def test_hoy_saludo_el_nombre_va_en_la_pagina_y_nunca_en_data_json(web_ctx):
+    uid, cl = listo(web_ctx)
+    with web_ctx.sesiones() as db:
+        db.get(Usuario, uid).nombre = 'Ana"<b>'
+        db.commit()
+    r = cl.get("/")
+    assert 'data-nombre="Ana&quot;&lt;b&gt;"' in r.text and "no-store" in r.headers["cache-control"]
+    datos = cl.get("/data.json")
+    assert "Ana" not in datos.text and validar.problemas(datos.json()) == []
+    assert datos.json()["hoy"]["titular"]

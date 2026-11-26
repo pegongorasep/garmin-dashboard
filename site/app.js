@@ -174,6 +174,14 @@ function bannerHoy(d) {
       DS.senales({ senales: (d.hoy["señales"] || []).map((x) => ({ ...estadoSenal(x.estado), nombre: nombreSenal(x.id), texto: x.texto })), nota: ayer })));
 }
 
+/** Saludo de Hoy. El nombre NUNCA viene en data.json: la web lo pone en `<main data-nombre>` (solo en tu propia página). La 2.ª línea la arma Python (`hoy.titular`); su ranura siempre existe. */
+function saludoHoy(d) {
+  const nombre = ($("app") && $("app").dataset.nombre) || "";
+  return h("header", { class: "hoy-saludo ancha" },
+    h("h1", {}, nombre ? T("sitio.hoy.hola", { nombre }) : T("sitio.hoy.hola_sin")),
+    h("p", { class: "hoy-estado" }, (d.hoy && d.hoy.titular) || "\u00a0"));
+}
+
 const nombrePrueba = (tipo) => T(`sitio.prueba.${tipo}`);
 
 /** "7:42 /km", "93 % de trote" o "25:00" según la prueba. */
@@ -609,7 +617,7 @@ function renderHoySinPlan(d) {
   const rec = sl.recuperacion;
   const racha = sl.racha_semanas || 0;
   $("vista-hoy").replaceChildren(...[
-    bannerHoy(d),
+    saludoHoy(d), bannerHoy(d),
     DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
       sl.actividades ? DS.tiles({ etiqueta: T("sitio.sl.titulo") },
         DS.tile({ k: T("sitio.sl.minutos"), valor: fmt(sl.minutos, 0), unidad: T("sitio.sl.min"), deltas: dif(sl.minutos, sl.promedio_minutos, T("sitio.sl.min")) }),
@@ -631,6 +639,7 @@ function renderHoy(d) {
   const sems = semanasHoy(d);
   if (semIdx === null) semIdx = Math.min(Math.max((d.semana_hoy_idx ?? 0) + semInicial, 0), Math.max(sems.length - 1, 0));
   $("vista-hoy").replaceChildren(...[
+    saludoHoy(d),
     d.hoy.semaforo.repetir_semana
       ? DS.aviso({ clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
       : null,

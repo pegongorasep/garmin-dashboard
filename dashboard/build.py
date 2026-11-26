@@ -961,6 +961,26 @@ def eventos_plan(config: dict) -> dict:
     return {"eventos": sorted(out, key=lambda e: e["desde"])} if out else {}
 
 
+def titular_hoy(tarjeta: dict, estado: list) -> str | None:
+    """Línea de estado bajo el saludo de Hoy. None = el sitio la deja vacía (pausa, plan terminado, primera sincronización)."""
+    tipo = tarjeta.get("tipo")
+    nombre = lambda i: next((e["name"] for e in estado or [] if e.get("id") == i), None)   # noqa: E731
+    if tipo == "sesion":
+        if tarjeta.get("version") == "descanso":
+            return tt("motor.titular.descanso")
+        ses = tarjeta.get("sesion") or {}
+        n = ((ses.get("easy") or {}).get("name") if tarjeta.get("version") == "suave" else None) or ses.get("name") or nombre(tarjeta.get("sesion_id"))
+        return tt("motor.titular.toca", sesion=n) if n else None
+    if tipo in ("hecha_hoy", "otra"):
+        prox = nombre(tarjeta.get("proxima_id"))
+        return tt("motor.titular.hecha_manana", sesion=prox) if prox else tt("motor.titular.hecha")
+    if tipo == "completa":
+        return tt("motor.titular.descanso")
+    if tipo == "sin_plan":
+        return tt("motor.titular.libre")
+    return None
+
+
 def build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     """data.json de una persona. Los textos que arma el motor salen en `config["idioma"]` (es si no lo trae)."""
     with i18n.usar(config.get("idioma")):
@@ -1030,6 +1050,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "rhr_promedio_7d": r1(rhr),
         "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
+                "titular": titular_hoy(tarjeta, estado),
                 "semana_pasada": resumen_semana_pasada(hoy, data, config, plan)},
         "ultima_corrida": last_run(data, config, plan),
         "semana": build_week(hoy, data, config, estado, plan),

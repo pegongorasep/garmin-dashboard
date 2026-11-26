@@ -225,6 +225,8 @@
 "sitio.hace_momento": "hace un momento",
 "sitio.hoy.aria": "Versión de la sesión",
 "sitio.hoy.elegiste": "Elegiste {e}; te proponía {r}. Escucha a tu cuerpo.",
+"sitio.hoy.hola": "Hola {nombre}, ahí la llevas",
+"sitio.hoy.hola_sin": "Hola, ahí la llevas",
 "sitio.hoy.l_descanso": "descansar",
 "sitio.hoy.l_normal": "la normal",
 "sitio.hoy.l_suave": "la suave",

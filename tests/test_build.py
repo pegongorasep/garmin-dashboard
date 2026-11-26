@@ -912,3 +912,14 @@ def test_marca_semana_por_fechas_y_prioridad():
     assert build.marca_semana(w, lun, cfg) == "carrera"
     assert build.marca_semana({"sessions": [{"tipo": "prueba"}]}, lun, {}) == "prueba"
     assert build.marca_semana(w, date(2026, 12, 7), cfg) is None
+
+
+def test_titular_hoy_por_estado():
+    est = [{"id": "x", "name": "Z2 #3"}]
+    assert build.titular_hoy({"tipo": "sesion", "version": "normal", "sesion": {"name": "Z2 #2"}}, est) == "Hoy toca: Z2 #2"
+    assert build.titular_hoy({"tipo": "sesion", "version": "descanso", "sesion": {"name": "Z2 #2"}}, est) == "Hoy toca descansar"
+    assert build.titular_hoy({"tipo": "hecha_hoy", "proxima_id": None}, est) == "Ya la hiciste hoy ✔"
+    assert build.titular_hoy({"tipo": "hecha_hoy", "proxima_id": "x"}, est).endswith("Mañana: Z2 #3")
+    assert build.titular_hoy({"tipo": "completa"}, est) == "Hoy toca descansar"
+    assert build.titular_hoy({"tipo": "sin_plan"}, est) == "¿Salimos a moverte?"
+    assert build.titular_hoy({"tipo": "pausa"}, est) is None

@@ -1,5 +1,6 @@
 """Rutas y arranque de la web. `crear_app()` arma la app (las pruebas le pasan su propia base y su propio correo)."""
 import logging
+from html import escape
 import secrets
 import re
 from datetime import datetime, timezone
@@ -254,7 +255,9 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if not onboarding.completo(db, usuario):
             return RedirectResponse("/bienvenida", 303)
         html = (SITE / "index.html").read_text().replace("</main>", pie_sitio(request.state.idioma) + "</main>", 1)
-        return HTMLResponse(html)
+        # El nombre va solo en esta página (nunca en data.json). Las páginas no se guardan en el service worker; no-store por si acaso.
+        html = html.replace('<main id="app">', f'<main id="app" data-nombre="{escape(usuario.nombre or "", quote=True)}">', 1)
+        return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
     @app.get("/diseno")
     def diseno(usuario=Depends(actual)):
