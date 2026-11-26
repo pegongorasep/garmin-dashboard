@@ -278,3 +278,15 @@ def test_invitacion_mas_codigo_crea_la_cuenta(web_ctx):
     assert r.status_code == 303
     with web_ctx.sesiones() as db:
         assert auth.buscar_por_correo(db, "nuevo@x.com") is not None
+
+
+def test_codigo_con_plan_lleva_a_instalar_y_siguiente_malo_va_a_inicio(web_ctx):
+    crear_usuario(web_ctx, "si@x.com", con_ajustes=True)
+    cl = web_ctx.cliente()
+    post(cl, "/entrar", correo="si@x.com")
+    r = con_codigo(cl, "si@x.com", codigo_de(web_ctx))
+    assert r.headers["location"] == "/instalar?siguiente=/"
+    ok = cl.get("/instalar?siguiente=/plan")
+    assert ok.status_code == 200 and 'href="/plan"' in ok.text and "Compartir" in ok.text
+    for malo in ("//evil.com", "https://evil.com", "/\\evil.com", "evil"):
+        assert 'href="/"' in cl.get("/instalar", params={"siguiente": malo}).text

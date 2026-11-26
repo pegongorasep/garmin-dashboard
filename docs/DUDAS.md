@@ -350,3 +350,8 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Un código vale 10 min, un uso, 5 intentos fallidos (luego se bloquea y hay que pedir otro); tope de 5 pedidos por hora por persona.
 - La liga `/entrar/liga/<token>` se dejó funcionando (lo más simple, no se borra código) pero ya no se manda por correo; se puede quitar cuando se quiera.
 - Respuesta neutra: código malo, vencido o correo inexistente dan el mismo mensaje.
+
+### v5 login: L3 (/instalar)
+- Tras entrar (Google o código) sin cookie del conector y con onboarding completo (consentimiento y plan) se va a `/instalar?siguiente=/`; si falta onboarding, a `/` (que ya manda a `/bienvenida`).
+- `siguiente` solo acepta rutas relativas del sitio (`oauth.ruta_relativa`); si no, `/`. El ícono `compartir` no existe en iconos.js: las instrucciones de iPhone van solo con texto.
+- «Ahora no» se recuerda en localStorage (`instalar_ahora_no`); la app ya instalada (standalone) se salta la página.

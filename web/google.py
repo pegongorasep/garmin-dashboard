@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 
 import httpx
 import jwt
+from . import onboarding
 from fastapi import Depends, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -139,7 +140,7 @@ def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
         if u is None:
             return rechazo(request, "Necesitas una invitación para crear tu cuenta. Pídesela a Pedro.", 403)
 
-        resp = RedirectResponse(oauth.volver_seguro(request.cookies.get(oauth.COOKIE_VOLVER, "")), 303)
+        resp = RedirectResponse(oauth.destino_login(request.cookies.get(oauth.COOKIE_VOLVER, ""), onboarding.completo(db, u)), 303)
         poner_sesion(resp, auth.crear_sesion(db, u))
         resp.delete_cookie(oauth.COOKIE_VOLVER, path="/")
         resp.delete_cookie(COOKIE, path="/entrar/google")

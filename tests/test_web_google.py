@@ -128,3 +128,12 @@ def test_google_respeta_la_cookie_del_conector(web_ctx):
     cl.cookies.set("oauth_volver", "/oauth/autorizar?client_id=x")
     r = vuelta(cl, empezar(web_ctx, cl))
     assert r.headers["location"] == "/oauth/autorizar?client_id=x"
+
+
+def test_google_sin_cookie_y_con_plan_va_a_instalar(web_ctx):
+    from tests.test_web_cuentas import crear_usuario as cu
+    cu(web_ctx, "nueva@x.com", con_ajustes=True)
+    activar(web_ctx)
+    cl = web_ctx.cliente()
+    r = vuelta(cl, empezar(web_ctx, cl))
+    assert r.headers["location"] == "/instalar?siguiente=/"

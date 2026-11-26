@@ -34,6 +34,11 @@ def estado(db: Session, u: Usuario) -> dict:
             "pendiente": tubo.pendiente_vigente(db, u.id) is not None}
 
 
+def completo(db: Session, u: Usuario) -> bool:
+    e = estado(db, u)
+    return bool(e["consentimiento"] and e["ajustes"])
+
+
 def paso_maximo(e: dict) -> int:
     if not e["consentimiento"]:
         return 1

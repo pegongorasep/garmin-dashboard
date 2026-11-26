@@ -129,7 +129,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if u is None:
             return render(request, "entrar.html", status=400, mensaje=auth.MENSAJE_LIGA,
                           correo=auth.normalizar_correo(correo_in), error="Código incorrecto o vencido. Pide uno nuevo si hace falta.")
-        resp = RedirectResponse(oauth.volver_seguro(request.cookies.get(oauth.COOKIE_VOLVER, "")), 303)
+        resp = RedirectResponse(oauth.destino_login(request.cookies.get(oauth.COOKIE_VOLVER, ""), onboarding.completo(db, u)), 303)
         poner_sesion(resp, auth.crear_sesion(db, u))
         resp.delete_cookie(oauth.COOKIE_VOLVER, path="/")
         return resp
@@ -197,6 +197,10 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     admin.montar(app, get_db, actual, render, formulario, settings)
     google.montar(app, get_db, actual, render, settings, poner_sesion)
     mcp_servidor.montar(app, settings)
+
+    @app.get("/instalar")
+    def instalar(request: Request, siguiente: str = "/"):
+        return render(request, "instalar.html", siguiente=oauth.ruta_relativa(siguiente))
 
     # --- dashboard por usuario ---
 

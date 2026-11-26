@@ -31,6 +31,21 @@ def volver_seguro(valor: str) -> str:
     return "/"
 
 
+def ruta_relativa(valor: str) -> str:
+    """Ruta relativa del propio sitio ('/algo'); si no lo es, '/' (sin redirección abierta)."""
+    if (valor.startswith("/") and not valor.startswith("//") and "\\" not in valor and "\r" not in valor
+            and "\n" not in valor and ":" not in valor.split("?")[0]):
+        return valor
+    return "/"
+
+
+def destino_login(cookie_volver: str, onboarding_completo: bool) -> str:
+    """Adónde va la persona tras entrar: conector a medias, o invitación a instalar la app, o inicio."""
+    if cookie_volver:
+        return volver_seguro(cookie_volver)
+    return "/instalar?siguiente=/" if onboarding_completo else "/"
+
+
 def uri_valida(uri: str) -> bool:
     """https, o http solo en localhost/127.0.0.1 (pruebas); sin fragmento ni credenciales."""
     try:
