@@ -258,7 +258,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return redir
         pref = prefijo(usuario, atleta)
         if accion == "visto":
-            cambios.marcar_vistos(db, atleta.id)
+            if usuario.id == atleta.id:   # el coach no consume los avisos del atleta
+                cambios.marcar_vistos(db, atleta.id)
             return RedirectResponse(f"{pref}/historial?ok=visto", 303)
         try:
             cambios.deshacer(db, usuario, cambio_id)

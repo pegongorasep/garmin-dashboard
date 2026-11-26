@@ -216,6 +216,10 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     def data_atleta(atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
         return data_de(db, usuario, atleta_id, "" if usuario is not None and usuario.id == atleta_id else f"/a/{atleta_id}")
 
+    @app.get("/a/{atleta_id}")
+    def sitio_atleta_sin_slash(atleta_id: int):
+        return RedirectResponse(f"/a/{atleta_id}/", 308)
+
     @app.get("/a/{atleta_id}/")
     def sitio_atleta(atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
         """El mismo sitio, visto por el coach: los archivos van con ruta absoluta y data.json sigue relativo (/a/<id>/data.json)."""

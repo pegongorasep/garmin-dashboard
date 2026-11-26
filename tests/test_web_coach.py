@@ -1,7 +1,7 @@
 """F5a: dar y quitar acceso de coach."""
 from test_web_ajustes import listo
 from test_web_cuentas import csrf_de
-from web.modelos import Coach
+from web.modelos import Cambio, Coach
 
 
 def dar(cl, correo):
@@ -72,3 +72,18 @@ def test_f5b_coach_ve_y_edita_a_su_atleta_con_via_coach_y_aviso(web_ctx):
         c = db.query(Cambio).filter(Cambio.atleta_id == uid_a).order_by(Cambio.id.desc()).first()
         assert c is not None and c.via == "coach" and c.autor_id == uid_c
     assert atleta.get("/data.json").json().get("avisos")
+
+
+def test_a_sin_slash_redirige_y_el_coach_no_consume_avisos(web_ctx):
+    uid_a, atleta = listo(web_ctx, "atleta@x.com")
+    uid_c, coach = listo(web_ctx, "coach@x.com", con_plan=False)
+    dar(atleta, "coach@x.com")
+    r = coach.get(f"/a/{uid_a}")
+    assert r.status_code == 308 and r.headers["location"] == f"/a/{uid_a}/"
+    r = coach.get(f"/a/{uid_a}/plan/acciones")
+    coach.post(f"/a/{uid_a}/plan/viaje", data={"csrf": csrf_de(r.text), "desde": "2027-03-01", "hasta": "2027-03-05"})
+    assert not coach.get(f"/a/{uid_a}/data.json").json().get("avisos")   # oculto al coach
+    coach.post(f"/a/{uid_a}/historial/visto", data={"csrf": csrf_de(coach.get(f"/a/{uid_a}/historial").text)})
+    with web_ctx.sesiones() as db:
+        assert db.query(Cambio).filter(Cambio.atleta_id == uid_a, Cambio.visto.is_(False)).count() == 1
+    assert atleta.get("/data.json").json().get("avisos")   # sigue pendiente para el atleta

@@ -132,7 +132,8 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     base = _calcular_cacheado(db, usuario, ahora_utc)
     ahora_naive = ahora_utc or ahora()
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive)}}
-    avisos = cambios.avisos_de(db, usuario.id)   # también fuera de la caché: se van al marcarlos vistos
+    # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
+    avisos = [] if pref else cambios.avisos_de(db, usuario.id)
     if avisos:
         salida["avisos"] = avisos
     problemas = validar.problemas(salida)
