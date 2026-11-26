@@ -366,7 +366,7 @@ function vacioDia(x, hoyIso) {
   const futuro = x.fecha >= hoyIso, ses = x.plan_ses;
   if (ses === undefined || ses === null) return [T("sitio.dia.sin_act"), null];
   if (ses) return futuro ? [T("sitio.dia.toca", { s: ses }), null] : [T("sitio.dia.sin_act"), T("sitio.dia.plan_era", { s: ses })];
-  return [T("sitio.dia.vacio_descanso"), futuro ? T("sitio.dia.toca_descanso") : T("sitio.dia.plan_descanso")];
+  return [T("sitio.dia.vacio_descanso"), futuro ? T("sitio.dia.toca_descanso") : null];   // días pasados: el plan no fija día, no se puede decir qué tocaba
 }
 
 /** Tarjeta del día tocado, de alto fijo: cabecera + 2 espacios de fila (`.dia-ranura`). Con 3 o más actividades, la segunda ranura dice
