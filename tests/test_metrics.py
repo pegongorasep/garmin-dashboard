@@ -936,3 +936,12 @@ def test_deriva_solo_si_casi_todo_el_trote_va_en_z2():
     assert m.deriva(serie_parejo(), {"minutos": 50, "pct_trote": 100}, zonas)["pct"] is not None
     carrera = serie_parejo(fc=lambda t: 160)
     assert m.deriva(carrera, {"minutos": 50, "pct_trote": 100}, zonas)["motivo"] == "fuera de Z2"
+
+
+def test_opciones_hoy_por_color():
+    ses = {"easy": {"minutes": 35}}
+    assert m.opciones_hoy("normal", ses) == ["suave", "normal"]
+    assert m.opciones_hoy("suave", ses) == ["suave", "normal"]
+    assert m.opciones_hoy("descanso", ses) == ["descanso", "suave", "normal"]
+    assert m.opciones_hoy("normal", {}) == []
+    assert m.opciones_hoy(None, ses) == []

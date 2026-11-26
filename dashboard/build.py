@@ -906,6 +906,8 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                    "version": None, "sesion_id": None}
     ayer_dato = m.ayer_duro(hoy, data["activities"], data["details"], config)
     tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None
+    tarjeta["opciones"] = m.opciones_hoy(tarjeta["version"], tarjeta.get("sesion"))
+    tarjeta["recomendada"] = tarjeta["version"] if tarjeta["opciones"] else None
 
     pulled = data["meta"].get("pulled_at_utc")
     datos_al = None

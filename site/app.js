@@ -389,7 +389,37 @@ function filaNoHecha(e, s) {
   return DS.filaSesion({ nombre: e.name, sub: s ? T("sitio.min_n", { n: s.minutes }) : null, estado: { clase: "nd", simbolo: "✗", texto: T("sitio.nohecha"), etiqueta: T("sitio.nohecha_e") } });
 }
 
+/** Hoy con selector de versión (normal / suave / descanso). Solo pinta: Python manda `opciones` y `recomendada`.
+ *  El cuerpo se arma al elegir, con la fila ya visible, para que la silueta mida su ancho. No se guarda la elección. */
+function filaHoyElegir(e, s, t, abierta) {
+  const rec = t.recomendada, ops = t.opciones;
+  const sesDe = (v) => (v === "suave" ? s.easy : s);
+  const cuerpoDe = (v) => (v === "descanso" ? [h("p", {}, T("sitio.descanso"))]
+    : [bloqueSilueta(sesDe(v)), bloqueCalidad(sesDe(v)), detallePasos(sesDe(v))].filter(Boolean));
+  const nombreDe = (v) => T(`sitio.hoy.n_${v}`, { n: e.name });
+  const minDe = (v) => (v === "descanso" ? "" : `· ${T("sitio.min_n", { n: sesDe(v).minutes })}`);
+  const textoPor = (v) => {
+    if (v !== rec) return T("sitio.hoy.elegiste", { e: T(`sitio.hoy.l_${v}`), r: T(`sitio.hoy.l_${rec}`) });
+    if (rec === "normal") return T("sitio.hoy.rec_normal");
+    return t.motivo ? T(`sitio.hoy.rec_${rec}_m`, { m: t.motivo }) : T(`sitio.hoy.rec_${rec}`);
+  };
+  const nom = h("span", {}, nombreDe(rec)), mi = h("small", {}, minDe(rec));
+  const por = h("p", { class: "nota" }, textoPor(rec));
+  const cont = h("div", {}, ...cuerpoDe(rec));
+  const seg = DS.segmento({ etiqueta: T("sitio.hoy.aria"), modo: "botones", activo: rec,
+    opciones: ops.map((v) => ({ id: v, texto: v === "descanso" ? T("sitio.hoy.v_descanso") : T(`sitio.hoy.v_${v}`, { min: sesDe(v).minutes }) })),
+    onCambio: (v) => {
+      nom.textContent = nombreDe(v); mi.textContent = minDe(v); por.textContent = textoPor(v);
+      cont.replaceChildren(...cuerpoDe(v));
+    } });
+  const cuerpo = [seg, por, cont];
+  if (t.aviso) cuerpo.push(DS.aviso({ clase: "warn", simbolo: "!", texto: t.aviso }));
+  return DS.filaSesion({ nombre: h("span", {}, nom, " ", mi), hoy: true, abierta,
+    estado: { clase: "nd", simbolo: "—", texto: T("sitio.ses.pendiente"), etiqueta: T("sitio.ses.pendiente_e") }, cuerpo });
+}
+
 function filaHoy(e, s, t, abierta) {
+  if (s && s.easy && Array.isArray(t.opciones) && t.opciones.length && t.opciones.includes(t.recomendada)) return filaHoyElegir(e, s, t, abierta);
   const suave = t.version === "suave";
   const ses = s && suave ? s.easy : s;
   const cuerpo = [];

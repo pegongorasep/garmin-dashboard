@@ -820,3 +820,14 @@ def test_semana_libre_solo_sin_plan_promedios_racha_y_sin_claves_prohibidas():
     assert all(set(a) == {"nombre", "icono", "minutos"} for d in sl["dias"] for a in d["actividades"])
     assert validar.problemas(out) == []
     assert "semana_libre" not in build.build(fixture(), gen_plan.generar(CONFIG_CORREDOR), CONFIG_CORREDOR, AHORA)
+
+
+def test_tarjeta_hoy_trae_opciones_y_recomendada(monkeypatch):
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    t = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)["hoy"]["tarjeta"]
+    if t["tipo"] == "sesion":
+        assert t["recomendada"] == t["version"] and t["recomendada"] in t["opciones"]
+        assert t["opciones"][-1] == "normal" and "suave" in t["opciones"]
+    else:
+        assert t["opciones"] == [] and t["recomendada"] is None
