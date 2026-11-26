@@ -88,8 +88,8 @@ function detalleTrote(u) {
 function estadoSesion(est) {
   if (!est) return null;
   if (est.estado === "pendiente") return { clase: "nd", simbolo: "—", texto: T("sitio.ses.pendiente"), etiqueta: T("sitio.ses.pendiente_e") };
-  if (est.estado === "incompleta") return { clase: "warn", simbolo: "!", texto: T("sitio.ses.incompleta"), etiqueta: T("sitio.ses.incompleta_e") };
-  if (est.ajustada) return { clase: "warn", simbolo: "!", texto: T("sitio.ses.ajustada"), etiqueta: T("sitio.ses.ajustada_e") };
+  if (est.estado === "incompleta") return { clase: "nd", simbolo: "!", texto: T("sitio.ses.incompleta"), etiqueta: T("sitio.ses.incompleta_e") };
+  if (est.ajustada) return { clase: "nd", simbolo: "!", texto: T("sitio.ses.ajustada"), etiqueta: T("sitio.ses.ajustada_e") };
   return { clase: "ok", simbolo: "✓", texto: T("sitio.ses.hecha"), etiqueta: T("sitio.ses.hecha_e") };
 }
 
@@ -448,20 +448,20 @@ function lineasPlanVsReal(filas) {
     const nombre = solo ? f.zona : f.zona === "Z5" ? "Z5" : T("sitio.pvr.o_mas", { z: f.zona });
     const v = { n: nombre, h: fmt(f.hecho_min, 0), p: fmt(f.plan_min, 0), pct: f.pct };
     const txt = T(solo ? "sitio.pvr.fila" : "sitio.pvr.fila_pct", v);
-    return f.ok ? DS.estado("ok", "✓", `${txt} ✓`, T("sitio.pvr.cumplido")) : DS.estado("warn", "!", `${txt} ⚠`, T("sitio.pvr.debajo"));
+    return f.ok ? DS.estado("ok", "✓", `${txt} ✓`, T("sitio.pvr.cumplido")) : DS.estado("nd", "!", `${txt} ⚠`, T("sitio.pvr.debajo"));
   }), filas[0].mucho_arriba
-    ? DS.estado("warn", "!", T("sitio.pvr.arriba", { m: fmt(filas[0].arriba_min, 0), z: filas[0].zona }), T("sitio.pvr.muy_arriba"))
+    ? DS.estado("nd", "!", T("sitio.pvr.arriba", { m: fmt(filas[0].arriba_min, 0), z: filas[0].zona }), T("sitio.pvr.muy_arriba"))
     : null);
 }
 
 function lineaTecho(c) {
   const txt = T("sitio.techo.txt", { m: fmt(c.min_sobre_techo), t: fmt(c.tolerancia_min, 0) });
-  return c.techo_ok ? DS.estado("ok", "✓", txt, T("sitio.techo.ok")) : DS.estado("warn", "!", txt, T("sitio.techo.no"));
+  return c.techo_ok ? DS.estado("ok", "✓", txt, T("sitio.techo.ok")) : DS.estado("nd", "!", txt, T("sitio.techo.no"));
 }
 
 function lineaDeriva(c) {
   const txt = T("sitio.deriva.txt", { v: fmt(c.deriva_pct, 1) });
-  return c.deriva_ok ? DS.estado("ok", "✓", `${txt} ✓`, T("sitio.deriva.baja")) : DS.estado("warn", "!", T("sitio.deriva.buena", { t: txt }), T("sitio.deriva.alta"));
+  return c.deriva_ok ? DS.estado("ok", "✓", `${txt} ✓`, T("sitio.deriva.baja")) : DS.estado("nd", "!", T("sitio.deriva.buena", { t: txt }), T("sitio.deriva.alta"));
 }
 
 /** Fila de una corrida hecha o extra: estado + título, y al abrirla (ya viene abierta) datos, techo y detalle de trote/caminata. */
