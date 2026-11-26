@@ -232,3 +232,86 @@ def test_tarjeta_sin_plan_usa_semana_libre(web_ctx, monkeypatch):
     pag = a.get(f"/grupos/{gid}").text
     assert "3 actividades · 95 min esta semana" in pag and "Racha: 4 semanas activas" in pag
     assert "Ruta secreta" not in pag
+
+
+def _t(uid, km=0, minutos=0, otras=None, hechas=None, total=3, estado="ok", carrera=None, racha=0):
+    return {"usuario_id": uid, "estado": estado, "carrera": carrera, "racha": racha,
+            "semana": None if estado == "pausa" else {"km": km, "minutos": minutos, "otras": otras or {}, "extra_min": 0},
+            "progreso": {"hechas": hechas, "total": total} if hechas is not None else None}
+
+
+def test_total_e_insignias_empates_y_ceros():
+    from web import grupos_resumen as g
+    ts = [_t(1, 10, 60, hechas=2), _t(2, 10, 50, hechas=2), _t(3, 0, 0), _t(4, 99, 99, estado="pausa")]
+    assert g.total_grupo(ts) == {"km": 20.0, "minutos": 110}   # la pausa no suma
+    ins = {i["clave"]: i["usuario_ids"] for i in g.insignias(ts, {1: {"larga": 40}, 2: {"larga": 40}, 3: {"larga": 0}})}
+    assert ins == {"mas_constante": [1, 2], "mas_km": [1, 2], "corrida_mas_larga": [1, 2]}   # empate: todos; el 0 no gana
+    assert g.insignias([_t(1, 5, 30, hechas=1), _t(2)], {}) == []                              # solo 1 con actividad
+    assert g.insignias([_t(1, 5, 30), _t(2, 3, 20, estado="pausa")], {}) == []                 # la pausa no cuenta
+    assert [i["clave"] for i in g.insignias([_t(1, 5, 30), _t(2, 0, 20)], {1: {"larga": 30}, 2: {"larga": 0}})] == ["mas_km", "corrida_mas_larga"]
+
+
+def test_novedades_cada_tipo_max_3_y_pausa():
+    from web import grupos_resumen as g
+    h = {"hoy": "2026-11-26", "ini_sem": "2026-11-23", "completa_ahora": True, "completa_antes": False, "record": 8.5,
+         "racha": 3, "n": 5, "n_antes": 4, "total": 12, "larga": 40}
+    t = _t(1, 8, 60, hechas=3, carrera={"nombre": "10K", "dias": 5}, racha=3)
+    nov = g.novedades([t], {1: h})
+    assert [n["tipo"] for n in nov] == ["semana_completa", "record_distancia", "carrera_cerca"]   # máx. 3, lo más nuevo primero (racha, de la semana pasada, queda fuera)
+    assert nov[0]["datos"] == {"n": 5, "total": 12} and nov[1]["datos"] == {"km": 8.5} and nov[2]["datos"] == {"dias": 5}
+    assert [n["tipo"] for n in g.novedades([_t(1, racha=3)], {1: {**h, "completa_ahora": False, "record": None}})] == ["racha"]
+    assert [n["tipo"] for n in g.novedades([_t(1, carrera={"nombre": "10K", "dias": 7})], {1: {**h, "completa_ahora": False, "record": None, "racha": 1}})] == ["carrera_cerca"]
+    assert g.novedades([_t(1, carrera={"nombre": "x", "dias": 8})], {1: {**h, "completa_ahora": False, "record": None, "racha": 0}}) == []
+    antes = g.novedades([t], {1: {**h, "completa_ahora": False, "completa_antes": True, "record": None, "racha": 0}})
+    assert next(n for n in antes if n["tipo"] == "semana_completa")["datos"] == {"n": 4, "total": 12}                                    # semana pasada completada
+    pausa = {**t, "estado": "pausa"}
+    assert g.novedades([pausa], {1: h}) == []                                            # la pausa no aparece
+
+
+def test_tarjeta_nuevos_campos_racha_record_carrera(web_ctx, monkeypatch):
+    from web import grupos_resumen
+    a = sesion(web_ctx, "a@x.com")
+    gid = crear(a)
+    def sem(est, n, hechas, total=3, **extra):
+        return {"estado": est, "n": n, "inicio": f"2026-11-{2 + 7 * (n - 1):02d}", "plan": {"total": total, "hechas": hechas},
+                "stats": {"km": 12.34, "minutos": 80}, "dias": [{"fecha": "x", "corrida": {"minutos": 40} if i == 0 else None,
+                                                                 "otras": [{"cat": "fuerza", "minutos": 30}] if i == 2 else []} for i in range(7)], **extra}
+    data = {"generado": "2026-11-26T08:00", "semana_hoy_idx": 3, "ultima_corrida": None,
+            "plan": {"inicio": "2026-11-02", "eventos": [{"tipo": "carrera", "desde": "2026-12-01", "nombre": "10K"}],
+                     "semanas": [{}] * 12},
+            "progreso": {"corridas": [{"fecha": "2026-11-05", "km": 5.0}, {"fecha": "2026-11-24", "km": 7.0}]},
+            "semanas_hoy": [sem("pasada", 1, 1), sem("pasada", 2, 3), sem("pasada", 3, 2), sem("actual", 4, 3, inicio="2026-11-23")]}
+    monkeypatch.setattr(grupos_resumen.calculo, "calcular", lambda db, u: data)
+    with web_ctx.sesiones() as db:
+        from web.modelos import Ajustes, Plan
+        u = db.query(Usuario).filter_by(correo="a@x.com").one()
+        db.add(Ajustes(usuario_id=u.id, config={})); db.add(Plan(usuario_id=u.id, plan={"weeks": []})); db.commit()
+        ms = [(m, u) for m in db.query(MiembroGrupo).filter_by(grupo_id=gid)]
+        r = grupos_resumen.resumen(db, ms)
+    c = r["tarjetas"][u.id]
+    assert set(c) == grupos_resumen.CAMPOS
+    assert c["semana"] == {"km": 12.3, "minutos": 80, "otras": {"fuerza": 1}, "extra_min": 30}
+    assert c["plan"] == {"n": 4, "total": 12} and c["progreso"] == {"hechas": 3, "total": 3}
+    assert c["racha"] == 2 and c["carrera"] == {"nombre": "10K", "dias": 5}
+    assert len(r["novedades"]) == 3
+    assert {n["tipo"] for n in r["novedades"]} <= {"semana_completa", "record_distancia", "racha", "carrera_cerca"}
+    assert all(set(n) == {"tipo", "usuario_id", "datos"} for n in r["novedades"])
+    assert r["total"] == {"km": 12.3, "minutos": 110} and r["insignias"] == []   # una sola persona: sin insignias
+
+
+def test_reacciones_ocho_emojis_y_quienes_por_emoji(web_ctx):
+    from web import grupos
+    assert len(grupos.EMOJIS) == 8 and set(grupos.EMOJIS) >= {"❤️", "🫡", "🚀", "🏆", "😂"}
+    a, b, c = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com"), sesion(web_ctx, "c@x.com")
+    gid = crear(a)
+    post(b, f"/grupos/unirse/{liga(a, gid)}"); post(c, f"/grupos/unirse/{liga(a, gid)}")
+    with web_ctx.sesiones() as db:
+        ua, ub, uc = (db.query(Usuario).filter_by(correo=f"{x}@x.com").one().id for x in "abc")
+    for cl, e in ((b, "❤️"), (c, "❤️"), (c, "🫡")):
+        assert post(cl, f"/grupos/{gid}/reaccionar/{ua}", emoji=e).status_code == 303
+    with web_ctx.sesiones() as db:
+        r = grupos.reacciones_de(db, gid, grupos.semana_iso(), ub)[ua]
+        assert r["por_emoji"] == {"❤️": [ub, uc], "🫡": [uc]} and r["cuentas"]["❤️"] == 2 and r["mias"] == {"❤️"}
+    post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="❤️")   # toggle
+    with web_ctx.sesiones() as db:
+        assert grupos.reacciones_de(db, gid, grupos.semana_iso(), ub)[ua]["por_emoji"]["❤️"] == [uc]

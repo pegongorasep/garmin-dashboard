@@ -17,7 +17,7 @@ from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, Reaccion, Usuario, ah
 MAX_MIEMBROS = 12
 MAX_GRUPOS = 5          # por persona (los que crea o a los que se une)
 DIAS_LIGA = 7
-EMOJIS = ("👏", "🔥", "💪")
+EMOJIS = ("👏", "🔥", "💪", "🚀", "❤️", "😂", "🫡", "🏆")
 MAX_REACCIONES_HORA = 60   # límite por persona (cuenta las filas creadas en la última hora)
 
 
@@ -27,12 +27,13 @@ def semana_iso(hoy: date | None = None) -> str:
 
 
 def reacciones_de(db: Session, grupo_id: int, semana: str, yo: int) -> dict:
-    """{para_id: {"cuentas": {emoji: n}, "mias": {emoji}, "quienes": [usuario_id únicos]}} de la semana."""
+    """{para_id: {"cuentas": {emoji: n}, "mias": {emoji}, "quienes": [usuario_id únicos], "por_emoji": {emoji: [usuario_id en orden]}}} de la semana."""
     out: dict = {}
     for r in db.scalars(select(Reaccion).where(Reaccion.grupo_id == grupo_id, Reaccion.semana == semana)
                         .order_by(Reaccion.id)):
-        d = out.setdefault(r.para_id, {"cuentas": {}, "mias": set(), "quienes": []})
+        d = out.setdefault(r.para_id, {"cuentas": {}, "mias": set(), "quienes": [], "por_emoji": {}})
         d["cuentas"][r.emoji] = d["cuentas"].get(r.emoji, 0) + 1
+        d["por_emoji"].setdefault(r.emoji, []).append(r.de_id)
         if r.de_id == yo:
             d["mias"].add(r.emoji)
         if r.de_id not in d["quienes"]:
@@ -101,10 +102,11 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def pagina(request, usuario, db, grupo, status=200, liga=None, error=None):
         miembros = miembros_de(db, grupo.id)
         yo = next((m for m, u in miembros if u.id == usuario.id), None)
+        res = grupos_resumen.resumen(db, miembros)
         fotos = {u.id for _, u in miembros if perfil_tiene_foto(db, u.id)}
         return render(request, "grupo.html", status=status, atleta=usuario, pref="", grupo=grupo, miembros=miembros,
                       yo=yo, fotos=fotos, emojis=EMOJIS,
-                      reacc=reacciones_de(db, grupo.id, semana_iso(), usuario.id), por_id={u.id: u for _, u in miembros}, tarjetas=grupos_resumen.tarjetas(db, miembros), liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
+                      reacc=reacciones_de(db, grupo.id, semana_iso(), usuario.id), por_id={u.id: u for _, u in miembros}, tarjetas=res["tarjetas"], total=res["total"], insignias=res["insignias"], novedades=res["novedades"], liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
                       error=error, lleno=len(miembros) >= MAX_MIEMBROS)
 
     def propio(request, usuario, db, gid):
