@@ -198,8 +198,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         if usuario:
             usuario.idioma = nuevo
             db.commit()
-        destino = str(form.get("siguiente", "/"))
-        resp = RedirectResponse(destino if destino.startswith("/") and not destino.startswith("//") else "/", 303)
+        resp = RedirectResponse(oauth.ruta_relativa(str(form.get("siguiente", "/"))), 303)
         resp.set_cookie("idioma", nuevo, max_age=365 * 86400, httponly=True, secure=settings.cookie_segura, samesite="lax", path="/")
         return resp
 
