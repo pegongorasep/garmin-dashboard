@@ -635,7 +635,7 @@ const TABS = [{ id: "hoy", texto: "Hoy", icono: "hoy", href: "#hoy" }, { id: "pl
   { id: "progreso", texto: "Progreso", icono: "progreso", href: "#progreso" }];
 
 /** Ícono de cada liga del menú ☰ (si ui.menu trae `icono`, gana el suyo). */
-const ICONO_MENU = { "/ajustes": "editar", "/plan": "plan", "/cuerpo": "progreso", "/historial": "deshacer", "/privacidad": "check", "/salir": "flecha", "/diseno": "hoy" };
+const ICONO_MENU = { "/ajustes": "editar", "/plan": "plan", "/cuerpo": "progreso", "/historial": "deshacer", "/coach": "medalla", "/privacidad": "check", "/salir": "flecha", "/diseno": "hoy" };
 
 let menuAbierto = false;
 

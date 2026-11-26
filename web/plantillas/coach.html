@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, aviso, tarjeta, campo %}
+{% block titulo %}Coach · Ahí la Llevas{% endblock %}
+{% block clase %}ancha{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1 class="pag-t">Coach</h1>
+<p class="pag-s">Tu coach puede ver y editar tu plan, tus ajustes y tus mediciones InBody. Tú decides quién, y se lo quitas cuando quieras.</p>
+{% if ok == "1" %}{% call aviso("ok") %}Si esa persona tiene cuenta, ya tiene acceso.{% endcall %}{% endif %}
+{% if ok == "quitado" %}{% call aviso("ok") %}Acceso quitado.{% endcall %}{% endif %}
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+{% call tarjeta("Dar acceso") %}
+<form method="post" action="/coach/dar"><input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ campo("Correo de tu coach", "correo", tipo="email", requerido=True, ayuda="Tiene que ser el correo con el que su cuenta entra a Ahí la Llevas.") }}
+  <div class="acciones">{{ boton("Dar acceso", tipo="submit") }}</div>
+</form>
+{% endcall %}
+<h2 class="pag-h">Quién tiene acceso</h2>
+{% if not coaches %}<p class="pag-s">Nadie por ahora.</p>{% endif %}
+{% for c in coaches %}
+  {% call tarjeta() %}
+    <p><strong>{{ c.nombre }}</strong></p>
+    <form method="post" action="/coach/quitar/{{ c.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+      {{ boton("Quitar", "sec", chico=True, tipo="submit") }}</form>
+  {% endcall %}
+{% endfor %}
+{% endblock %}

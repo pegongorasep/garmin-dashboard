@@ -18,7 +18,7 @@ from .modelos import Ajustes, CacheData, DatoGarmin, InBody, Plan, Usuario, ahor
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
 MENU = [{"texto": "Ajustes", "url": "/ajustes"}, {"texto": "Historial", "url": "/historial"},
-        {"texto": "InBody", "url": "/cuerpo"}, {"texto": "Privacidad", "url": "/privacidad"},
+        {"texto": "InBody", "url": "/cuerpo"}, {"texto": "Coach", "url": "/coach"}, {"texto": "Privacidad", "url": "/privacidad"},
         {"texto": "Salir", "url": "/salir"}]   # lo que pinta el JS junto al ?; el plan vive en la pestaña Plan (Coach/Admin: cuando existan sus rutas)
 # Botones de la pestaña Plan (ui.plan_acciones): llevan a los formularios del plan vivo.
 PLAN_ACCIONES = [{"texto": "Voy de viaje", "url": "/plan/acciones#viaje"},

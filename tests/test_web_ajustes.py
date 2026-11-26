@@ -296,7 +296,7 @@ def test_inbody_de_otro_usuario_404(web_ctx):
 def test_el_menu_de_la_web_trae_las_nuevas_paginas(web_ctx):
     _, cl = listo(web_ctx)
     urls = [i["url"] for i in cl.get("/data.json").json()["ui"]["menu"]]
-    assert urls == ["/ajustes", "/historial", "/cuerpo", "/privacidad", "/salir"]
+    assert urls == ["/ajustes", "/historial", "/cuerpo", "/coach", "/privacidad", "/salir"]
 
 
 def test_ajustes_de_pedro_sin_tocar_no_cambian_nada(web_ctx):

@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from ajustes import ConfigError
 
-from . import ROOT, ajustes_web, auth, calculo, correo, onboarding, plan_web, tubo
+from . import ROOT, ajustes_web, auth, calculo, coach, correo, onboarding, plan_web, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -170,6 +170,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     onboarding.montar(app, get_db, actual, render, formulario, settings)
     ajustes_web.montar(app, get_db, actual, render, formulario, settings)
     plan_web.montar(app, get_db, actual, render, formulario, settings)
+    coach.montar(app, get_db, actual, render, formulario, settings)
 
     # --- dashboard por usuario ---
 
