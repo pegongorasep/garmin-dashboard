@@ -164,11 +164,11 @@ function textoBanner(d) {
 }
 
 /** Banner de la sesión de hoy con el semáforo como chip: «Recuperación: verde · ver señales» abre las señales. */
-function bannerHoy(d) {
+function bannerHoy(d, ancha = true) {
   const sem = d.hoy.semaforo, est = estadoSemaforo(sem.color) || estadoSemaforo("sin_datos");
   const texto = textoBanner(d);
   const ayer = d.hoy.ayer ? T("sitio.ayer", { cat: d.hoy.ayer.categoria, esf: d.hoy.ayer.esfuerzo != null ? T("sitio.ayer_esfuerzo", { v: fmt(d.hoy.ayer.esfuerzo, 1) }) : "" }) : null;
-  return DS.tarjeta({ clase: "ancha banner" },
+  return DS.tarjeta({ clase: ancha ? "ancha banner" : "banner" },
     texto ? h("p", { class: "b-t" }, texto) : null,
     DS.desplegable({ titulo: [badge(est.clase, est.icono, est.titulo), T("sitio.recuperacion", { estado: sem.color === "sin_datos" ? T("sitio.sin_datos_min") : est.titulo.toLowerCase() }), h("span", { class: "mu" }, T("sitio.ver_senales"))] },
       DS.senales({ senales: (d.hoy["señales"] || []).map((x) => ({ ...estadoSenal(x.estado), nombre: nombreSenal(x.id), texto: x.texto })), nota: ayer })));
@@ -224,7 +224,7 @@ function resumenSemanaPasada(d) {
   const carga = r.carga_anterior ? T("sitio.sp.carga_vs", { c: fmt(r.carga, 0), f: r.carga >= r.carga_anterior ? "▲" : "▼", p: Math.abs(Math.round(((r.carga - r.carga_anterior) / r.carga_anterior) * 100)), a: fmt(r.carga_anterior, 0) }) : T("sitio.sp.carga", { c: fmt(r.carga, 0) });
   const ritmo = r.ritmo_ref_s != null ? T("sitio.sp.ritmo", { fc: (d.progreso || {}).fc_ref, r: mmss(r.ritmo_ref_s), cmp: cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s) ? `, ${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s)}` : "" }) : null;
   const dist = r.intensidad || {};
-  return DS.tarjeta({ clase: "ancha banner semana-pasada" }, DS.desplegable({
+  return DS.tarjeta({ clase: "banner semana-pasada" }, DS.desplegable({
     titulo: h("span", { class: "sp-titulo" }, h("span", { class: "sp-linea" }, T("sitio.sp.titulo", { l: linea.join(" · ") })),
       sug ? h("span", { class: "estado" }, badge(sug.tipo === "sigue" ? "ok" : "warn", sug.tipo === "sigue" ? "✓" : "!", T("sitio.sugerencia")), sug.texto) : null) },
   h("div", { class: "sp-cuerpo" },
@@ -643,7 +643,7 @@ function renderHoy(d) {
     d.hoy.semaforo.repetir_semana
       ? DS.aviso({ clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
       : null,
-    bannerHoy(d), tarjetaPlanTerminado(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
+    tarjetaPlanTerminado(d), bannerHoy(d, !d.hoy.semana_pasada), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
     d.aviso_zonas ? DS.aviso({ clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
   pintarSemana(d);
 }
