@@ -119,6 +119,25 @@ const DS = (() => {
     return d;
   };
 
+  /** Burbuja de texto al pasar o enfocar con teclado (no cambia el layout: va absoluta). Recibe el elemento y el texto; devuelve el elemento con
+   *  tabindex y aria-describedby. Necesita un ancestro con position: relative (el propio elemento lo es). */
+  const burbuja = (el, texto) => {
+    const id = uid("bu");
+    el.classList.add("con-burbuja");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("aria-describedby", id);
+    const b = h("span", { class: "burbuja", role: "tooltip", id }, texto);
+    el.append(b);
+    const ajustar = () => {   // recorta al viewport: se corre lo que se salga por los lados
+      b.style.setProperty("--bu-dx", "0px");
+      const r = b.getBoundingClientRect(), m = 6, ancho = document.documentElement.clientWidth;
+      b.style.setProperty("--bu-dx", `${r.left < m ? m - r.left : r.right > ancho - m ? ancho - m - r.right : 0}px`);
+    };
+    el.addEventListener("mouseenter", ajustar);
+    el.addEventListener("focus", ajustar);
+    return el;
+  };
+
   /** Campo con etiqueta. Recibe { etiqueta, opcional, tipo, valor, opciones:[{valor,texto}|texto], ayuda, error, corto, deshabilitado, nombre, attrs }. */
   const campo = ({ etiqueta, opcional, tipo = "text", valor, opciones, ayuda, error, corto, deshabilitado, nombre, attrs = {} } = {}) => {
     const idErr = error ? uid("err") : null;
@@ -453,7 +472,7 @@ const DS = (() => {
 
   return {
     ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoCoach, confirmacion, bannerCambio, filaHistorial,
-    boton, botonIco, dialogo, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
+    boton, botonIco, dialogo, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */

@@ -186,7 +186,7 @@ function tarjetaDoceSemanas(d) {
           onclick: () => { planSel = x.n; c.replaceWith(tarjetaDoceSemanas(d)); } },
           x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null,
           h("span", { class: "sem-cab" }, h("strong", {}, x.n),
-            iconosSemana(x).map((k) => h("span", { class: "sem-ev", "data-ev": k, title: T(`sitio.plan.et_${k}`) }, DS.ico(ICONO_MARCA[k])))),
+            iconosSemana(x).map((k) => DS.burbuja(h("span", { class: "sem-ev", "data-ev": k }, DS.ico(ICONO_MARCA[k])), textoBurbuja(x, k)))),
           h("span", {}, tipoSemana(x.etiqueta || x.kind)),
           marcaProgreso(x, actual))))));
   }
@@ -218,6 +218,13 @@ function marcaProgreso(x, actual) {
   const p = x.progreso;
   const simbolo = x.cumplimiento === "completa" ? "✓✓" : x.cumplimiento === "casi" ? "✓" : x.cumplimiento === "baja" ? "–" : x.n === actual && p ? `${p.hechas}/${p.total}` : "";
   return h("span", { class: "sem-prog", "data-cump": x.cumplimiento || null, "aria-hidden": "true" }, simbolo || " ");
+}
+/** Texto de la burbuja de un ícono: lo específico (fechas, prueba) sale de `marcas_det`; sin él, el nombre del evento. */
+function textoBurbuja(x, k) {
+  const dt = (x.marcas_det || {})[k] || {};
+  const f = !dt.d ? "" : dt.h && dt.h !== dt.d ? `${fechaLarga(dt.d)} – ${fechaLarga(dt.h)}` : fechaLarga(dt.d);
+  if (k === "prueba") return dt.n ? T("sitio.plan.bur_prueba_n", { n: dt.n }) : T("sitio.plan.bur_prueba");
+  return f ? T(`sitio.plan.bur_${k}`, { f }) : T(`sitio.plan.et_${k}`);
 }
 const ICONO_MARCA = { carrera: "medalla", viaje: "avion", enfermedad: "termometro", prueba: "cronometro" };
 

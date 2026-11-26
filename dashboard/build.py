@@ -199,6 +199,31 @@ def marcas_semana(w: dict, ini: date | None, config: dict) -> list:
     return [x for x in MARCAS_SEMANA if x in hay]
 
 
+def detalle_marcas(w: dict, ini: date | None, config: dict, marcas: list) -> dict:
+    """Para la burbuja de cada ícono: {tipo: {"d": desde, "h": hasta}} (ISO; `n` = nombre de la sesión de prueba). Solo fechas
+    de la config o de la semana: nada de nombres de actividades de Garmin."""
+    fin = ini + timedelta(days=6) if ini else None
+    out = {}
+    for tipo in marcas:
+        d, h = (ini.isoformat(), fin.isoformat()) if ini else (None, None)
+        if ini:
+            cae = lambda a, b: date.fromisoformat(str(a)) <= fin and date.fromisoformat(str(b or a)) >= ini
+            if tipo == "carrera":
+                f = next((str(x["fecha"]) for x in config.get("metas") or [] if cae(x["fecha"], x["fecha"])), None)
+                d, h = (f, f) if f else (d, h)
+            elif tipo in ("viaje", "enfermedad"):
+                ev = next((e for e in config.get("eventos") or [] if (e["tipo"] if e["tipo"] != "lesion" else "enfermedad") == tipo
+                           and cae(e["desde"], e["hasta"])), None)
+                d, h = (str(ev["desde"]), str(ev["hasta"] or ev["desde"])) if ev else (d, h)
+        item = {"d": d, "h": h} if d else {}
+        if tipo == "prueba":
+            nombre = next((s.get("name") for s in w["sessions"] if s.get("tipo") == "prueba"), None)
+            if nombre:
+                item["n"] = plan_i18n.nombre(nombre)
+        out[tipo] = item
+    return out
+
+
 def cumplimiento_semana(hechas: int, total: int):
     """Semana pasada: "completa" (todas), "casi" (al menos 2/3) o "baja" (el resto; la página la muestra neutra). None sin sesiones."""
     if total <= 0:
@@ -223,6 +248,7 @@ def semanas_plan(plan: dict, zonas: list, hoy: date, data: dict, config: dict) -
         if marca:
             cw["marca"] = marca
             todas = marcas_semana(w, ini, config)
+            cw["marcas_det"] = detalle_marcas(w, ini, config, todas)   # fechas para la burbuja de cada ícono
             if len(todas) > 1:
                 cw["marcas"] = todas   # dos eventos en la semana: la página muestra los dos íconos, en este orden
         if ini is not None and ini <= monday(hoy):
