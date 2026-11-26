@@ -116,6 +116,19 @@ def plan_de(db: Session, usuario: Usuario) -> dict:
     return p.plan if p else build.load(build.ROOT / "plan" / "plan.example.json")
 
 
+def _huella_codigo() -> str:
+    """Huella del código del motor: si cambia (un deploy), el data.json guardado en caché deja de valer."""
+    h = hashlib.sha256()
+    for carpeta in ("dashboard", "plan", "i18n"):
+        for f in sorted((build.ROOT / carpeta).glob("*")):
+            if f.is_file() and f.suffix in (".py", ".csv", ".yaml", ".json"):
+                h.update(f.name.encode() + f.read_bytes())
+    return h.hexdigest()[:16]
+
+
+CODIGO = _huella_codigo()
+
+
 def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") -> str:
     n, ultimo = db.execute(select(func.count(DatoGarmin.id), func.max(DatoGarmin.actualizado))
                            .where(DatoGarmin.usuario_id == usuario.id)).one()
@@ -123,7 +136,7 @@ def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") ->
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
     partes = [hoy_local, idioma, json.dumps([menu_de(idioma), plan_acciones(idioma), LIGA_AJUSTAR_PLAN]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
-              usuario.repo, usuario.sensor, bool(usuario.sin_plan)]
+              usuario.repo, usuario.sensor, bool(usuario.sin_plan), CODIGO]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
 
 

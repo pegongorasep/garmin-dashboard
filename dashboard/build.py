@@ -234,7 +234,8 @@ def cumplimiento_semana(hechas: int, total: int):
 def semanas_plan(plan: dict, zonas: list, hoy: date, data: dict, config: dict) -> list:
     """Las semanas del plan para el Plan: `etiqueta` (carga/descarga), `marca` (evento del ícono) y `progreso`
     {hechas, total} de las pasadas y la actual (lo que dice estado_sesiones; las futuras no traen la clave) y `cumplimiento`
-    (solo las pasadas: completa, casi o baja)."""
+    (solo las pasadas: completa, casi o baja) y `estados` [{id, estado, ajustada}] de cada sesión (pasadas: hecha/incompleta/no_hecha;
+    futuras: pendiente; la semana actual usa plan.estado_sesiones)."""
     inicio = date.fromisoformat(config["plan_start"])
     sec = m.secuencia_semanas(inicio, config.get("semanas_repetidas", []), config.get("plan_semanas", 12), config.get("pausas", []))
     lunes = {}
@@ -256,6 +257,11 @@ def semanas_plan(plan: dict, zonas: list, hoy: date, data: dict, config: dict) -
             cw["progreso"] = {"hechas": sum(1 for e in estado if e["estado"] == "hecha"), "total": len(w["sessions"])}
             if ini < monday(hoy):
                 cw["cumplimiento"] = cumplimiento_semana(cw["progreso"]["hechas"], cw["progreso"]["total"])
+                # pasada: lo que no se hizo es «no_hecha» (la actual lleva el suyo en plan.estado_sesiones)
+                cw["estados"] = [{"id": e["id"], "estado": "no_hecha" if e["estado"] == "pendiente" else e["estado"],
+                                  "ajustada": e["ajustada"]} for e in estado]
+        if "estados" not in cw and (ini is None or ini > monday(hoy)):
+            cw["estados"] = [{"id": s["id"], "estado": "pendiente", "ajustada": False} for s in w["sessions"]]   # futura
         out.append(cw)
     return out
 

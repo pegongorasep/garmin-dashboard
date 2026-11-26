@@ -190,7 +190,7 @@ function tarjetaDoceSemanas(d) {
           h("span", {}, tipoSemana(x.etiqueta || x.kind)),
           marcaProgreso(x, actual))))));
   }
-  const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
+  const est = actual === w.n ? plan.estado_sesiones ?? [] : w.estados ?? [];   // el estado de cada semana lo calcula Python
   c.append(linea,
     h("p", { class: "nota" }, T("sitio.plan.nota", { d: ui().textos.descarga || T("sitio.plan.descarga_nota") })),
     h("h3", { class: "titular" }, T("sitio.plan.titulo_sem", { n: w.n, b: w.block, k: tipoSemana(w.kind) })),

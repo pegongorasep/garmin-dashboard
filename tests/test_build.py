@@ -966,3 +966,11 @@ def test_huella_de_sugerencia_depende_de_la_semana():
     assert a == build.huellas_avisos({}, None, {}, {}, 3, sug, "2026-11-16")
     assert a["sugerencia"] != build.huellas_avisos({}, None, {}, {}, 3, sug, "2026-11-23")["sugerencia"]
     assert "sugerencia" not in build.huellas_avisos({}, None, {}, {}, 3, {"tipo": "sigue"}, "2026-11-16")
+
+
+def test_semanas_plan_estados_por_sesion(salida):
+    sem = salida["plan"]["semanas"]
+    assert [e["estado"] for e in sem[0]["estados"]].count("hecha") == sem[0]["progreso"]["hechas"]
+    assert {e["estado"] for e in sem[0]["estados"]} <= {"hecha", "incompleta", "no_hecha"}      # pasada: nada «pendiente»
+    assert "estados" not in sem[1]                                                              # la actual usa estado_sesiones
+    assert all(e["estado"] == "pendiente" for w in sem[2:] for e in w["estados"])               # futuras

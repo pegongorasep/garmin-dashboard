@@ -211,3 +211,25 @@ def test_settings_exigen_secret_key_fuera_de_localhost_y_arreglan_la_url_de_post
     assert s.database_url.startswith("postgresql+psycopg://") and not s.cookie_segura
     assert Settings(base_url="https://ahilallevas.com/", secret_key="x").cookie_segura
     assert s.oidc_audience == "http://localhost:8000"
+
+
+@pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
+def test_semanas_del_plan_web_y_build_traen_las_mismas_claves(web_ctx):
+    """Las palomitas del Plan salen de plan.semanas[]: la web debe traer las mismas claves que build."""
+    uid = usuario_pedro(web_ctx)
+    with web_ctx.sesiones() as db:
+        importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
+        web = calculo.calcular(db, db.get(Usuario, uid), AHORA_UTC)
+    esp = esperado(modo_web=True)["plan"]["semanas"]
+    assert [sorted(w) for w in web["plan"]["semanas"]] == [sorted(w) for w in esp]
+    assert any("cumplimiento" in w for w in web["plan"]["semanas"]) and all("estados" in w for w in web["plan"]["semanas"] if "progreso" not in w or "cumplimiento" in w)
+
+
+def test_la_huella_del_cache_incluye_el_codigo_del_motor(web_ctx, monkeypatch):
+    """Tras un deploy el data.json en caché (calculado con el código viejo) no debe servirse: la huella cambia con el código."""
+    uid = usuario_pedro(web_ctx)
+    with web_ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        h1 = calculo.huella(db, u, "2026-11-26")
+        monkeypatch.setattr(calculo, "CODIGO", "otro")
+        assert calculo.huella(db, u, "2026-11-26") != h1
