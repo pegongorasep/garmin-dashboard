@@ -40,6 +40,7 @@ body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bot
 
 /* Calendario de la semana: lo que el sistema no trae (extras, carrera, categorías) */
 .circ.extra { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink-2); }
+.circ.planeado { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--accent); }
 .circ.carrera { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); margin-bottom: 5px; }
 .dia { min-width: 0; text-align: center; }
 .sn { display: flex; flex-direction: column; align-items: center; gap: 1px; max-width: 100%; line-height: 1.15; overflow-wrap: anywhere; }

@@ -353,6 +353,27 @@ def dia_de_semana(d: date, hoy: date, runs: list, sesiones: list, data: dict, co
             "corrida": corrida, "corridas_n": len(del_dia), "otras": otras}
 
 
+def marcar_planeados(dias: list, sesiones: list, hoy: date, pasada: bool) -> None:
+    """Pone `planeado: True` en los días de hoy en adelante de la semana en curso donde toca correr una sesión
+    pendiente. El plan no fija día, así que: la Larga al primer fin de semana libre y las demás en los primeros
+    días libres. Semanas pasadas y futuras no marcan nada."""
+    if pasada or not any(d["fecha"] <= hoy.isoformat() for d in dias):
+        return
+    pendientes = [s for s in sesiones if s["estado"] == "pendiente"]
+    libres = [d for d in dias if d["fecha"] >= hoy.isoformat() and d["corrida"] is None]
+    for s in sorted(pendientes, key=lambda s: s.get("tipo") not in ("larga", "prueba")):
+        if not libres:
+            return
+        if s.get("tipo") in ("larga", "prueba"):
+            d = next((d for d in libres if date.fromisoformat(d["fecha"]).weekday() >= 5), None)
+            if d is None:
+                continue
+        else:
+            d = next((d for d in libres if date.fromisoformat(d["fecha"]).weekday() < 5), libres[0])
+        d["planeado"] = True
+        libres.remove(d)
+
+
 def intensidad_semana(acts: list, ini: date) -> dict:
     """Minutos por zona (Z1–Z5, Z0 fuera) de corridas + actividades de la semana y % bajo / limbo / alto: la cuenta de 80/20."""
     d = m.week_distribution(acts, ini)
@@ -381,6 +402,7 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
         else:
             extras.append({"fecha": clave[0], **corrida_plana(a, None, data, config)})
     dias = [dia_de_semana(ini + timedelta(days=i), hoy, runs, sesiones, data, config) for i in range(7)]
+    marcar_planeados(dias, sesiones, hoy, pasada)
     for s in sesiones:
         s["minutos"] = r1(s["minutos"])
     filas = _semana_corridas(ini, hasta, data["activities"], data["details"], config)

@@ -799,3 +799,11 @@ def test_ayuda_en_el_json_y_en_la_lista_blanca(salida):
     assert [b["titulo"] for b in salida["ayuda"]][:2] == ["El semáforo de cada mañana", "Tus sesiones"]
     assert all(set(b) == {"titulo", "parrafos", "lista"} for b in salida["ayuda"])
     assert validar.problemas(salida) == []
+
+
+def test_semana_actual_marca_dias_planeados_sin_hacer():
+    data = {**fixture(), "activities": []}
+    s = _semana(data, date(2026, 10, 28), date(2026, 10, 26))   # miércoles
+    marcados = [d["fecha"] for d in s["dias"] if d.get("planeado")]
+    assert len(marcados) == len(s["sesiones"]) and all(f >= "2026-10-28" for f in marcados)
+    assert date.fromisoformat(marcados[-1]).weekday() >= 5   # la Larga cae en fin de semana

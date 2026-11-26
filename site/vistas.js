@@ -171,7 +171,7 @@ function tarjetaDoceSemanas(d) {
           "aria-pressed": x.n === planSel ? "true" : "false",
           "aria-label": `Semana ${x.n}, ${x.etiqueta || x.kind}${x.n === actual ? ", semana actual" : ""}`,
           onclick: () => { planSel = x.n; c.replaceWith(tarjetaDoceSemanas(d)); } },
-          h("strong", {}, x.n), h("span", { class: "con-ico" }, x.etiqueta === "carrera" ? DS.ico("medalla") : null, x.etiqueta || (x.kind === "descarga" ? "descarga" : "carga")), x.n === actual ? h("em", {}, "actual") : null)))));
+          h("strong", {}, x.n), h("span", { class: "con-ico" }, x.etiqueta === "carrera" ? DS.ico("medalla") : x.etiqueta === "viaje" ? DS.ico("avion") : null, x.etiqueta || (x.kind === "descarga" ? "descarga" : "carga")), x.n === actual ? h("em", {}, "actual") : null)))));
   }
   const est = actual === w.n ? plan.estado_sesiones ?? [] : [];
   c.append(linea,

@@ -312,6 +312,7 @@ function tarjetaEstaSemana(d, s) {
 const diaTexto = (x) => {
   const partes = [];
   if (x.corrida) partes.push(`${x.corrida.carrera ? "carrera" : "corrida"} de ${fmt(x.corrida.minutos, 0)} min (${x.corrida.sesion_nombre}, ${{ hecha: "hecha", incompleta: "incompleta", extra: "sin sesión" }[x.corrida.estado] || x.corrida.estado})`);
+  if (x.planeado && !x.corrida) partes.push("corrida planeada");
   if (x.corridas_n > 1) partes.push(`${x.corridas_n} corridas ese día`);
   for (const cf of x.otras || []) {
     partes.push(`${categoria(cf.cat).nombre}${cf.minutos ? ` ${fmt(cf.minutos, 0)} min` : ""}${cf.esfuerzo != null ? `, esfuerzo ${fmt(cf.esfuerzo, 1)}` : ""}${cf.rpe != null ? `, RPE ${fmt(cf.rpe, 0)}` : ""}`);
@@ -332,6 +333,7 @@ function diaCalendario(x, hoyIso) {
       h("span", { class: "sn" }, DS.ico(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr")), h("span", {}, `${fmt(x.corrida.minutos, 0)}' ${x.corrida.sesion_nombre}` + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, "carrera") : null];
   }
+  if (!marca.length && x.planeado) marca = [h("span", { class: "circ planeado", "aria-hidden": "true" }, parseFecha(x.fecha).getDate())];   // corrida planeada, aún sin hacer
   const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.esfuerzo != null ? fmt(cf.esfuerzo, 1) : null));
   return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), numeroEnMarca: marca.length > 0, hijos: [...marca, ...cfMarca] });
 }

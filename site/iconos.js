@@ -2,6 +2,7 @@
 // Íconos de línea (trazo 1.75, viewBox 24). Python decide cuál va en cada lugar; aquí solo se pintan.
 // Siempre decorativos (aria-hidden): al lado va el texto o un title.
 const ICONOS = {
+  "avion": [["path", {"d": "M21 3 10.5 13.5 M21 3l-6.5 18-4-7.5L3 9.5z"}]],
   "ayuda": [["circle", {"cx": 12, "cy": 12, "r": 8.5}], ["path", {"d": "M9.6 9.6a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.8-1.1 1.5v.5"}], ["circle", {"cx": 12, "cy": 16.6, "r": 0.9, "fill": "currentColor", "stroke": "none"}]],
   "bici": [["circle", {"cx": 5.8, "cy": 16, "r": 3.6}], ["circle", {"cx": 18.2, "cy": 16, "r": 3.6}], ["path", {"d": "M5.8 16 9.6 8.6h5.2l3.4 7.4 M9.6 8.6 12.2 16 14.8 8.6 M14.8 8.6l-.9-2.4h2.4 M8.2 8.6h2.8"}]],
   "caminar": [["circle", {"cx": 13, "cy": 4.6, "r": 1.9}], ["path", {"d": "M12.6 8.4 11.6 14 M11.6 14l2.6 6.2 M11.6 14l-3 6.4 M12.6 9.4 9.6 12.4 M12.6 9.4l3 2.8"}]],
