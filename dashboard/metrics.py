@@ -641,7 +641,7 @@ def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, con
     else:
         return None
     texto = tt("motor.sugerencia.repetir_web" if tipo == "repetir" and config.get("modo") == "web" else f"motor.sugerencia.{tipo}")
-    return {"tipo": tipo, "texto": texto}
+    return {"tipo": tipo, "titulo": tt(f"motor.sugerencia_t.{tipo}"), "texto": texto}
 
 
 def rolling_mean(valores: list, ventana: int = 7, minimo: int = 3) -> list:

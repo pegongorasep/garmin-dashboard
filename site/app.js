@@ -243,14 +243,15 @@ function resumenSemanaPasada(d) {
   const verSemana = () => { semIdx = hoyIdx - 1; pintarSemana(d); const x = $("hoy-semana"); if (x && x.firstElementChild) x.firstElementChild.scrollIntoView({ behavior: "smooth", block: "start" }); };
   // La línea 2 vive en el summary: tocar «Entendido» no debe abrir ni cerrar el detalle.
   const linea2 = !sug ? null : sug.tipo === "sigue" ? h("p", { class: "sp-sigue" }, sug.texto)
-    : avisoCerrable("sugerencia", { clase: "warn", simbolo: "!", texto: sug.texto });
+    : avisoCerrable("sugerencia", { clase: "warn", simbolo: "!", extra: "una-linea", texto: sug.titulo || sug.texto });
   if (linea2 && sug.tipo !== "sigue") linea2.addEventListener("click", (e) => e.preventDefault());
-  return DS.tarjeta({ clase: "ancha semana-pasada" }, DS.desplegable({ clase: "cab-d",
+  return DS.tarjeta({ clase: "semana-pasada" }, DS.desplegable({ clase: "cab-d",
     titulo: h("span", { class: "sp-cab" },
       h("span", { class: "sp-linea" }, tiene ? T("sitio.sp.t_sesiones", { a: r.sesiones_hechas, b: r.sesiones_total }) : T("sitio.sp.t_min", { n: fmt(r.minutos, 0) })),
       tiene ? h("span", { class: `sem-barra${pct >= 100 ? " completa" : ""}`, role: "img", "aria-label": T("sitio.sp.t_sesiones", { a: r.sesiones_hechas, b: r.sesiones_total }) }, h("i", { style: `width:${pct}%` })) : null,
       linea2) },
   h("div", { class: "sp-cuerpo" },
+    sug && sug.tipo !== "sigue" && sug.titulo ? h("p", { class: "nota" }, sug.texto) : null,
     h("p", {}, mink), h("p", {}, carga), ritmo ? h("p", {}, ritmo) : null, intens ? h("p", {}, intens) : null,
     h("p", { class: "nota" }, verdes),
     hoyIdx > 0 ? DS.boton(T("sitio.sp.ver"), { variante: "texto", chico: true, onclick: verSemana }) : null)));
@@ -399,25 +400,24 @@ function vacioDia(x, hoyIso) {
   return [T("sitio.dia.vacio_descanso"), futuro ? T("sitio.dia.toca_descanso") : null];   // días pasados: el plan no fija día, no se puede decir qué tocaba
 }
 
-/** Tarjeta del día tocado, de alto fijo: cabecera + 2 espacios de fila (`.dia-ranura`). Con 3 o más actividades, la segunda ranura dice
- *  «+N más» y al tocarla se abren todas (crecer ahí es explícito). Sin actividad, un estado que llena las mismas ranuras. */
+/** Tarjeta del día tocado, de alto fijo: cabecera (fecha + «+N más» a la derecha) y una sola ranura (`.dia-ranura`) para el caso normal:
+ *  1 actividad, día planeado o descanso. Con 2 o más, se ve la primera y «+N más» abre todas (crecer ahí es explícito). */
 function tarjetaDia(x, hoyIso) {
   const acts = x.actividades || [];
   const ranura = (...hijos) => h("div", { class: "dia-ranura" }, ...hijos);
-  let filas;
+  const caja = h("div", { class: "dia-filas" });
+  const cab = h("div", { class: "dia-cab" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)));
   if (!acts.length) {
     const [t, sub] = vacioDia(x, hoyIso);
-    filas = [ranura(h("div", { class: "act-fila" }, h("span", { class: "act-t" }, t), sub ? h("span", { class: "nota" }, sub) : null)), ranura()];
-  } else if (acts.length <= 2) {
-    filas = [...acts.map((a) => ranura(filaActividad(a))), ...(acts.length < 2 ? [ranura()] : [])];
-  } else {
-    const caja = h("div", { class: "dia-filas" });
-    const mas = h("button", { type: "button", class: "dia-mas", onclick: () => caja.replaceChildren(...acts.map((a) => ranura(filaActividad(a)))) },
+    caja.append(ranura(h("div", { class: "act-fila" }, h("span", { class: "act-t" }, t), sub ? h("span", { class: "nota" }, sub) : null)));
+  } else if (acts.length === 1) caja.append(ranura(filaActividad(acts[0])));
+  else {
+    caja.append(ranura(filaActividad(acts[0])));
+    const mas = h("button", { type: "button", class: "dia-mas", onclick: () => { caja.replaceChildren(...acts.map((a) => ranura(filaActividad(a)))); mas.remove(); } },
       T("sitio.dia.mas", { n: acts.length - 1 }));
-    caja.append(ranura(filaActividad(acts[0])), ranura(mas));
-    return h("div", { class: "dia-det", "aria-live": "polite" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)), caja);
+    cab.append(mas);
   }
-  return h("div", { class: "dia-det", "aria-live": "polite" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)), h("div", { class: "dia-filas" }, ...filas));
+  return h("div", { class: "dia-det", "aria-live": "polite" }, cab, caja);
 }
 
 /** Calendario de 7 días tocables + la tarjeta del día elegido (hoy; en otra semana, el último con actividad). `mk(x, sel, alTocar)` pinta cada día. */
