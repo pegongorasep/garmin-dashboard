@@ -164,7 +164,7 @@ def("Navegación", "Pasos", "DS.pasos()", "Avance del onboarding: hechos, actual
 def("Navegación", "Pestañas (segmento)", "DS.segmento()", "Pestañas secundarias dentro de una tarjeta, o un grupo de opciones.",
   DS.tarjeta({ titulo: "Tus corridas" }, DS.segmento({ etiqueta: "Vista", activo: "corridas", opciones: [{ id: "corridas", texto: "Corridas" }, { id: "km", texto: "Km" }, { id: "cuerpo", texto: "Cuerpo" }] })),
   DS.segmento({ etiqueta: "Periodo", modo: "grupo", activo: "8", opciones: [{ id: "4", texto: "4 sem" }, { id: "8", texto: "8 sem" }, { id: "12", texto: "12 sem" }] }));
-def("Navegación", "Desplegable", "DS.desplegable()", "Abrir más detalle: fila con flecha y liga «Ver pasos».",
+def("Navegación", "Desplegable", "DS.desplegable()", "Abrir más detalle: fila con flecha, liga «Ver pasos» y encabezado de varias líneas (clase cab-d: raya entre encabezado y cuerpo).",
   DS.tarjeta({ titulo: "Semanas del plan" },
     DS.desplegable({ titulo: "Semana 7", sub: "24 nov – 30 nov", abierto: true }, h("p", { class: "mu" }, "Z2 #1 · 30 min · Z2 #2 · 30 min · Larga · 45 min")),
     DS.desplegable({ titulo: "Semana 8", sub: "1 dic – 7 dic" }, h("p", { class: "mu" }, "…"))),

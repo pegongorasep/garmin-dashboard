@@ -220,26 +220,40 @@ function tarjetaPlanTerminado(d) {
   return c;
 }
 
-/** Resumen de la semana pasada (calculado en Python): una línea y, al tocarla, el resto. */
+/** Resumen de la semana pasada (calculado en Python): el veredicto en dos líneas y, al abrir, cómo vas contra la semana anterior. */
 function resumenSemanaPasada(d) {
   const r = d.hoy.semana_pasada;
   if (!r) return null;
-  const sug = r.sugerencia;
-  const linea = [r.sesiones_total != null ? T("sitio.sp.sesiones", { a: r.sesiones_hechas, b: r.sesiones_total }) : null,
-    r.plan_min != null ? T("sitio.sp.min", { a: fmt(r.minutos, 0), b: fmt(r.plan_min, 0) }) : T("sitio.min_n", { n: fmt(r.minutos, 0) }),
-    T("sitio.sp.verdes", { v: r.dias_verdes, sd: r.dias_sin_datos ? T("sitio.sp.sin_datos", { n: r.dias_sin_datos }) : "" })].filter(Boolean);
+  const sug = r.sugerencia, hoyIdx = d.semana_hoy_idx ?? 0;
+  const tiene = r.sesiones_total != null;
+  const pct = tiene && r.sesiones_total ? Math.min(100, (r.sesiones_hechas / r.sesiones_total) * 100) : 0;
+  const flecha = (a, b) => (a >= b ? "▲" : "▼");
   const cuando = (a, b) => (a == null || b == null ? null : Math.abs(a - b) < 3 ? T("sitio.sp.igual") : T(a < b ? "sitio.sp.mas_rapido" : "sitio.sp.mas_lento", { v: mmss(b) }));
-  const carga = r.carga_anterior ? T("sitio.sp.carga_vs", { c: fmt(r.carga, 0), f: r.carga >= r.carga_anterior ? "▲" : "▼", p: Math.abs(Math.round(((r.carga - r.carga_anterior) / r.carga_anterior) * 100)), a: fmt(r.carga_anterior, 0) }) : T("sitio.sp.carga", { c: fmt(r.carga, 0) });
+  const mink = r.minutos_anterior || r.km_anterior
+    ? T("sitio.sp.mink_vs", { m: fmt(r.minutos, 0), fm: flecha(r.minutos, r.minutos_anterior), dm: fmt(Math.abs(r.minutos - r.minutos_anterior), 0),
+      k: fmt(r.km), fk: flecha(r.km, r.km_anterior), dk: fmt(Math.abs(r.km - r.km_anterior)) })
+    : T("sitio.sp.mink", { m: fmt(r.minutos, 0), k: fmt(r.km) });
+  const carga = r.carga_anterior ? T("sitio.sp.carga_vs", { c: fmt(r.carga, 0), f: flecha(r.carga, r.carga_anterior), p: Math.abs(Math.round(((r.carga - r.carga_anterior) / r.carga_anterior) * 100)), a: fmt(r.carga_anterior, 0) }) : T("sitio.sp.carga", { c: fmt(r.carga, 0) });
   const ritmo = r.ritmo_ref_s != null ? T("sitio.sp.ritmo", { fc: (d.progreso || {}).fc_ref, r: mmss(r.ritmo_ref_s), cmp: cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s) ? `, ${cuando(r.ritmo_ref_s, r.ritmo_ref_anterior_s)}` : "" }) : null;
-  const dist = r.intensidad || {};
-  return DS.tarjeta({ clase: "ancha banner semana-pasada" }, DS.desplegable({
-    titulo: h("span", { class: "sp-titulo" }, h("span", { class: "sp-linea" }, T("sitio.sp.titulo", { l: linea.join(" · ") })),
-      sug ? h("span", { class: "estado" }, badge(sug.tipo === "sigue" ? "ok" : "warn", sug.tipo === "sigue" ? "✓" : "!", T("sitio.sugerencia")), sug.texto) : null) },
+  const dist = r.intensidad || {}, antes = r.intensidad_anterior || {};
+  const intens = dist.bajo == null ? null : antes.bajo != null && (antes.bajo || antes.alto)
+    ? T("sitio.sp.dist_vs", { b: fmt(dist.bajo, 0), pb: fmt(antes.bajo, 0), a: fmt(dist.alto, 0), pa: fmt(antes.alto, 0) })
+    : T("sitio.sp.dist", { b: fmt(dist.bajo, 0), a: fmt(dist.alto, 0) });
+  const verdes = T("sitio.sp.verdes", { v: r.dias_verdes, sd: r.dias_sin_datos ? T("sitio.sp.sin_datos", { n: r.dias_sin_datos }) : "" });
+  const verSemana = () => { semIdx = hoyIdx - 1; pintarSemana(d); const x = $("hoy-semana"); if (x && x.firstElementChild) x.firstElementChild.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  // La línea 2 vive en el summary: tocar «Entendido» no debe abrir ni cerrar el detalle.
+  const linea2 = !sug ? null : sug.tipo === "sigue" ? h("p", { class: "sp-sigue" }, sug.texto)
+    : avisoCerrable("sugerencia", { clase: "warn", simbolo: "!", texto: sug.texto });
+  if (linea2 && sug.tipo !== "sigue") linea2.addEventListener("click", (e) => e.preventDefault());
+  return DS.tarjeta({ clase: "ancha semana-pasada" }, DS.desplegable({ clase: "cab-d",
+    titulo: h("span", { class: "sp-cab" },
+      h("span", { class: "sp-linea" }, tiene ? T("sitio.sp.t_sesiones", { a: r.sesiones_hechas, b: r.sesiones_total }) : T("sitio.sp.t_min", { n: fmt(r.minutos, 0) })),
+      tiene ? h("span", { class: `sem-barra${pct >= 100 ? " completa" : ""}`, role: "img", "aria-label": T("sitio.sp.t_sesiones", { a: r.sesiones_hechas, b: r.sesiones_total }) }, h("i", { style: `width:${pct}%` })) : null,
+      linea2) },
   h("div", { class: "sp-cuerpo" },
-    h("p", {}, T("sitio.km_n", { n: fmt(r.km) }) + (r.pct_trote != null ? T("sitio.sp.trote", { v: fmt(r.pct_trote, 0) }) : "")),
-    dist.bajo != null ? h("p", {}, T("sitio.sp.dist", { b: fmt(dist.bajo, 0), l: fmt(dist.limbo, 0), a: fmt(dist.alto, 0) })) : null,
-    h("p", {}, carga), ritmo ? h("p", {}, ritmo) : null,
-    ...(r.plan_vs_real || []).map((x) => h("div", {}, h("p", { class: "nota" }, x.sesion), lineasPlanVsReal(x.filas))))));
+    h("p", {}, mink), h("p", {}, carga), ritmo ? h("p", {}, ritmo) : null, intens ? h("p", {}, intens) : null,
+    h("p", { class: "nota" }, verdes),
+    hoyIdx > 0 ? DS.boton(T("sitio.sp.ver"), { variante: "texto", chico: true, onclick: verSemana }) : null)));
 }
 
 // --- semanas navegables: selector, esta semana, calendario ---

@@ -27,10 +27,13 @@ body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bot
 /* Hoy: selector de semana, resumen y sesiones */
 .selector { display: grid; justify-items: center; gap: var(--space-2); }
 .selector > .sel { width: 100%; }
-.sp-titulo, .sp-cuerpo, .calidad, .notas-paso, .pvr, .int-sem, .cal-caja, .bloque-sil, .sil-fila, .pie-graf, .vista-cuerpo { display: grid; gap: var(--space-4); }
+.sp-cuerpo, .calidad, .notas-paso, .pvr, .int-sem, .cal-caja, .bloque-sil, .sil-fila, .pie-graf, .vista-cuerpo { display: grid; gap: var(--space-4); }
 .pie-graf, .vista-cuerpo { gap: var(--space-8); }
 .vista-cuerpo { min-height: 60px; }
+.sp-cab { display: grid; flex: 1; min-width: 0; gap: var(--space-6); font-weight: 400; }
+.sp-cab .sem-barra { width: 100%; }
 .sp-linea { font-weight: 600; }
+.sp-sigue { margin: 0; font-size: 13px; color: var(--muted); }
 .sil-fila { pointer-events: none; }
 .titulo-sil { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .leyenda b { font-weight: 600; }

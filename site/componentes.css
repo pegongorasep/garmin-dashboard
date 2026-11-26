@@ -262,6 +262,11 @@ button.dia.dia-sel { box-shadow: inset 0 0 0 2px var(--ink-2); }   /* elegido: a
 .desplegable > :not(summary) { margin-bottom: var(--space-10); }
 .desplegable.liga-d { border-top: 0; }
 .desplegable.rec-linea { border-top: 0; }
+/* cab-d: el encabezado (varias líneas) va en el summary y la raya queda debajo de él, entre encabezado y cuerpo */
+.desplegable.cab-d { border-top: 0; }
+.desplegable.cab-d summary { align-items: flex-start; padding-block: var(--space-4); }
+.desplegable.cab-d summary .ico { margin-top: var(--space-10); }
+.desplegable.cab-d > :not(summary) { border-top: 1px solid var(--grid); padding-top: var(--space-8); }
 .desplegable.rec-linea summary { min-height: 32px; gap: var(--space-6); font-weight: 400; font-size: 13px; color: var(--muted); }
 .desplegable.rec-linea summary .ico { margin-left: 0; color: var(--muted); }
 .punto-luz { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }

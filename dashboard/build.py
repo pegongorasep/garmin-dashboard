@@ -635,7 +635,7 @@ def prueba_resultado(data: dict, config: dict, plan: dict):
 
 def resumen_semana_pasada(hoy: date, data: dict, config: dict, plan: dict):
     """Resumen de la semana pasada (lun–dom antes de la de hoy) para Hoy, sin Claude: sesiones hechas, minutos, km,
-    % trote, días verdes, 80/20, carga contra la anterior, ritmo a FC ref contra la anterior, plan vs real y una
+    % trote, días verdes, 80/20, carga, minutos, km y ritmo a FC ref contra la anterior y una
     sugerencia por reglas. None si esa semana no tuvo corridas ni plan."""
     ini = monday(hoy) - timedelta(days=7)
     s = build_semana(ini, hoy, data, config, plan)
@@ -648,17 +648,16 @@ def resumen_semana_pasada(hoy: date, data: dict, config: dict, plan: dict):
     ritmo = lambda i: m.promedio([f["ritmo_ref_s"] for f in _semana_corridas(i, i + timedelta(days=6), acts, det, config)])  # noqa: E731
     ahora_r, antes_r = ritmo(ini), ritmo(ini - timedelta(days=7))
     plan_s = s["plan"]
+    ant = build_semana(ini - timedelta(days=7), hoy, data, config, plan)
     return {"inicio": s["inicio"], "fin": s["fin"], "n": s["n"],
             "sesiones_hechas": plan_s["hechas"] if plan_s else None, "sesiones_total": plan_s["total"] if plan_s else None,
-            "minutos": s["stats"]["minutos"], "plan_min": plan_s["plan_min"] if plan_s else None,
-            "km": s["stats"]["km"], "pct_trote": s["stats"]["pct_trote"],
+            "minutos": s["stats"]["minutos"], "minutos_anterior": ant["stats"]["minutos"],
+            "km": s["stats"]["km"], "km_anterior": ant["stats"]["km"],
             "dias_verdes": verdes, "dias_rojos": rojos, "dias_sin_datos": sin_datos,
-            "intensidad": s["intensidad"],
+            "intensidad": s["intensidad"], "intensidad_anterior": ant["intensidad"],
             "carga": r1(carga), "carga_anterior": r1(previa),
             "ritmo_ref_s": None if ahora_r is None else round(ahora_r),
             "ritmo_ref_anterior_s": None if antes_r is None else round(antes_r),
-            "plan_vs_real": [{"sesion": x["name"], "filas": x["corrida"]["plan_vs_real"]} for x in s["sesiones"]
-                             if x["corrida"] and x["corrida"].get("plan_vs_real")],
             "sugerencia": m.sugerencia_semana(plan_s["hechas"] if plan_s else 0, plan_s["total"] if plan_s else None,
                                               rojos, carga, previa, config)}
 
@@ -967,7 +966,7 @@ def huella(contenido) -> str:
     return hashlib.sha1(str(contenido).encode("utf-8")).hexdigest()[:10]
 
 
-def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n) -> dict:
+def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n, sugerencia=None) -> dict:
     """{id: huella} de los avisos que hoy están activos (los que el sitio puede cerrar con «Entendido»). Sin aviso, sin clave."""
     out = {}
     if tarjeta.get("aviso"):
@@ -978,6 +977,8 @@ def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, sem
         out["fcmax"] = huella(round(fc_max["estimacion"]))
     if semaforo.get("repetir_semana"):
         out["repetir"] = huella(semana_n)
+    if sugerencia and sugerencia.get("tipo") != "sigue":   # «sigue así» no es aviso: no se cierra
+        out["sugerencia"] = huella(sugerencia["tipo"])   # el tipo, no el texto: en la web y en el sitio el texto cambia de forma
     return out
 
 
@@ -1082,6 +1083,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     semanas_hoy, semana_hoy_idx = build_semanas(hoy, data, config, plan)
     semanas_12 = build_weeks(hoy, data, config, plan)
     mejora = build_mejora(hoy, filas, zonas, data, config, plan)
+    sem_pasada = resumen_semana_pasada(hoy, data, config, plan)
     return {
         "generado": ahora.isoformat(timespec="minutes"),
         "datos_al": datos_al,
@@ -1090,7 +1092,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
                 "titular": titular_hoy(tarjeta, (semana_plan or {}).get("sessions"), manana_id),
-                "semana_pasada": resumen_semana_pasada(hoy, data, config, plan)},
+                "semana_pasada": sem_pasada},
         "ultima_corrida": last_run(data, config, plan),
         "semana": build_week(hoy, data, config, estado, plan),
         "semanas_hoy": semanas_hoy, "semana_hoy_idx": semana_hoy_idx,
@@ -1115,7 +1117,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": {**build_ui(config, plan), "avisos": huellas_avisos(
             tarjeta, m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
-            fc_max, luz, n)},
+            fc_max, luz, n, (sem_pasada or {}).get("sugerencia"))},
         "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
         "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),
