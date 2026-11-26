@@ -128,8 +128,6 @@ def test_errores_junto_al_campo(web_ctx):
     assert r.status_code == 400 and "debe ser lunes" in r.text and 'class="error-t"' in r.text
     r = guardar(cl, zona="Marte/Base")
     assert r.status_code == 400 and "zona" in r.text
-    r = guardar(cl, edad="", fc_max="")
-    assert r.status_code == 400
     r = guardar(cl, cats=[])
     assert r.status_code == 400
     r = guardar(cl, repetidas="tres")
@@ -339,3 +337,11 @@ def test_descargar_plan_para_el_reloj(web_ctx):
         db.commit()
     assert cl_c.get(f"/a/{uid_a}/plan/reloj.json").json() == r.json()
     assert web_ctx.cliente().get("/plan/reloj.json", follow_redirects=False).status_code == 303
+
+
+def test_ajustes_ya_no_edita_fc_max_ni_edad(web_ctx):
+    uid, cl = listo(web_ctx)
+    html = cl.get("/ajustes").text
+    assert 'name="titulo"' in html and 'name="fc_max"' not in html and 'name="edad"' not in html
+    assert guardar(cl, edad="", fc_max="").status_code in (200, 302, 303)
+    assert crudo(web_ctx, uid)["perfil"].get("fc_max") == 189   # lo guardado se conserva

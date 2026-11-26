@@ -466,6 +466,7 @@ def test_max_hr_above_watch():
     assert m.max_hr_above_watch(189, 189) is None
     assert m.max_hr_above_watch(None, 189) is None
     assert "192" in m.max_hr_above_watch(192, 189)
+    assert "Garmin Connect" in m.max_hr_above_watch(None, None) and "220" in m.max_hr_above_watch(192, None)
 
 
 def test_motivo():

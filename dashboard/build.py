@@ -922,7 +922,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "datos_al": datos_al,
         "zonas": [{"zona": z, "piso": lo, "techo": hi} for z, lo, hi in zonas],
         "rhr_promedio_7d": r1(rhr),
-        "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], config["max_hr"]),
+        "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
                 "semana_pasada": resumen_semana_pasada(hoy, data, config, plan)},
         "ultima_corrida": last_run(data, config, plan),

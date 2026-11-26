@@ -20,8 +20,6 @@
   <h2 class="pag-h">{{ t("aj.perfil") }}</h2>
   {{ campo(t("aj.t_pagina"), "titulo", valor=v.titulo, extra={"maxlength": 60}) }}
   {{ seleccion(t("aj.zona_h"), "zona", zs, valor=v.zona, error=errores.get("zona")) }}
-  {{ campo(t("aj.edad"), "edad", tipo="number", valor=v.edad, extra={"min": 10, "max": 99}, error=errores.get("edad")) }}
-  {{ campo(t("aj.fcmax"), "fc_max", tipo="number", valor=v.fc_max, opcional=t("comun.opcional"), ayuda=t("aj.fcmax_ayuda"), extra={"min": 120, "max": 230}, error=errores.get("fc_max")) }}
   {{ seleccion(t("aj.sensor"), "sensor", ss, valor=v.sensor, ayuda=t("aj.sensor_ayuda"), error=errores.get("sensor")) }}
 
   <h2 class="pag-h">{{ t("aj.corrida") }}</h2>

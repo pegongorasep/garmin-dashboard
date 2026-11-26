@@ -1116,8 +1116,10 @@ def watch_max_hr(hr_zones):
     return perfil.get("maxHeartRateUsed")
 
 
-def max_hr_above_watch(estimacion, max_hr):
-    """Aviso si la FC máx medida supera la que se usa; None si no."""
-    if estimacion is None or estimacion <= max_hr:
+def max_hr_above_watch(estimacion, reloj):
+    """Aviso de FC máx: sin valor de Garmin, cómo sacarla; con valor y estimación mayor, que la cambie en Garmin; si no, None."""
+    if reloj is None:
+        return tt("motor.aviso.fcmax_sin")
+    if estimacion is None or estimacion <= reloj:
         return None
-    return tt("motor.aviso.fcmax", est=round(estimacion), reloj=max_hr)
+    return tt("motor.aviso.fcmax", est=round(estimacion))

@@ -403,3 +403,8 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - Íconos: la liga del menú ☰ usa el ícono por defecto del sitio; no se tocó `site/vistas.js` para no mover la versión del service worker.
 - Los slugs aceptan solo `[a-z0-9-]`; los 11 se ordenan con `ORDEN` en `web/aprende.py`.
 - Los enlaces contextuales («¿Por qué zona 2?») se agregan después de que Pedro revise.
+
+## v5 FC máx
+- La FC máx de las zonas sale siempre de Garmin (`maxHeartRateUsed`). Respaldo si Garmin no manda nada: `perfil.fc_max` de la config (los repos viejos de Pages siguen funcionando) y luego `220 - edad`.
+- La web ya no deja editar FC máx ni edad en Ajustes (lo guardado queda intacto, solo respaldo). El onboarding aún las pide como respaldo.
+- Aviso (`aviso_zonas`): sin valor de Garmin explica cómo sacarla; con valor y estimación (pico + 3) mayor, dice que la cambie en Garmin Connect. Nunca manda a editarla en la app.

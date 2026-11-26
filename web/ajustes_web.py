@@ -100,12 +100,6 @@ def crudo_desde_form(crudo: dict, f) -> dict:
         raise ErrorT("err.zona", "zona", zona=zona) from None
     perfil["titulo"] = (str(f.get("titulo", "")).strip() or "Mi entreno")[:60]
     perfil["zona_horaria"] = zona
-    for campo, clave, nombre in (("edad", "edad", "edad"), ("fc_max", "fc_max", "fc_max")):
-        v = _entero(f, campo, campo, vacio_ok=True)
-        if v is None:
-            perfil.pop(clave, None)
-        else:
-            perfil[clave] = v
     sensor = f.get("sensor", "banda")
     if sensor not in SENSORES:
         raise ErrorT("err.sensor", "sensor")
