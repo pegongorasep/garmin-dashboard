@@ -19,7 +19,7 @@ function idiomaDe(pref) {
 /** Idioma a usar antes de tener data.json: el último que se vio en este equipo, o el del navegador. */
 function idiomaInicial() {
   try { const g = localStorage.getItem("idioma"); if (g) return idiomaDe(g); } catch (e) {}
-  return idiomaDe(navigator.language);
+  return idiomaDe(navigator.language);   // solo antes de tener data.json (pantalla de carga)
 }
 /** Carga i18n/<idioma>.json; si falla deja lo que había (las claves se ven tal cual, nunca se rompe). */
 async function cargarIdioma(idioma) {

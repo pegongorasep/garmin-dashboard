@@ -904,7 +904,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": build_ui(config, plan),
-        **({"idioma": config["idioma"]} if config.get("idioma") else {}),   # sin él, el sitio usa el idioma del navegador
+        "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
         "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),
         "detalles": build_details(hoy, data, config, fc_max, reloj),

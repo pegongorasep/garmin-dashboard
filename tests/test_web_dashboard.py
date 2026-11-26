@@ -58,7 +58,7 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
     esp = norm(esperado(modo_web=True))
     assert norm(web) == esp
     pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
-    web_n.pop("idioma")   # la web lo manda siempre; Pages solo si está en config.yaml
+    # las dos mandan "idioma" siempre
     for d in (pages, web_n):
         for k in ("menu", "plan_acciones", "editar_urls"):
             d["ui"].pop(k)
