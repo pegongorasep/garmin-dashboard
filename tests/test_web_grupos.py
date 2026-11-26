@@ -179,3 +179,35 @@ def test_tarjeta_con_plan_solo_campos_permitidos(web_ctx, monkeypatch):
     pag = a.get(f"/grupos/{gid}").text
     assert "10K" in pag and "Semana 5" in pag and "Adherencia 67%" in pag and "2026-11-24" in pag
     assert "150" not in pag   # la FC no sale
+
+
+def test_reacciones(web_ctx):
+    from web import cuenta
+    from web.modelos import Reaccion
+    a, b = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com")
+    gid = crear(a)
+    post(b, f"/grupos/unirse/{liga(a, gid)}")
+    with web_ctx.sesiones() as db:
+        ua = db.query(Usuario).filter_by(correo="a@x.com").one().id
+        ub = db.query(Usuario).filter_by(correo="b@x.com").one().id
+    assert post(a, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥").status_code == 400   # a sí misma
+    assert post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="x").status_code == 400
+    assert post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥").status_code == 303
+    with web_ctx.sesiones() as db:
+        assert db.query(Reaccion).count() == 1
+    assert "🔥 1" in b.get(f"/grupos/{gid}").text
+    assert "te reaccionaron" in a.get(f"/grupos/{gid}").text
+    post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥")                              # toggle
+    with web_ctx.sesiones() as db:
+        assert db.query(Reaccion).count() == 0
+    post(a, f"/grupos/{gid}/pausar", pausado="1")                                     # pausada: no recibe
+    assert post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="👏").status_code == 400
+    post(a, f"/grupos/{gid}/pausar", pausado="0")
+    post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="👏")
+    post(a, f"/grupos/{gid}/reaccionar/{ub}", emoji="💪")
+    c = sesion(web_ctx, "c@x.com")
+    assert post(c, f"/grupos/{gid}/reaccionar/{ua}", emoji="👏").status_code == 404
+    with web_ctx.sesiones() as db:
+        cuenta.borrar_cuenta(db, db.query(Usuario).filter_by(correo="a@x.com").one())
+    with web_ctx.sesiones() as db:
+        assert db.query(Reaccion).count() == 0

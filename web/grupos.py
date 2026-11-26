@@ -3,7 +3,7 @@
 Solo miembros ven un grupo (a los demás, 404). La liga de invitación se guarda como hash y vale hasta que expira.
 Aquí NO se muestran datos de entrenamiento: G3 agrega las tarjetas de avance, que respetan `MiembroGrupo.pausado`.
 """
-from datetime import timedelta
+from datetime import date, timedelta
 
 import sqlalchemy as sa
 from fastapi import Depends, Request
@@ -12,11 +12,32 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import auth, grupos_resumen, permisos
-from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, Usuario, ahora
+from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, Reaccion, Usuario, ahora
 
 MAX_MIEMBROS = 12
 MAX_GRUPOS = 5          # por persona (los que crea o a los que se une)
 DIAS_LIGA = 7
+EMOJIS = ("👏", "🔥", "💪")
+MAX_REACCIONES_HORA = 60   # límite por persona (cuenta las filas creadas en la última hora)
+
+
+def semana_iso(hoy: date | None = None) -> str:
+    a, s, _ = (hoy or date.today()).isocalendar()
+    return f"{a}-W{s:02d}"
+
+
+def reacciones_de(db: Session, grupo_id: int, semana: str, yo: int) -> dict:
+    """{para_id: {"cuentas": {emoji: n}, "mias": {emoji}, "quienes": [usuario_id únicos]}} de la semana."""
+    out: dict = {}
+    for r in db.scalars(select(Reaccion).where(Reaccion.grupo_id == grupo_id, Reaccion.semana == semana)
+                        .order_by(Reaccion.id)):
+        d = out.setdefault(r.para_id, {"cuentas": {}, "mias": set(), "quienes": []})
+        d["cuentas"][r.emoji] = d["cuentas"].get(r.emoji, 0) + 1
+        if r.de_id == yo:
+            d["mias"].add(r.emoji)
+        if r.de_id not in d["quienes"]:
+            d["quienes"].append(r.de_id)
+    return out
 
 
 def miembros_de(db: Session, grupo_id: int) -> list[tuple[MiembroGrupo, Usuario]]:
@@ -32,6 +53,7 @@ def grupos_de(db: Session, usuario_id: int) -> list[Grupo]:
 
 
 def _borrar_grupo(db: Session, grupo_id: int) -> None:
+    db.execute(sa.delete(Reaccion).where(Reaccion.grupo_id == grupo_id))
     db.execute(sa.delete(InvitacionGrupo).where(InvitacionGrupo.grupo_id == grupo_id))
     db.execute(sa.delete(MiembroGrupo).where(MiembroGrupo.grupo_id == grupo_id))
     db.execute(sa.delete(Grupo).where(Grupo.id == grupo_id))
@@ -39,6 +61,8 @@ def _borrar_grupo(db: Session, grupo_id: int) -> None:
 
 def _salir(db: Session, grupo_id: int, usuario_id: int) -> None:
     """Quita a la persona; si era la única se borra el grupo; si era la admin, la más antigua pasa a admin."""
+    db.execute(sa.delete(Reaccion).where(Reaccion.grupo_id == grupo_id,
+                                         sa.or_(Reaccion.de_id == usuario_id, Reaccion.para_id == usuario_id)))
     db.execute(sa.delete(MiembroGrupo).where(MiembroGrupo.grupo_id == grupo_id, MiembroGrupo.usuario_id == usuario_id))
     db.flush()
     resto = db.scalars(select(MiembroGrupo).where(MiembroGrupo.grupo_id == grupo_id)
@@ -56,6 +80,7 @@ def quitar_de_todos(db: Session, usuario_id: int) -> None:
     """Para borrar la cuenta: sale de todos sus grupos y no deja referencias."""
     for gid in db.scalars(select(MiembroGrupo.grupo_id).where(MiembroGrupo.usuario_id == usuario_id)).all():
         _salir(db, gid, usuario_id)
+    db.execute(sa.delete(Reaccion).where(sa.or_(Reaccion.de_id == usuario_id, Reaccion.para_id == usuario_id)))
     db.execute(sa.update(InvitacionGrupo).where(InvitacionGrupo.creada_por == usuario_id).values(creada_por=None))
     db.execute(sa.update(Grupo).where(Grupo.creado_por == usuario_id).values(creado_por=None))
 
@@ -78,7 +103,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         yo = next((m for m, u in miembros if u.id == usuario.id), None)
         fotos = {u.id for _, u in miembros if perfil_tiene_foto(db, u.id)}
         return render(request, "grupo.html", status=status, atleta=usuario, pref="", grupo=grupo, miembros=miembros,
-                      yo=yo, fotos=fotos, tarjetas=grupos_resumen.tarjetas(db, miembros), liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
+                      yo=yo, fotos=fotos, emojis=EMOJIS,
+                      reacc=reacciones_de(db, grupo.id, semana_iso(), usuario.id), por_id={u.id: u for _, u in miembros}, tarjetas=grupos_resumen.tarjetas(db, miembros), liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
                       error=error, lleno=len(miembros) >= MAX_MIEMBROS)
 
     def propio(request, usuario, db, gid):
@@ -181,6 +207,32 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         token = nueva_liga(db, gid, usuario.id)
         db.commit()
         return pagina(request, usuario, db, p[0], liga=token)
+
+    @app.post("/grupos/{gid}/reaccionar/{uid}")
+    async def reaccionar(gid: int, uid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+        form = await formulario(request)
+        if usuario is None:
+            return sin_sesion()
+        if propio(request, usuario, db, gid) is None:
+            return Response(status_code=404)
+        emoji = str(form.get("emoji", ""))
+        dest = db.scalar(select(MiembroGrupo).where(MiembroGrupo.grupo_id == gid, MiembroGrupo.usuario_id == uid))
+        if dest is None:
+            return Response(status_code=404)
+        if uid == usuario.id or dest.pausado or emoji not in EMOJIS:
+            return Response(status_code=400)
+        previa = db.scalar(select(Reaccion).where(Reaccion.grupo_id == gid, Reaccion.de_id == usuario.id,
+                                                  Reaccion.para_id == uid, Reaccion.semana == semana_iso(), Reaccion.emoji == emoji))
+        if previa is not None:
+            db.delete(previa)
+        else:
+            recientes = db.scalar(select(sa.func.count()).select_from(Reaccion).where(
+                Reaccion.de_id == usuario.id, Reaccion.creada > ahora() - timedelta(hours=1)))
+            if recientes >= MAX_REACCIONES_HORA:
+                return Response(status_code=429)
+            db.add(Reaccion(grupo_id=gid, de_id=usuario.id, para_id=uid, semana=semana_iso(), emoji=emoji))
+        db.commit()
+        return RedirectResponse(f"/grupos/{gid}", 303)
 
     @app.post("/grupos/{gid}/pausar")
     async def pausar(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):

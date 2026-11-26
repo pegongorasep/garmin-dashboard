@@ -422,6 +422,7 @@ a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:f
 /* Avatar: foto o iniciales; el color sale de 6 tokens y se mezcla con la superficie para que el texto (tinta) se lea en claro y oscuro */
 .avatar { display: inline-grid; place-items: center; flex: none; width: 2.8em; height: 2.8em; border-radius: var(--radius-pill); overflow: hidden; font: 600 14px/1 var(--font-sans); color: var(--ink); background: color-mix(in srgb, var(--av-c, var(--accent)) 28%, var(--surface)); box-shadow: inset 0 0 0 2px var(--av-c, var(--accent)); user-select: none; }
 .avatar.g { font-size: 22px; }
+.avatar.xs { width: 1.6em; height: 1.6em; font-size: 10px; box-shadow: inset 0 0 0 1px var(--av-c, var(--accent)); }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .av-0 { --av-c: var(--z1); } .av-1 { --av-c: var(--z2); } .av-2 { --av-c: var(--z3); }
 .av-3 { --av-c: var(--z4); } .av-4 { --av-c: var(--z5); } .av-5 { --av-c: var(--cat-4); }

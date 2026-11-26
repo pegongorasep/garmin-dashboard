@@ -65,6 +65,19 @@ class MiembroGrupo(Base):
     unido: Mapped[datetime] = mapped_column(default=ahora)
 
 
+class Reaccion(Base):
+    """G4: aplauso/fuego/fuerza de una persona a otra en un grupo, por semana ISO (lunes de esa semana en `semana`)."""
+    __tablename__ = "reacciones"
+    __table_args__ = (sa.UniqueConstraint("grupo_id", "de_id", "para_id", "semana", "emoji"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    grupo_id: Mapped[int] = mapped_column(sa.ForeignKey("grupos.id"), index=True)
+    de_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    para_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    semana: Mapped[str] = mapped_column(sa.String(10))    # «2026-W48»
+    emoji: Mapped[str] = mapped_column(sa.String(8))
+    creada: Mapped[datetime] = mapped_column(default=ahora)
+
+
 class InvitacionGrupo(Base):
     """Liga para unirse a un grupo; solo se guarda el hash. Vale varias veces hasta que expira."""
     __tablename__ = "invitaciones_grupo"

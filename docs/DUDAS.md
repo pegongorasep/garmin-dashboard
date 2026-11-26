@@ -383,3 +383,8 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - La liga de invitación vale 7 días y varias veces (se manda por chat); hash en la base. Máximo 12 personas por grupo y 5 grupos por persona.
 - Unirse exige cuenta (solo por invitación a la web): sin sesión se pide entrar y abrir la liga otra vez. «Solo cuerpo» no puede unirse.
 - Al salir la admin, la miembro más antigua pasa a admin; si no queda nadie, el grupo se borra. Solo la admin quita gente.
+
+## v5 grupos (G4)
+- Reacciones 👏 🔥 💪 por semana ISO (`Reaccion`, única por grupo/de/para/semana/emoji); POST con CSRF que alterna (poner/quitar). No a una misma, ni a quien está en pausa. Se borran al salir del grupo (las que dio y las que recibió ahí), al borrar el grupo y al borrar la cuenta.
+- Límite: no había limitador general; se cuentan las reacciones creadas por la persona en la última hora (máx. 60, 429). Quitar y poner de nuevo no suma al contar quitadas, aceptable.
+- El aviso en Hoy («Ana y Luis te aplaudieron») se omitió: requiere llave nueva en el data.json público (lista blanca) y JS en el sitio. Sí se ve en la tarjeta propia dentro del grupo.

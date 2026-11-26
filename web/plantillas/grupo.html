@@ -32,6 +32,20 @@
     <div class="acciones" aria-label="{{ t('grupos.semana') }}">{% for d in c.dias %}<span class="badge {{ 'ok' if d == 'hecha' else 'nd' }}">{{ '✓' if d == 'hecha' else '·' }}</span>{% endfor %}</div>
     <p class="pag-s">{% if c.ultima %}{{ t("grupos.ultima", fecha=c.ultima) }}{% else %}{{ t("grupos.sin_actividad") }}{% endif %}</p>
     {% endif %}
+    {% if c.estado != "pausa" %}{% set r = reacc.get(u.id) %}
+    <div class="acciones" aria-label="{{ t('grupos.reacciones') }}">
+      {% for e in emojis %}
+      {% if u.id != atleta.id %}
+      <form method="post" action="/grupos/{{ grupo.id }}/reaccionar/{{ u.id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="emoji" value="{{ e }}">
+        {{ boton(e ~ " " ~ (r.cuentas.get(e, 0) if r else 0), "sec" if r and e in r.mias else "texto", chico=True, tipo="submit") }}
+      </form>
+      {% elif r and r.cuentas.get(e) %}<span class="badge nd">{{ e }} {{ r.cuentas[e] }}</span>{% endif %}
+      {% endfor %}
+      {% if r %}{% for q in r.quienes %}{{ avatar(por_id[q], q in fotos, "xs") if q in por_id }}{% endfor %}{% endif %}
+    </div>
+    {% if u.id == atleta.id and r %}<p class="pag-s">{{ t("grupos.reaccionaron", n=r.quienes|length) }}</p>{% endif %}
+    {% endif %}
   {% endcall %}
   </li>
   {% endfor %}
