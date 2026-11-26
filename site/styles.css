@@ -66,12 +66,13 @@ body { padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bot
 .zb-ley.fija { display: flex; font-size: 11px; }
 /* Detalle de actividad: tipografía chica y barra fina (la meta de 80 % es semanal, no va aquí) */
 .act-cuerpo .nota, .act-cuerpo p { font-size: 12px; line-height: 17px; }
-.act-tiles { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--space-6); }
+.act-tiles { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: var(--space-6); }   /* auto-fit: los cuadros llenan la fila */
 .act-tiles .tile { padding: 6px 9px; }
 .act-tiles .k { font-size: 11px; }
 .act-tiles .big { font: 600 14px/18px var(--font-sans); }
 .act-tiles .big small { font-size: 11px; }
 .act-cuerpo .zbar-w { margin-top: 6px; }
+@media (min-width: 720px) { .act-tiles .tile { padding: 10px 12px; } .act-tiles .big { font-size: 18px; line-height: 24px; } .act-tiles .big small { font-size: 12px; } }
 @media (max-width: 520px) { .zb-z { display: none; } .zb-ley { display: flex; } }
 .grupos { display: grid; gap: var(--space-8); }
 .grupo { display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap; }
