@@ -47,7 +47,7 @@ def liga_nueva(ctx, correo) -> str:
 
 def crear_usuario(ctx, correo="a@x.com", con_ajustes=False):
     with ctx.sesiones() as db:
-        u = Usuario(correo=correo)
+        u = Usuario(correo=correo, nombre="Ana", apellido="Prueba")
         db.add(u)
         db.commit()
         if con_ajustes:

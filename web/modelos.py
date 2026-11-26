@@ -31,7 +31,18 @@ class Usuario(Base):
     idioma: Mapped[str | None] = mapped_column(sa.String(5))              # es | en; None = el del navegador
     uso: Mapped[str | None] = mapped_column(sa.String(10))                # None = completo | cuerpo (solo mediciones)
     migrado: Mapped[bool] = mapped_column(default=False)                  # F8: Pages apagado
+    nombre: Mapped[str | None] = mapped_column(sa.String(60))             # G1: None = aún no lo ha dicho (se le pide en /perfil)
+    apellido: Mapped[str | None] = mapped_column(sa.String(60))
     borrado: Mapped[datetime | None] = mapped_column()
+
+
+class FotoPerfil(Base):
+    """G1: foto ya recodificada (256x256, sin EXIF). En la base porque Cloud Run no tiene disco."""
+    __tablename__ = "fotos_perfil"
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), primary_key=True)
+    contenido: Mapped[bytes] = mapped_column(sa.LargeBinary)
+    tipo: Mapped[str] = mapped_column(sa.String(20), default="image/webp")
+    actualizada: Mapped[datetime] = mapped_column(default=ahora)
 
 
 class Invitacion(Base):

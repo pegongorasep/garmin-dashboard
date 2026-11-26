@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, aviso, avatar %}
+{% block titulo %}{{ t("perfil.titulo_pagina") }}{% endblock %}
+{% block contenido %}
+{% if not primera_vez %}{% include "_nav.html" %}{% endif %}
+<h1 class="pag-t">{{ t("perfil.titulo") }}</h1>
+<p class="pag-s">{{ t("perfil.ayuda") }}</p>
+{% if request.query_params.get("ok") == "1" %}{% call aviso("ok") %}{{ t("perfil.guardado") }}{% endcall %}{% endif %}
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+<form class="pila" method="post" enctype="multipart/form-data" action="/perfil">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="acciones">{{ avatar(atleta, foto, "g") }}</div>
+  {{ campo(t("perfil.nombre"), "nombre", valor=v.nombre, requerido=True, extra={"maxlength": 60, "autocomplete": "given-name"}) }}
+  {{ campo(t("perfil.apellido"), "apellido", valor=v.apellido, requerido=True, extra={"maxlength": 60, "autocomplete": "family-name"}) }}
+  <label class="campo">
+    <span class="campo-t">{{ t("perfil.foto") }} <small>({{ t("comun.opcional") }})</small></span>
+    <input type="file" name="foto" accept="image/jpeg,image/png,image/webp">
+    <span class="ayuda">{{ t("perfil.foto_ayuda") }}</span>
+  </label>
+  {% if foto %}
+  <label class="opcion"><input type="checkbox" name="quitar_foto"><span>{{ t("perfil.quitar_foto") }}</span></label>
+  {% endif %}
+  <div class="acciones">
+    {{ boton(t("comun.guardar"), tipo="submit") }}
+  </div>
+</form>
+{% endblock %}

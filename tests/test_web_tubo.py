@@ -50,7 +50,7 @@ def ctx(web_ctx):
 
 def usuario_amigo(ctx, owner="amigo", consentimiento=True, repo_id=None):
     with ctx.sesiones() as db:
-        u = Usuario(correo="amigo@x.com", github_owner=owner, repo_id=repo_id, repo="amigo/garmin-prueba" if repo_id else None)
+        u = Usuario(correo="amigo@x.com", nombre="Ana", apellido="Prueba", github_owner=owner, repo_id=repo_id, repo="amigo/garmin-prueba" if repo_id else None)
         db.add(u)
         db.commit()
         if consentimiento:
@@ -246,7 +246,7 @@ def test_cli_vincular(ctx, capsys):
 def test_un_repo_ya_vinculado_a_otro_usuario_no_se_roba(ctx):
     usuario_amigo(ctx, owner="amigo", repo_id=777)
     with ctx.sesiones() as db:
-        db.add(Usuario(correo="b@x.com", github_owner="amigo"))
+        db.add(Usuario(correo="b@x.com", nombre="Ana", apellido="Prueba", github_owner="amigo"))
         db.commit()
     # el repo 777 sigue siendo del primero; otro repo del mismo owner no se vincula a nadie (el primero ya tiene repo)
     assert ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx))).status_code == 200

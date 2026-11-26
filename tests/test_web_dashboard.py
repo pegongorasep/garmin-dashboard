@@ -22,7 +22,7 @@ AHORA_UTC = datetime(2026, 11, 25, 18, 0)   # 12:00 en Mérida
 
 def usuario_pedro(ctx):
     with ctx.sesiones() as db:
-        u = Usuario(correo="pedro@example.com")
+        u = Usuario(correo="pedro@example.com", nombre="Ana", apellido="Prueba")
         db.add(u)
         db.commit()
         return u.id
@@ -128,7 +128,7 @@ def test_ruta_data_json_de_la_web_sirve_el_del_usuario(web_ctx):
 def test_data_con_claves_prohibidas_no_se_sirve(web_ctx, monkeypatch):
     from test_web_cuentas import CONFIG, entrar
     with web_ctx.sesiones() as db:
-        u = Usuario(correo="a@x.com")
+        u = Usuario(correo="a@x.com", nombre="Ana", apellido="Prueba")
         db.add(u)
         db.commit()
         db.add(Ajustes(usuario_id=u.id, config=CONFIG))
@@ -150,7 +150,7 @@ def test_guardar_paquete_es_upsert_y_no_borra(web_ctx):
         "activities": [{"id": "a1", "startTimeLocal": "2026-11-01 07:00:00", "activityType": {"typeKey": "running"}}],
         "activity_details": {"a1": {"rpe": 3.0}}, "hr_zones": [], "historial_corridas": [], "meta": {}}}
     with web_ctx.sesiones() as db:
-        u = Usuario(correo="a@x.com")
+        u = Usuario(correo="a@x.com", nombre="Ana", apellido="Prueba")
         db.add(u)
         db.commit()
         r1 = datos.guardar_paquete(db, u.id, pq)

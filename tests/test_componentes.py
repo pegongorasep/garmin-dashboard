@@ -16,6 +16,7 @@ COMPONENTES_JS = (ROOT / "site" / "componentes.js").read_text()
 COMPONENTES = {
     "BannerCambio": ("banner-cambio", "bannerCambio"),
     "BarraTroteCaminata": ("barra-rw", "barraTroteCaminata"),
+    "Avatar": ("avatar", "avatar"),
     "Boton": ("boton", "boton"),
     "Campo": ("campo", "campo"),
     "Casilla": ("opcion", "opciones"),

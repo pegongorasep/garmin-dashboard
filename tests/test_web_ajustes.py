@@ -23,7 +23,7 @@ def listo(ctx, correo="a@x.com", con_plan=True):
     """Usuario con consentimiento, ajustes y plan; devuelve (id, cliente con sesión)."""
     ctx.app.state.reloj = lambda: HOY
     with ctx.sesiones() as db:
-        u = Usuario(correo=correo)
+        u = Usuario(correo=correo, nombre="Ana", apellido="Prueba")
         db.add(u)
         db.commit()
         db.add(Ajustes(usuario_id=u.id, config=copy.deepcopy(CONFIG)))

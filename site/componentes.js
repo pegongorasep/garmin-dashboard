@@ -55,6 +55,11 @@ const DS = (() => {
     h("div", { class: "vacio" }, nombre === null ? null : ico(nombre || "punto"), h("p", { class: "vc-t" }, titulo), texto ? h("p", { class: "vc-x" }, texto) : null,
       accion ? h("a", { class: "boton", href: accion.href }, accion.texto) : null);
 
+  /** Avatar: foto (`foto` = url) o iniciales con color estable. Recibe { iniciales, color (0..5), foto, grande }. */
+  const avatar = ({ iniciales = "?", color = 0, foto, grande = false } = {}) =>
+    h("span", { class: `avatar ${["av-0", "av-1", "av-2", "av-3", "av-4", "av-5"][color % 6]}${grande ? " g" : ""}`, "aria-hidden": "true" },
+      foto ? h("img", { src: foto, alt: "", width: 256, height: 256 }) : iniciales);
+
   /** Aviso con fondo. Recibe { clase: "warn"|"ok"|"bad", simbolo (insignia al inicio: el color no va solo), titulo, texto }. */
   const aviso = ({ clase = "warn", simbolo, titulo, texto, extra } = {}) =>
     h("div", { class: `aviso-fondo ${clase}${extra ? ` ${extra}` : ""}`, role: "status" }, titulo ? h("div", { class: "b-t" }, titulo) : null,
@@ -404,7 +409,7 @@ const DS = (() => {
   const graficaBarras = (cfg) => conAncho((ancho) => barChart({ ...cfg, ancho }));
 
   return {
-    ico, logo, marca, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoCoach, confirmacion, bannerCambio, filaHistorial,
+    ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, campo, opciones, chip, copiar, formulario, filaCampos, insignia, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,

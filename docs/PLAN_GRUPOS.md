@@ -1,0 +1,55 @@
+# Grupos de amigos + perfil (acordado con Pedro, 2026-11-27)
+
+## Decisiones
+- **Grupos:** cualquier persona con cuenta «completa» (no «solo cuerpo») puede crear un grupo y compartir una liga o código.
+  - Para unirse hace falta una cuenta con sesión; la entrada sigue siendo solo por invitación.
+  - Los miembros pueden salirse. Quien creó el grupo puede quitar miembros.
+  - Una persona puede estar en varios grupos.
+- **Lo que se comparte** (fijo, igual para todos, calculado en Python):
+  - meta: carrera + fecha, o enfoque del plan;
+  - etapa: semana N de M + etiqueta (base/carga/descarga/carrera/viaje);
+  - constancia: sesiones hechas / planeadas en las últimas 4 semanas;
+  - los puntos de los días de esta semana: hecho / pendiente / faltó;
+  - última actividad: «hoy», «hace 3 días».
+  - **Nunca se comparte:** FC, ritmos, peso, InBody, notas, GPS, nombres de actividades, el interior del data.json.
+  - «Pausar lo que comparto»: en pausa, los demás ven solo el nombre + «En pausa».
+- **Reacciones:** en la v1.
+  - Unos pocos emoji fijos sobre la semana de un miembro (👏 🔥 💪).
+  - Una reacción por emoji por persona por semana, que se puede quitar.
+  - Se ve quién reaccionó (avatares).
+  - Tus propias reacciones se ven en tu tarjeta del grupo. Y un aviso chico en Hoy («Ana y Luis te aplaudieron esta semana») si es sencillo.
+- **Perfil:**
+  - **Nombre:** obligatorio, nombre + apellido.
+    - Se pide en el onboarding, para cuentas nuevas.
+    - Para cuentas existentes, se pide una vez después de entrar, antes que cualquier otra cosa, en un paso corto `/perfil`. Pedro y su amigo ya tienen cuenta.
+    - Se edita en Ajustes.
+  - **Foto:** opcional.
+    - JPEG/PNG/WebP, máximo 5 MB.
+    - Se recodifica en el servidor con Pillow: 256×256 recortada al centro, en WebP o JPEG. Esto **quita EXIF/GPS**.
+    - Se guarda en la base (Cloud Run no tiene disco).
+    - Solo la sirve una ruta autenticada con `permisos`: la propia persona y quienes comparten grupo con ella.
+    - Pillow va fijado en `web/requirements.txt`.
+  - **Sin foto:** un círculo con las 2 iniciales (nombre + apellido). El color es «aleatorio» pero estable: sale del id de usuario, de una paleta chica de tokens del sistema de diseño con buen contraste en claro y oscuro.
+  - **Privacidad:** el nombre y la foto nunca van al data.json público de Pages (la lista blanca no cambia). Sí van en el ZIP de «Mis datos» y se borran con la cuenta.
+- Todos los textos pasan por el catálogo i18n (es + en). Lógica en Python; el JS solo pinta (sin JS nuevo si las plantillas alcanzan).
+
+## Fases (un agente Sonnet + un commit cada una)
+- **G1 «Perfil: nombre y foto»:**
+  - `Usuario.nombre`, `Usuario.apellido` y la tabla `FotoPerfil`, con migración;
+  - el paso en el onboarding y el paso `/perfil` para cuentas existentes;
+  - edición en Ajustes;
+  - recodificación con Pillow;
+  - un macro de avatar (foto o iniciales);
+  - cobertura en el ZIP y en el borrado de cuenta.
+  - Pruebas: el EXIF desaparece; >5 MB se rechaza; lo que no es imagen se rechaza; quien no comparte grupo recibe 404 en la foto; iniciales y color estable; una cuenta existente va a `/perfil` una sola vez.
+  - En G1 todavía no hay grupos: la ruta de la foto solo la sirve a su dueña (y a su coach, por `puede_ver`); G2 la extiende a quienes comparten grupo.
+- **G2 «Grupos: crear, unirse, salir»:**
+  - modelos `Grupo`, `MiembroGrupo` y un token de invitación (solo el hash), con migración;
+  - rutas `/grupos`, `/grupos/nuevo`, `/grupos/{id}`, `/grupos/unirse/{token}`, salir, quitar, pausar lo compartido;
+  - `permisos.mismo_grupo`;
+  - una entrada en el menú.
+  - Pruebas: control de acceso (quien no es miembro recibe 404), unirse exige sesión, «solo cuerpo» no puede unirse, quitar, salir.
+- **G3 «Grupos: tarjetas de avance»:**
+  - `web/grupos_resumen.py` calcula la tarjeta de cada miembro desde su plan/datos guardados (reusa `plan_vivo`/`calculo`), solo con los campos de la lista blanca;
+  - la página del grupo pinta las tarjetas (avatar, nombre, meta, etapa, barra de constancia, puntos de la semana, última actividad);
+  - reacciones y aviso en Hoy.

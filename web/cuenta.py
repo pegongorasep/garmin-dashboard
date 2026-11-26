@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import auth
-from .modelos import (Ajustes, CacheData, Cambio, ClienteOAuth, CodigoOAuth, Coach, Consentimiento, DatoGarmin, InBody,
+from .modelos import (FotoPerfil, Ajustes, CacheData, Cambio, ClienteOAuth, CodigoOAuth, Coach, Consentimiento, DatoGarmin, InBody,
                       CodigoLogin, Invitacion, LigaLogin, Plan, Sesion, CuentaBorrada, Subida, TokenOAuth, Usuario, VinculoPendiente)
 
 PALABRA = "BORRAR"
@@ -27,8 +27,10 @@ def datos_de(db: Session, u: Usuario) -> dict[str, object]:
     atletas = db.scalars(select(Coach).where(Coach.coach_id == u.id).order_by(Coach.creado)).all()
     conex = db.execute(select(TokenOAuth, ClienteOAuth.nombre).join(ClienteOAuth, ClienteOAuth.client_id == TokenOAuth.client_id)
                        .where(TokenOAuth.usuario_id == u.id).order_by(TokenOAuth.creado)).all()
+    foto = db.get(FotoPerfil, u.id)
     return {
-        "cuenta.json": {"correo": u.correo, "apodo": u.apodo, "repo": u.repo, "sensor": u.sensor, "creado": _fecha(u.creado)},
+        "cuenta.json": {"correo": u.correo, "apodo": u.apodo, "nombre": u.nombre, "apellido": u.apellido,
+                        "foto": "foto_perfil.webp" if foto else None, "repo": u.repo, "sensor": u.sensor, "creado": _fecha(u.creado)},
         "ajustes.json": ajustes.config if ajustes else None,
         "plan.json": plan.plan if plan else None,
         "inbody.json": [{"fecha": i.fecha, **i.valores} for i in
@@ -51,6 +53,9 @@ def zip_de(db: Session, u: Usuario) -> bytes:
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for nombre, contenido in datos_de(db, u).items():
             z.writestr(nombre, json.dumps(contenido, ensure_ascii=False, indent=2, default=str))
+        foto = db.get(FotoPerfil, u.id)
+        if foto is not None:
+            z.writestr("foto_perfil.webp", foto.contenido)
     return buf.getvalue()
 
 
@@ -65,7 +70,7 @@ def borrar_cuenta(db: Session, u: Usuario) -> None:
     db.execute(sa.delete(Coach).where(sa.or_(Coach.atleta_id == uid, Coach.coach_id == uid)))
     db.execute(sa.delete(Cambio).where(Cambio.atleta_id == uid))
     db.execute(sa.delete(Invitacion).where(Invitacion.creada_por == uid))
-    for modelo in (CacheData, LigaLogin, CodigoLogin, Sesion, Consentimiento, DatoGarmin, Subida, Ajustes, Plan, InBody, VinculoPendiente):
+    for modelo in (CacheData, LigaLogin, CodigoLogin, Sesion, Consentimiento, DatoGarmin, FotoPerfil, Subida, Ajustes, Plan, InBody, VinculoPendiente):
         db.execute(sa.delete(modelo).where(modelo.usuario_id == uid))
     db.delete(u)
     db.add(CuentaBorrada())

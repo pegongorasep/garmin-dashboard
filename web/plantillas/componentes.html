@@ -105,3 +105,11 @@
   <p>{{ t("pie.datos") if t else "Datos de Garmin" }} · <a href="/privacidad">{{ t("pie.privacidad") if t else "Aviso de privacidad" }}</a></p>
 </footer>
 {%- endmacro %}
+
+{# Avatar: la foto (ruta autenticada) o un círculo con las 2 iniciales y un color estable por persona. tam: "" | "g". #}
+{% macro avatar(u, foto=False, tam="") -%}
+{%- set ini = (((u.nombre or "")[:1] ~ (u.apellido or "")[:1]) or (u.correo or "?")[:1])|upper -%}
+<span class="avatar av-{{ u.id % 6 }}{% if tam %} {{ tam }}{% endif %}" aria-hidden="true">
+  {%- if foto %}<img src="/perfil/foto/{{ u.id }}" alt="" width="256" height="256">{% else %}{{ ini }}{% endif -%}
+</span>
+{%- endmacro %}

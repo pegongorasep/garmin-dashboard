@@ -126,6 +126,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def bienvenida(request: Request, usuario=Depends(actual), db=Depends(get_db)):
         if usuario is None:
             return RedirectResponse("/entrar", 303)
+        if not (usuario.nombre and usuario.apellido):
+            return RedirectResponse("/perfil", 303)
         e = estado(db, usuario)
         if completo(db, usuario):
             return RedirectResponse("/", 303)

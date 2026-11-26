@@ -84,6 +84,9 @@ def("Marca", "Error de carga", "DS.errorCarga()", "Cuando data.json no llega.",
   DS.errorCarga({ texto: "Revisa tu conexión y vuelve a intentar. Si sigue igual, puede que tu repo no haya subido datos hoy.", detalle: "data.json: 404" }));
 
 // Contenedores
+def("Contenedores", "Avatar", "DS.avatar()", "Foto de la persona, o un círculo con sus 2 iniciales; el color es estable (seis tokens).",
+  ...[0, 1, 2, 3, 4, 5].map((c) => DS.avatar({ iniciales: ["AL", "PG", "MR", "JC", "SV", "LT"][c], color: c })),
+  DS.avatar({ iniciales: "AL", color: 1, grande: true }));
 def("Contenedores", "Tarjeta", "DS.tarjeta()", "Contenedor base con título.",
   DS.tarjeta({ titulo: "Tu semana" }, h("p", { class: "mu" }, "Todo lo demás se arma dentro de tarjetas.")),
   DS.tarjeta({ titulo: "Carrera de hoy", clase: "carrera" }, h("p", { class: "mu" }, "Con raya de color a la izquierda.")));
