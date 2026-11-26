@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "componentes.html" import boton, aviso, avatar, confirmacion %}
+{% from "componentes.html" import boton, aviso, avatar, confirmacion, tarjeta %}
 {% block titulo %}{{ grupo.nombre }} · {{ t("grupos.titulo") }}{% endblock %}
 {% block contenido %}
 {% include "_nav.html" %}
@@ -8,15 +8,31 @@
 {% if liga %}{% call aviso("ok") %}{{ t("grupos.liga_lista", dias=7) }} <code>{{ liga }}</code>{% endcall %}{% endif %}
 <ul class="pila" aria-label="{{ t('grupos.miembros') }}">
   {% for m, u in miembros %}
-  <li class="acciones">
-    {{ avatar(u, u.id in fotos) }}
-    <span>{{ ((u.nombre or "") ~ " " ~ (u.apellido or ""))|trim or u.correo }}{% if m.rol == "admin" %} <small>({{ t("grupos.admin") }})</small>{% endif %}{% if u.id == atleta.id %} <small>({{ t("grupos.tu") }})</small>{% endif %}</span>
-    {% if yo.rol == "admin" and u.id != atleta.id %}
-    <form method="post" action="/grupos/{{ grupo.id }}/quitar/{{ u.id }}">
-      <input type="hidden" name="csrf" value="{{ csrf }}">
-      {{ boton(t("grupos.quitar"), "texto", chico=True, tipo="submit") }}
-    </form>
+  {% set c = tarjetas[u.id] %}
+  <li>
+  {% call tarjeta() %}
+    <div class="acciones">
+      {{ avatar(u, u.id in fotos) }}
+      <span class="card-t">{{ ((u.nombre or "") ~ " " ~ (u.apellido or ""))|trim or u.correo }}{% if m.rol == "admin" %} <small>({{ t("grupos.admin") }})</small>{% endif %}{% if u.id == atleta.id %} <small>({{ t("grupos.tu") }})</small>{% endif %}</span>
+      {% if yo.rol == "admin" and u.id != atleta.id %}
+      <form method="post" action="/grupos/{{ grupo.id }}/quitar/{{ u.id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        {{ boton(t("grupos.quitar"), "texto", chico=True, tipo="submit") }}
+      </form>
+      {% endif %}
+    </div>
+    {% if c.estado == "pausa" %}<p class="pag-s">{{ t("grupos.pausado") }}</p>
+    {% elif c.estado == "sin_plan" %}<p class="pag-s">{{ t("grupos.sin_plan") }}</p>
+    {% else %}
+    <p class="pag-s">{% if c.meta %}{{ c.meta }} · {% endif %}{% if c.etapa_n %}{{ t("grupos.etapa", n=c.etapa_n) }}{% endif %}</p>
+    {% if c.adherencia is not none %}
+    <div class="barra-rw" role="img" aria-label="{{ t('grupos.adherencia', n=c.adherencia) }}"><i class="trote" style="flex: {{ c.adherencia }}"></i><i class="camina" style="flex: {{ 100 - c.adherencia }}"></i></div>
+    <p class="pag-s">{{ t("grupos.adherencia", n=c.adherencia) }}</p>
     {% endif %}
+    <div class="acciones" aria-label="{{ t('grupos.semana') }}">{% for d in c.dias %}<span class="badge {{ 'ok' if d == 'hecha' else 'nd' }}">{{ '✓' if d == 'hecha' else '·' }}</span>{% endfor %}</div>
+    <p class="pag-s">{% if c.ultima %}{{ t("grupos.ultima", fecha=c.ultima) }}{% else %}{{ t("grupos.sin_actividad") }}{% endif %}</p>
+    {% endif %}
+  {% endcall %}
   </li>
   {% endfor %}
 </ul>

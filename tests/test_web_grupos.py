@@ -138,3 +138,44 @@ def test_borrar_cuenta_limpia_grupos(web_ctx):
         assert db.query(MiembroGrupo).one().rol == "admin"
         assert db.get(Grupo, gid).creado_por is None
     assert b.get(f"/grupos/{gid}").status_code == 200
+
+
+def test_tarjetas_pausa_y_sin_plan_solo_campos_permitidos(web_ctx):
+    from web import grupos_resumen
+    a, b = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com")
+    gid = crear(a)
+    post(b, f"/grupos/unirse/{liga(a, gid)}")
+    pag = a.get(f"/grupos/{gid}").text
+    assert pag.count("Sin plan todavía") == 2
+    post(b, f"/grupos/{gid}/pausar", pausado="1")
+    pag = a.get(f"/grupos/{gid}").text
+    assert "En pausa" in pag and pag.count("Sin plan todavía") == 1
+    with web_ctx.sesiones() as db:
+        ms = [(m, db.get(Usuario, m.usuario_id)) for m in db.query(MiembroGrupo).filter_by(grupo_id=gid)]
+        for c in grupos_resumen.tarjetas(db, ms).values():
+            assert set(c) == grupos_resumen.CAMPOS
+            if c["estado"] != "ok":
+                assert c["meta"] is None and c["adherencia"] is None and c["dias"] == [] and c["ultima"] is None
+
+
+def test_tarjeta_con_plan_solo_campos_permitidos(web_ctx, monkeypatch):
+    from web import grupos_resumen
+    a = sesion(web_ctx, "a@x.com")
+    gid = crear(a)
+    data = {"generado": "2026-11-26T08:00", "semana_hoy_idx": 0, "ultima_corrida": {"fecha": "2026-11-24", "fc_prom": 150},
+            "plan": {"eventos": [{"tipo": "carrera", "desde": "2027-01-10", "nombre": "10K"}]},
+            "semanas_hoy": [{"estado": "actual", "n": 5, "plan": {"total": 3, "hechas": 2},
+                             "dias": [{"fecha": f"2026-11-{23 + i}", "corrida": {"minutos": 30} if i in (1, 3) else None} for i in range(7)]}]}
+    monkeypatch.setattr(grupos_resumen.calculo, "calcular", lambda db, u: data)
+    with web_ctx.sesiones() as db:
+        from web.modelos import Ajustes, Plan
+        u = db.query(Usuario).filter_by(correo="a@x.com").one()
+        db.add(Ajustes(usuario_id=u.id, config={})); db.add(Plan(usuario_id=u.id, plan={"weeks": []})); db.commit()
+        m = db.query(MiembroGrupo).filter_by(grupo_id=gid).one()
+        c = grupos_resumen.tarjeta_de(db, u, m)
+    assert set(c) == grupos_resumen.CAMPOS and c["estado"] == "ok"
+    assert c["meta"] == "10K" and c["etapa_n"] == 5 and c["ultima"] == "2026-11-24"
+    assert c["dias"][1] == "hecha" and c["dias"][2] == "libre" and c["dias"][4] == "futuro"
+    pag = a.get(f"/grupos/{gid}").text
+    assert "10K" in pag and "Semana 5" in pag and "Adherencia 67%" in pag and "2026-11-24" in pag
+    assert "150" not in pag   # la FC no sale

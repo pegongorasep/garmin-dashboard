@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import auth, permisos
+from . import auth, grupos_resumen, permisos
 from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, Usuario, ahora
 
 MAX_MIEMBROS = 12
@@ -78,7 +78,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         yo = next((m for m, u in miembros if u.id == usuario.id), None)
         fotos = {u.id for _, u in miembros if perfil_tiene_foto(db, u.id)}
         return render(request, "grupo.html", status=status, atleta=usuario, pref="", grupo=grupo, miembros=miembros,
-                      yo=yo, fotos=fotos, liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
+                      yo=yo, fotos=fotos, tarjetas=grupos_resumen.tarjetas(db, miembros), liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
                       error=error, lleno=len(miembros) >= MAX_MIEMBROS)
 
     def propio(request, usuario, db, gid):
