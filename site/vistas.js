@@ -817,23 +817,62 @@ function pintarListaGrupos(lista) {
       h("span", {}, x.nombre), h("small", {}, T("sitio.gr.personas", { n: x.miembros_n }))))));
 }
 
-/** Entrar a la pestaña: baja la lista (o el grupo) de la red, siempre fresca; el service worker no toca /api. */
+// Caché en memoria de la pestaña Grupo: se precarga al abrir la app y se refresca en silencio al entrar.
+const grupoCache = { lista: null, grupos: {}, vuelo: null };
+
+/** Baja la lista (y el grupo si es único, o el pedido) y la deja en la caché. Devuelve { lista, g, gid }. */
+async function grupoBajar(id) {
+  let gid = id, lista = grupoCache.lista;
+  if (!gid) {
+    lista = await grupoGet("/api/grupos");
+    grupoCache.lista = lista;
+    if (lista.length !== 1) return { lista, g: null, gid: null };
+    gid = lista[0].id;
+  }
+  const g = await grupoGet(`/api/grupos/${encodeURIComponent(gid)}`);
+  grupoCache.grupos[gid] = g;
+  return { lista, g, gid };
+}
+
+/** Precarga en segundo plano (tras data.json, con al menos un grupo). Los errores se ignoran: al entrar se reintenta. */
+function precargarGrupo() {
+  if (!(nGrupos() > 0) || grupoCache.vuelo) return;
+  grupoCache.vuelo = grupoBajar(null).catch(() => null).finally(() => { grupoCache.vuelo = null; });
+}
+
+const grupoPintarCache = (id) => {
+  if (id) { const g = grupoCache.grupos[id]; if (g) { pintarGrupo(g); return true; } return false; }
+  const lista = grupoCache.lista;
+  if (!lista) return false;
+  if (lista.length !== 1) { pintarListaGrupos(lista); return true; }
+  const g = grupoCache.grupos[lista[0].id];
+  if (!g) return false;
+  pintarGrupo(g);
+  return true;
+};
+
+/** Entrar a la pestaña: pinta la caché al instante (sin cargador) y refresca en silencio; sin caché, baja con cargador. */
 async function cargarGrupo(id) {
   const turno = ++grupoTurno, raiz = $("vista-grupo");
-  raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando")));
+  let pintado = grupoPintarCache(id);
+  const antes = pintado ? JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null, grupoCache.lista && grupoCache.lista.length === 1 ? grupoCache.grupos[grupoCache.lista[0].id] : null]) : "";
   try {
-    let gid = id;
-    if (!gid) {
-      const lista = await grupoGet("/api/grupos");
-      if (turno !== grupoTurno) return;
-      if (lista.length !== 1) { pintarListaGrupos(lista); return; }
-      gid = lista[0].id;
+    if (!pintado) {
+      raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando")));
+      if (grupoCache.vuelo) { await grupoCache.vuelo; if (turno !== grupoTurno) return; if (grupoPintarCache(id)) pintado = true; }
+      if (!pintado) {
+        const r = await grupoBajar(id);
+        if (turno !== grupoTurno) return;
+        if (r.g) pintarGrupo(r.g); else pintarListaGrupos(r.lista);
+        return;
+      }
     }
-    const g = await grupoGet(`/api/grupos/${encodeURIComponent(gid)}`);
+    const r = await grupoBajar(id);
     if (turno !== grupoTurno) return;
-    pintarGrupo(g);
+    const despues = JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null, grupoCache.lista && grupoCache.lista.length === 1 ? grupoCache.grupos[grupoCache.lista[0].id] : null]);
+    if (despues !== antes) { if (r.g) pintarGrupo(r.g); else pintarListaGrupos(r.lista); }
   } catch (e) {
-    if (turno !== grupoTurno) return;
+    if (turno !== grupoTurno || pintado) return;   // con la caché ya pintada, un fallo del refresco no tumba la vista
     raiz.replaceChildren(DS.errorCarga({ titulo: T("sitio.gr.err_t"), texto: T("sitio.gr.err"), detalle: e && e.message ? e.message : String(e), onReintentar: () => cargarGrupo(id) }));
   }
 }
@@ -851,10 +890,12 @@ let vistaActual = null;
 // Rutas viejas que siguen sirviendo.
 const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
+// Cuántos grupos hay: con data.json, el suyo; antes, el que la web puso en <main data-grupos> (sin atributo: 0).
+const nGrupos = () => datos && ui().grupos != null ? ui().grupos : parseInt(($("app") && $("app").dataset.grupos) || "0", 10) || 0;
 const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
   ...(ui().sin_plan ? [] : [{ id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" }]),   // sin plan: no hay pestaña Plan (L2 la reemplaza por una tarjeta)
   { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" },
-  ...(ui().grupos > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#grupo" }] : [])];   // solo en la web y con al menos un grupo
+  ...(nGrupos() > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#grupo" }] : [])];   // solo en la web y con al menos un grupo
 const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
 
 /** Ícono de cada liga del menú ☰ (si ui.menu trae `icono`, gana el suyo). */
@@ -912,7 +953,7 @@ function mostrarVista() {
   const ruta = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
   const [nombre, sub] = (ALIAS_RUTA[ruta] || ruta).split("/");
   const solo = !!ui().solo_cuerpo;   // solo cuerpo: todo cae en Progreso > Cuerpo (la ayuda sigue)
-  const v = solo && nombre !== "ayuda" ? "progreso" : nombre === "grupo" && !(ui().grupos > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
+  const v = solo && nombre !== "ayuda" ? "progreso" : nombre === "grupo" && !(nGrupos() > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
   subProgreso = solo || (v === "progreso" && sub === "cuerpo") ? "cuerpo" : "corridas";
   if (v !== "ayuda") rutaPrevia = `#${ruta || "hoy"}`;
   vistaActual = v;
@@ -978,6 +1019,7 @@ async function iniciar() {
   setInterval(actualizarEncabezado, 60000);
   $("tabs").replaceChildren(DS.tabs({ items: tabsDef(), actual: null }));
   repintarVistas();
+  precargarGrupo();
 }
 
 /** Pinta todas las vistas con `datos` (al arrancar y cuando cambia algo local, como dar un aviso por «Entendido»). */

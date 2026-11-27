@@ -390,3 +390,22 @@ def test_ui_grupos_0_1_2(web_ctx):
     assert n() == 1                     # fuera de la caché: se ve al momento
     crear(a, "Otro")
     assert n() == 2
+
+
+def test_pagina_trae_data_grupos_y_el_coach_no(web_ctx):
+    crear_usuario(web_ctx, "a@x.com", con_ajustes=True)
+    a = entrar(web_ctx, web_ctx.cliente(), "a@x.com")
+    assert 'data-grupos="0"' in a.get("/").text
+    crear(a)
+    assert 'data-grupos="1"' in a.get("/").text
+    crear(a, "Otro")
+    assert 'data-grupos="2"' in a.get("/").text
+    # el coach que ve a su atleta: sin atributo (= 0) y data.json con 0
+    from test_web_coach import dar
+    from test_web_ajustes import listo
+    uid_a, atl = listo(web_ctx, "atl@x.com")
+    crear(atl)
+    uid_c, coach = listo(web_ctx, "coach@x.com", con_plan=False)
+    dar(atl, "coach@x.com")
+    assert "data-grupos" not in coach.get(f"/a/{uid_a}/").text
+    assert coach.get(f"/a/{uid_a}/data.json").json()["ui"]["grupos"] == 0

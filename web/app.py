@@ -273,7 +273,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         # Nombre, avisos ya entendidos y token CSRF van solo en esta página (nunca en data.json). Las páginas no se
         # guardan en el service worker; no-store por si acaso.
         ocultos = {a.aviso_id: a.huella for a in db.scalars(select(AvisoOculto).where(AvisoOculto.usuario_id == usuario.id))}
-        attrs = {"data-nombre": usuario.nombre or "", "data-avisos-ocultos": json.dumps(ocultos), "data-csrf": campo}
+        attrs = {"data-nombre": usuario.nombre or "", "data-avisos-ocultos": json.dumps(ocultos), "data-csrf": campo,
+                 "data-grupos": str(calculo.contar_grupos(db, usuario))}
         html = html.replace('<main id="app">', '<main id="app" ' + " ".join(f'{k}="{escape(v, quote=True)}"' for k, v in attrs.items()) + ">", 1)
         resp = HTMLResponse(html, headers={"Cache-Control": "no-store"})
         if nueva:

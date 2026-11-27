@@ -180,13 +180,20 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     return out
 
 
+def contar_grupos(db: Session, usuario: Usuario, pref: str = "") -> int:
+    """Cuántos grupos tiene la persona; 0 cuando un coach ve a su atleta (no se le muestra)."""
+    if pref:
+        return 0
+    return db.scalar(select(func.count()).select_from(MiembroGrupo).where(MiembroGrupo.usuario_id == usuario.id)) or 0
+
+
 def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, pref: str = "", idioma: str | None = None) -> dict:
     """data.json de la persona (con el aviso de repo atrasado, que no se guarda en la caché porque depende de la hora).
     Truena con SinConfig o DataInvalido."""
     base = _calcular_cacheado(db, usuario, ahora_utc, idioma)
     ahora_naive = ahora_utc or ahora()
     # `grupos` también va fuera de la caché: la huella no cuenta las membresías. Al coach que ve a su atleta no se le muestra.
-    n_grupos = 0 if pref else db.scalar(select(func.count()).select_from(MiembroGrupo).where(MiembroGrupo.usuario_id == usuario.id)) or 0
+    n_grupos = contar_grupos(db, usuario, pref)
     # `coach`: solo cuando un coach ve a su atleta, con el mismo nombre que le muestra su página de atletas (nada más).
     coach = {"nombre": usuario.apodo or usuario.correo, "volver": "/coach"} if pref else None
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
