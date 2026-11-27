@@ -3,7 +3,7 @@
 Solo miembros ven un grupo (a los demás, 404). La liga de invitación se guarda como hash y vale hasta que expira.
 Aquí NO se muestran datos de entrenamiento: G3 agrega las tarjetas de avance, que respetan `MiembroGrupo.pausado`.
 """
-from datetime import date, timedelta
+from datetime import timedelta
 
 import sqlalchemy as sa
 from fastapi import Depends, Request
@@ -12,43 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import auth, grupos_resumen, permisos
-from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, Reaccion, Usuario, ahora
+from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, ReaccionActividad, Usuario, ahora
 
 MAX_MIEMBROS = 12
 MAX_GRUPOS = 5          # por persona (los que crea o a los que se une)
 DIAS_LIGA = 7
-EMOJIS = ("👏", "🔥", "💪", "🚀", "❤️", "😂", "🫡", "🏆")
-MAX_REACCIONES_HORA = 60   # límite por persona (cuenta las filas creadas en la última hora)
-
-
-def semana_iso(hoy: date | None = None) -> str:
-    a, s, _ = (hoy or date.today()).isocalendar()
-    return f"{a}-W{s:02d}"
-
-
-def reacciones_de(db: Session, grupo_id: int, semana: str, yo: int) -> dict:
-    """{para_id: {"cuentas": {emoji: n}, "mias": {emoji}, "quienes": [usuario_id únicos], "por_emoji": {emoji: [usuario_id en orden]}}} de la semana."""
-    out: dict = {}
-    for r in db.scalars(select(Reaccion).where(Reaccion.grupo_id == grupo_id, Reaccion.semana == semana)
-                        .order_by(Reaccion.id)):
-        d = out.setdefault(r.para_id, {"cuentas": {}, "mias": set(), "quienes": [], "por_emoji": {}})
-        d["cuentas"][r.emoji] = d["cuentas"].get(r.emoji, 0) + 1
-        d["por_emoji"].setdefault(r.emoji, []).append(r.de_id)
-        if r.de_id == yo:
-            d["mias"].add(r.emoji)
-        if r.de_id not in d["quienes"]:
-            d["quienes"].append(r.de_id)
-    return out
-
-
-def reacciones_json(r: dict | None, nombres: dict, yo: int) -> dict:
-    """Lo que ve el cliente de las reacciones de una persona: {emoji: {n, quienes [nombres], mia}} (solo n >= 1)."""
-    out: dict = {}
-    for e in EMOJIS:
-        ids = (r or {}).get("por_emoji", {}).get(e) or []
-        if ids:
-            out[e] = {"n": len(ids), "quienes": [nombres.get(i, "") for i in ids], "mia": yo in ids}
-    return out
 
 
 def nombre_de(u: Usuario) -> str:
@@ -68,7 +36,6 @@ def grupos_de(db: Session, usuario_id: int) -> list[Grupo]:
 
 
 def _borrar_grupo(db: Session, grupo_id: int) -> None:
-    db.execute(sa.delete(Reaccion).where(Reaccion.grupo_id == grupo_id))
     db.execute(sa.delete(InvitacionGrupo).where(InvitacionGrupo.grupo_id == grupo_id))
     db.execute(sa.delete(MiembroGrupo).where(MiembroGrupo.grupo_id == grupo_id))
     db.execute(sa.delete(Grupo).where(Grupo.id == grupo_id))
@@ -76,8 +43,6 @@ def _borrar_grupo(db: Session, grupo_id: int) -> None:
 
 def _salir(db: Session, grupo_id: int, usuario_id: int) -> None:
     """Quita a la persona; si era la única se borra el grupo; si era la admin, la más antigua pasa a admin."""
-    db.execute(sa.delete(Reaccion).where(Reaccion.grupo_id == grupo_id,
-                                         sa.or_(Reaccion.de_id == usuario_id, Reaccion.para_id == usuario_id)))
     db.execute(sa.delete(MiembroGrupo).where(MiembroGrupo.grupo_id == grupo_id, MiembroGrupo.usuario_id == usuario_id))
     db.flush()
     resto = db.scalars(select(MiembroGrupo).where(MiembroGrupo.grupo_id == grupo_id)
@@ -95,7 +60,7 @@ def quitar_de_todos(db: Session, usuario_id: int) -> None:
     """Para borrar la cuenta: sale de todos sus grupos y no deja referencias."""
     for gid in db.scalars(select(MiembroGrupo.grupo_id).where(MiembroGrupo.usuario_id == usuario_id)).all():
         _salir(db, gid, usuario_id)
-    db.execute(sa.delete(Reaccion).where(sa.or_(Reaccion.de_id == usuario_id, Reaccion.para_id == usuario_id)))
+    db.execute(sa.delete(ReaccionActividad).where(sa.or_(ReaccionActividad.de_id == usuario_id, ReaccionActividad.dueno_id == usuario_id)))
     db.execute(sa.update(InvitacionGrupo).where(InvitacionGrupo.creada_por == usuario_id).values(creada_por=None))
     db.execute(sa.update(Grupo).where(Grupo.creado_por == usuario_id).values(creado_por=None))
 
@@ -119,12 +84,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         res = grupos_resumen.resumen(db, miembros)
         fotos = {u.id for _, u in miembros if perfil_tiene_foto(db, u.id)}
         return render(request, "grupo.html", status=status, atleta=usuario, pref="", grupo=grupo, miembros=miembros,
-                      yo=yo, fotos=fotos, emojis=EMOJIS,
-                      reacc=reacciones_de(db, grupo.id, semana_iso(), usuario.id), por_id={u.id: u for _, u in miembros}, tarjetas=res["tarjetas"], total=res["total"], insignias=res["insignias"], novedades=res["novedades"], liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
+                      yo=yo, fotos=fotos, por_id={u.id: u for _, u in miembros}, tarjetas=res["tarjetas"], total=res["total"], insignias=res["insignias"], novedades=res["novedades"], liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
                       error=error, lleno=len(miembros) >= MAX_MIEMBROS)
-
-    def quiere_json(request) -> bool:
-        return "application/json" in request.headers.get("accept", "")
 
     def propio(request, usuario, db, gid):
         """(grupo, mi membresía) o None si no soy miembro (404 igual que si no existe)."""
@@ -157,15 +118,13 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         miembros = miembros_de(db, gid)
         res = grupos_resumen.resumen(db, miembros)
         nombres = {u.id: nombre_de(u) for _, u in miembros}
-        reacc = reacciones_de(db, gid, semana_iso(), usuario.id)
         return {"grupo": {"id": gid, "nombre": db.get(Grupo, gid).nombre}, "yo": usuario.id,
                 "miembros": [{"usuario_id": u.id, "nombre": nombres[u.id],
                               "foto": f"/perfil/foto/{u.id}" if perfil_tiene_foto(db, u.id) else None,
-                              "tarjeta": res["tarjetas"][u.id],
-                              "reacciones": {} if res["tarjetas"][u.id]["estado"] == "pausa" else reacciones_json(reacc.get(u.id), nombres, usuario.id)}
+                              "tarjeta": res["tarjetas"][u.id]}
                              for m, u in miembros],
                 "total": res["total"], "insignias": res["insignias"], "novedades": res["novedades"],
-                "emojis": list(EMOJIS), "emoji_cat": grupos_resumen.EMOJI_CATEGORIA, "admin_url": f"/grupos/{gid}"}
+                "emoji_cat": grupos_resumen.EMOJI_CATEGORIA, "admin_url": f"/grupos/{gid}"}
 
     @app.get("/grupos/nuevo")
     def nuevo_get(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
@@ -251,36 +210,6 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         token = nueva_liga(db, gid, usuario.id)
         db.commit()
         return pagina(request, usuario, db, p[0], liga=token)
-
-    @app.post("/grupos/{gid}/reaccionar/{uid}")
-    async def reaccionar(gid: int, uid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return sin_sesion()
-        if propio(request, usuario, db, gid) is None:
-            return Response(status_code=404)
-        emoji = str(form.get("emoji", ""))
-        dest = db.scalar(select(MiembroGrupo).where(MiembroGrupo.grupo_id == gid, MiembroGrupo.usuario_id == uid))
-        if dest is None:
-            return Response(status_code=404)
-        if uid == usuario.id or dest.pausado or emoji not in EMOJIS:
-            return Response(status_code=400)
-        previa = db.scalar(select(Reaccion).where(Reaccion.grupo_id == gid, Reaccion.de_id == usuario.id,
-                                                  Reaccion.para_id == uid, Reaccion.semana == semana_iso(), Reaccion.emoji == emoji))
-        if previa is not None:
-            db.delete(previa)
-        else:
-            recientes = db.scalar(select(sa.func.count()).select_from(Reaccion).where(
-                Reaccion.de_id == usuario.id, Reaccion.creada > ahora() - timedelta(hours=1)))
-            if recientes >= MAX_REACCIONES_HORA:
-                return Response(status_code=429)
-            db.add(Reaccion(grupo_id=gid, de_id=usuario.id, para_id=uid, semana=semana_iso(), emoji=emoji))
-        db.commit()
-        if quiere_json(request):
-            nombres = {u.id: nombre_de(u) for _, u in miembros_de(db, gid)}
-            r = reacciones_de(db, gid, semana_iso(), usuario.id).get(uid)
-            return {"para_id": uid, "reacciones": reacciones_json(r, nombres, usuario.id)}
-        return RedirectResponse(f"/grupos/{gid}", 303)
 
     @app.post("/grupos/{gid}/pausar")
     async def pausar(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):

@@ -37,6 +37,7 @@ COMPONENTES = {
     "Pasos": ("pasos", "pasos"),
     "Pestanas": ("segmento", "segmento"),
     "Pie": ("pie", "pie"),
+    "FilaActividad": ("act-fila", "filaActividad"),
     "Ranking": ("marca-t", "ranking"),
     "Senales": ("senales", "senales"),
     "Silueta": ("slt", "silueta"),

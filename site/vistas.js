@@ -715,14 +715,6 @@ function grupoTextoNovedad(n, nombre) {
   return "";
 }
 
-/** Manda (o quita) una reacción y devuelve las reacciones nuevas de esa persona. El token CSRF va como campo de formulario, nunca en JSON. */
-async function grupoReaccionar(gid, uid, emoji) {
-  const r = await fetch(`/grupos/${gid}/reaccionar/${uid}`, { method: "POST", headers: { Accept: "application/json" },
-    body: new URLSearchParams({ csrf: $("app").dataset.csrf || "", emoji }) });
-  if (!r.ok) throw new Error(String(r.status));
-  return (await r.json()).reacciones || {};
-}
-
 function grupoDialogo(titulo, cuerpo) {
   const d = DS.dialogo({ titulo, cuerpo });
   d.addEventListener("close", () => d.remove());
@@ -732,41 +724,8 @@ function grupoDialogo(titulo, cuerpo) {
 }
 
 function pintarGrupo(g) {
-  const raiz = $("vista-grupo"), yo = g.yo, porId = Object.fromEntries(g.miembros.map((m) => [m.usuario_id, m]));
+  const raiz = $("vista-grupo"), porId = Object.fromEntries(g.miembros.map((m) => [m.usuario_id, m]));
   const catEmoji = (c) => (g.emoji_cat || {})[c] || (g.emoji_cat || {}).otra || "🤸";
-  const aviso = h("div", { class: "ancha", "aria-live": "polite" });
-  const error = () => { aviso.replaceChildren(DS.aviso({ clase: "bad", simbolo: "!", texto: T("sitio.gr.err_reaccion") })); };
-
-  const filaReacciones = (m) => {
-    const fila = h("div", { class: "reacciones" });
-    const repintar = (nuevo) => {
-      fila.replaceChildren(
-        ...[...g.emojis.filter((e) => m.reacciones[e]).map((e) => {
-          const r = m.reacciones[e], quienes = r.quienes.join(", ");
-          return DS.chipReaccion({ emoji: e, n: r.n, mia: r.mia, nueva: e === nuevo,
-            etiqueta: r.mia ? T("sitio.gr.quitar", { emoji: e, quienes }) : T("sitio.gr.ver_quienes", { emoji: e, quienes }),
-            onclick: r.mia ? () => enviar(m, e)
-              : () => grupoDialogo(T("sitio.gr.quienes_t", { emoji: e }), [h("p", {}, T("sitio.gr.quienes", { emoji: e })), h("p", {}, quienes)]) });
-        }),
-        m.usuario_id === yo ? null : DS.botonReaccion({ etiqueta: T("sitio.gr.reaccionar_a", { nombre: m.nombre }), onclick: () => elegir(m) })].filter(Boolean));
-    };
-    m._pintarReacciones = repintar;
-    repintar();
-    return fila;
-  };
-  const enviar = async (m, emoji) => {
-    try {
-      const antes = !!(m.reacciones[emoji] && m.reacciones[emoji].mia);
-      m.reacciones = await grupoReaccionar(g.grupo.id, m.usuario_id, emoji);
-      aviso.replaceChildren();
-      m._pintarReacciones(antes ? null : emoji);
-    } catch (e) { error(); }
-  };
-  const elegir = (m) => {
-    const d = grupoDialogo(T("sitio.gr.reaccionar_a", { nombre: m.nombre }),
-      [DS.selectorReaccion({ emojis: g.emojis, onElegir: (e) => { d.close(); enviar(m, e); } })]);
-  };
-
   const tarjeta = (m) => {
     const t = m.tarjeta, clave = `${g.grupo.id}:${m.usuario_id}`;
     const pausa = t.estado === "pausa";
@@ -796,7 +755,7 @@ function pintarGrupo(g) {
       pausa: pausa ? T("sitio.gr.pausa") : null,
       linea: partes.length ? partes.join(" · ") : T(t.semana ? "sitio.gr.sin_actividad" : "sitio.gr.sin_datos"),
       dias: t.dias || [], etiquetaDias: T("sitio.gr.dias_aria", { n: (t.dias || []).filter((d) => d === "hecha").length }),
-      reacciones: pausa ? null : filaReacciones(m), detalle, abierto: !!grupoAbiertos()[clave], etiquetaAbrir: T("sitio.gr.detalle", { nombre: m.nombre }),
+      detalle, abierto: !!grupoAbiertos()[clave], etiquetaAbrir: T("sitio.gr.detalle", { nombre: m.nombre }),
       onAlternar: (on) => grupoGuardarAbierto(clave, on) });
   };
 
@@ -807,19 +766,119 @@ function pintarGrupo(g) {
     h("p", { class: "grupo-total ancha" }, T("sitio.gr.juntos", { km: fmt(g.total.km, 1), tiempo: grupoTiempo(g.total.minutos) })),
     nov.length ? DS.tarjeta({ titulo: T("sitio.gr.novedades"), clase: "ancha" }, h("ul", { class: "novedades" }, nov.map((n) => {
       const m = porId[n.usuario_id];
-      return h("li", { class: "nov-fila" }, h("span", {}, `${NOV_EMOJI[n.tipo] || "•"} ${grupoTextoNovedad(n, m.nombre)}`),
-        m.usuario_id === yo ? null : DS.botonReaccion({ texto: "", etiqueta: T("sitio.gr.reaccionar_a", { nombre: m.nombre }), onclick: () => elegir(m) }));
+      return h("li", { class: "nov-fila" }, h("span", {}, `${NOV_EMOJI[n.tipo] || "•"} ${grupoTextoNovedad(n, m.nombre)}`));
     }))) : null,
-    aviso,
     ...g.miembros.map(tarjeta)].filter(Boolean));
 }
 
+// ---- Feed de actividades de Juntos: lo que entrenan las personas con las que compartes un grupo (el servidor decide quién aparece) ----
+const feedCache = { items: [], siguiente: null, emojis: [], listo: false, vuelo: null };
+const feedAbiertas = new Set();
+
+/** Manda (o quita) una reacción a una actividad y devuelve las reacciones nuevas. El CSRF va como campo de formulario, nunca en JSON. */
+async function feedReaccionar(it, emoji) {
+  const r = await fetch("/api/juntos/reaccionar", { method: "POST", headers: { Accept: "application/json" },
+    body: new URLSearchParams({ csrf: $("app").dataset.csrf || "", dueno: String(it.usuario_id), clave: it.clave, emoji }) });
+  if (!r.ok) throw new Error(String(r.status));
+  return (await r.json()).reacciones || {};
+}
+
+function feedCuando(fecha) {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dias = Math.round((hoy - parseFecha(fecha)) / 864e5);
+  return dias <= 0 ? T("sitio.gr.f.hoy") : dias === 1 ? T("sitio.gr.f.ayer") : dias < 7 ? T("sitio.gr.f.hace", { n: dias }) : fechaCorta(fecha);
+}
+
+function feedDetalle(it) {
+  const d = it.detalle || {}, z = d.zonas, t = it.trote;
+  const p = (txt) => h("p", {}, txt);
+  return [
+    it.fc_prom || d.fc_max ? p([it.fc_prom ? T("sitio.gr.f.fc", { v: it.fc_prom }) : null, d.fc_max ? T("sitio.gr.f.fcmax", { v: d.fc_max }) : null].filter(Boolean).join(" · ")) : null,
+    d.kcal || d.desnivel_m ? p([d.kcal ? T("sitio.gr.f.kcal", { v: fmt(d.kcal, 0) }) : null, d.desnivel_m ? T("sitio.gr.f.desnivel", { v: d.desnivel_m }) : null].filter(Boolean).join(" · ")) : null,
+    z ? p(T("sitio.gr.f.zonas", { bajo: fmt(z.bajo, 0), limbo: fmt(z.limbo, 0), alto: fmt(z.alto, 0) })) : null,
+    t ? p(T("sitio.gr.f.trote", { pct: fmt(t.pct_trote, 0), t: fmt(t.trote_min, 0), c: fmt(t.camina_min, 0) })) : null,
+    it.partes && it.partes.length > 1 ? p(T("sitio.gr.f.partes", { n: it.partes.length })) : null,
+    h("p", { class: "muted" }, T("sitio.gr.f.visible"))].filter(Boolean);
+}
+
+function feedFila(it, aviso) {
+  const nombre = it.mia ? T("sitio.gr.f.yo") : it.nombre;
+  const fila = h("div", { class: "reacciones" });
+  const repintar = (nuevo) => {
+    fila.replaceChildren(...[...feedCache.emojis.filter((e) => it.reacciones[e]).map((e) => {
+      const r = it.reacciones[e], quienes = r.quienes.join(", ");
+      return DS.chipReaccion({ emoji: e, n: r.n, mia: r.mia, nueva: e === nuevo,
+        etiqueta: r.mia ? T("sitio.gr.quitar", { emoji: e, quienes }) : T("sitio.gr.ver_quienes", { emoji: e, quienes }),
+        onclick: r.mia ? () => enviar(e)
+          : () => grupoDialogo(T("sitio.gr.quienes_t", { emoji: e }), [h("p", {}, T("sitio.gr.quienes", { emoji: e })), quienes ? h("p", {}, quienes) : null].filter(Boolean)) });
+    }), it.mia ? null : DS.botonReaccion({ etiqueta: T("sitio.gr.f.reaccionar", { nombre: it.nombre }), onclick: elegir })].filter(Boolean));
+  };
+  const enviar = async (emoji) => {
+    try {
+      const antes = !!(it.reacciones[emoji] && it.reacciones[emoji].mia);
+      it.reacciones = await feedReaccionar(it, emoji);
+      aviso.replaceChildren();
+      repintar(antes ? null : emoji);
+    } catch (e) { aviso.replaceChildren(DS.aviso({ clase: "bad", simbolo: "!", texto: T("sitio.gr.err_reaccion") })); }
+  };
+  const elegir = () => {
+    const d = grupoDialogo(T("sitio.gr.f.reaccionar", { nombre: it.nombre }), [DS.selectorReaccion({ emojis: feedCache.emojis, onElegir: (e) => { d.close(); enviar(e); } })]);
+  };
+  repintar();
+  const iniciales = it.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
+  const resumen = [it.km != null ? T("sitio.km_n", { n: fmt(it.km, 1) }) : null, it.minutos ? T("sitio.min_n", { n: fmt(it.minutos, 0) }) : null].filter(Boolean).join(" · ");
+  return DS.filaActividad({ nombre, foto: it.foto, iniciales, color: it.usuario_id, cuando: feedCuando(it.fecha), emoji: it.emoji, tipo: it.tipo, resumen,
+    esfuerzo: textoEsfuerzo(it), sesion: it.sesion ? T("sitio.gr.f.sesion", { sesion: it.sesion.nombre, n: it.sesion.n }) : null,
+    detalle: feedDetalle(it), reacciones: fila, abierto: feedAbiertas.has(it.clave), etiquetaAbrir: T("sitio.gr.f.ver", { tipo: it.tipo, nombre }),
+    onAlternar: (on) => { if (on) feedAbiertas.add(it.clave); else feedAbiertas.delete(it.clave); } });
+}
+
+function pintarFeed(sec, error) {
+  const f = feedCache, aviso = h("div", { "aria-live": "polite" });
+  const mas = f.siguiente ? h("div", { class: "feed-mas" }, DS.boton(T("sitio.gr.feed_mas"), { variante: "sec", chico: true, onclick: (e) => feedMas(sec, e.currentTarget) })) : null;
+  const cuerpo = f.items.length ? [aviso, ...f.items.map((it) => feedFila(it, aviso)), mas]
+    : f.listo ? [DS.estadoVacio({ icono: "personas", titulo: T("sitio.gr.feed_vacio_t"), texto: T("sitio.gr.feed_vacio"), accion: { texto: T("sitio.gr.feed_vacio_acc"), href: "/grupos/nuevo" } })]
+    : error ? [DS.errorCarga({ titulo: T("sitio.gr.err_t"), texto: T("sitio.gr.feed_err"), detalle: error, onReintentar: () => feedRefrescar() })]
+    : [DS.cargando(T("sitio.gr.cargando"))];
+  sec.replaceChildren(h("h3", {}, T("sitio.gr.feed")), ...cuerpo.filter(Boolean));
+}
+
+const feedSeccion = () => $("vista-grupo").querySelector(".juntos-feed");
+
+async function feedMas(sec, boton) {
+  boton.disabled = true;
+  try {
+    const r = await grupoGet(`/api/juntos/feed?antes=${encodeURIComponent(feedCache.siguiente)}`);
+    const claves = new Set(feedCache.items.map((x) => x.clave));
+    feedCache.items.push(...r.items.filter((x) => !claves.has(x.clave)));
+    feedCache.siguiente = r.siguiente;
+  } catch (e) { boton.disabled = false; return; }
+  const actual = feedSeccion();
+  if (actual) pintarFeed(actual);
+}
+
+/** Baja la primera página y repinta solo si cambió algo (así no se pierde lo abierto ni se salta la pantalla). */
+function feedRefrescar() {
+  if (feedCache.vuelo) return;
+  feedCache.vuelo = grupoGet("/api/juntos/feed").then((r) => {
+    const antes = JSON.stringify([feedCache.items.slice(0, r.items.length), feedCache.listo]);
+    const igual = feedCache.listo && antes === JSON.stringify([r.items, true]);
+    feedCache.emojis = r.emojis;
+    if (!igual) { feedCache.items = r.items; feedCache.siguiente = r.siguiente; }
+    feedCache.listo = true;
+    const sec = feedSeccion();
+    if (sec && !igual) pintarFeed(sec);
+  }).catch((e) => { const sec = feedSeccion(); if (sec && !feedCache.listo) pintarFeed(sec, e && e.message ? e.message : String(e)); })
+    .finally(() => { feedCache.vuelo = null; });
+}
+
 function pintarListaGrupos(lista) {
+  const sec = h("section", { class: "juntos-feed ancha", "aria-label": T("sitio.gr.feed") });
+  pintarFeed(sec);
   $("vista-grupo").replaceChildren(h("h2", { class: "grupo-cab ancha" }, T("sitio.gr.tus_grupos")),
     h("div", { class: "grupos-lista ancha" }, lista.map((x) => h("a", { class: "grupo-fila", href: `#juntos/${x.id}` },
-      h("span", {}, x.nombre), h("small", {}, T("sitio.gr.personas", { n: x.miembros_n }))))),
-    // Reserva del feed (S3 lo llena): altura fija, elegir un grupo no la mueve.
-    h("section", { class: "juntos-feed ancha", "aria-label": T("sitio.gr.feed") }, h("h3", {}, T("sitio.gr.feed")), h("p", {}, T("sitio.gr.feed_pronto"))));
+      h("span", {}, x.nombre), h("small", {}, T("sitio.gr.personas", { n: x.miembros_n }))))), sec);
+  feedRefrescar();
 }
 
 // Caché en memoria de la pestaña Juntos: se precarga al abrir la app y se refresca en silencio al entrar.

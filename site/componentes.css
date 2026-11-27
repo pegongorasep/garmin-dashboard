@@ -597,7 +597,22 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .grupo-fila small { flex: none; color: var(--muted); font: 400 12.5px/17px var(--font-sans); }
 .grupo-fila span { min-width: 0; overflow-wrap: anywhere; }
 .miembro { align-self: start; }
-/* Juntos: reserva del feed (altura fija en em; S3 la llena) */
-.juntos-feed { min-height: 9em; padding: var(--space-12) var(--space-14); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-card); }
-.juntos-feed h3 { margin: 0 0 var(--space-4); font: 600 15px/20px var(--font-sans); }
-.juntos-feed p { margin: 0; color: var(--muted); font: 400 13px/18px var(--font-sans); }
+/* Juntos: feed de actividades. Todo lo cerrado tiene altura fija (3 líneas + reacciones): elegir o reaccionar no mueve nada; solo abrir/cerrar. */
+.juntos-feed { display: grid; gap: var(--space-8); align-content: start; min-height: 9em; }
+.juntos-feed h3 { margin: 0; font: 600 15px/20px var(--font-sans); }
+.act-fila { display: grid; gap: var(--space-6); padding-bottom: var(--space-10); }
+.act-cab { display: flex; align-items: center; gap: var(--space-10); width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.act-cab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.act-quien { flex: 1; min-width: 0; display: grid; }
+.act-l1 { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-8); min-width: 0; height: 1.4em; line-height: 1.4em; }
+.act-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px/1.4em var(--font-sans); }
+.act-cuando { flex: none; color: var(--muted); font: 400 12.5px/1.4em var(--font-sans); }
+.act-l2 { height: 1.4em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 14px/1.4em var(--font-sans); color: var(--ink); }
+.act-l3 { height: 1.3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12.5px/1.3em var(--font-sans); color: var(--ink-2); }
+.act-cab .ico { flex: none; width: 18px; height: 18px; color: var(--muted); transition: transform .18s ease; }
+.act-cab[aria-expanded="true"] .ico { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .act-cab .ico { transition: none; } }
+.act-detalle { display: grid; gap: var(--space-6); padding-top: var(--space-8); border-top: 1px solid var(--grid); }
+.act-detalle p { margin: 0; font: 400 13px/18px var(--font-sans); color: var(--ink-2); overflow-wrap: anywhere; }
+.act-detalle p.muted { color: var(--muted); }
+.feed-mas { display: flex; justify-content: center; }

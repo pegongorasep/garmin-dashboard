@@ -296,6 +296,13 @@ def("Grupo", "Tarjeta de persona", "DS.tarjetaMiembro()", "Una persona del grupo
     detalle: [h("p", {}, "Semana 3 de 12"), DS.barraFina({ pct: 25 }), h("p", {}, "85 % de sesiones en las últimas 4 semanas"), h("p", {}, "🔥 Racha de 4 semanas cumplidas")], abierto: true }),
   DS.tarjetaMiembro({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, pausa: "Pausó lo que comparte" }));
 
+def("Grupo", "Fila de actividad", "DS.filaActividad()", "Una actividad del feed de Juntos, cerrada por defecto: quién, cuándo, tipo, km · min, esfuerzo y la palomita de la sesión del plan; debajo, las reacciones. Al abrirla, el detalle.",
+  DS.filaActividad({ nombre: "Ana López", iniciales: "AL", color: 1, cuando: "Ayer", emoji: "🏃", tipo: "Corrida", resumen: "5.2 km · 38 min", esfuerzo: "Esfuerzo 4.1",
+    sesion: "✓ Fácil 2, semana 3", reacciones: h("div", { class: "reacciones" }, DS.chipReaccion({ emoji: "🔥", n: 2, etiqueta: "🔥" }), DS.botonReaccion({ onclick: () => {} })),
+    detalle: [h("p", {}, "FC promedio 142 · FC máx. 168"), h("p", {}, "82 % trote · 31 min trote · 7 min caminando")], abierto: true }),
+  DS.filaActividad({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, cuando: "Hace 3 días", emoji: "🏋️", tipo: "Fuerza", resumen: "45 min", esfuerzo: "Esfuerzo 6.0",
+    reacciones: h("div", { class: "reacciones" }, DS.botonReaccion({ onclick: () => {} })) }));
+
 const raiz = document.getElementById("catalogo");
 for (const [grupo, secciones] of Object.entries(GRUPOS)) raiz.append(h("h2", { class: "grupo" }, grupo), ...secciones);
 </script>

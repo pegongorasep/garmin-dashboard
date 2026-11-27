@@ -77,15 +77,15 @@ class AvisoOculto(Base):
     creado: Mapped[datetime] = mapped_column(default=ahora)
 
 
-class Reaccion(Base):
-    """G4: aplauso/fuego/fuerza de una persona a otra en un grupo, por semana ISO (lunes de esa semana en `semana`)."""
-    __tablename__ = "reacciones"
-    __table_args__ = (sa.UniqueConstraint("grupo_id", "de_id", "para_id", "semana", "emoji"),)
+class ReaccionActividad(Base):
+    """Social S3: emoji de una persona (`de_id`) a una actividad de otra (`dueno_id`). `clave` es opaca (HMAC con la SECRET_KEY),
+    nunca un ID de Garmin. Si la actividad cambia (sesión encadenada que crece), su clave cambia y las reacciones no la siguen."""
+    __tablename__ = "reacciones_actividad"
+    __table_args__ = (sa.UniqueConstraint("clave", "dueno_id", "de_id", "emoji"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    grupo_id: Mapped[int] = mapped_column(sa.ForeignKey("grupos.id"), index=True)
+    clave: Mapped[str] = mapped_column(sa.String(32), index=True)
+    dueno_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
     de_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
-    para_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
-    semana: Mapped[str] = mapped_column(sa.String(10))    # «2026-W48»
     emoji: Mapped[str] = mapped_column(sa.String(8))
     creada: Mapped[datetime] = mapped_column(default=ahora)
 

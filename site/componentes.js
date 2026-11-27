@@ -573,12 +573,33 @@ const DS = (() => {
       reacciones, pausa ? null : cuerpo);
   };
 
+  /** Fila de una actividad del feed, cerrada por defecto (al abrirla solo se muestra el detalle; la altura de lo cerrado es fija).
+   *  Recibe { nombre, foto, iniciales, color, cuando (texto), emoji, tipo, resumen (km · min), esfuerzo (texto), sesion (texto con ✓),
+   *  detalle (nodos), reacciones (nodo), abierto, etiquetaAbrir, onAlternar(abierto) }. */
+  const filaActividad = ({ nombre, foto, iniciales, color = 0, cuando, emoji, tipo, resumen, esfuerzo, sesion, detalle = [], reacciones = null,
+    abierto = false, etiquetaAbrir, onAlternar } = {}) => {
+    const cuerpo = h("div", { class: "act-detalle", hidden: !abierto }, detalle);
+    const cab = h("button", { type: "button", class: "act-cab", "aria-expanded": String(!!abierto), "aria-label": etiquetaAbrir, onclick: () => {
+      const on = cab.getAttribute("aria-expanded") !== "true";
+      cab.setAttribute("aria-expanded", String(on));
+      cuerpo.hidden = !on;
+      if (onAlternar) onAlternar(on);
+    } },
+      avatar({ iniciales, color, foto }),
+      h("span", { class: "act-quien" },
+        h("span", { class: "act-l1" }, h("span", { class: "act-nombre" }, nombre), h("span", { class: "act-cuando" }, cuando)),
+        h("span", { class: "act-l2" }, h("span", { "aria-hidden": "true" }, emoji), ` ${tipo}${resumen ? ` · ${resumen}` : ""}`),
+        h("span", { class: "act-l3" }, [esfuerzo, sesion].filter(Boolean).join(" · "))),
+      ico("flecha-abajo"));
+    return h("article", { class: "card act-fila" }, cab, reacciones, cuerpo);
+  };
+
   return {
     animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, dialogoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
-    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro,
+    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */
     silueta: (tramos, { alto = 44, conTip = true, rachas = null, ...rampas } = {}) => siluetaSesion(tramos, alto, conTip, rachas, rampas),
   };

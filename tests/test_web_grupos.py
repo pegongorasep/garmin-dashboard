@@ -182,38 +182,6 @@ def test_tarjeta_con_plan_solo_campos_permitidos(web_ctx, monkeypatch):
     assert not re.search(r"\b150\b", pag)   # la FC no sale (\b: un token CSRF al azar puede llevar "150" dentro)
 
 
-def test_reacciones(web_ctx):
-    from web import cuenta
-    from web.modelos import Reaccion
-    a, b = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com")
-    gid = crear(a)
-    post(b, f"/grupos/unirse/{liga(a, gid)}")
-    with web_ctx.sesiones() as db:
-        ua = db.query(Usuario).filter_by(correo="a@x.com").one().id
-        ub = db.query(Usuario).filter_by(correo="b@x.com").one().id
-    assert post(a, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥").status_code == 400   # a sí misma
-    assert post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="x").status_code == 400
-    assert post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥").status_code == 303
-    with web_ctx.sesiones() as db:
-        assert db.query(Reaccion).count() == 1
-    assert "🔥 1" in b.get(f"/grupos/{gid}").text
-    assert "te reaccionaron" in a.get(f"/grupos/{gid}").text
-    post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥")                              # toggle
-    with web_ctx.sesiones() as db:
-        assert db.query(Reaccion).count() == 0
-    post(a, f"/grupos/{gid}/pausar", pausado="1")                                     # pausada: no recibe
-    assert post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="👏").status_code == 400
-    post(a, f"/grupos/{gid}/pausar", pausado="0")
-    post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="👏")
-    post(a, f"/grupos/{gid}/reaccionar/{ub}", emoji="💪")
-    c = sesion(web_ctx, "c@x.com")
-    assert post(c, f"/grupos/{gid}/reaccionar/{ua}", emoji="👏").status_code == 404
-    with web_ctx.sesiones() as db:
-        cuenta.borrar_cuenta(db, db.query(Usuario).filter_by(correo="a@x.com").one())
-    with web_ctx.sesiones() as db:
-        assert db.query(Reaccion).count() == 0
-
-
 def test_tarjeta_sin_plan_usa_semana_libre(web_ctx, monkeypatch):
     from web import grupos_resumen
     a = sesion(web_ctx, "a@x.com")
@@ -300,26 +268,6 @@ def test_tarjeta_nuevos_campos_racha_record_carrera(web_ctx, monkeypatch):
     assert r["total"] == {"km": 12.3, "minutos": 110} and r["insignias"] == []   # una sola persona: sin insignias
 
 
-def test_reacciones_ocho_emojis_y_quienes_por_emoji(web_ctx):
-    from web import grupos
-    assert len(grupos.EMOJIS) == 8 and set(grupos.EMOJIS) >= {"❤️", "🫡", "🚀", "🏆", "😂"}
-    a, b, c = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com"), sesion(web_ctx, "c@x.com")
-    gid = crear(a)
-    post(b, f"/grupos/unirse/{liga(a, gid)}"); post(c, f"/grupos/unirse/{liga(a, gid)}")
-    with web_ctx.sesiones() as db:
-        ua, ub, uc = (db.query(Usuario).filter_by(correo=f"{x}@x.com").one().id for x in "abc")
-    for cl, e in ((b, "❤️"), (c, "❤️"), (c, "🫡")):
-        assert post(cl, f"/grupos/{gid}/reaccionar/{ua}", emoji=e).status_code == 303
-    with web_ctx.sesiones() as db:
-        r = grupos.reacciones_de(db, gid, grupos.semana_iso(), ub)[ua]
-        assert r["por_emoji"] == {"❤️": [ub, uc], "🫡": [uc]} and r["cuentas"]["❤️"] == 2 and r["mias"] == {"❤️"}
-    post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="❤️")   # toggle
-    with web_ctx.sesiones() as db:
-        assert grupos.reacciones_de(db, gid, grupos.semana_iso(), ub)[ua]["por_emoji"]["❤️"] == [uc]
-
-
-# --- G2 (parte 2): API JSON y ui.grupos ---
-
 def _dos(web_ctx):
     a, b = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com")
     gid = crear(a)
@@ -343,43 +291,13 @@ def test_api_forma_y_lista_blanca(web_ctx):
     from web import grupos_resumen
     a, b, gid, ua, ub = _dos(web_ctx)
     d = a.get(f"/api/grupos/{gid}").json()
-    assert set(d) == {"grupo", "yo", "miembros", "total", "insignias", "novedades", "emojis", "emoji_cat", "admin_url"}
+    assert set(d) == {"grupo", "yo", "miembros", "total", "insignias", "novedades", "emoji_cat", "admin_url"}
     assert d["grupo"] == {"id": gid, "nombre": "Los Fieras"} and d["yo"] == ua and d["admin_url"] == f"/grupos/{gid}"
-    assert len(d["emojis"]) == 8
+    assert "emojis" not in d and "reacciones" not in str(d)
     for m in d["miembros"]:
-        assert set(m) == {"usuario_id", "nombre", "foto", "tarjeta", "reacciones"}
+        assert set(m) == {"usuario_id", "nombre", "foto", "tarjeta"}
         assert set(m["tarjeta"]) <= grupos_resumen.CAMPOS
         assert m["foto"] is None
-
-
-def test_api_pausado_sin_reacciones_y_reaccion_json(web_ctx):
-    a, b, gid, ua, ub = _dos(web_ctx)
-    r = post(b, f"/grupos/{gid}/reaccionar/{ua}", emoji="🔥")           # sin Accept: redirección de siempre
-    assert r.status_code == 303
-    cs = csrf_de(b.get("/grupos/nuevo").text)
-    j = b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": cs, "emoji": "🏆"}, headers={"accept": "application/json"})
-    assert j.status_code == 200
-    rr = j.json()
-    assert rr["para_id"] == ua and rr["reacciones"]["🔥"] == {"n": 1, "quienes": ["Ana Prueba"], "mia": True}
-    assert rr["reacciones"]["🏆"]["mia"] is True
-    d = a.get(f"/api/grupos/{gid}").json()
-    mia = next(m for m in d["miembros"] if m["usuario_id"] == ua)
-    assert mia["reacciones"]["🔥"]["mia"] is False and mia["reacciones"]["🔥"]["n"] == 1
-    j = b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": cs, "emoji": "🏆"}, headers={"accept": "application/json"})
-    assert "🏆" not in j.json()["reacciones"]                           # toggle
-    post(a, f"/grupos/{gid}/pausar", pausado="1")
-    mia = next(m for m in a.get(f"/api/grupos/{gid}").json()["miembros"] if m["usuario_id"] == ua)
-    assert mia["reacciones"] == {} and mia["tarjeta"]["estado"] == "pausa"
-
-
-def test_reaccion_json_exige_csrf(web_ctx):
-    a, b, gid, ua, ub = _dos(web_ctx)
-    h = {"accept": "application/json"}
-    assert b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"emoji": "🔥"}, headers=h).status_code == 403
-    assert b.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": "malo", "emoji": "🔥"}, headers=h).status_code == 403
-    c = sesion(web_ctx, "c@x.com")
-    cs = csrf_de(c.get("/grupos/nuevo").text)
-    assert c.post(f"/grupos/{gid}/reaccionar/{ua}", data={"csrf": cs, "emoji": "🔥"}, headers=h).status_code == 404
 
 
 def test_ui_grupos_0_1_2(web_ctx):

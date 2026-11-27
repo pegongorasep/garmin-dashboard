@@ -509,6 +509,12 @@ def detalle_actividad(a: dict, details: dict, config: dict) -> dict:
             "curva_fc": None if a.get("_partes") else curva_fc(det.get("serie"))}
 
 
+def _trote_corto(a: dict, details: dict):
+    """Trote/caminata de una corrida para la fila de actividad: {pct_trote, trote_min, camina_min}; None sin tramos."""
+    rw = rw_json(m.run_walk(a, details))
+    return {k: rw[k] for k in ("pct_trote", "trote_min", "camina_min")} if rw else None
+
+
 def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None, details=None) -> list:
     """Todo lo que se hizo un día, una fila por actividad: tipo (texto del catálogo), minutos, km, FC prom. y, en
     corridas, la sesión del plan que cumplió. `acts` ya viene con las encadenadas unidas (`m.unir_encadenadas`). Nunca nombres, IDs ni GPS."""
@@ -525,6 +531,8 @@ def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None, detail
         out.append({"cat": c, "nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(a["duration"] / 60),
                     "km": r2(km) if km >= 0.05 else None, "fc_prom": round(a["averageHR"]) if a.get("averageHR") else None,
                     "carrera": carrera, "sesion": {"nombre": e["name"], "estado": e["estado"]} if e else None,
+                    **registro_esfuerzo(a, details or {}, config),
+                    "trote": _trote_corto(a, details or {}) if c == "run" else None,
                     "partes": [{"nombre": p["nombre"], "minutos": p["minutos"]} for p in a.get("partes") or []],
                     "detalle": detalle_actividad(a, details or {}, config)})
     return out
