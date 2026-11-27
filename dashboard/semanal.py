@@ -57,3 +57,43 @@ def ajustar_plan(plan: dict, data: dict, config: dict, hoy: date) -> dict:
         texto = tt(f"motor.ajuste.{a['razon']}", min=a["minutos"], real=a["real_prev"], pct=PCT)
     actual_ajustada = {**actual_ajustada, "ajuste_texto": texto}
     return {**plan, "weeks": [actual_ajustada if w["n"] == actual_ajustada["n"] else w for w in plan["weeks"]]}
+
+
+# --- cifras de la semana: una sola fuente (Unificar U2) ---
+
+def resumen_corridas(filas: list) -> dict:
+    """Totales de las corridas (filas de run_rows): minutos, km, trote/caminata y % trote."""
+    min_trote, min_camina = (sum(f[k] or 0 for f in filas) for k in ("trote_min", "camina_min"))
+    return {"corridas": len(filas), "minutos": round(sum(f["minutos"] for f in filas), 1),
+            "km": round(sum(f["km"] for f in filas), 1), "min_trote": round(min_trote, 1), "min_camina": round(min_camina, 1),
+            "pct_trote": round(min_trote / (min_trote + min_camina) * 100, 1) if min_trote + min_camina else None}
+
+
+def resumen_semana(ini: date, hasta: date, data: dict, config: dict) -> dict:
+    """Volumen de las corridas de ini..hasta (inclusive): {corridas, minutos, km, min_trote, min_camina, pct_trote}.
+    Única fuente de minutos y km de una semana: Hoy, Plan, Progreso y la web leen esto."""
+    acts = [a for a in data["activities"] if ini <= m.day_of(a) <= hasta]
+    return resumen_corridas(m.run_rows(acts, data["details"], config))
+
+
+def volumen(resumen: dict, unidad: str = "min"):
+    """El volumen en la unidad pedida ("min" o "km"); el plan solo tiene minutos, por eso no hay objetivo en km."""
+    return resumen["km" if unidad == "km" else "minutos"]
+
+
+def minutos_plan(semana):
+    """Minutos que pide una semana del plan (None sin semana)."""
+    return sum(s["minutes"] for s in semana["sessions"]) if semana else None
+
+
+def conteo(estado: list) -> dict:
+    """Hechas/incompletas/total de la asignación de sesiones (`estado` de week_assignment). Única fuente del avance."""
+    return {"hechas": sum(1 for e in estado if e["estado"] == "hecha"),
+            "incompletas": sum(1 for e in estado if e["estado"] == "incompleta"), "total": len(estado)}
+
+
+def cumplimiento(hechas: int, total: int):
+    """Semana pasada: "completa" (todas), "casi" (al menos 2/3) o "baja" (el resto; la página la muestra neutra). None sin sesiones."""
+    if total <= 0:
+        return None
+    return "completa" if hechas >= total else "casi" if 3 * hechas >= 2 * total else "baja"

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from dashboard.build import cumplimiento_semana
+from semanal import cumplimiento as cumplimiento_semana
 
 from . import calculo, semana_plan
 from .modelos import Ajustes, MiembroGrupo, Plan, Usuario

@@ -531,12 +531,23 @@ def aviso_intenso_ayer(day: date, sesion: dict, activities: list, config: dict):
     return tt("motor.aviso.pierna", resto=resto)
 
 
-def faltan_texto(status: list) -> str:
-    """«Te faltan: 1 fácil y la larga» (en orden del plan). "" si no falta ninguna."""
+def faltan(status: list) -> list:
+    """Lo que falta de la semana, estructurado y en orden del plan: [{k: facil, n}, {k: calidad}, {k: larga}]. Única fuente:
+    `faltan_texto` (Hoy y Plan) y la web (perfil, tarjetas del grupo) lo leen."""
     pend = [s for s in status if s["estado"] == "pendiente"]
     facil = sum(1 for s in pend if s["tipo"] not in ("larga", "calidad", "prueba"))
-    partes = ([tt("motor.faltan.facil_uno") if facil == 1 else tt("motor.faltan.facil_n", n=facil)] if facil else []) + [tt("motor.faltan.calidad")] * any(s["tipo"] == "calidad" for s in pend) \
-        + [tt("motor.faltan.larga")] * any(s["tipo"] in ("larga", "prueba") for s in pend)
+    out = [{"k": "facil", "n": facil}] if facil else []
+    if any(s["tipo"] == "calidad" for s in pend):
+        out.append({"k": "calidad"})
+    if any(s["tipo"] in ("larga", "prueba") for s in pend):
+        out.append({"k": "larga"})
+    return out
+
+
+def faltan_texto(status: list) -> str:
+    """«Te faltan: 1 fácil y la larga» (en orden del plan). "" si no falta ninguna."""
+    partes = [(tt("motor.faltan.facil_uno") if f["n"] == 1 else tt("motor.faltan.facil_n", n=f["n"])) if f["k"] == "facil"
+              else tt("motor.faltan.calidad") if f["k"] == "calidad" else tt("motor.faltan.larga") for f in faltan(status)]
     if not partes:
         return ""
     lista = partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " " + tt("motor.faltan.y") + " " + partes[-1]

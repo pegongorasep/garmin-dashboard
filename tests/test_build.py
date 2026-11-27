@@ -9,6 +9,7 @@ import pytest
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "dashboard"))
 import build  # noqa: E402
+import semanal  # noqa: E402
 import validar  # noqa: E402
 
 from ajustes import cargar_config  # noqa: E402
@@ -905,7 +906,7 @@ def test_semanas_plan_progreso_y_marca(salida):
 
 
 def test_cumplimiento_semana():
-    f = build.cumplimiento_semana
+    f = semanal.cumplimiento
     assert f(3, 3) == "completa" and f(2, 3) == "casi" and f(4, 6) == "casi" and f(1, 3) == "baja" and f(0, 3) == "baja"
     assert f(0, 0) is None
 

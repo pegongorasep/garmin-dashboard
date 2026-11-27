@@ -11,6 +11,7 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "dashboard"))
 sys.path.insert(0, str(ROOT / "plan"))
 import build  # noqa: E402
+import semanal  # noqa: E402
 import pasos  # noqa: E402
 import metrics as m  # noqa: E402
 import motor_v6 as v6  # noqa: E402
@@ -471,7 +472,7 @@ def test_build_convierte_y_asigna_sesiones(clave):
         estado = m.assign_sessions(w, corridas, cfg)
         assert len(estado) == len(w["sessions"]) and {e["id"] for e in estado} == {s["id"] for s in w["sessions"]}
         assert sum(e["estado"] == "hecha" for e in estado) >= len(w["sessions"]) - 1 or len(w["sessions"]) <= 1
-        assert build.cumplimiento_semana(len(w["sessions"]), len(w["sessions"])) == "completa"
+        assert semanal.cumplimiento(len(w["sessions"]), len(w["sessions"])) == "completa"
 
 
 def test_plan_i18n_entiende_el_foco_de_v6():

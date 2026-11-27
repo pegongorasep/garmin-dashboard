@@ -1,17 +1,6 @@
 """Semana contra el plan, compartido por el perfil (`persona.py`) y las tarjetas del grupo (`grupos_resumen.py`): una sola lógica.
 Todo estructurado (el JS arma las frases en el idioma de quien mira) y solo conteos, tipos de sesión y categorías: nunca nombres de Garmin."""
-
-
-def faltan(sesiones: list) -> list[dict]:
-    """Lo que falta de la semana, en el orden de `faltan_texto`: [{k: facil, n}, {k: calidad}, {k: larga}]."""
-    pend = [s for s in sesiones if s.get("estado") == "pendiente"]
-    facil = sum(1 for s in pend if s["tipo"] not in ("larga", "calidad", "prueba"))
-    out = [{"k": "facil", "n": facil}] if facil else []
-    if any(s["tipo"] == "calidad" for s in pend):
-        out.append({"k": "calidad"})
-    if any(s["tipo"] in ("larga", "prueba") for s in pend):
-        out.append({"k": "larga"})
-    return out
+from metrics import faltan   # la regla de «lo que falta» vive en el motor
 
 
 def semana_vs_plan(actual: dict, con_plan: bool) -> dict:
