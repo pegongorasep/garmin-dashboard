@@ -13,20 +13,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Pedro prueba el motor antes de correr su tubo de datos: si pytest falla, no corre.
-  pruebas:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements.txt -r web/requirements.txt
-      - run: python -m pytest -q
-
+  # Las pruebas corren en web.yml (antes de cada despliegue); aquí el tubo de datos no las repite.
   publicar:
-    needs: pruebas
     uses: ./.github/workflows/motor.yml
     with:
       motor_ref: ${{ github.sha }}

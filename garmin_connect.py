@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -33,15 +34,19 @@ RUN_TYPES = CONFIG["run_types"]
 CROSSFIT_TYPES = [t for t in CONFIG["tipos_con_detalle"] if t not in RUN_TYPES]
 
 
+class KeyRechazada(SystemExit):
+    """Garmin rechazó la key (SystemExit con mensaje: sale con 1 e imprime el texto, como siempre)."""
+
+
 def get_access_token() -> str:
     resp = requests.post(
         TOKEN_URL, headers={"Authorization": f"ApiKey {os.environ['PERSONAL_API_KEY']}"}
     )
     if resp.status_code in (400, 401, 403):
         # Mensaje para quien lee el log del workflow (casi siempre: la key expiró o se borró).
-        sys.exit(f"ERROR: Garmin rechazó la key ({resp.status_code}). Probablemente expiró: crea una nueva en "
-                 "https://connect.garmin.com/app/settings/personalApiToken y guárdala con "
-                 "`gh secret set PERSONAL_API_KEY`.")
+        raise KeyRechazada(f"ERROR: Garmin rechazó la key ({resp.status_code}). Probablemente expiró: crea una nueva en "
+                           "https://connect.garmin.com/app/settings/personalApiToken y guárdala con "
+                           "`gh secret set PERSONAL_API_KEY`.")
     resp.raise_for_status()
     return resp.text.strip()
 
@@ -139,7 +144,16 @@ def tramos(summary: dict) -> list:
             for t in summary.get("splitSummaries") or []]
 
 
-def pull_activity_details(c: Client, activities: list) -> dict:
+def _avisa_detalles(avance, i: int, n: int, ultimo, ahora=time.monotonic):
+    """Avisa `detalles` (i de n) como mucho cada 3 s o cada 10 %; devuelve (t, i) del último aviso."""
+    t = ahora()
+    if ultimo is None or t - ultimo[0] >= 3 or i - ultimo[1] >= max(1, n // 10) or i == n:
+        avance("detalles", i - 1, n)
+        return (t, i)
+    return ultimo
+
+
+def pull_activity_details(c: Client, activities: list, avance=None) -> dict:
     """Pide RPE y sensación (y tramos de trote/caminata y serie de FC en corridas); reusa lo ya completo.
     Una actividad de los últimos 7 días sin RPE se vuelve a pedir (Pedro puede ponerlo después)."""
     tipos = RUN_TYPES + CROSSFIT_TYPES
@@ -147,10 +161,12 @@ def pull_activity_details(c: Client, activities: list) -> dict:
     cache = load_json(path)
     out = {}
     hoy = date.today()
-    for a in activities:
+    con_detalle = [a for a in activities if a["activityType"]["typeKey"] in tipos]
+    n, ultimo = len(con_detalle), None
+    for i, a in enumerate(con_detalle, 1):
+        if avance:
+            ultimo = _avisa_detalles(avance, i, n, ultimo)
         tipo = a["activityType"]["typeKey"]
-        if tipo not in tipos:
-            continue
         key, es_corrida = str(a["activityId"]), tipo in RUN_TYPES
         carrera = es_corrida and metrics.es_carrera(a, CONFIG)
         reciente = (hoy - date.fromisoformat(a["startTimeLocal"][:10])).days <= 7
@@ -173,24 +189,29 @@ def pull_activity_details(c: Client, activities: list) -> dict:
     return out
 
 
-def main(argv=None, cliente=None) -> None:
+def main(argv=None, cliente=None, avance=None) -> None:
     ap = argparse.ArgumentParser(description="Baja los datos de Garmin a data/")
     ap.add_argument("semanas_salud", nargs="?", type=int, default=16, help="semanas de salud (por defecto 16)")
     ap.add_argument("dias_posicional", nargs="?", type=int, help="días de actividades (igual que --dias-actividades)")
+    ap.add_argument("--semanas-salud", dest="semanas_salud_opcion", type=int, choices=range(1, 53), metavar="N", help="semanas de salud (1-52)")
     ap.add_argument("--dias-actividades", type=int, help="días de actividades (por defecto 120)")
     ap.add_argument("--historial-desde", metavar="AAAA-MM-DD", help="solo las corridas del historial desde esta fecha")
     args = ap.parse_args(argv)
-    health_weeks = args.semanas_salud
+    health_weeks = args.semanas_salud_opcion or args.semanas_salud
     activity_days = args.dias_actividades or args.dias_posicional or 120
     if args.historial_desde:
         date.fromisoformat(args.historial_desde)   # falla claro si no es fecha
 
     today = date.today()
+    aviso = avance or (lambda *a, **k: None)
     c = cliente or Client(get_access_token())
     DATA_DIR.mkdir(exist_ok=True)
 
+    aviso("busca")
     activities = pull_activities(c, today - timedelta(days=activity_days))
-    details = pull_activity_details(c, activities)
+    aviso("encuentra", total=len(activities))
+    details = pull_activity_details(c, activities, avance)
+    aviso("salud")
     historial = pull_historial(c, args.historial_desde)
     (DATA_DIR / "historial_corridas.json").write_text(json.dumps(historial, indent=1))
     datasets = {

@@ -41,6 +41,11 @@ jobs:
 
       - run: pip install -r motor/requirements.txt
 
+      - name: Avisar a la web
+        run: python motor/scripts/subir.py avance arranca || true
+        env:
+          GARMIN_USER_DIR: ${{ github.workspace }}
+
       # Caché del RPE por actividad: cada corrida guarda una versión nueva.
       - uses: actions/cache@v4
         with:
@@ -54,13 +59,22 @@ jobs:
         run: echo "args=$(python motor/scripts/subir.py instrucciones || true)" >> "$GITHUB_OUTPUT"
 
       - name: Bajar datos de Garmin
-        run: python motor/garmin_connect.py ${{ steps.instrucciones.outputs.args }}
+        run: python motor/scripts/subir.py bajar ${{ steps.instrucciones.outputs.args }}
         env:
           PERSONAL_API_KEY: ${{ secrets.PERSONAL_API_KEY }}
           GARMIN_USER_DIR: ${{ github.workspace }}
 
       # 4. Mandar el paquete limpio (lista blanca) a la web. Falla si la subida falla; "no vinculado" no es fallo.
       - name: Subir datos a la web
-        run: python motor/scripts/subir.py subir
+        run: |
+          python motor/scripts/subir.py avance sube || true
+          python motor/scripts/subir.py subir
+        env:
+          GARMIN_USER_DIR: ${{ github.workspace }}
+
+      # Si algo falló y nadie avisó el motivo, la web se entera de que fue «otra».
+      - name: Avisar el fallo a la web
+        if: failure()
+        run: python motor/scripts/subir.py fallo || true
         env:
           GARMIN_USER_DIR: ${{ github.workspace }}
