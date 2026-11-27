@@ -1,0 +1,13 @@
+{% from "componentes.html" import boton, tarjeta, opcion %}
+{% if not pref %}
+{% call tarjeta() %}
+  <form class="pila texto" method="post" action="/ajustes/compartir">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2 class="pag-h">{{ t("aj.comp_t") }}</h2>
+    <p>{{ t("aj.comp_a") }}</p>
+    {{ opcion("compartir_actividades", t("aj.comp_act"), valor="1", nota=t("aj.comp_act_n"), marcado=atleta.compartir_actividades) }}
+    {{ opcion("compartir_plan", t("aj.comp_plan"), valor="1", nota=t("aj.comp_plan_n"), marcado=atleta.compartir_plan) }}
+    <div class="acciones">{{ boton(t("comun.guardar"), tipo="submit") }}</div>
+  </form>
+{% endcall %}
+{% endif %}

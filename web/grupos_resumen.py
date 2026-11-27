@@ -48,7 +48,7 @@ def _otras(dias: list) -> dict:
     return out
 
 
-def _tarjeta(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tuple[dict, dict]:
+def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tuple[dict, dict]:
     """(tarjeta, hitos): los hitos (corrida más larga, récord, semana completa) alimentan insignias y novedades y no salen."""
     base = {"usuario_id": usuario.id, "estado": "ok", "meta": None, "etapa_n": None, "adherencia": None, "dias": [], "ultima": None,
             "libre": None, "semana": None, "plan": None, "progreso": None, "racha": None, "carrera": None}
@@ -118,6 +118,29 @@ def _tarjeta(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tuple[dict
              "adherencia": _adherencia(semanas), "dias": dias, "ultima": ((data.get("ultima_corrida") or {}).get("fecha")),
              "semana": semana, "plan": {"n": actual.get("n"), "total": total_plan},
              "progreso": {"hechas": p["hechas"], "total": p["total"]}, "racha": racha, "carrera": carrera}, hitos)
+
+
+def aplicar_privacidad(usuario: Usuario, t: dict, hitos: dict) -> tuple[dict, dict]:
+    """Los dos interruptores de la persona. Sin `compartir_actividades` el grupo solo ve totales de la semana (km, minutos);
+    sin `compartir_plan` no sale nada del plan (etapa, avance, adherencia, carrera, racha)."""
+    t, hitos = dict(t), dict(hitos)
+    if not usuario.compartir_actividades:
+        t["dias"], t["ultima"] = [], None
+        if t.get("semana"):
+            t["semana"] = {**t["semana"], "otras": {}}
+        if t.get("libre"):
+            t["libre"] = {**t["libre"], "actividades": 0}
+        hitos.update({k: v for k, v in (("larga", 0), ("record", None)) if k in hitos})
+    if not usuario.compartir_plan:
+        t.update(meta=None, etapa_n=None, adherencia=None, plan=None, progreso=None, racha=None, carrera=None)
+        if t.get("libre"):
+            t["libre"] = {**t["libre"], "racha": 0}
+        hitos.update({k: v for k, v in (("completa_ahora", False), ("completa_antes", False), ("racha", 0)) if k in hitos})
+    return t, hitos
+
+
+def _tarjeta(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tuple[dict, dict]:
+    return aplicar_privacidad(usuario, *_tarjeta_cruda(db, usuario, miembro))
 
 
 def tarjeta_de(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> dict:

@@ -37,3 +37,28 @@ def mismo_grupo(db: Session, actor: Usuario | None, otro_id: int) -> bool:
     mios = select(MiembroGrupo.grupo_id).where(MiembroGrupo.usuario_id == actor.id)
     return db.scalar(select(MiembroGrupo.id).where(MiembroGrupo.usuario_id == otro_id,
                                                    MiembroGrupo.grupo_id.in_(mios)).limit(1)) is not None
+
+
+def puede_ver_social(db: Session, actor: Usuario | None, dueno_id: int) -> bool:
+    """LA regla de «quién ve a quién» en lo social: uno mismo, o comparten al menos un grupo. Hoy solo grupos; si algún día
+    hay «amigos», se agrega aquí y nada más cambia. No da acceso a actividades ni plan: eso lo deciden los interruptores."""
+    if actor is None or actor.borrado is not None:
+        return False
+    dueno = db.get(Usuario, dueno_id)
+    if dueno is None or dueno.borrado is not None:
+        return False
+    return mismo_grupo(db, actor, dueno_id)
+
+
+def puede_ver_actividades(db: Session, actor: Usuario | None, dueno_id: int) -> bool:
+    """Sus actividades una por una: él mismo, su coach, o alguien de un grupo en común si compartir_actividades está encendido."""
+    if puede_ver(db, actor, dueno_id):
+        return True
+    return puede_ver_social(db, actor, dueno_id) and bool(db.get(Usuario, dueno_id).compartir_actividades)
+
+
+def puede_ver_plan(db: Session, actor: Usuario | None, dueno_id: int) -> bool:
+    """Su calendario de plan: él mismo, su coach, o alguien de un grupo en común si compartir_plan está encendido."""
+    if puede_ver(db, actor, dueno_id):
+        return True
+    return puede_ver_social(db, actor, dueno_id) and bool(db.get(Usuario, dueno_id).compartir_plan)

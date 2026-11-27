@@ -240,3 +240,22 @@ def test_plan_url_con_prefijo_del_coach():
     s = {"ui": {"menu": [], "plan_acciones": [], "plan_url": calculo.PLAN_URL, "editar_urls": {}}}
     assert calculo.con_prefijo(s, "/a/7")["ui"]["plan_url"] == "/a/7/plan"
     assert calculo.con_prefijo(s, "")["ui"]["plan_url"] == "/plan"
+
+
+def test_migracion_compartir_sube_y_baja_y_los_usuarios_quedan_en_si(tmp_path):
+    db = tmp_path / "m.db"
+    cfg = Config(str(ROOT / "web" / "alembic.ini"))
+    cfg.cmd_opts = type("O", (), {"x": [f"url=sqlite:///{db}"]})()
+    cols = lambda: {r[1] for r in sqlite3.connect(db).execute("pragma table_info(usuarios)")}  # noqa: E731
+    command.upgrade(cfg, "0013")
+    con = sqlite3.connect(db)
+    con.execute("insert into usuarios (correo, es_admin, creado, migrado, sensor, sin_plan) values ('v@x.com', 0, '2026-01-01', 0, 'banda', 0)")
+    con.commit()
+    con.close()
+    command.upgrade(cfg, "head")
+    assert {"compartir_actividades", "compartir_plan"} <= cols()
+    assert sqlite3.connect(db).execute("select compartir_actividades, compartir_plan from usuarios").fetchone() == (1, 1)
+    command.downgrade(cfg, "0013")
+    assert not {"compartir_actividades", "compartir_plan"} & cols()
+    command.upgrade(cfg, "head")
+    assert "compartir_plan" in cols()

@@ -144,6 +144,17 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             db.commit()
         return RedirectResponse("/bienvenida", 303)
 
+    @app.post("/ajustes/compartir")
+    async def ajustes_compartir(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        """Los dos interruptores sociales (actividades y plan). Solo la propia persona: un coach no los cambia."""
+        form = await formulario(request)
+        if usuario is None:
+            return RedirectResponse("/entrar", 303)
+        usuario.compartir_actividades = form.get("compartir_actividades") == "1"
+        usuario.compartir_plan = form.get("compartir_plan") == "1"
+        db.commit()
+        return RedirectResponse("/ajustes?ok=1", 303)
+
     @app.post("/ajustes/plan")
     async def ajustes_plan(request: Request, usuario=Depends(actual), db=Depends(get_db)):
         """«Quiero un plan de running» (lleva a /plan/nuevo) o «Quitar mi plan» (sin_plan=True;

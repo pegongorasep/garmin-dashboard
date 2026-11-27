@@ -1,5 +1,6 @@
 """G2: grupos (crear, unirse, salir, quitar, pausar) y foto para quienes comparten grupo."""
 import re
+from datetime import datetime
 
 from test_web_cuentas import csrf_de, entrar, crear_usuario
 from test_web_perfil import con_exif_gps
@@ -409,3 +410,77 @@ def test_pagina_trae_data_grupos_y_el_coach_no(web_ctx):
     dar(atl, "coach@x.com")
     assert "data-grupos" not in coach.get(f"/a/{uid_a}/").text
     assert coach.get(f"/a/{uid_a}/data.json").json()["ui"]["grupos"] == 0
+
+
+# ---------- Social S1: privacidad por persona ----------
+def _uid(ctx, correo):
+    with ctx.sesiones() as db:
+        return db.query(Usuario).filter_by(correo=correo).one().id
+
+
+def test_matriz_de_visibilidad_social(web_ctx):
+    from web import permisos
+    from web.modelos import Coach
+    cls = {c: sesion(web_ctx, f"{c}@x.com") for c in "abcd"}   # a,b comparten grupo; c solo; d es coach de b
+    gid = crear(cls["a"])
+    post(cls["b"], f"/grupos/unirse/{liga(cls['a'], gid)}")
+    ids = {c: _uid(web_ctx, f"{c}@x.com") for c in "abcd"}
+    with web_ctx.sesiones() as db:
+        db.add(Coach(atleta_id=ids["b"], coach_id=ids["d"]))
+        db.commit()
+        U = {c: db.get(Usuario, i) for c, i in ids.items()}
+        v = lambda f, x, y: f(db, U[x], ids[y])  # noqa: E731
+        for f in (permisos.puede_ver_social, permisos.puede_ver_actividades, permisos.puede_ver_plan):
+            assert v(f, "a", "b") and v(f, "b", "a")          # comparten grupo, switches por defecto (sí)
+            assert v(f, "a", "a")                              # uno mismo
+            assert not v(f, "c", "a") and not v(f, "a", "c")   # sin grupo en común
+            assert not f(db, None, ids["a"])
+        assert permisos.puede_ver_actividades(db, U["d"], ids["b"]) and permisos.puede_ver_plan(db, U["d"], ids["b"])   # coach
+        assert not permisos.puede_ver_social(db, U["d"], ids["b"])                                                     # coach no es grupo
+        U["b"].compartir_actividades = False
+        db.commit()
+        assert not permisos.puede_ver_actividades(db, U["a"], ids["b"]) and permisos.puede_ver_plan(db, U["a"], ids["b"])
+        assert permisos.puede_ver_actividades(db, U["b"], ids["b"]) and permisos.puede_ver_actividades(db, U["d"], ids["b"])
+        assert permisos.puede_ver_social(db, U["a"], ids["b"])   # apagar actividades no te saca del grupo
+        U["b"].compartir_plan = False
+        db.commit()
+        assert not permisos.puede_ver_plan(db, U["a"], ids["b"]) and permisos.puede_ver_plan(db, U["d"], ids["b"])
+        U["a"].borrado = datetime(2026, 1, 1)
+        assert not permisos.puede_ver_social(db, U["a"], ids["b"]) and not permisos.puede_ver_social(db, U["b"], ids["a"])
+
+
+def test_ajustes_compartir_guarda_y_pide_csrf(web_ctx):
+    a = sesion(web_ctx, "a@x.com")
+    with web_ctx.sesiones() as db:
+        u = db.query(Usuario).one()
+        assert u.compartir_actividades is True and u.compartir_plan is True   # por defecto
+        u.uso = "cuerpo"   # /ajustes sin plan ni config renderiza la variante «solo cuerpo» (que también trae los interruptores)
+        db.commit()
+    assert a.post("/ajustes/compartir", data={"compartir_plan": "1"}).status_code == 403     # sin CSRF
+    pag = a.get("/ajustes").text.replace("\n", " ")
+    t = csrf_de(pag)
+    assert 'name="compartir_actividades" value="1" checked' in pag and 'name="compartir_plan" value="1" checked' in pag
+    r = a.post("/ajustes/compartir", data={"csrf": t, "compartir_plan": "1"})   # actividades desmarcado
+    assert r.status_code == 303
+    with web_ctx.sesiones() as db:
+        u = db.query(Usuario).one()
+        assert (u.compartir_actividades, u.compartir_plan) == (False, True)
+    assert 'name="compartir_actividades" value="1" checked' not in a.get("/ajustes").text.replace("\n", " ")
+    assert web_ctx.cliente().post("/ajustes/compartir", data={"csrf": "x"}).status_code in (303, 403)
+
+
+def test_tarjeta_respeta_los_interruptores(web_ctx):
+    from web import grupos_resumen as gr
+    u = Usuario(correo="z@x.com", compartir_actividades=False, compartir_plan=False)
+    t = {"usuario_id": 1, "estado": "ok", "meta": "10K", "etapa_n": 3, "adherencia": 80, "dias": ["hecha", "libre"], "ultima": "2026-11-20",
+         "libre": None, "semana": {"km": 12.0, "minutos": 90, "otras": {"hiit": 2}, "extra_min": 40}, "plan": {"n": 3, "total": 12},
+         "progreso": {"hechas": 2, "total": 4}, "racha": 3, "carrera": {"nombre": "10K", "dias": 5}}
+    h = {"larga": 50, "record": 8.0, "racha": 3, "completa_ahora": True, "completa_antes": True}
+    t2, h2 = gr.aplicar_privacidad(u, t, h)
+    assert t2["semana"] == {"km": 12.0, "minutos": 90, "otras": {}, "extra_min": 40}          # solo totales
+    assert t2["dias"] == [] and t2["ultima"] is None and t2["plan"] is None and t2["progreso"] is None
+    assert t2["meta"] is None and t2["carrera"] is None and t2["adherencia"] is None and t2["racha"] is None
+    assert h2["larga"] == 0 and h2["record"] is None and h2["completa_ahora"] is False and h2["racha"] == 0
+    assert t["dias"] and h["larga"] == 50                                                      # no muta la entrada
+    t3, _ = gr.aplicar_privacidad(Usuario(correo="y@x.com", compartir_actividades=True, compartir_plan=True), t, h)
+    assert t3 == t

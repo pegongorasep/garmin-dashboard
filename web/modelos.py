@@ -34,6 +34,8 @@ class Usuario(Base):
     migrado: Mapped[bool] = mapped_column(default=False)                  # F8: Pages apagado
     nombre: Mapped[str | None] = mapped_column(sa.String(60))             # G1: None = aún no lo ha dicho (se le pide en /perfil)
     apellido: Mapped[str | None] = mapped_column(sa.String(60))
+    compartir_actividades: Mapped[bool] = mapped_column(default=True, server_default=sa.true())   # Social: los grupos ven mis actividades (apagado: solo totales de la semana)
+    compartir_plan: Mapped[bool] = mapped_column(default=True, server_default=sa.true())          # Social: los grupos ven mi plan (calendario, etapa, avance)
     borrado: Mapped[datetime | None] = mapped_column()
 
 
