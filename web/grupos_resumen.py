@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from semanal import cumplimiento as cumplimiento_semana
+import semanal
 
 from . import calculo, semana_plan
 from .modelos import Ajustes, MiembroGrupo, Plan, Usuario
@@ -13,31 +13,11 @@ from .modelos import Ajustes, MiembroGrupo, Plan, Usuario
 log = logging.getLogger("web.grupos_resumen")
 
 CAMPOS = {"usuario_id", "estado", "meta", "etapa_n", "adherencia", "dias", "ultima", "libre",
-          "semana", "plan", "progreso", "racha", "carrera", "sem_plan", "cal"}   # lo único que sale de una tarjeta
+          "semana", "plan", "progreso", "racha", "carrera", "sem_plan", "cal", "dias_hechos", "dias_n"}   # lo único que sale de una tarjeta
 MAX_NOVEDADES = 3
 # Emoji de cada categoría de «otras sesiones» (la pestaña solo pinta). Lo que no esté aquí usa «otra».
 EMOJI_CATEGORIA = {"crossfit": "🔥", "hiit": "🔥", "fuerza": "🏋️", "gym": "🏋️", "pesas": "🏋️", "bici": "🚴", "cardio": "🚴",
                    "nado": "🏊", "natacion": "🏊", "caminata": "🚶", "walking": "🚶", "movilidad": "🤸", "yoga": "🤸", "otra": "🤸"}
-SEMANAS_ADHERENCIA = 4
-
-
-def _adherencia(semanas: list) -> int | None:
-    """% de sesiones hechas en las últimas semanas pasadas con plan (o en la actual si aún no hay pasadas)."""
-    con_plan = [s for s in semanas if s.get("plan")]
-    base = [s for s in con_plan if s["estado"] == "pasada"][-SEMANAS_ADHERENCIA:] or [s for s in con_plan if s["estado"] == "actual"]
-    total = sum(s["plan"]["total"] for s in base)
-    return round(100 * sum(s["plan"]["hechas"] for s in base) / total) if total else None
-
-
-def _racha(semanas: list, idx: int) -> int:
-    """Semanas pasadas seguidas, terminando con la anterior a la actual, con ✓ o ✓✓ (misma regla que las palomitas del Plan)."""
-    n = 0
-    for s in reversed(semanas[:idx]):
-        p = s.get("plan")
-        if s.get("estado") != "pasada" or not p or cumplimiento_semana(p["hechas"], p["total"]) not in ("completa", "casi"):
-            break
-        n += 1
-    return n
 
 
 def _otras(dias: list) -> dict:
@@ -52,7 +32,7 @@ def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tupl
     """(tarjeta, hitos): los hitos (corrida más larga, récord, semana completa) alimentan insignias y novedades y no salen."""
     base = {"usuario_id": usuario.id, "estado": "ok", "meta": None, "etapa_n": None, "adherencia": None, "dias": [], "ultima": None,
             "libre": None, "semana": None, "plan": None, "progreso": None, "racha": None, "carrera": None,
-            "sem_plan": None, "cal": None}
+            "sem_plan": None, "cal": None, "dias_hechos": 0, "dias_n": 0}
     if miembro.pausado:
         return {**base, "estado": "pausa"}, {}
     sin_plan = {**base, "estado": "sin_plan"}
@@ -77,6 +57,7 @@ def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tupl
         cal = [{"hoy": i == hoy_i, "hecha": bool(d["actividades"]), "cats": [a.get("cat", "run") for a in d["actividades"]]} for i, d in enumerate(sl["dias"])]
         return ({**base, "estado": "libre", "dias": dias, "semana": semana, "cal": cal,
                  "sem_plan": {"minutos": semana["minutos"] + semana["extra_min"], "objetivo": None, "faltan": []},
+                 "racha": sl["racha_semanas"], "dias_hechos": sum(1 for c in cal if c["hecha"]), "dias_n": dias.count("hecha"),
                  "libre": {"actividades": sl["actividades"], "minutos": round(sl["minutos"]), "racha": sl["racha_semanas"]}},
                 {"larga": max(corridas, default=0)})
     if db.get(Ajustes, usuario.id) is None or db.get(Plan, usuario.id) is None:
@@ -104,8 +85,9 @@ def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tupl
     larga = max((d["corrida"]["minutos"] for d in actual["dias"] if d.get("corrida")), default=0)
     semana = {"km": round(stats.get("km") or 0, 1), "minutos": round(stats.get("minutos") or 0), "otras": _otras(actual["dias"]),
               "extra_min": round(sum(o.get("minutos") or 0 for d in actual["dias"] for o in d.get("otras") or []))}
-    total_plan = len((data.get("plan") or {}).get("semanas") or []) or None
-    racha = _racha(semanas, idx)
+    total_plan = (data.get("plan") or {}).get("largo") or None
+    cal = semana_plan.calendario_semana(actual["dias"], hoy)
+    racha = (data.get("racha") or {}).get("semanas") or 0
     # récord: la corrida más larga (km) de esta semana supera a todas las anteriores desde que empezó el plan
     inicio_plan, ini_sem = (data.get("plan") or {}).get("inicio"), actual.get("inicio")
     km_sem = max((c["km"] or 0 for c in (data.get("progreso") or {}).get("corridas") or [] if ini_sem and c["fecha"] >= ini_sem), default=0)
@@ -116,13 +98,15 @@ def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tupl
     pa = (anterior or {}).get("plan")
     hitos = {"larga": larga, "record": record, "racha": racha, "hoy": hoy, "ini_sem": ini_sem,
              "completa_ahora": p["total"] > 0 and p["hechas"] >= p["total"],
-             "completa_antes": bool(pa and (anterior or {}).get("estado") == "pasada" and cumplimiento_semana(pa["hechas"], pa["total"]) == "completa"),
+             "completa_antes": bool(pa and (anterior or {}).get("estado") == "pasada" and semanal.cumplimiento(pa["hechas"], pa["total"]) == "completa"),
              "n": actual.get("n"), "n_antes": (anterior or {}).get("n"), "total": total_plan}
     return ({**base, "meta": carreras[0]["nombre"] if carreras else None, "etapa_n": actual.get("n"),
-             "adherencia": _adherencia(semanas), "dias": dias, "ultima": ((data.get("ultima_corrida") or {}).get("fecha")),
-             "semana": semana, "plan": {"n": actual.get("n"), "total": total_plan},
-             "progreso": {"hechas": p["hechas"], "total": p["total"]}, "racha": racha, "carrera": carrera,
-             "sem_plan": semana_plan.semana_vs_plan(actual, True), "cal": semana_plan.calendario_semana(actual["dias"], hoy)}, hitos)
+             "adherencia": semanal.adherencia(semanas), "dias": dias, "ultima": ((data.get("ultima_corrida") or {}).get("fecha")),
+             "semana": semana,
+             "plan": {"n": actual.get("n"), "total": total_plan, "pct": semanal.pct(actual.get("n"), total_plan) if actual.get("n") else None},
+             "progreso": {"hechas": p["hechas"], "total": p["total"], "pct": p.get("pct", semanal.pct(p["hechas"], p["total"]))},
+             "racha": racha, "carrera": carrera, "sem_plan": semana_plan.semana_vs_plan(actual, True), "cal": cal,
+             "dias_hechos": sum(1 for c in cal if c["hecha"]), "dias_n": dias.count("hecha")}, hitos)
 
 
 def aplicar_privacidad(usuario: Usuario, t: dict, hitos: dict) -> tuple[dict, dict]:
@@ -131,6 +115,7 @@ def aplicar_privacidad(usuario: Usuario, t: dict, hitos: dict) -> tuple[dict, di
     t, hitos = dict(t), dict(hitos)
     if not usuario.compartir_actividades:
         t["dias"], t["ultima"] = [], None
+        t["dias_hechos"] = t["dias_n"] = 0
         t["cal"] = None   # ni qué días se llenaron: solo totales (la tarjeta pinta la ranura vacía)
         if t.get("semana"):
             t["semana"] = {**t["semana"], "otras": {}}
@@ -178,7 +163,7 @@ def insignias(tarjetas: list, hitos: dict) -> list:
     activas = [t for t in tarjetas if t["estado"] in ("ok", "libre") and _con_actividad(t)]
     if len(activas) < 2:
         return []
-    pct = {t["usuario_id"]: round(100 * t["progreso"]["hechas"] / t["progreso"]["total"])
+    pct = {t["usuario_id"]: semanal.pct(t["progreso"]["hechas"], t["progreso"]["total"])
            for t in activas if t["progreso"] and t["progreso"]["total"]}
     candidatas = [("mas_constante", pct),
                   ("mas_km", {t["usuario_id"]: t["semana"]["km"] for t in activas}),

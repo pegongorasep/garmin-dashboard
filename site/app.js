@@ -249,7 +249,7 @@ function resumenSemanaPasada(d) {
   if (!r) return null;
   const sug = r.sugerencia, idxPasada = semanasHoy(d).findIndex((x) => x.inicio === r.inicio);
   const tiene = r.sesiones_total != null;
-  const pct = tiene && r.sesiones_total ? Math.min(100, (r.sesiones_hechas / r.sesiones_total) * 100) : 0;
+  const pct = tiene && r.pct != null ? r.pct : 0;
   const minutos = (r.stats || {}).minutos || 0;
   const bajo = (r.intensidad || {}).bajo;
   const resumen = lineaSemana(r.stats, T("sitio.sin_corridas"), bajo != null ? [T("sitio.sp.bajas", { v: fmt(bajo, 0) })] : [], "sp-resumen");
@@ -291,7 +291,7 @@ function rangoSemana(s) {
 
 function etiquetaSelector(d, s) {
   if (s.antes_plan) return T("sitio.sel.antes", { r: rangoSemana(s) });
-  const total = ((d.plan || {}).semanas || []).length;
+  const total = (d.plan || {}).largo || 0;
   return s.n !== null && s.n !== undefined
     ? (total ? T("sitio.sel.semana_de", { n: s.n, t: total, r: rangoSemana(s) }) : T("sitio.sel.semana", { n: s.n, r: rangoSemana(s) })) + (s.kind ? ` · ${tipoSemana(s.kind)}` : "")
     : T("sitio.sel.del", { r: rangoSemana(s) });
@@ -334,7 +334,7 @@ function tarjetaEstaSemana(d, s) {
     if (p.faltan) c.append(h("p", { class: "nota" }, p.faltan));
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, T("sitio.plan.futura", { t: p.total, m: fmt(p.plan_min, 0) })));
     else {
-      const min = st.minutos || 0, pct = Math.round((min / p.plan_min) * 100);
+      const min = st.minutos || 0, pct = p.min_pct != null ? p.min_pct : 0;
       c.append(DS.anilloPlan({ pct, titulo: `${fmt(min, 0)} / ${fmt(p.plan_min, 0)} min · ${pct} %`,
         texto: T("sitio.plan.hechas", { h: p.hechas, t: p.total, inc: p.incompletas ? ` · ${Tn("sitio.incompleta", p.incompletas)}` : "" }),
         etiqueta: T("sitio.plan.min_de", { a: fmt(min, 0), b: fmt(p.plan_min, 0) }) }));

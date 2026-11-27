@@ -216,8 +216,8 @@ function tarjetaDoceSemanas(d) {
     h("p", { class: "nota" }, T("sitio.plan.nota", { d: ui().textos.descarga || T("sitio.plan.descarga_nota") })),
     h("h3", { class: "titular" }, T("sitio.plan.titulo_sem", { n: w.n, b: w.block, k: tipoSemana(w.kind) })),
     h("p", { class: "nota" }, w.focus || ""),
-    w.ajuste_texto ? h("p", { class: "nota" }, w.ajuste_texto) : null,
-    actual === w.n && plan.faltan ? h("p", { class: "nota" }, plan.faltan) : null,
+    ...(w.ajuste_texto ? [h("p", { class: "nota" }, w.ajuste_texto)] : []),   // append(null) escribiría «null»
+    ...(actual === w.n && plan.faltan ? [h("p", { class: "nota" }, plan.faltan)] : []),
     h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), (ui().editar_urls || {})[`${w.n}/${s.id}`]
       ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: ui().editar_urls[`${w.n}/${s.id}`] })] } : {}))),
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, T("sitio.plan.repetidas", { l: plan.semanas_repetidas.join(", ") }))] : []),
@@ -741,27 +741,27 @@ function pintarGrupo(g) {
       minutos: sp.objetivo ? T("sitio.gr.p.min_de", { hechos: fmt(sp.minutos, 0), meta: fmt(sp.objetivo, 0) }) : T("sitio.gr.p.min_solo", { hechos: fmt(sp.minutos, 0) }),
       faltan: !sp.objetivo ? "" : sp.faltan.length ? T("sitio.gr.p.faltan", { lista: personaFaltan(sp.faltan) }) : T("sitio.gr.c.completa"),
       completa: !!sp.objetivo && !sp.faltan.length });
-    const cal = !pausa && t.cal && t.cal.length === 7 ? DS.miniSemana({ letras, etiqueta: T("sitio.gr.c.dias_aria", { n: t.cal.filter((d) => d.hecha).length }),
+    const cal = !pausa && t.cal && t.cal.length === 7 ? DS.miniSemana({ letras, etiqueta: T("sitio.gr.c.dias_aria", { n: t.dias_hechos || 0 }),
       celdas: t.cal.map((d) => ({ hecha: d.hecha, hoy: d.hoy, emoji: d.cats.length ? (d.cats[0] === "run" ? "🏃" : catEmoji(d.cats[0])) : null })) }) : DS.miniSemana({ letras });
     const detalle = [];
     if (t.plan && t.plan.n) {
       const p = t.progreso;
       detalle.push(h("p", {}, t.plan.total ? T("sitio.gr.semana_n", { n: t.plan.n, total: t.plan.total }) : T("sitio.gr.semana_sola", { n: t.plan.n })));
-      if (t.plan.total) detalle.push(DS.barraFina({ pct: 100 * t.plan.n / t.plan.total, etiqueta: T("sitio.gr.semana_n", { n: t.plan.n, total: t.plan.total }) }));
+      if (t.plan.total) detalle.push(DS.barraFina({ pct: t.plan.pct || 0, etiqueta: T("sitio.gr.semana_n", { n: t.plan.n, total: t.plan.total }) }));
       if (p && !t.semana) detalle.push(h("p", {}, T("sitio.gr.progreso_aria", { hechas: p.hechas, total: p.total })));
     }
     if (t.adherencia !== null && t.adherencia !== undefined) detalle.push(h("p", {}, T("sitio.gr.adherencia", { pct: fmt(t.adherencia, 0) })));
     if (t.carrera) detalle.push(h("p", {}, t.meta || t.carrera.nombre ? T("sitio.gr.carrera", { nombre: t.carrera.nombre || t.meta, dias: t.carrera.dias }) : T("sitio.gr.carrera_sola", { dias: t.carrera.dias })));
-    const racha = t.racha || (t.libre && t.libre.racha) || 0;
+    const racha = t.racha || 0;
     if (racha > 0) detalle.push(h("p", {}, `🔥 ${T("sitio.gr.racha", { n: racha })}`));
     if (t.ultima) detalle.push(h("p", {}, T("sitio.gr.ultima", { fecha: fechaCorta(t.ultima) })));
     const iniciales = m.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
     return DS.tarjetaMiembro({ nombre: m.nombre, foto: m.foto, iniciales, color: m.usuario_id, insignias: ins,
-      pct: !pausa && t.progreso && t.progreso.total ? 100 * t.progreso.hechas / t.progreso.total : null,
+      pct: !pausa && t.progreso && t.progreso.total ? t.progreso.pct : null,
       etiquetaAnillo: t.progreso ? T("sitio.gr.progreso_aria", { hechas: t.progreso.hechas, total: t.progreso.total }) : null,
       pausa: pausa ? T("sitio.gr.pausa") : null,
       linea: partes.length ? partes.join(" · ") : T(t.semana ? "sitio.gr.sin_actividad" : "sitio.gr.sin_datos"),
-      dias: t.dias || [], etiquetaDias: T("sitio.gr.dias_aria", { n: (t.dias || []).filter((d) => d === "hecha").length }),
+      dias: t.dias || [], etiquetaDias: T("sitio.gr.dias_aria", { n: t.dias_n || 0 }),
       semana, calendario: cal,
       detalle: [...detalle, personaEnlace(m.usuario_id, m.nombre)], alPersona: () => { location.hash = `#juntos/persona/${m.usuario_id}`; },
       abierto: !!grupoAbiertos()[clave], etiquetaAbrir: T("sitio.gr.detalle", { nombre: m.nombre }),

@@ -19,7 +19,6 @@ from .modelos import Grupo, MiembroGrupo, Plan, Usuario
 
 log = logging.getLogger("web.persona")
 
-SEMANAS_GRAFICA = 12
 MAX_CARRERAS = 3
 NIVELES = ("empezando", "base", "corredor")
 ACTIVIDADES_PERFIL = 10
@@ -85,6 +84,8 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
            "interruptores": {"plan": bool(dueno.compartir_plan), "actividades": bool(dueno.compartir_actividades)},
            "semana": None, "plan": None, "calendario": None, "progreso": None, "actividades": None}
     data = None if pausa else _datos(db, dueno)
+    if data and (data.get("plan") or {}).get("nivel") in NIVELES:
+        out["nivel"] = data["plan"]["nivel"]   # misma fuente que el sitio; sin data.json (pausa) queda el de la base
     if data:
         hoy = (data.get("generado") or date.today().isoformat())[:10]
         semanas, idx = data.get("semanas_hoy") or [], data.get("semana_hoy_idx") or 0
@@ -94,16 +95,16 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
             out["semana"] = semana_plan.semana_vs_plan(actual, False)
             if ver_plan:
                 out["semana"] = semana_plan.semana_vs_plan(actual, True)
-                total = len((data.get("plan") or {}).get("semanas") or []) or None
+                total = (data.get("plan") or {}).get("largo") or None
                 out["plan"] = {"n": actual.get("n"), "total": total}
                 out["calendario"] = [_semana_cal(s, hoy, ver_act) for s in semanas[idx:idx + 2]]
         elif libre:
             out["semana"] = {"minutos": round(libre.get("minutos") or 0), "objetivo": None, "faltan": []}
         prog = {"semanas": [{"inicio": s["inicio"], "minutos": round(s.get("minutos") or 0)}
-                            for s in (data.get("progreso") or {}).get("semanas") or []][-SEMANAS_GRAFICA:],
+                            for s in (data.get("progreso") or {}).get("semanas") or []],   # el largo lo decide semanal.serie_semanas
                 "racha": None, "carreras": None}
         if ver_plan:
-            prog["racha"] = grupos_resumen._racha(semanas, idx) if actual and actual.get("plan") else (libre or {}).get("racha_semanas") or 0
+            prog["racha"] = (data.get("racha") or {}).get("semanas") or 0
             prog["carreras"] = [{"fecha": e["desde"][:10], "distancia_km": e.get("distancia_km")}
                                 for e in (data.get("plan") or {}).get("eventos") or [] if e["tipo"] == "carrera" and e["desde"][:10] >= hoy][:MAX_CARRERAS]
         out["progreso"] = prog

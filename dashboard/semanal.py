@@ -69,9 +69,14 @@ def resumen_corridas(filas: list) -> dict:
             "pct_trote": round(min_trote / (min_trote + min_camina) * 100, 1) if min_trote + min_camina else None}
 
 
-def resumen_semana(ini: date, hasta: date, data: dict, config: dict) -> dict:
+def resumen_semana(ini: date, hasta: date, data: dict, config: dict, todas: bool = False) -> dict:
     """Volumen de las corridas de ini..hasta (inclusive): {corridas, minutos, km, min_trote, min_camina, pct_trote}.
-    Única fuente de minutos y km de una semana: Hoy, Plan, Progreso y la web leen esto."""
+    Única fuente de minutos y km de una semana: Hoy, Plan, Progreso y la web leen esto.
+    Con `todas=True` (modo sin plan) los minutos cuentan todas las categorías y el km solo las corridas: {actividades, minutos, km}."""
+    if todas:
+        lista = [a for a in data["activities"] if m.classify(a, config) and ini <= m.day_of(a) <= hasta]
+        return {"actividades": len(lista), "minutos": round(sum(x["duration"] for x in lista) / 60, 1),
+                "km": round(sum((x.get("distance") or 0) for x in lista if m.classify(x, config) == "run") / 1000, 1)}
     acts = [a for a in data["activities"] if ini <= m.day_of(a) <= hasta]
     return resumen_corridas(m.run_rows(acts, data["details"], config))
 
@@ -97,3 +102,56 @@ def cumplimiento(hechas: int, total: int):
     if total <= 0:
         return None
     return "completa" if hechas >= total else "casi" if 3 * hechas >= 2 * total else "baja"
+
+
+# --- racha, adherencia y porcentajes (Unificar U2b) ---
+
+MAX_RACHA = 52   # semanas que se miran hacia atrás
+
+
+def pct(hechas, total):
+    """Porcentaje entero (0-100) de hechas sobre total; None si no hay total. Única fuente de los % de la página."""
+    return round(100 * hechas / total) if total else None
+
+
+def racha(cerradas: list, actual: bool = False) -> int:
+    """REGLA ÚNICA de la racha: semanas seguidas que «cumplen», terminando en la última semana cerrada (la actual se suma solo si
+    ya cumple). `cerradas` va de la más vieja a la más nueva. Cumplir = ✓ o ✓✓ del Plan (2/3 de las sesiones) con plan;
+    sin plan = tener alguna actividad (no hay meta que medir). Con plan la semana actual no cuenta porque aún puede perderse."""
+    n = 0
+    for ok in reversed(cerradas[-MAX_RACHA:]):
+        if not ok:
+            break
+        n += 1
+    return n + 1 if actual else n
+
+
+def racha_semanas(semanas: list, idx: int, hoy: date = None, data: dict = None, config: dict = None, libre: bool = False) -> dict:
+    """Lo que sale en data.json como `racha`: {"semanas": n, "modo": "plan"|"libre"}. Grupos y perfil solo lo leen.
+    Plan: sobre `semanas_hoy` (semanas pasadas con cumplimiento completa/casi). Libre: sobre las actividades de cada semana."""
+    if libre:
+        ini = hoy - timedelta(days=hoy.weekday())
+        tiene = lambda k: any(m.classify(a, config) and ini - timedelta(weeks=k) <= m.day_of(a) < ini - timedelta(weeks=k - 1)
+                              for a in data["activities"])
+        return {"semanas": racha([tiene(k) for k in range(MAX_RACHA, 0, -1)], tiene(0)), "modo": "libre"}
+    ok = lambda s: s.get("estado") == "pasada" and bool(s.get("plan")) and cumplimiento(s["plan"]["hechas"], s["plan"]["total"]) in ("completa", "casi")
+    return {"semanas": racha([ok(s) for s in semanas[:idx]]), "modo": "plan"}
+
+
+def adherencia(semanas: list, ultimas: int = 4):
+    """% de sesiones hechas en las últimas semanas pasadas con plan (o en la actual si aún no hay pasadas); None sin sesiones."""
+    con_plan = [s for s in semanas if s.get("plan")]
+    base = [s for s in con_plan if s["estado"] == "pasada"][-ultimas:] or [s for s in con_plan if s["estado"] == "actual"]
+    return pct(sum(s["plan"]["hechas"] for s in base), sum(s["plan"]["total"] for s in base))
+
+
+SEMANAS_SIN_PLAN = 12
+
+
+def serie_semanas(hoy: date, plan: dict = None, config: dict = None) -> list:
+    """Lunes (del más viejo al de esta semana) de toda serie por semanas: tantas como semanas tiene el plan
+    (8, 12, 16…) o 12 si no hay plan. Gráficas, intensidad y carga usan esta lista, así todas miden lo mismo."""
+    con_plan = bool(plan and plan.get("weeks")) and not (config or {}).get("sin_plan")
+    n = len(plan["weeks"]) if con_plan else SEMANAS_SIN_PLAN
+    ini = hoy - timedelta(days=hoy.weekday())
+    return [ini - timedelta(weeks=i) for i in range(n - 1, -1, -1)]

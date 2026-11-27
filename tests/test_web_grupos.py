@@ -247,7 +247,8 @@ def test_tarjeta_nuevos_campos_racha_record_carrera(web_ctx, monkeypatch):
                                                                  "otras": [{"cat": "fuerza", "minutos": 30}] if i == 2 else []} for i in range(7)], **extra}
     data = {"generado": "2026-11-26T08:00", "semana_hoy_idx": 3, "ultima_corrida": None,
             "plan": {"inicio": "2026-11-02", "eventos": [{"tipo": "carrera", "desde": "2026-12-01", "nombre": "10K"}],
-                     "semanas": [{}] * 12},
+                     "semanas": [{}] * 12, "largo": 12},
+            "racha": {"semanas": 2, "modo": "plan"},
             "progreso": {"corridas": [{"fecha": "2026-11-05", "km": 5.0}, {"fecha": "2026-11-24", "km": 7.0}]},
             "semanas_hoy": [sem("pasada", 1, 1), sem("pasada", 2, 3), sem("pasada", 3, 2), sem("actual", 4, 3, inicio="2026-11-23")]}
     monkeypatch.setattr(grupos_resumen.calculo, "calcular", lambda db, u: data)
@@ -260,7 +261,7 @@ def test_tarjeta_nuevos_campos_racha_record_carrera(web_ctx, monkeypatch):
     c = r["tarjetas"][u.id]
     assert set(c) == grupos_resumen.CAMPOS
     assert c["semana"] == {"km": 12.3, "minutos": 80, "otras": {"fuerza": 1}, "extra_min": 30}
-    assert c["plan"] == {"n": 4, "total": 12} and c["progreso"] == {"hechas": 3, "total": 3}
+    assert c["plan"] == {"n": 4, "total": 12, "pct": 33} and c["progreso"] == {"hechas": 3, "total": 3, "pct": 100}
     assert c["racha"] == 2 and c["carrera"] == {"nombre": "10K", "dias": 5}
     assert len(r["novedades"]) == 3
     assert {n["tipo"] for n in r["novedades"]} <= {"semana_completa", "record_distancia", "racha", "carrera_cerca"}

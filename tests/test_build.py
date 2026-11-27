@@ -94,10 +94,10 @@ def test_forma_y_json_valido(salida):
     assert salida["plan"]["semana_actual"] == 2
     assert len(salida["semana"]["dias"]) == 7 and len(salida["zonas"]) == 5
     p = salida["progreso"]
-    assert len(p["dias"]) == 84 and len(p["semanas"]) == 12 and set(p["resumen"]) == {"4", "8", "12"}
+    assert len(p["dias"]) == 84 and len(p["semanas"]) == 2 and set(p["resumen"]) == {"4", "8", "12"}
     assert set(salida["detalles"]) >= {"distribucion", "carga", "carga_anterior", "carga_semanas",
                                        "fc_max", "umbrales"}
-    assert len(salida["detalles"]["carga_semanas"]) == 12
+    assert len(salida["detalles"]["carga_semanas"]) == 2   # el largo del plan (serie_semanas)
     assert salida["generado"].startswith("2026-11-04T12:00")
     assert salida["datos_al"].startswith("2026-11-04T11:00")  # 17:00 UTC = 11:00 Mérida
 
@@ -146,7 +146,7 @@ def test_progreso(salida):
     assert ultima["inicio"] == "2026-11-02" and ultima["minutos"] == 30 and ultima["min_trote"] == 20
     assert ultima["min_camina"] == 10 and ultima["plan_min"] == 100   # semana 2 del ejemplo: 25+25+50
     assert p["semanas"][-2]["plan_min"] == 80                         # semana 1: 20+20+40
-    assert p["semanas"][0]["plan_min"] is None
+    assert p["semanas"][0]["plan_min"] == 80
     d = p["dias"][-1]
     assert d["fecha"] == "2026-11-04" and d["hrv"] == 34 and d["hrv_7d"] == 34 and d["sueño_7d"] == 6.94
     assert p["dias"][0]["hrv_7d"] is None            # sin datos 84 días atrás
@@ -341,7 +341,7 @@ def test_semana_pasada_sesion_sin_hacer_es_no_hecha():
     assert s["estado"] == "pasada"
     assert [e["estado"] for e in s["sesiones"]] == ["hecha", "no_hecha", "no_hecha"]
     assert s["sesiones"][1]["corrida"] is None
-    assert s["plan"] == {"total": 3, "hechas": 1, "incompletas": 0, "plan_min": 100}
+    assert s["plan"] == {"total": 3, "hechas": 1, "incompletas": 0, "pct": 33, "plan_min": 100, "min_pct": 30}
 
 
 def test_semana_futura_todo_pendiente_y_sin_planeados():
@@ -659,8 +659,11 @@ def test_mejora_otras_e_intensidad_por_semana():
     assert total > 0 and abs(semana["bajo"] - (mins["Z1"] + mins["Z2"]) / total * 100) < 0.1
     assert abs(semana["bajo"] + semana["limbo"] + semana["alto"] - 100) < 0.2
     iw = out["progreso"]["intensidad_semanas"]
-    assert len(iw) == 12 and iw[-1]["inicio"] == "2026-11-02" and iw[-1] == {"inicio": "2026-11-02", **semana}
-    sin = next(x for x in iw if x["inicio"] == "2026-08-17")
+    assert len(iw) == 2 and iw[-1]["inicio"] == "2026-11-02" and iw[-1] == {"inicio": "2026-11-02", **semana}
+    libre = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), {**CONFIG_FIXTURE, "sin_plan": True}, AHORA)
+    iw_libre = libre["progreso"]["intensidad_semanas"]   # sin plan: 12 semanas que terminan en la actual
+    assert len(iw_libre) == 12 and iw_libre[-1]["inicio"] == "2026-11-02"
+    sin = next(x for x in iw_libre if x["inicio"] == "2026-08-17")
     assert sum(sin["minutos"].values()) == 0 and sin["bajo"] == 0
     assert all("intensidad" in s for s in out["semanas_hoy"])
     revisar_privacidad(out)
@@ -896,7 +899,7 @@ def test_pulso_en_detalle_sin_datos_del_dispositivo(salida):
 
 def test_semanas_plan_progreso_y_marca(salida):
     sem = salida["plan"]["semanas"]
-    assert sem[0]["progreso"] == {"hechas": 1, "total": 3}      # semana 1 (pasada): la corrida del 28/10
+    assert sem[0]["progreso"] == {"hechas": 1, "total": 3, "pct": 33}      # semana 1 (pasada): la corrida del 28/10
     assert sem[1]["progreso"]["total"] == 3 and 0 <= sem[1]["progreso"]["hechas"] <= 3   # la actual
     assert all("progreso" not in w for w in sem[2:])           # futuras: sin clave
     assert all(w["etiqueta"] in ("carga", "descarga") for w in sem)

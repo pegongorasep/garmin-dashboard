@@ -28,7 +28,8 @@ def datos_falsos(uid, acts):
     actual = {**semana(0, "actual", 1, 3), "dias": [{"fecha": d, "actividades": v, "dia_semana": "x", "plan_ses": ""} for d, v in dias.items()]
               + semana(0, "actual", 1, 3)["dias"]}
     return {"generado": HOY.isoformat(), "semanas_hoy": [pasada, actual, semana(1, "futura", 0, 4)], "semana_hoy_idx": 1,
-            "plan": {"semanas": [{}] * 10, "eventos": [{"tipo": "carrera", "desde": (HOY + timedelta(days=30)).isoformat(), "hasta": "x",
+            "racha": {"semanas": 1, "modo": "plan"},
+            "plan": {"semanas": [{}] * 10, "largo": 10, "eventos": [{"tipo": "carrera", "desde": (HOY + timedelta(days=30)).isoformat(), "hasta": "x",
                                                          "nombre": "Maraton Secreto", "distancia_km": 10},
                                 {"tipo": "viaje", "desde": HOY.isoformat(), "hasta": HOY.isoformat()}]},
             "progreso": {"semanas": [{"inicio": (LUN - timedelta(weeks=k)).isoformat(), "minutos": 30 + k, "km": 5, "plan_min": 60} for k in range(11, -1, -1)]},

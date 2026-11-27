@@ -40,7 +40,9 @@ CASOS = {
 def generar(nombre):
     datos, extra, ahora = CASOS[nombre]
     plan = build.load(ROOT / "plan" / "plan.example.json")
-    return json.loads(json.dumps(build.build(datos(), plan, {**CONFIG_FIXTURE, **extra}, ahora)))
+    out = json.loads(json.dumps(build.build(datos(), plan, {**CONFIG_FIXTURE, **extra}, ahora)))
+    out.pop("ui", None)   # depende del entorno (git remote, URL del repo): no es del golden
+    return out
 
 
 def diferencias(esperado, real, ruta=""):
@@ -75,7 +77,7 @@ def test_una_sola_fuente():
     assert con_progreso
     for w in con_progreso:
         s = next(s for s in out["semanas_hoy"] if s["n"] == w["n"])
-        assert w["progreso"] == {"hechas": s["plan"]["hechas"], "total": s["plan"]["total"]}
+        assert w["progreso"] == {"hechas": s["plan"]["hechas"], "total": s["plan"]["total"], "pct": s["plan"]["pct"]}
     mie = generar("plan_mie")
     hoy = next(s for s in mie["semanas_hoy"] if s["estado"] == "actual")
     assert mie["semana"]["plan_min"] == hoy["plan"]["plan_min"]
