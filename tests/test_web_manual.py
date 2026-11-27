@@ -157,14 +157,15 @@ def test_cuenta_en_ajustar_semana_real_prev():
     assert semanal.ajustar_plan(plan, {"activities": []}, cfg, hoy) is plan
 
 
-def test_tarjeta_del_grupo_cuenta_la_manual(web_ctx):
-    uid, cl = listo(web_ctx, con_plan=False)
-    hoy = datetime.now(ZoneInfo("America/Merida")).date()
+def test_tarjeta_del_grupo_cuenta_la_manual(web_ctx, monkeypatch):
+    original = calculo.calcular   # reloj fijo: la tarjeta calcula «ahora» con el miércoles de AHORA_UTC
+    monkeypatch.setattr(calculo, "calcular", lambda db, u, ahora_utc=None, *a, **k: original(db, u, AHORA_UTC, *a, **k))
+    uid, cl = listo(web_ctx, con_plan=False)   # el reloj de `listo` es el miércoles 2026-11-25
     with web_ctx.sesiones() as db:
         u = db.get(Usuario, uid)
         u.sin_plan, u.repo_id = True, 1
         db.commit()
-        fila(db, uid, fecha=hoy - timedelta(days=hoy.weekday()), tipo="correr", nota="NOTA-PRIVADA-9")
+        fila(db, uid, fecha=HOY - timedelta(days=HOY.weekday()), tipo="correr", nota="NOTA-PRIVADA-9")
         t, _ = grupos_resumen._tarjeta_cruda(db, u, MiembroGrupo(usuario_id=uid, pausado=False))
     assert t["estado"] == "libre" and t["semana"]["minutos"] == 30 and t["semana"]["km"] == 5.0
     assert "NOTA-PRIVADA-9" not in json.dumps(t)

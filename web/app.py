@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 import i18n
 from ajustes import ConfigError
 
-from . import ROOT, admin, aprende, ajustes_web, auth, calculo, coach, conexion, correo, cuenta, feed, garmin_key, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, sync_web, tubo
+from . import ROOT, actividad_web, admin, aprende, ajustes_web, auth, calculo, coach, conexion, correo, cuenta, feed, garmin_key, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, sync_web, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -246,6 +246,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     tubo.montar(app, get_db, settings)
     onboarding.montar(app, get_db, actual, render, formulario, settings)
     ajustes_web.montar(app, get_db, actual, render, formulario, settings)
+    actividad_web.montar(app, get_db, actual, render, formulario, settings)
     plan_nuevo.montar(app, get_db, actual, render, formulario, settings)   # antes de plan_web: /plan/nuevo no choca con /plan/{...}
     plan_web.montar(app, get_db, actual, render, formulario, settings)
     coach.montar(app, get_db, actual, render, formulario, settings)

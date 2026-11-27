@@ -144,3 +144,33 @@ def detalle_de(fila: ActividadManual) -> dict | None:
 def de_persona(db: Session, usuario_id: int) -> list[ActividadManual]:
     return list(db.scalars(select(ActividadManual).where(ActividadManual.usuario_id == usuario_id)
                            .order_by(ActividadManual.fecha, ActividadManual.id)))
+
+
+def _hms(s: int) -> str:
+    h, resto = divmod(int(s), 3600)
+    m, seg = divmod(resto, 60)
+    return f"{h}:{m:02d}:{seg:02d}" if h else f"{m}:{seg:02d}"
+
+
+def ritmo(fila: ActividadManual) -> str | None:
+    """Ritmo de la actividad: «m:ss» por km (tipos en km) o por 100 m (natación); None si no hay distancia."""
+    info = TIPOS.get(fila.tipo) or TIPOS["otra"]
+    if not fila.distancia_m or info["unidad"] == "oculta":
+        return None
+    base = 100 if info["unidad"] == "m" else 1000
+    return _hms(round(fila.duracion_s * base / fila.distancia_m))
+
+
+def unidad_ritmo(tipo: str) -> str:
+    return "100 m" if (TIPOS.get(tipo) or {}).get("unidad") == "m" else "km"
+
+
+def valores_de(fila: ActividadManual) -> dict:
+    """La fila como valores de formulario (para editar)."""
+    info = TIPOS.get(fila.tipo) or TIPOS["otra"]
+    dist = ""
+    if fila.distancia_m and info["unidad"] != "oculta":
+        dist = str(fila.distancia_m) if info["unidad"] == "m" else f"{fila.distancia_m / 1000:g}"
+    return {"tipo": fila.tipo, "fecha": fila.fecha.isoformat(), "distancia": dist, "tiempo": _hms(fila.duracion_s),
+            "esfuerzo": "" if fila.esfuerzo is None else str(fila.esfuerzo),
+            "fc_prom": "" if fila.fc_prom is None else str(fila.fc_prom), "nota": fila.nota or ""}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, aviso %}
+{% block titulo %}{{ t("web.manual.titulo_pagina") }}{% endblock %}
+{% block contenido %}
+{% include "_nav.html" %}
+{% set editando = fila is not none %}
+{% set unidad = unidades.get(v.get('tipo') or 'correr', 'km') %}
+<h1 class="pag-t">{{ t("web.manual.editar") if editando else t("web.manual.nueva") }}</h1>
+<p class="pag-s">{{ t("web.manual.ayuda") }}</p>
+{% if errores %}{% call aviso("bad", rol="alert") %}{{ t("web.manual.revisa") }}{% endcall %}{% endif %}
+<style>
+.act-tipos { display: flex; flex-wrap: wrap; gap: var(--space-8); border: 0; padding: 0; margin: 0; }
+.act-tipos label { position: relative; }
+.act-tipos input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.act-tipos span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; box-sizing: border-box; border: 1px solid var(--axis); border-radius: var(--radius-control); font: 400 15px/1.3 var(--font-sans); color: var(--ink); background: var(--page); }
+.act-tipos input:checked + span { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }   /* sin negritas: elegir no cambia el ancho */
+.act-tipos input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+.act-ranura { min-height: 5.5em; }   /* el espacio de la distancia y de la lista «Otra» se queda aunque se oculten */
+.act-ranura.oculta { visibility: hidden; }
+.act-ritmo { margin: 0; font: 600 13.5px/19px var(--font-sans); }
+</style>
+<form class="pila" method="post" action="{{ pref }}/actividad/{{ fila.id if editando else 'nueva' }}" id="act-form"
+      data-km="{{ t('web.manual.unidad_km') }}" data-m="{{ t('web.manual.unidad_m') }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <fieldset class="act-tipos" role="radiogroup" aria-label="{{ t('web.manual.tipo') }}">
+    <legend class="campo-t">{{ t("web.manual.tipo") }}</legend>
+    {% for k in principales %}
+    <label><input type="radio" name="tipo" value="{{ k }}" data-unidad="{{ unidades[k] }}"{% if grupo == k %} checked{% endif %}><span>{{ t("web.manual.t." ~ k) }}</span></label>
+    {% endfor %}
+    <label><input type="radio" name="tipo" value="otra" data-unidad="lista"{% if grupo == 'otra' %} checked{% endif %}><span>{{ t("web.manual.t.otra_lista") }}</span></label>
+  </fieldset>
+  {% if errores.tipo %}<span class="error-t" role="alert"><span class="badge bad">✕</span>{{ t(errores.tipo) }}</span>{% endif %}
+  <div class="act-ranura{% if grupo != 'otra' %} oculta{% endif %}" id="act-otro">
+    <label class="campo">
+      <span class="campo-t">{{ t("web.manual.cual") }}</span>
+      <select name="otro">
+        {% for k in otros %}<option value="{{ k }}" data-unidad="{{ unidades[k] }}"{% if k == otro %} selected{% endif %}>{{ t("web.manual.t." ~ k) }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+  {{ campo(t("web.manual.fecha"), "fecha", tipo="date", valor=v.get('fecha', ''), requerido=True, error=t(errores.fecha) if errores.fecha else None) }}
+  <div class="act-ranura{% if unidad == 'oculta' %} oculta{% endif %}" id="act-dist">
+    <label class="campo{% if errores.distancia %} error{% endif %}">
+      <span class="campo-t">{{ t("web.manual.distancia") }} (<span id="act-unidad">{{ t('web.manual.unidad_m') if unidad == 'm' else t('web.manual.unidad_km') }}</span>)</span>
+      <input type="text" name="distancia" value="{{ v.get('distancia', '') }}" inputmode="decimal" autocomplete="off">
+      {% if errores.distancia %}<span class="error-t" role="alert"><span class="badge bad">✕</span>{{ t(errores.distancia) }}</span>{% endif %}
+    </label>
+  </div>
+  {{ campo(t("web.manual.tiempo"), "tiempo", valor=v.get('tiempo', ''), requerido=True, placeholder="45:00", error=t(errores.tiempo) if errores.tiempo else None, ayuda=t("web.manual.tiempo_ayuda"), extra={"inputmode": "numeric", "autocomplete": "off"}) }}
+  {{ campo(t("web.manual.esfuerzo"), "esfuerzo", valor=v.get('esfuerzo', ''), opcional=t("comun.opcional"), error=t(errores.esfuerzo) if errores.esfuerzo else None, ayuda=t("web.manual.esfuerzo_ayuda"), extra={"inputmode": "numeric", "autocomplete": "off"}) }}
+  {% if ritmo %}<p class="act-ritmo">{{ t("web.manual.ritmo", r=ritmo, u=unidad_ritmo) }}</p>{% endif %}
+  <details{% if errores.fc_prom or errores.nota or v.get('fc_prom') or v.get('nota') %} open{% endif %}>
+    <summary>{{ t("web.manual.mas") }}</summary>
+    <div class="pila">
+      {{ campo(t("web.manual.fc"), "fc_prom", valor=v.get('fc_prom', ''), opcional=t("comun.opcional"), error=t(errores.fc_prom) if errores.fc_prom else None, extra={"inputmode": "numeric", "autocomplete": "off"}) }}
+      <label class="campo{% if errores.nota %} error{% endif %}">
+        <span class="campo-t">{{ t("web.manual.nota") }} <small>({{ t("comun.opcional") }})</small></span>
+        <textarea name="nota" rows="3" maxlength="280">{{ v.get('nota', '') }}</textarea>
+        {% if errores.nota %}<span class="error-t" role="alert"><span class="badge bad">✕</span>{{ t(errores.nota) }}</span>{% endif %}
+        <span class="ayuda">{{ t("web.manual.nota_ayuda") }}</span>
+      </label>
+    </div>
+  </details>
+  <div class="acciones">
+    {{ boton(t("comun.guardar"), tipo="submit") }}
+    {{ boton(t("comun.cancelar"), "sec", href=pref ~ "/#hoy") }}
+  </div>
+</form>
+{% if editando %}
+<form method="post" action="{{ pref }}/actividad/{{ fila.id }}/borrar" onsubmit="return confirm('{{ t('web.manual.borrar_confirmar') }}')">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ boton(t("comun.borrar"), "sec", chico=True, tipo="submit") }}
+</form>
+{% endif %}
+<script>
+(function () {   // solo muestra u oculta (el espacio se queda) y cambia la unidad; la lógica vive en el servidor
+  var f = document.getElementById("act-form"), sel = f.elements.otro;
+  function ver() {
+    var r = f.querySelector('input[name="tipo"]:checked'), u = r ? r.dataset.unidad : "km";
+    document.getElementById("act-otro").classList.toggle("oculta", u !== "lista");
+    if (u === "lista") u = sel.selectedOptions[0].dataset.unidad;
+    document.getElementById("act-dist").classList.toggle("oculta", u === "oculta");
+    if (u !== "oculta") document.getElementById("act-unidad").textContent = u === "m" ? f.dataset.m : f.dataset.km;
+  }
+  f.addEventListener("change", ver);
+  ver();
+})();
+</script>
+{% endblock %}
