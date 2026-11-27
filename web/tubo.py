@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 import paquete as paquete_mod
 
 from . import cambios, datos, importar
-from .modelos import Ajustes, Cambio, Consentimiento, Subida, Usuario, VinculoPendiente, ahora
+from .modelos import Ajustes, Cambio, Consentimiento, Sincronizacion, Subida, Usuario, VinculoPendiente, ahora
 
 log = logging.getLogger("web.tubo")
 ISSUER = "https://token.actions.githubusercontent.com"
@@ -168,6 +168,63 @@ def instrucciones_de(db: Session, u: Usuario) -> dict:
             "dias_actividades": DIAS_PRIMERA if primera else DIAS_ACTIVIDADES}
 
 
+PASOS = ("arranca", "prepara", "busca", "encuentra", "detalles", "salud", "sube", "termina")
+ERRORES = ("sin_key", "nombre_mal", "key_rechazada", "otra")
+MAX_CUENTA = 100000
+
+
+def _entero_acotado(v):
+    """Entero 0..MAX_CUENTA o None (los booleanos no cuentan)."""
+    if isinstance(v, bool) or not isinstance(v, int) or not 0 <= v <= MAX_CUENTA:
+        return None
+    return v
+
+
+def sinc_del_run(db: Session, u: Usuario, claims: dict):
+    """Sincronización viva de esa corrida; si no hay (o la corrida no se conoce), la viva sin corrida asignada."""
+    from . import sincronizar
+    run_id = _entero(claims.get("run_id"))
+    if run_id is not None:
+        s = db.scalar(select(Sincronizacion).where(Sincronizacion.usuario_id == u.id, Sincronizacion.run_id == run_id,
+                                                   Sincronizacion.estado.in_(sincronizar.VIVAS))
+                      .order_by(Sincronizacion.id.desc()).limit(1))
+        if s is not None:
+            return s
+    sincronizar.actual(db, u.id, incluir_programadas=True)   # caduca las vivas viejas
+    programada = claims.get("event_name") == "schedule"
+    vivas = [x for x in sincronizar._vivas(db, u.id, True) if (x.tipo == "programada") == programada
+             and (run_id is None or x.run_id is None or x.run_id == run_id)]
+    return vivas[0] if vivas else None
+
+
+def instrucciones_v2(db: Session, u: Usuario, claims: dict) -> dict:
+    """Instrucciones del motor nuevo: según la sincronización viva (o una nueva), con rangos por tipo."""
+    from . import sincronizar
+    run_id = _entero(claims.get("run_id"))
+    primera = not tuvo_subida_ok(db, u.id)
+    sinc = sinc_del_run(db, u, claims)
+    if sinc is None:
+        if u.historial_pendiente:
+            tipo = "historial"
+        elif claims.get("event_name") == "schedule":
+            tipo = "programada"
+        else:
+            tipo = "normal"
+        sinc = Sincronizacion(usuario_id=u.id, tipo=tipo, estado="esperando")
+        db.add(sinc)
+        db.flush()
+    if run_id is not None:
+        sinc.run_id = run_id
+    sincronizar.avanzar(db, sinc, "prepara")
+    dias, semanas = sincronizar.rango(sinc.tipo, db, u)
+    if primera and sinc.tipo != "comprobacion":
+        dias, semanas = DIAS_PRIMERA, 16
+    desde = u.historial_desde
+    if not desde and (sinc.tipo == "historial" or (primera and sinc.tipo != "comprobacion")):
+        desde = (ahora().date() - timedelta(days=DIAS_PRIMERA)).isoformat()
+    return {"vinculado": True, "historial_desde": desde, "dias_actividades": dias, "semanas_salud": semanas}
+
+
 def _descomprimir(cuerpo: bytes, encabezado: str) -> bytes:
     if len(cuerpo) > MAX_COMPRIMIDO:
         raise TuboError(413, "paquete demasiado grande")
@@ -211,17 +268,67 @@ def montar(app, get_db, settings) -> None:
         except Exception:   # JWKS inalcanzable u otro fallo: no se adivina
             log.exception("no se pudo verificar el token")
             raise TuboError(503, "no se pudo verificar el token") from None
+        request.state.claims = claims
         return usuario_del_token(db, claims, settings.secret_key)
 
     def error(e: TuboError):
         return JSONResponse({"error": e.mensaje, **e.extra}, status_code=e.status)
 
-    @app.post("/api/tubo/instrucciones")
-    def instrucciones(request: Request, db=Depends(get_db)):
+    def _cerrar_sinc(db, u, request, ok, nuevas=None):
+        from . import sincronizar
         try:
-            return instrucciones_de(db, autenticar(request, db))
+            sinc = sinc_del_run(db, u, request.state.claims)
+            if sinc is not None:
+                sincronizar.terminar(db, sinc, ok=ok, error=None if ok else "otra", nuevas=nuevas)
+        except Exception:   # noqa: BLE001  cerrar la sincronización nunca tumba la subida
+            db.rollback()
+            log.warning("no se cerró la sincronización de %s", u.id, exc_info=True)
+
+    @app.post("/api/tubo/instrucciones")
+    async def instrucciones(request: Request, db=Depends(get_db)):
+        try:
+            u = autenticar(request, db)
+            v2 = request.headers.get("x-motor-version", "").strip() == "2"
+            if not v2:
+                try:
+                    cuerpo = json.loads(await request.body() or b"null")
+                except ValueError:
+                    cuerpo = None
+                v2 = isinstance(cuerpo, dict) and cuerpo.get("motor_version") == 2
+            if not v2:
+                return instrucciones_de(db, u)   # motor viejo: exactamente lo de siempre
+            return instrucciones_v2(db, u, request.state.claims)
         except TuboError as e:
             return error(e)
+
+    @app.post("/api/tubo/avance")
+    async def avance(request: Request, db=Depends(get_db)):
+        from . import sincronizar
+        try:
+            u = autenticar(request, db)
+            try:
+                c = json.loads(await request.body() or b"null")
+            except ValueError:
+                c = None
+            if not isinstance(c, dict) or c.get("paso") not in PASOS:
+                raise TuboError(422, "avance no válido")
+            nums = {}
+            for k in ("hechos", "total"):
+                if c.get(k) is not None:
+                    nums[k] = _entero_acotado(c[k])
+                    if nums[k] is None:
+                        raise TuboError(422, "avance no válido")
+            err = c.get("error")
+            if err is not None and not isinstance(err, str):
+                raise TuboError(422, "avance no válido")
+        except TuboError as e:
+            return error(e)
+        sinc = sinc_del_run(db, u, request.state.claims)
+        if sinc is not None:
+            sincronizar.avanzar(db, sinc, c["paso"], **nums)
+            if err:
+                sincronizar.terminar(db, sinc, ok=False, error=err if err in ERRORES else "otra")
+        return {"ok": True}
 
     @app.post("/api/tubo/subida")
     async def subida(request: Request, db=Depends(get_db)):
@@ -239,18 +346,21 @@ def montar(app, get_db, settings) -> None:
         if problemas:
             db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error="; ".join(problemas)[:2000]))
             db.commit()
+            _cerrar_sinc(db, u, request, False)
             return JSONResponse({"error": "paquete no válido", "problemas": problemas}, status_code=422)
         try:
-            datos.guardar_paquete(db, u.id, pq)
+            cuentas = datos.guardar_paquete(db, u.id, pq)
         except Exception as e:   # no se guarda a medias
             db.rollback()
             log.exception("falló guardar el paquete de %s", u.id)
             db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error=type(e).__name__))
             db.commit()
+            _cerrar_sinc(db, u, request, False)
             return JSONResponse({"error": "no se pudo guardar"}, status_code=500)
         db.commit()   # el paquete queda guardado antes de importar (un rollback ahí no debe tirarlo)
         _importar_personales(db, u, pq.get("personales"))
         db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=True))
         u.historial_desde = None   # el pedido pendiente se cumplió con esta subida
         db.commit()
+        _cerrar_sinc(db, u, request, True, (cuentas.get("actividad") or {}).get("nuevos"))
         return {"ok": True, "publicar_pages": not u.migrado}
