@@ -83,7 +83,15 @@ function cabCuerpo() {
   return url ? h("div", { class: "cuerpo-cab" }, h("a", { class: "boton chico", href: url }, T("sitio.ib.agregar"))) : null;
 }
 
+/** Opciones del selector de periodo: las manda Python (4/8/12 o, con plan, hasta «todo el plan»); la página solo elige. */
+function opcionesPeriodo(d) {
+  const ops = (d.progreso || {}).periodos;
+  return ops && ops.length ? ops : [4, 8, 12].map((n) => ({ n, todo: false }));
+}
+
 function renderProgreso(d) {
+  const ops = opcionesPeriodo(d);
+  if (!ops.some((p) => p.n === periodo)) periodo = (ops.find((p) => p.n === 8) || ops[ops.length - 1]).n;   // el elegido ya no existe (otro plan)
   PINTAR.progreso = [];
   PINTAR.cuerpo = [];
   const raiz = $("vista-progreso");
@@ -96,7 +104,7 @@ function renderProgreso(d) {
   }
   raiz.replaceChildren(selectorProgreso(),
     h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...[
-      DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodo, opciones: [4, 8, 12].map((n) => ({ id: n, texto: T("sitio.prog.n_sem", { n }) })),
+      DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodo, opciones: opcionesPeriodo(d).map((p) => ({ id: p.n, texto: p.todo ? T("sitio.prog.todo") : T("sitio.prog.n_sem", { n: p.n }) })),
         onCambio: (n) => { periodo = Number(n); renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }),
       filaNumeros(d),
       tarjetaMejora(d),
@@ -206,10 +214,12 @@ function selectorUnidad() {
   return caja;
 }
 
-/** Volumen de una semana del bloque en la unidad vigente. Del plan solo hay minutos; en km sale lo hecho (vacío si aún no hay). */
+/** Volumen de una semana del bloque en la unidad vigente. Del plan solo hay minutos; en km sale lo hecho o, en las futuras, el
+ *  km estimado que manda Python (≈); sin estimado (sin corridas aún, o actividades ocultas) se queda en minutos. */
 function textoVolumen(x) {
   const hecho = x.minutos != null;
-  if (unidad === "km") return hecho ? T("sitio.plan.vol_km", { k: fmt(x.km || 0, 1) }) : "";
+  if (unidad === "km" && hecho) return T("sitio.plan.vol_km", { k: fmt(x.km || 0, 1) });
+  if (unidad === "km" && x.plan_km != null) return T("sitio.plan.vol_km_est", { k: fmt(x.plan_km, 1) });
   if (hecho) return x.plan_min ? T("sitio.plan.vol_hp", { h: fmt(x.minutos, 0), p: x.plan_min }) : T("sitio.plan.vol_h", { h: fmt(x.minutos, 0) });
   return x.plan_min ? T("sitio.plan.vol_p", { p: x.plan_min }) : "";
 }
@@ -249,18 +259,22 @@ function tarjetaPlan(plan, { editarUrls = {}, textoDescarga = "", sel = null, al
           marcaProgreso(x, actual), vol);
       }))));
   }
-  REPINTAR_UNIDAD.push({ conectado: () => c.isConnected, pintar: () => vols.forEach(([v, x]) => { v.textContent = textoVolumen(x) || " "; }) });
   const est = actual === w.n ? plan.estado_sesiones ?? [] : w.estados ?? [];   // el estado de cada semana lo calcula Python
+  const filas = h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), editarUrls[`${w.n}/${s.id}`]
+    ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: editarUrls[`${w.n}/${s.id}`] })] } : {})));
+  const textoSesion = (s) => (unidad === "km" && s.km_est != null ? T("sitio.plan.vol_km_est", { k: fmt(s.km_est, 1) }) : T("sitio.min_n", { n: s.minutes }));
+  const pintarSesiones = () => filas.querySelectorAll(".fila-ses").forEach((f, i) => { const sm = f.querySelector(".fs-n small"); if (sm && w.sessions[i]) sm.textContent = `· ${textoSesion(w.sessions[i])}`; });
+  REPINTAR_UNIDAD.push({ conectado: () => c.isConnected, pintar: () => { vols.forEach(([v, x]) => { v.textContent = textoVolumen(x) || " "; }); pintarSesiones(); } });
   c.append(h("div", { class: "unidad-fila" }, selectorUnidad(), h("p", { class: "nota" }, T("sitio.u.nota"))), linea,
     h("p", { class: "nota" }, T("sitio.plan.nota", { d: textoDescarga || T("sitio.plan.descarga_nota") })),
     h("h3", { class: "titular" }, T("sitio.plan.titulo_sem", { n: w.n, b: w.block, k: tipoSemana(w.kind) })),
     h("p", { class: "nota" }, w.focus || ""),
     ...(w.ajuste_texto ? [h("p", { class: "nota" }, w.ajuste_texto)] : []),   // append(null) escribiría «null»
     ...(actual === w.n && plan.faltan ? [h("p", { class: "nota" }, plan.faltan)] : []),
-    h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), editarUrls[`${w.n}/${s.id}`]
-      ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: editarUrls[`${w.n}/${s.id}`] })] } : {}))),
+    filas,
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, T("sitio.plan.repetidas", { l: plan.semanas_repetidas.join(", ") }))] : []),
     ...listaEventos(plan.eventos));
+  pintarSesiones();
   return c;
 }
 

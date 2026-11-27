@@ -21,6 +21,7 @@ OBLIGATORIAS = {"generado", "zonas", "hoy", "plan", "progreso", "detalles", "ui"
 PROHIBIDAS = {"activityId", "activityName", "ownerDisplayName", "ownerFullName", "userProfilePk", "userProfilePK",
               "userProfileId", "uuid", "activityUUID", "displayName", "locationName", "profileImageUrl",
               "ownerProfileImageUrlSmall", "fullName", "emailAddress", "birthDate", "dateOfBirth",
+              "ritmo_facil", "ritmo_min_km",   # el ritmo real nunca se publica: solo el km estimado (plan_km, km_est)
               "startLatitude", "startLongitude", "endLatitude", "endLongitude", "splitSummaries", "splits", "serie"}   # `serie` = FC por segundo: nunca se publica
 
 
@@ -55,6 +56,10 @@ def problemas(datos: dict) -> list:
                 ruta.startswith("/ui/repo_estado/") and o.startswith(PREFIJOS_LIGAS)):
             out.append(f"URL en el JSON: {ruta}")
     recorrer(datos, "")
+    for w in (datos.get("plan") or {}).get("semanas") or []:   # km estimados del plan: número o nulo, nunca texto ni ritmo
+        for ruta, v in [("plan_km", w.get("plan_km"))] + [("km_est", x.get("km_est")) for x in w.get("sessions") or []]:
+            if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):
+                out.append(f"{ruta} debe ser un número o nulo (semana {w.get('n')})")
     return out
 
 

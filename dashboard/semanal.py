@@ -86,6 +86,37 @@ def volumen(resumen: dict, unidad: str = "min"):
     return resumen["km" if unidad == "km" else "minutos"]
 
 
+RITMO_SEMANAS, RITMO_MIN_CORRIDAS = 6, 3   # ventana de corridas reales y mínimo para fiarse del ritmo
+RITMO_LIMITES = (4.0, 13.0)                # min/km creíbles de trote o trote-caminata; fuera de esto se ignora la corrida
+
+
+def ritmo_facil(filas: list, hoy: date, semanas: int = RITMO_SEMANAS):
+    """Ritmo fácil reciente en min/km: mediana de las corridas reales (no carreras, mínimo 1 km y 10 min) de las últimas
+    `semanas` semanas, descartando ritmos fuera de RITMO_LIMITES. None si hay menos de RITMO_MIN_CORRIDAS (sin datos)."""
+    ritmos = []
+    for f in m.periodo_filas(filas, hoy, semanas):
+        if f.get("carrera") or (f.get("km") or 0) < 1 or (f.get("minutos") or 0) < 10:
+            continue
+        r = f["minutos"] / f["km"]
+        if RITMO_LIMITES[0] <= r <= RITMO_LIMITES[1]:
+            ritmos.append(r)
+    if len(ritmos) < RITMO_MIN_CORRIDAS:
+        return None
+    ritmos.sort()
+    k = len(ritmos)
+    return ritmos[k // 2] if k % 2 else (ritmos[k // 2 - 1] + ritmos[k // 2]) / 2
+
+
+def volumen_plan(minutos, unidad: str = "min", ritmo=None):
+    """El volumen PLANEADO en la unidad pedida. El plan sigue en minutos; en km es solo una estimación para mostrar:
+    minutos ÷ ritmo fácil, a 0.5 km (mínimo 0.5). None si no hay ritmo (la página muestra entonces los minutos)."""
+    if unidad != "km":
+        return minutos
+    if not minutos or not ritmo:
+        return None
+    return max(0.5, round(minutos / ritmo * 2) / 2)
+
+
 def minutos_plan(semana):
     """Minutos que pide una semana del plan (None sin semana)."""
     return sum(s["minutes"] for s in semana["sessions"]) if semana else None
@@ -148,6 +179,16 @@ def adherencia(semanas: list, ultimas: int = 4):
 SEMANAS_SIN_PLAN = 12
 
 
+def periodos_progreso(hoy: date, plan: dict = None, config: dict = None) -> list:
+    """Opciones del selector de periodo de Progreso: [{"n", "todo"}]. Con plan: 4, 8 y 12 que quepan y «todo el plan»
+    (su largo real, p. ej. 16); sin plan: 4, 8 y 12. La página solo corta la serie con el `n` que marca Python."""
+    n = len(serie_semanas(hoy, plan, config))
+    con_plan = bool(plan and plan.get("weeks")) and not (config or {}).get("sin_plan")
+    if not con_plan:
+        return [{"n": k, "todo": False} for k in (4, 8, 12)]
+    return [{"n": k, "todo": False} for k in (4, 8, 12) if k < n] + [{"n": n, "todo": True}]
+
+
 def serie_semanas(hoy: date, plan: dict = None, config: dict = None) -> list:
     """Lunes (del más viejo al de esta semana) de toda serie por semanas: tantas como semanas tiene el plan
     (8, 12, 16…) o 12 si no hay plan. Gráficas, intensidad y carga usan esta lista, así todas miden lo mismo."""
@@ -160,7 +201,7 @@ def serie_semanas(hoy: date, plan: dict = None, config: dict = None) -> list:
 # --- el plan que se comparte (perfil): un solo filtro sobre el plan de la persona ---
 
 SEMANA_PUBLICA = ("n", "block", "kind", "etiqueta", "focus", "sessions", "plan_min")
-SEMANA_AVANCE = ("progreso", "cumplimiento", "estados", "minutos", "km")   # salen de sus actividades
+SEMANA_AVANCE = ("progreso", "cumplimiento", "estados", "minutos", "km", "plan_km")   # salen de sus actividades
 EVENTOS_PUBLICOS = ("carrera", "prueba")   # viajes y enfermedades son privados
 
 
@@ -181,6 +222,8 @@ def plan_visible(plan: dict, con_actividades: bool) -> dict | None:
                 x["marcas"] = marcas
         if con_actividades:
             x.update({k: w[k] for k in SEMANA_AVANCE if k in w})
+        else:   # el km estimado delata el ritmo real: sin actividades, la página muestra minutos
+            x["sessions"] = [{k: v for k, v in ses.items() if k != "km_est"} for ses in x.get("sessions", [])]
         out["semanas"].append(x)
     if con_actividades:
         if plan.get("faltan"):

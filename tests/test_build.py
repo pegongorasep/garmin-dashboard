@@ -1009,5 +1009,75 @@ def test_bloques_y_series_siguen_el_largo_del_plan():
             assert [s["actual"] for s in serie].count(True) == 1 and serie[-1]["actual"]
         hechas = [w for w in p["semanas"] if "minutos" in w]
         assert hechas and all(w["km"] is not None for w in hechas)   # lo hecho viene en minutos y en km; el objetivo solo en minutos
-        assert not any("plan_km" in w or "objetivo_km" in w for w in p["semanas"])
+        assert not any("objetivo_km" in w for w in p["semanas"])   # el objetivo del plan no tiene km; plan_km es solo un estimado de las futuras
         revisar_privacidad(out)
+
+
+# --- km estimados del plan y periodo «todo el plan» ---
+
+def _filas_ritmo(hoy, ritmos, km=5.0, **extra):
+    from datetime import timedelta
+    return [{"fecha": (hoy - timedelta(days=3 * (i + 1))).isoformat(), "minutos": r * km, "km": km, **extra} for i, r in enumerate(ritmos)]
+
+
+def test_ritmo_facil_mediana_limites_y_sin_datos():
+    import semanal
+    from datetime import date
+    hoy = date(2026, 11, 25)
+    assert semanal.ritmo_facil(_filas_ritmo(hoy, [6, 7, 9]), hoy) == 7        # mediana, no promedio
+    assert semanal.ritmo_facil(_filas_ritmo(hoy, [6, 7, 8, 9]), hoy) == 7.5
+    assert semanal.ritmo_facil(_filas_ritmo(hoy, [6, 7, 9, 2.0, 30.0]), hoy) == 7  # ritmos imposibles se descartan
+    assert semanal.ritmo_facil(_filas_ritmo(hoy, [6, 7]), hoy) is None           # muy pocas corridas
+    assert semanal.ritmo_facil([], hoy) is None
+    assert semanal.ritmo_facil(_filas_ritmo(hoy, [6, 7, 9], carrera=True), hoy) is None   # las carreras no cuentan
+    viejas = _filas_ritmo(hoy, [6, 7, 9])
+    for f in viejas:
+        f["fecha"] = "2026-01-01"
+    assert semanal.ritmo_facil(viejas, hoy) is None                              # fuera de las últimas semanas
+
+
+def test_volumen_plan_km_redondea_y_cae_a_minutos():
+    import semanal
+    assert semanal.volumen_plan(60, "min", 7.0) == 60
+    assert semanal.volumen_plan(60, "km", 7.0) == 8.5      # 8.57 → a 0.5
+    assert semanal.volumen_plan(3, "km", 8.0) == 0.5       # nunca 0 km
+    assert semanal.volumen_plan(60, "km", None) is None    # sin ritmo: la página muestra minutos
+    assert semanal.volumen_plan(None, "km", 7.0) is None
+
+
+def test_periodos_de_progreso_con_plan_de_16_semanas_y_sin_plan():
+    import semanal
+    from datetime import date
+    hoy = date(2026, 11, 25)
+    plan16 = {"weeks": [{"n": i} for i in range(1, 17)]}
+    ops = semanal.periodos_progreso(hoy, plan16, {})
+    assert [p["n"] for p in ops] == [4, 8, 12, 16] and [p["todo"] for p in ops] == [False, False, False, True]
+    assert len(semanal.serie_semanas(hoy, plan16, {})) == 16
+    assert [p["n"] for p in semanal.periodos_progreso(hoy, {"weeks": [{"n": 1}] * 8}, {})] == [4, 8]
+    assert semanal.periodos_progreso(hoy, None, {}) == [{"n": k, "todo": False} for k in (4, 8, 12)]
+    assert semanal.periodos_progreso(hoy, plan16, {"sin_plan": True})[-1] == {"n": 12, "todo": False}
+
+
+def test_plan_visible_sin_actividades_no_filtra_el_ritmo():
+    import semanal
+    plan = {"largo": 2, "semanas": [
+        {"n": 1, "block": 1, "kind": "carga", "sessions": [{"id": "a", "minutes": 30, "km_est": 4.0}], "plan_min": 30, "plan_km": 4.0},
+        {"n": 2, "block": 1, "kind": "carga", "sessions": [{"id": "a", "minutes": 30, "km_est": 4.0}], "plan_min": 30, "plan_km": 4.0}]}
+    con, sin = semanal.plan_visible(plan, True), semanal.plan_visible(plan, False)
+    assert con["semanas"][0]["plan_km"] == 4.0 and con["semanas"][0]["sessions"][0]["km_est"] == 4.0
+    assert all("plan_km" not in w and all("km_est" not in s for s in w["sessions"]) for w in sin["semanas"])
+    assert sin["semanas"][0]["sessions"][0]["minutes"] == 30   # los minutos siguen
+
+
+def test_build_trae_km_estimados_en_semanas_futuras_y_periodos_del_plan():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import planes_v6
+    cfg = {**CONFIG_FIXTURE, "plan_semanas": 16}
+    out = build.build(fixture(), planes_v6.generar(cfg), cfg, datetime(2026, 11, 25, 12, 0, tzinfo=ZoneInfo("America/Merida")))
+    assert [p["n"] for p in out["progreso"]["periodos"]] == [4, 8, 12, 16] and out["progreso"]["periodos"][-1]["todo"]
+    assert len(out["progreso"]["semanas"]) == 16 and "16" in out["progreso"]["numeros"]["periodos"]
+    fut = [w for w in out["plan"]["semanas"] if w["n"] > out["plan"]["semana_actual"]]
+    assert fut and all("plan_km" in w and all("km_est" in s for s in w["sessions"]) for w in fut)
+    import validar
+    assert validar.problemas(out) == []

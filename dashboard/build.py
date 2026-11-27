@@ -225,7 +225,7 @@ def detalle_marcas(w: dict, ini: date | None, config: dict, marcas: list) -> dic
     return out
 
 
-def semanas_plan(plan: dict, zonas: list, hoy: date, semanas_hoy: list, config: dict) -> list:
+def semanas_plan(plan: dict, zonas: list, hoy: date, semanas_hoy: list, config: dict, ritmo=None) -> list:
     """Las semanas del plan para el Plan: `etiqueta` (carga/descarga), `marca` (evento del ícono) y `progreso`
     {hechas, total} de las pasadas y la actual (lo que dice estado_sesiones; las futuras no traen la clave) y `cumplimiento`
     (solo las pasadas: completa, casi o baja) y `estados` [{id, estado, ajustada}] de cada sesión (pasadas: hecha/incompleta/no_hecha;
@@ -258,6 +258,10 @@ def semanas_plan(plan: dict, zonas: list, hoy: date, semanas_hoy: list, config: 
         if "estados" not in cw and (ini is None or ini > monday(hoy)):
             cw["estados"] = [{"id": s["id"], "estado": "pendiente", "ajustada": False} for s in w["sessions"]]   # futura
         cw["plan_min"] = semanal.minutos_plan(w)   # el objetivo del plan solo existe en minutos
+        if ini is None or ini >= monday(hoy):   # km estimados (minutos ÷ ritmo fácil) de la semana actual y las futuras; None sin ritmo
+            cw["plan_km"] = semanal.volumen_plan(cw["plan_min"], "km", ritmo) if ini is None or ini > monday(hoy) else None
+            for ses in cw["sessions"]:
+                ses["km_est"] = semanal.volumen_plan(ses.get("minutes"), "km", ritmo)
         out.append(cw)
     return out
 
@@ -844,7 +848,7 @@ def build_mejora(hoy: date, filas: list, zonas: list, data=None, config=None, pl
     return {"modo": modo, "ritmo": ritmo, "deriva": deriva, "prueba": prueba}
 
 
-def build_numeros(hoy: date, filas: list, modo: str) -> dict:
+def build_numeros(hoy: date, filas: list, modo: str, periodos=(4, 8, 12)) -> dict:
     """Fila de números de Progreso por periodo (4, 8 o 12 semanas): corridas, minutos y km por semana y ritmo a la FC de
     referencia (modo "ritmo") o % trote (modo "trote"), con el valor del periodo anterior y el cambio. `filas` es run_rows;
     usa el mismo conjunto de corridas por periodo que la frase del periodo (m.periodo_filas)."""
@@ -857,7 +861,7 @@ def build_numeros(hoy: date, filas: list, modo: str) -> dict:
                 "extra": m.promedio([f.get(clave) for f in g])}
     campos = [("corridas", "corridas"), ("minutos", "minutos"), ("km", "km"), ("extra", "ritmo_ref" if modo == "ritmo" else "pct_trote")]
     out = {}
-    for k in (4, 8, 12):
+    for k in periodos:
         ahora, antes = periodo(k, 0), periodo(k, 1)
         items = []
         for campo, id_ in campos:
@@ -871,7 +875,7 @@ def build_numeros(hoy: date, filas: list, modo: str) -> dict:
             mejor = None if not delta else (delta < 0 if id_ == "ritmo_ref" else delta > 0)
             items.append({"id": id_, "valor": v, "anterior": a, "delta": delta, "bueno": mejor})
         out[str(k)] = items
-    caminatas = {str(k): any((f["caminatas"] or 0) > 0 for f in m.periodo_filas(filas, hoy, k)) for k in (4, 8, 12)}
+    caminatas = {str(k): any((f["caminatas"] or 0) > 0 for f in m.periodo_filas(filas, hoy, k)) for k in periodos}
     return {"modo": modo, "periodos": out, "caminatas": caminatas}
 
 
@@ -1113,6 +1117,8 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     filas = m.run_rows(data["activities"], data["details"], config)
     semanas_hoy, semana_hoy_idx = build_semanas(hoy, data, config, plan)
     semanas_12 = build_weeks(hoy, data, config, plan)
+    periodos_p = semanal.periodos_progreso(hoy, plan, config)
+    claves_p = sorted({4, 8, 12} | {p["n"] for p in periodos_p})   # los fijos de siempre y el largo del plan
     mejora = build_mejora(hoy, filas, zonas, data, config, plan)
     racha_json = semanal.racha_semanas(semanas_hoy, semana_hoy_idx, hoy, data, config, libre=bool(config.get("sin_plan")))
     sem_pasada = resumen_semana_pasada(hoy, data, config, plan, semanas_hoy)
@@ -1135,19 +1141,20 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                  "bloques": sorted({w["block"] for w in plan["weeks"] if w.get("block") is not None}),
                  **({"faltan": m.faltan_texto(estado)} if m.faltan_texto(estado) else {}),
                  **eventos_plan(config),
-                 "semanas": semanas_plan(plan, zonas, hoy, semanas_hoy, config),
+                 "semanas": semanas_plan(plan, zonas, hoy, semanas_hoy, config, semanal.ritmo_facil(filas, hoy)),
                  "estado_sesiones": [{**e, "minutos": r1(e["minutos"]),
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
         "carreras": build_carreras(hoy, data, config),
         "mejores_marcas": m.mejores_marcas(historial_corridas(data, config), hoy, config),
         "progreso": {"fc_ref": m.fc_referencia(zonas),
+                     "periodos": periodos_p,
                      "resumen": {str(k): m.progress_summary(filas, hoy, k, m.fc_referencia(zonas)) for k in (4, 8, 12)},
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,
                      "mejora": mejora,
                      "intensidad_semanas": [{"inicio": i.isoformat(), "actual": i == monday(hoy), **intensidad_semana(data["activities"], i)}
                                             for i in semanal.serie_semanas(hoy, plan, config)],
-                     "numeros": build_numeros(hoy, filas, mejora["modo"]),
+                     "numeros": build_numeros(hoy, filas, mejora["modo"], claves_p),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": {**build_ui(config, plan, categorias_presentes(config, data)), "zonas_origen": zonas_origen, "avisos": huellas_avisos(
