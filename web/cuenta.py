@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import auth, grupos
-from .modelos import (FotoPerfil, Ajustes, CacheData, Cambio, ClienteOAuth, CodigoOAuth, Coach, Consentimiento, DatoGarmin, InBody,
+from .modelos import (ActividadManual, FotoPerfil, Ajustes, CacheData, Cambio, ClienteOAuth, CodigoOAuth, Coach, Consentimiento, DatoGarmin, InBody,
                       CodigoLogin, Invitacion, LigaLogin, Plan, Sesion, CuentaBorrada, Subida, TokenOAuth, Usuario, VinculoPendiente)
 
 PALABRA = "BORRAR"
@@ -37,6 +37,11 @@ def datos_de(db: Session, u: Usuario) -> dict[str, object]:
                         db.scalars(select(InBody).where(InBody.usuario_id == u.id).order_by(InBody.fecha))],
         "datos_garmin.json": [{"tipo": d.tipo, "clave": d.clave, "contenido": d.contenido} for d in
                               db.scalars(select(DatoGarmin).where(DatoGarmin.usuario_id == u.id).order_by(DatoGarmin.id))],
+        "actividades_manuales.json": [{"fecha": a.fecha.isoformat(), "tipo": a.tipo, "distancia_m": a.distancia_m,
+                                       "duracion_s": a.duracion_s, "esfuerzo": a.esfuerzo, "fc_prom": a.fc_prom, "nota": a.nota,
+                                       "creada": _fecha(a.creada), "actualizada": _fecha(a.actualizada)}
+                                      for a in db.scalars(select(ActividadManual).where(ActividadManual.usuario_id == u.id)
+                                                          .order_by(ActividadManual.fecha, ActividadManual.id))],
         "historial_cambios.json": [{"fecha": _fecha(c.fecha), "via": c.via, "hecho_por_ti": c.autor_id == u.id,
                                     "descripcion": c.descripcion, "antes": c.antes, "despues": c.despues}
                                    for c in db.scalars(select(Cambio).where(Cambio.atleta_id == u.id).order_by(Cambio.id))],
@@ -71,7 +76,7 @@ def borrar_cuenta(db: Session, u: Usuario) -> None:
     db.execute(sa.delete(Cambio).where(Cambio.atleta_id == uid))
     grupos.quitar_de_todos(db, uid)
     db.execute(sa.delete(Invitacion).where(Invitacion.creada_por == uid))
-    for modelo in (CacheData, LigaLogin, CodigoLogin, Sesion, Consentimiento, DatoGarmin, FotoPerfil, Subida, Ajustes, Plan, InBody, VinculoPendiente):
+    for modelo in (CacheData, LigaLogin, CodigoLogin, Sesion, Consentimiento, DatoGarmin, FotoPerfil, Subida, Ajustes, Plan, InBody, ActividadManual, VinculoPendiente):
         db.execute(sa.delete(modelo).where(modelo.usuario_id == uid))
     db.delete(u)
     db.add(CuentaBorrada())

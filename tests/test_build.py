@@ -430,7 +430,7 @@ def test_build_con_tres_categorias(monkeypatch):
     lun = next(d for s in out["semanas_hoy"] for d in s["dias"] if d["fecha"] == "2026-11-02")
     assert sorted(o["cat"] for o in lun["otras"]) == ["fuerza", "hiit"]
     assert set(out["detalles"]["carga"]) >= {"fuerza", "hiit", "cardio", "run", "total"}
-    assert set(out["detalles"]["carga_semanas"][0]["cargas"]) == {"fuerza", "hiit", "cardio", "movilidad"}
+    assert set(out["detalles"]["carga_semanas"][0]["cargas"]) == {"fuerza", "hiit", "cardio", "movilidad", "caminar", "otra"}
     assert out["detalles"]["fc_max"]["configurada"] is False
 
 

@@ -15,7 +15,8 @@ umbrales:
 # Sin plan de running (solo ver cómo va). Se pone en la raíz de config.yaml: `sin_plan: true`. Por defecto, con plan.
 sin_plan: false
 
-# Categorías para quien no defina `actividades.categorias`. `walking` y lo no listado no se muestran.
+# Categorías para quien no defina `actividades.categorias`. Lo no listado no se muestra. `caminar` (todas las caminatas
+# de Garmin) y `otra` (solo lo registrado a mano: senderismo, deporte, otra actividad) se agregan siempre.
 categorias:
   - {id: fuerza, nombre: Fuerza, letra: F, tipos: [strength_training], intensa: false}
   - {id: hiit, nombre: HIIT, letra: H, tipos: [hiit], intensa: true}
@@ -26,3 +27,5 @@ categorias:
             open_water_swimming, indoor_rowing, rowing, elliptical, stair_climbing]
     intensa: false
   - {id: movilidad, nombre: Movilidad, letra: M, tipos: [yoga, pilates], intensa: false}
+  - {id: caminar, nombre: Caminar, letra: C, tipos: [walking], intensa: false, icono: caminar}
+  - {id: otra, nombre: Otra, letra: O, tipos: [otra], intensa: false, icono: punto}

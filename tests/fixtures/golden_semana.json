@@ -121,7 +121,7 @@
     ],
     "parrafos": [
      "Las zonas usan Karvonen (% de tu reserva de FC) con tu FC máx de 190 lpm. Se ajustan solas con tu FC en reposo.",
-     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad y corridas. Es solo referencia: no cambia tu plan."
+     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad, Caminar, Otra y corridas. Es solo referencia: no cambia tu plan."
     ],
     "titulo": "Tus zonas y el 80/20"
    }
@@ -131,16 +131,20 @@
   "datos_al": "2026-11-04T11:00-06:00",
   "detalles": {
    "carga": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 228.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 223.2,
     "total": 451.2
    },
    "carga_anterior": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 114.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 437.5,
     "total": 551.5
    },
@@ -149,9 +153,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-17"
     },
@@ -159,9 +165,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-24"
     },
@@ -169,9 +177,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-31"
     },
@@ -179,9 +189,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-07"
     },
@@ -189,9 +201,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-14"
     },
@@ -199,9 +213,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-21"
     },
@@ -209,9 +225,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-28"
     },
@@ -219,9 +237,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-05"
     },
@@ -229,9 +249,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-12"
     },
@@ -239,9 +261,11 @@
      "actual": false,
      "carga_corrida": 409.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-19"
     },
@@ -249,9 +273,11 @@
      "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 114.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-26"
     },
@@ -259,9 +285,11 @@
      "actual": true,
      "carga_corrida": 223.2,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 228.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-02"
     }
@@ -5037,7 +5065,7 @@
     ],
     "parrafos": [
      "Las zonas usan Karvonen (% de tu reserva de FC) con tu FC máx de 190 lpm. Se ajustan solas con tu FC en reposo.",
-     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad y corridas. Es solo referencia: no cambia tu plan."
+     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad, Caminar, Otra y corridas. Es solo referencia: no cambia tu plan."
     ],
     "titulo": "Tus zonas y el 80/20"
    }
@@ -5047,16 +5075,20 @@
   "datos_al": "2026-11-04T11:00-06:00",
   "detalles": {
    "carga": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 0.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 0.0,
     "total": 0.0
    },
    "carga_anterior": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 228.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 223.2,
     "total": 451.2
    },
@@ -5065,9 +5097,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-24"
     },
@@ -5075,9 +5109,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-31"
     },
@@ -5085,9 +5121,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-07"
     },
@@ -5095,9 +5133,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-14"
     },
@@ -5105,9 +5145,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-21"
     },
@@ -5115,9 +5157,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-28"
     },
@@ -5125,9 +5169,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-05"
     },
@@ -5135,9 +5181,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-12"
     },
@@ -5145,9 +5193,11 @@
      "actual": false,
      "carga_corrida": 409.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-19"
     },
@@ -5155,9 +5205,11 @@
      "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 114.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-26"
     },
@@ -5165,9 +5217,11 @@
      "actual": false,
      "carga_corrida": 223.2,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 228.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-02"
     },
@@ -5175,9 +5229,11 @@
      "actual": true,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-09"
     }
@@ -10057,7 +10113,7 @@
     ],
     "parrafos": [
      "Las zonas usan Karvonen (% de tu reserva de FC) con tu FC máx de 190 lpm. Se ajustan solas con tu FC en reposo.",
-     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad y corridas. Es solo referencia: no cambia tu plan."
+     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad, Caminar, Otra y corridas. Es solo referencia: no cambia tu plan."
     ],
     "titulo": "Tus zonas y el 80/20"
    }
@@ -10067,16 +10123,20 @@
   "datos_al": "2026-11-04T11:00-06:00",
   "detalles": {
    "carga": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 228.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 223.2,
     "total": 451.2
    },
    "carga_anterior": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 114.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 437.5,
     "total": 551.5
    },
@@ -10085,9 +10145,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-17"
     },
@@ -10095,9 +10157,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-24"
     },
@@ -10105,9 +10169,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-31"
     },
@@ -10115,9 +10181,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-07"
     },
@@ -10125,9 +10193,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-14"
     },
@@ -10135,9 +10205,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-21"
     },
@@ -10145,9 +10217,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-28"
     },
@@ -10155,9 +10229,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-05"
     },
@@ -10165,9 +10241,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-12"
     },
@@ -10175,9 +10253,11 @@
      "actual": false,
      "carga_corrida": 409.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-19"
     },
@@ -10185,9 +10265,11 @@
      "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 114.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-26"
     },
@@ -10195,9 +10277,11 @@
      "actual": true,
      "carga_corrida": 223.2,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 228.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-02"
     }
@@ -14832,7 +14916,7 @@
     ],
     "parrafos": [
      "Las zonas usan Karvonen (% de tu reserva de FC) con tu FC máx de 190 lpm. Se ajustan solas con tu FC en reposo.",
-     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad y corridas. Es solo referencia: no cambia tu plan."
+     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad, Caminar, Otra y corridas. Es solo referencia: no cambia tu plan."
     ],
     "titulo": "Tus zonas y el 80/20"
    }
@@ -14842,16 +14926,20 @@
   "datos_al": "2026-11-04T11:00-06:00",
   "detalles": {
    "carga": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 0.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 0.0,
     "total": 0.0
    },
    "carga_anterior": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 228.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 223.2,
     "total": 451.2
    },
@@ -14860,9 +14948,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-24"
     },
@@ -14870,9 +14960,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-31"
     },
@@ -14880,9 +14972,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-07"
     },
@@ -14890,9 +14984,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-14"
     },
@@ -14900,9 +14996,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-21"
     },
@@ -14910,9 +15008,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-28"
     },
@@ -14920,9 +15020,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-05"
     },
@@ -14930,9 +15032,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-12"
     },
@@ -14940,9 +15044,11 @@
      "actual": false,
      "carga_corrida": 409.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-19"
     },
@@ -14950,9 +15056,11 @@
      "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 114.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-26"
     },
@@ -14960,9 +15068,11 @@
      "actual": false,
      "carga_corrida": 223.2,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 228.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-02"
     },
@@ -14970,9 +15080,11 @@
      "actual": true,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-09"
     }
@@ -19546,7 +19658,7 @@
     ],
     "parrafos": [
      "Las zonas usan Karvonen (% de tu reserva de FC) con tu FC máx de 190 lpm. Se ajustan solas con tu FC en reposo.",
-     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad y corridas. Es solo referencia: no cambia tu plan."
+     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad, Caminar, Otra y corridas. Es solo referencia: no cambia tu plan."
     ],
     "titulo": "Tus zonas y el 80/20"
    }
@@ -19556,16 +19668,20 @@
   "datos_al": "2026-11-04T11:00-06:00",
   "detalles": {
    "carga": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 228.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 223.2,
     "total": 451.2
    },
    "carga_anterior": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 114.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 437.5,
     "total": 551.5
    },
@@ -19574,9 +19690,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-17"
     },
@@ -19584,9 +19702,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-24"
     },
@@ -19594,9 +19714,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-31"
     },
@@ -19604,9 +19726,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-07"
     },
@@ -19614,9 +19738,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-14"
     },
@@ -19624,9 +19750,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-21"
     },
@@ -19634,9 +19762,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-28"
     },
@@ -19644,9 +19774,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-05"
     },
@@ -19654,9 +19786,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-12"
     },
@@ -19664,9 +19798,11 @@
      "actual": false,
      "carga_corrida": 409.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-19"
     },
@@ -19674,9 +19810,11 @@
      "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 114.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-26"
     },
@@ -19684,9 +19822,11 @@
      "actual": true,
      "carga_corrida": 223.2,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 228.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-02"
     }
@@ -24244,7 +24384,7 @@
     ],
     "parrafos": [
      "Las zonas usan Karvonen (% de tu reserva de FC) con tu FC máx de 190 lpm. Se ajustan solas con tu FC en reposo.",
-     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad y corridas. Es solo referencia: no cambia tu plan."
+     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad, Caminar, Otra y corridas. Es solo referencia: no cambia tu plan."
     ],
     "titulo": "Tus zonas y el 80/20"
    }
@@ -24254,16 +24394,20 @@
   "datos_al": "2026-11-04T11:00-06:00",
   "detalles": {
    "carga": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 0.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 0.0,
     "total": 0.0
    },
    "carga_anterior": {
+    "caminar": 0.0,
     "cardio": 0.0,
     "crossfit": 0.0,
     "movilidad": 0.0,
+    "otra": 0.0,
     "run": 0.0,
     "total": 0.0
    },
@@ -24272,9 +24416,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-08-31"
     },
@@ -24282,9 +24428,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-07"
     },
@@ -24292,9 +24440,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-14"
     },
@@ -24302,9 +24452,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-21"
     },
@@ -24312,9 +24464,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-09-28"
     },
@@ -24322,9 +24476,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-05"
     },
@@ -24332,9 +24488,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-12"
     },
@@ -24342,9 +24500,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-19"
     },
@@ -24352,9 +24512,11 @@
      "actual": false,
      "carga_corrida": 114.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-10-26"
     },
@@ -24362,9 +24524,11 @@
      "actual": false,
      "carga_corrida": 114.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 228.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-02"
     },
@@ -24372,9 +24536,11 @@
      "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-09"
     },
@@ -24382,9 +24548,11 @@
      "actual": true,
      "carga_corrida": 0.0,
      "cargas": {
+      "caminar": 0.0,
       "cardio": 0.0,
       "crossfit": 0.0,
-      "movilidad": 0.0
+      "movilidad": 0.0,
+      "otra": 0.0
      },
      "inicio": "2026-11-16"
     }

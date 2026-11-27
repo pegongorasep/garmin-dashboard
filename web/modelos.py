@@ -1,5 +1,5 @@
 """Tablas. Fechas en UTC sin zona (naive); JSON como sa.JSON para que SQLite (pruebas) y Postgres (producción) valgan."""
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -229,6 +229,22 @@ class InBody(Base):
     fecha: Mapped[str] = mapped_column(sa.String(10))
     valores: Mapped[dict] = mapped_column(sa.JSON)  # una entrada de plan/inbody.json
     actualizado: Mapped[datetime] = mapped_column(default=ahora)
+
+
+class ActividadManual(Base):
+    """Actividad registrada a mano (E4). La nota es privada: la ven la persona y su coach, nunca el motor ni los grupos."""
+    __tablename__ = "actividades_manuales"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    fecha: Mapped[date] = mapped_column(sa.Date)
+    tipo: Mapped[str] = mapped_column(sa.String(30))
+    distancia_m: Mapped[int | None] = mapped_column()
+    duracion_s: Mapped[int] = mapped_column()
+    esfuerzo: Mapped[int | None] = mapped_column()
+    fc_prom: Mapped[int | None] = mapped_column()
+    nota: Mapped[str | None] = mapped_column(sa.String(280))
+    creada: Mapped[datetime] = mapped_column(default=ahora)
+    actualizada: Mapped[datetime] = mapped_column(default=ahora)
 
 
 class Cambio(Base):

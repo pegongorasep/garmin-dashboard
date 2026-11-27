@@ -13,8 +13,8 @@ import i18n
 import validar
 from ajustes import normalizar_config
 
-from . import cambios, datos, plan_vivo, tubo
-from .modelos import Ajustes, CacheData, DatoGarmin, InBody, MiembroGrupo, Plan, Usuario, ahora
+from . import cambios, datos, manual, plan_vivo, tubo
+from .modelos import ActividadManual, Ajustes, CacheData, DatoGarmin, InBody, MiembroGrupo, Plan, Usuario, ahora
 
 log = logging.getLogger("web.calculo")
 MINUTOS_CACHE = 30
@@ -90,6 +90,11 @@ def inbody_de(db: Session, usuario_id: int, crudo: dict) -> dict | None:
 def datos_de(db: Session, usuario: Usuario, crudo: dict | None = None) -> dict:
     """El mismo dict que `build.load_data`, desde `datos_garmin` + `inbody`."""
     d = datos.leer_archivos(db, usuario.id)
+    a_mano = manual.de_persona(db, usuario.id)
+    if a_mano:   # a mano: entran con la forma de Garmin (sin la nota); el esfuerzo va como `rpe` en sus detalles
+        d["activities"] = sorted([*d["activities"], *(manual.a_actividad(f) for f in a_mano)],
+                                 key=lambda a: (a.get("startTimeLocal") or "", str(a.get("id") or "")), reverse=True)
+        d["details"] = {**d["details"], **{f"m{f.id}": x for f in a_mano if (x := manual.detalle_de(f))}}
     d["inbody"] = inbody_de(db, usuario.id, crudo if crudo is not None else (db.get(Ajustes, usuario.id).config))
     return d
 
@@ -115,11 +120,13 @@ CODIGO = _huella_codigo()
 def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") -> str:
     n, ultimo = db.execute(select(func.count(DatoGarmin.id), func.max(DatoGarmin.actualizado))
                            .where(DatoGarmin.usuario_id == usuario.id)).one()
+    man = db.execute(select(func.count(ActividadManual.id), func.max(ActividadManual.actualizada))
+                     .where(ActividadManual.usuario_id == usuario.id)).one()
     aj, pl = db.get(Ajustes, usuario.id), db.get(Plan, usuario.id)
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
     partes = [hoy_local, idioma, json.dumps([menu_de(idioma), plan_acciones(idioma), PLAN_URL]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
-              usuario.repo, usuario.sensor, bool(usuario.sin_plan), CODIGO]
+              usuario.repo, usuario.sensor, bool(usuario.sin_plan), CODIGO, tuple(map(str, man))]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
 
 

@@ -30,7 +30,7 @@ def test_config_de_pedro_da_el_dict_plano():
 def test_minima_usa_defaults(tmp_path):
     c = cfg(tmp_path, MINIMA)
     assert c["max_hr"] == 190 and c["max_hr_floor"] == 190 and c["fc_max_correa_desde"] is None
-    assert [x["id"] for x in c["categorias"]] == ["fuerza", "hiit", "cardio", "movilidad"]
+    assert [x["id"] for x in c["categorias"]] == ["fuerza", "hiit", "cardio", "movilidad", "caminar", "otra"]
     assert c["nivel"] == "intermedio" and c["plan_semanas"] == 12 and c["base_min"] == {"z2": 20, "larga": 40}
     assert c["inbody"] is True and "walking" not in c["tipos_con_detalle"]
 
@@ -64,9 +64,9 @@ def test_sin_archivo(tmp_path):
 def test_categorias_propias_se_suman_a_las_de_defecto(tmp_path):
     c = cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: cf, nombre: CrossFit, letra: CF, tipos: [hiit, strength_training], intensa: true}\n")
     # la propia va primero; fuerza y hiit quedan cubiertas por ella y se omiten; cardio y movilidad se suman
-    assert [x["id"] for x in c["categorias"]] == ["cf", "cardio", "movilidad"]
+    assert [x["id"] for x in c["categorias"]] == ["cf", "cardio", "movilidad", "caminar", "otra"]
     c = cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: pesas, nombre: Pesas, letra: P, tipos: [strength_training]}\n")
-    assert [x["id"] for x in c["categorias"]] == ["pesas", "hiit", "cardio", "movilidad"]
+    assert [x["id"] for x in c["categorias"]] == ["pesas", "hiit", "cardio", "movilidad", "caminar", "otra"]
 
 
 def test_maximo_cuatro_categorias(tmp_path):
@@ -105,7 +105,7 @@ def test_iconos_por_tipo_de_garmin_y_de_config(tmp_path):
                  "hiking": "caminar", "yoga": "yoga", "pilates": "yoga", "otra_cosa": "punto"}.items():
         assert ajustes.icono_de_tipo(k) == i
     c = cfg(tmp_path, MINIMA)
-    assert {x["id"]: x["icono"] for x in c["categorias"]} == {"fuerza": "mancuerna", "hiit": "rayo", "cardio": "bici", "movilidad": "yoga"}
+    assert {x["id"]: x["icono"] for x in c["categorias"]} == {"fuerza": "mancuerna", "hiit": "rayo", "cardio": "bici", "movilidad": "yoga", "caminar": "caminar", "otra": "punto"}
     c = cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: cf, nombre: CrossFit, letra: CF, tipos: [strength_training, hiit], icono: rayo}\n")
     assert c["categorias"][0]["icono"] == "rayo"
     with pytest.raises(ajustes.ConfigError):

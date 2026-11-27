@@ -72,10 +72,13 @@ def _requerido(d: dict, clave: str, donde: str):
     return d[clave]
 
 
-def _categorias(brutas: list) -> list:
+SIEMPRE = ("caminar", "otra")   # categorías que toda config trae (las caminatas y lo registrado a mano caen ahí)
+
+
+def _categorias(brutas: list, maximo: int | None = MAX_CATEGORIAS) -> list:
     if not brutas:
         raise ConfigError("`actividades.categorias` está vacía; quita la sección para usar las de por defecto")
-    if len(brutas) > MAX_CATEGORIAS:
+    if maximo and len(brutas) > maximo:
         raise ConfigError(f"Máximo {MAX_CATEGORIAS} categorías de actividad (hay {len(brutas)})")
     out, ids = [], set()
     for i, c in enumerate(brutas):
@@ -89,7 +92,7 @@ def _categorias(brutas: list) -> list:
         if icono not in ICONOS:
             raise ConfigError(f"La categoría '{c['id']}' tiene icono '{icono}'; usa: {', '.join(ICONOS)}")
         out.append({"id": c["id"], "nombre": c["nombre"], "letra": c["letra"], "tipos": list(c["tipos"]),
-                    "intensa": bool(c.get("intensa", False)), "clase": CLASES[len(brutas)][i], "icono": icono})
+                    "intensa": bool(c.get("intensa", False)), "clase": CLASES[min(len(brutas), 4)][i % 4], "icono": icono})
     return out
 
 
@@ -97,10 +100,10 @@ def _categorias_efectivas(propias: list, defecto: list) -> list:
     """Todas las categorías por defecto + las propias que traigan configs viejas (ya no se elige: nada se filtra).
     Las propias van primero (ganan al clasificar); una por defecto que ya cubren por completo se omite."""
     propias = _categorias(propias) if propias else []
-    base = _categorias(defecto)
+    base = _categorias(defecto, None)
     tomados = {t for c in propias for t in c["tipos"]}
     ids = {c["id"] for c in propias}
-    return propias + [c for c in base if c["id"] not in ids and not set(c["tipos"]) <= tomados]
+    return propias + [c for c in base if c["id"] not in ids and (c["id"] in SIEMPRE or not set(c["tipos"]) <= tomados)]
 
 
 PRUEBAS_TIPOS = ("fc_fija", "trote_continuo", "5k")
@@ -243,7 +246,7 @@ def normalizar_config(crudo: dict) -> dict:
         "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base, "pruebas": pruebas,
         "categorias": categorias, "dias_pierna": pierna,
         "inbody": bool(cfg.get("inbody", True)),
-        "tipos_con_detalle": umbrales["run_types"] + [t for c in categorias for t in c["tipos"]],
+        "tipos_con_detalle": umbrales["run_types"] + [t for c in categorias if c["id"] not in SIEMPRE for t in c["tipos"]],
     }
 
 

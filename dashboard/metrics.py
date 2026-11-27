@@ -90,9 +90,22 @@ def rhr_7d(daily_summaries: list, day: date):
     return sum(valores) / len(valores) if valores else None
 
 
+# Las actividades registradas a mano (`manual: true`) se clasifican por su tipo con este mapa fijo, sin depender de la
+# config de cada persona (decisión 6 de PLAN_ENTRADA). Lo que no esté aquí es «otra».
+CATEGORIA_MANUAL = {"running": "run", "walking": "caminar", "hiit": "hiit", "strength_training": "fuerza",
+                    "cycling": "cardio", "lap_swimming": "cardio", "elliptical": "cardio", "yoga": "movilidad"}
+
+
 def classify(activity: dict, config: dict):
     """"run", el `id` de la categoría de actividad (config["categorias"]) o None si no se muestra."""
     tipo = activity["activityType"]["typeKey"]
+    if activity.get("manual"):
+        cat = CATEGORIA_MANUAL.get(tipo, "otra")
+        ids = {c["id"] for c in config.get("categorias", [])}
+        if cat == "run" or cat in ids:
+            return cat
+        # una categoría propia se quedó con ese id: se usa la que cubre el tipo, o «otra»
+        return next((c["id"] for c in config.get("categorias", []) if tipo in c["tipos"]), "otra" if "otra" in ids else None)
     if tipo in config["run_types"]:
         return "run"
     for c in config.get("categorias", []):
@@ -274,6 +287,9 @@ def esfuerzo_de(activity: dict, details: dict, config: dict):
         es = [e for p in activity["_partes"] if (e := esfuerzo_de(p, details, config)) is not None]
         return max(es) if es else None
     zm = zona_minutos(activity, details, zonas_de(config))
+    if zm is None and activity.get("manual"):   # a mano no hay zonas: vale el esfuerzo (1–10) que la persona puso
+        rpe = rpe_de(activity, details)
+        return None if rpe is None else float(rpe)
     return None if zm is None else esfuerzo(zm)
 
 
@@ -945,6 +961,10 @@ def unir_encadenadas(activities: list, config: dict, gap_min: float = ENCADENADA
     for a in ordenadas:
         c = classify(a, config)
         if not c or c == "run":
+            continue
+        if a.get("manual"):   # lo registrado a mano nunca se junta con otra actividad (ni entre sí)
+            cadenas.append([a])
+            cadena = []
             continue
         if cadena and datetime.fromisoformat(a["startTimeLocal"]) - max(_fin(x) for x in cadena) <= timedelta(minutes=gap_min):
             cadena.append(a)
