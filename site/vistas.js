@@ -180,7 +180,8 @@ function renderPlan(d) {
   const guardado = new URLSearchParams(location.search).get("ok") === "plan";   // viene de guardar un formulario del plan
   if (guardado) history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
   if (ui().sin_plan) {   // sin plan: la pestaña no existe, pero la ruta #plan puede abrirse a mano
-    const accion = (ui().menu || []).length ? { texto: T("sitio.sl.quiero"), href: "/plan/nuevo" } : null;
+    const espera = !!(ui().sync || {}).historial_pendiente;   // sin historial aún: el botón de armar el plan espera (misma ranura)
+    const accion = (ui().menu || []).length ? (espera ? { texto: T("sitio.sync.espera"), deshabilitado: true } : { texto: T("sitio.sl.quiero"), href: "/plan/nuevo" }) : null;
     $("vista-plan").replaceChildren(DS.tarjeta({ titulo: T("sitio.sl.sin_plan_t") }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.sin_plan_t"), texto: T("sitio.sl.sin_plan_x"), accion })));
     return;
   }
@@ -1219,13 +1220,17 @@ function pintarEncabezado() {
   const u = ui(), items = u.menu || [];
   if (u.titulo) document.title = `Garmin · ${u.titulo}`;
   const act = h("span", { id: "actualizado", "aria-live": "polite" });
+  const sy = u.sync || {};   // solo en la web: botón «Sincronizar» solo con `puede`; si no, EXACTAMENTE la liga de siempre
+  const viva = !!(window.Franja && window.Franja.viva());
+  const jalar = sy.puede ? h("button", { id: "sync-btn", class: "enlace-boton", type: "button", disabled: viva, onclick: () => window.Franja && window.Franja.empezar("normal") }, T("sitio.sync.boton"))
+    : u.acciones_url ? h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener", title: T("sitio.enc.acciones_tip") }, T("sitio.enc.jalar")) : null;
   const enc = DS.encabezado({ nombre: u.titulo || T("sitio.titulo_defecto"), tema: temaActual() === "light" ? "claro" : "oscuro", conAyuda: !!(datos && (datos.ayuda || []).length),
-    conMenu: items.length > 0, menuAbierto, actualizado: [act, ...(u.acciones_url ? [" · ", h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener",
-      title: T("sitio.enc.acciones_tip") }, T("sitio.enc.jalar"))] : [])],
+    conMenu: items.length > 0, menuAbierto, actualizado: [act, ...(jalar ? [" · ", jalar] : [])],
     onAyuda: () => { location.hash = "#ayuda"; }, onTema: cambiarTema, onMenu: () => ponerMenu(!menuAbierto) });
   $("encabezado").replaceChildren(enc);
   if (!items.length) ponerMenu(false, false);
   actualizarEncabezado();
+  if (window.Franja) window.Franja.reponer();   // si estaba sincronizando, la franja se vuelve a colgar del encabezado nuevo
   // Barra de «Modo coach» (la decide Python: ui.coach = {nombre, volver} solo cuando un coach ve a su atleta).
   const bc = $("barra-coach");
   bc.hidden = !u.coach;
@@ -1322,6 +1327,19 @@ async function iniciar() {
   repintarVistas();
   precargarGrupo();
 }
+
+/** Al terminar una sincronización (franja:lista): vuelve a pedir data.json y repinta sin recargar la página. */
+async function recargarDatos() {
+  try {
+    const resp = await fetch("data.json", { cache: "no-cache" });
+    if (!resp.ok) return;
+    datos = await resp.json();
+    pintarEncabezado();
+    repintarVistas();
+  } catch (e) { console.error("recargarDatos:", e); }
+}
+window.addEventListener("franja:lista", recargarDatos);
+window.addEventListener("franja:estado", (ev) => { const b = $("sync-btn"); if (b && b.tagName === "BUTTON") b.disabled = !!(ev.detail && ev.detail.viva); });
 
 /** Pinta todas las vistas con `datos` (al arrancar y cuando cambia algo local, como dar un aviso por «Entendido»). */
 function repintarVistas() {

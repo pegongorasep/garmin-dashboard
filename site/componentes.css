@@ -671,3 +671,28 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .pers-lista { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; font: 400 13.5px/1.4em var(--font-sans); }
 .pers-acts { display: grid; gap: var(--space-8); }
 .pers-ver { font: 600 13px/1.4em var(--font-sans); color: var(--accent); }
+
+/* Franja de sincronización (franja.js): flota fija arriba (no empuja nada: sin padding); misma altura en todos los estados (una línea + barra), solo existe mientras sincroniza. */
+.franja { position: fixed; z-index: 60; top: 0; left: 0; right: 0; box-sizing: border-box; height: calc(2.5rem + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); display: grid; grid-template-rows: 1fr 4px; background: var(--page); border-bottom: 1px solid var(--axis); color: var(--ink); }
+.franja[hidden] { display: none; }
+.franja-fila { display: flex; align-items: center; gap: var(--space-8); min-width: 0; padding-inline: var(--space-16); max-width: 720px; width: 100%; box-sizing: border-box; margin-inline: auto; overflow: hidden; }
+.franja-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 14px/1.25rem var(--font-sans); }
+.franja-b { flex: none; height: 1.5rem; padding: 0 var(--space-8); box-sizing: border-box; border: 1px solid var(--axis); border-radius: var(--radius-control); background: transparent; color: var(--accent); font: 600 13px/calc(1.5rem - 2px) var(--font-sans); text-decoration: none; cursor: pointer; }
+.franja-b[hidden] { display: none; }
+.franja-barra { background: var(--axis); overflow: hidden; }
+.franja-barra i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
+.franja[data-estado="ok"] .franja-barra i { background: var(--accent); }
+.franja[data-estado="error"] .franja-barra i { background: var(--bad); }
+.enlace-boton { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
+.enlace-boton:disabled { opacity: .5; cursor: default; }
+/* Franja en el encabezado: el estatus ocupa la ranura de «Actualizado hace…» (misma línea) y la barra (3 px) es absoluta al borde de abajo. */
+.encabezado { position: relative; }
+.encabezado.sync-on .act { font-size: 0; line-height: 0; }   /* también esconde el « · » suelto */
+.encabezado.sync-on .act > :not(.franja-enc) { display: none; }
+.franja-enc { display: none; }
+.encabezado.sync-on .franja-enc { display: flex; gap: var(--space-8); min-width: 0; font-size: 12.5px; line-height: 20px; }
+.franja-enc .franja-t { font: inherit; font-weight: 600; color: var(--ink-2); }
+.franja-enc .franja-b { height: auto; padding: 0; border: 0; font: inherit; font-weight: 600; text-decoration: underline; }
+.franja-enc-barra { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--axis); overflow: hidden; pointer-events: none; }
+.franja-enc-barra i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
+.franja-enc-barra[data-estado="error"] i { background: var(--bad); }

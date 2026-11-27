@@ -27,7 +27,7 @@ SITE = ROOT / "site"
 # Archivos del sitio que se sirven tal cual. `data.json` NO está aquí a propósito: sale de /data.json, por usuario.
 # `catalogo.html` tampoco está aquí: solo sale por /diseno, para el admin.
 ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "charts.js": "text/javascript",
-                  "iconos.js": "text/javascript", "componentes.js": "text/javascript", "actualizar.js": "text/javascript", "vistas.js": "text/javascript",
+                  "iconos.js": "text/javascript", "componentes.js": "text/javascript", "actualizar.js": "text/javascript", "franja.js": "text/javascript", "vistas.js": "text/javascript",
                   "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css",
                   "sw.js": "text/javascript", "manifest.webmanifest": "application/manifest+json",
                   "icono-192.png": "image/png", "icono-512.png": "image/png", "icono-maskable-512.png": "image/png",
@@ -46,7 +46,8 @@ def pie_sitio(idioma: str, csrf: str = "", ruta: str = "/") -> str:
             f'<div class="pie-fila">{form}<p>{i18n.t("pie.datos", idioma)} · <a href="/privacidad">{i18n.t("pie.privacidad", idioma)}</a></p></div></footer>'
             f'<script src="/actualizar.js" data-texto="{i18n.t("sitio.version_nueva", idioma)}" data-accion="{i18n.t("sitio.version_actualizar", idioma)}" '
             f'data-cuerpo="{i18n.t("sitio.version_cuerpo", idioma)}" data-luego="{i18n.t("sitio.version_luego", idioma)}" '
-            f'data-actualizando="{i18n.t("sitio.version_actualizando", idioma)}"></script>')
+            f'data-actualizando="{i18n.t("sitio.version_actualizando", idioma)}"></script>'
+            f'<script src="/franja.js" data-campo="{escape(csrf, quote=True)}"></script>')
 
 
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
@@ -316,7 +317,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         atleta = db.get(Usuario, atleta_id)
         try:
             salida = calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None), pref,
-                                      request.state.idioma)
+                                      request.state.idioma,
+                                      sync=sync_web.sync_ui(settings, atleta) if atleta.id == getattr(usuario, 'id', None) else None)
             return JSONResponse({**salida, "idioma": request.state.idioma})   # el sitio se pinta en el idioma de quien lo ve
         except calculo.SinConfig:
             raise HTTPException(404)

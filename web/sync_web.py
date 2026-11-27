@@ -118,6 +118,23 @@ def revisar_corrida(app, settings, cache: dict, db: Session, u: Usuario, viva: S
             sincronizar.terminar(db, viva, ok=False, error="otra")
 
 
+def sync_ui(settings, u: Usuario) -> dict | None:
+    """`ui.sync` del data.json: None (sin la GitHub App configurada) deja el default de siempre."""
+    if not settings.app_github:
+        return None
+    listo = conexion._gh_listo(u)
+    return {"puede": listo, "url_autorizar": None if listo else URL_APP, "historial_pendiente": bool(u.historial_pendiente)}
+
+
+def _historial_fallido(db: Session, u: Usuario) -> Sincronizacion | None:
+    """«Falta tu historial»: la comprobación salió bien y la última bajada del historial terminó en error (sin límite de tiempo)."""
+    if not u.historial_pendiente:
+        return None
+    s = db.scalar(select(Sincronizacion).where(Sincronizacion.usuario_id == u.id, Sincronizacion.tipo == "historial")
+                  .order_by(Sincronizacion.id.desc()).limit(1))
+    return s if s is not None and s.estado == "error" else None
+
+
 def montar(app, get_db, actual, settings, formulario) -> None:
     cache: dict = {}
 
@@ -130,6 +147,8 @@ def montar(app, get_db, actual, settings, formulario) -> None:
             revisar_corrida(app, settings, cache, db, usuario, viva)
             db.refresh(viva)
         s = viva if viva is not None and viva.estado in sincronizar.VIVAS else _reciente(db, usuario.id)
+        if s is None:
+            s = _historial_fallido(db, usuario)
         return {"sinc": a_json(s, request.state.t) if s is not None else None}
 
     @app.post("/api/sync")
@@ -150,7 +169,7 @@ def montar(app, get_db, actual, settings, formulario) -> None:
         hechos = db.scalar(select(func.count()).select_from(Sincronizacion).where(
             Sincronizacion.usuario_id == usuario.id, Sincronizacion.tipo != "programada", Sincronizacion.creada > desde))
         if hechos >= DISPAROS_POR_HORA:
-            return JSONResponse({"error": "limite"}, status_code=429)
+            return JSONResponse({"error": "limite", "texto": t("sync.limite")}, status_code=429)
         gh = conexion.app_de(app, settings)
         try:
             secreto, _ = conexion.estado_secreto(gh.secretos(usuario.gh_instalacion, usuario.repo))

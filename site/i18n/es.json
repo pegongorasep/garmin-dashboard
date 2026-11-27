@@ -635,6 +635,8 @@
 "sitio.sp.t_sesiones": "Semana pasada · {a} de {b} sesiones",
 "sitio.sp.ver": "Ver la semana",
 "sitio.suave_par": " (versión suave)",
+"sitio.sync.boton": "Sincronizar",
+"sitio.sync.espera": "Esperando tu historial…",
 "sitio.tab.grupo": "Juntos",
 "sitio.tab.hoy": "Hoy",
 "sitio.tab.plan": "Plan",

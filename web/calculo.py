@@ -187,7 +187,8 @@ def contar_grupos(db: Session, usuario: Usuario, pref: str = "") -> int:
     return db.scalar(select(func.count()).select_from(MiembroGrupo).where(MiembroGrupo.usuario_id == usuario.id)) or 0
 
 
-def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, pref: str = "", idioma: str | None = None) -> dict:
+def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, pref: str = "", idioma: str | None = None,
+             sync: dict | None = None) -> dict:
     """data.json de la persona (con el aviso de repo atrasado, que no se guarda en la caché porque depende de la hora).
     Truena con SinConfig o DataInvalido."""
     base = _calcular_cacheado(db, usuario, ahora_utc, idioma)
@@ -197,7 +198,8 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     # `coach`: solo cuando un coach ve a su atleta, con el mismo nombre que le muestra su página de atletas (nada más).
     coach = {"nombre": usuario.apodo or usuario.correo, "volver": "/coach"} if pref else None
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
-                             "grupos": n_grupos, "coach": coach}}
+                             "grupos": n_grupos, "coach": coach,
+                             **({"sync": sync} if sync is not None and not pref else {})}}
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)
     if avisos:

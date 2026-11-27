@@ -56,7 +56,7 @@ const DS = (() => {
   /** Estado vacío. Recibe { icono (null = sin ícono), titulo, texto, accion: {texto, href} }; se pone dentro de una tarjeta. */
   const estadoVacio = ({ icono: nombre, titulo, texto, accion } = {}) =>
     h("div", { class: "vacio" }, nombre === null ? null : ico(nombre || "punto"), h("p", { class: "vc-t" }, titulo), texto ? h("p", { class: "vc-x" }, texto) : null,
-      accion ? h("a", { class: "boton", href: accion.href }, accion.texto) : null);
+      accion ? (accion.deshabilitado ? h("button", { class: "boton", type: "button", disabled: true }, accion.texto) : h("a", { class: "boton", href: accion.href }, accion.texto)) : null);
 
   /** Avatar: foto (`foto` = url) o iniciales con color estable. Recibe { iniciales, color (0..5), foto, grande }. */
   const avatar = ({ iniciales = "?", color = 0, foto, grande = false } = {}) =>

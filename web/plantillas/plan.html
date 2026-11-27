@@ -13,7 +13,7 @@
 
 {% if atleta.sin_plan %}{% call tarjeta(t("aj.sp_t")) %}
   <p>{{ t("plan.quiero_a") }}</p>
-  <div class="acciones">{{ boton(t("aj.sp_quiero"), href=pref ~ "/plan/nuevo") }}</div>
+  <div class="acciones">{% if atleta.historial_pendiente %}{{ boton(t("sitio.sync.espera"), deshabilitado=True) }}{% else %}{{ boton(t("aj.sp_quiero"), href=pref ~ "/plan/nuevo") }}{% endif %}</div>
 {% endcall %}{% endif %}
 
 <h2 class="pag-h" id="cambios">{{ t("plan.cambios_t") }}</h2>
@@ -21,7 +21,7 @@
 
 {% if terminado %}
 <div id="siguiente">{% call tarjeta(t("plan.terminó")) %}
-  <div class="acciones">{{ boton(t("plan.armar"), href=pref ~ "/plan/nuevo") }}</div>
+  <div class="acciones">{% if atleta.historial_pendiente %}{{ boton(t("sitio.sync.espera"), deshabilitado=True) }}{% else %}{{ boton(t("plan.armar"), href=pref ~ "/plan/nuevo") }}{% endif %}</div>
 {% endcall %}</div>
 {% endif %}
 

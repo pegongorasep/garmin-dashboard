@@ -635,6 +635,8 @@
 "sitio.sp.t_sesiones": "Last week · {a} of {b} sessions",
 "sitio.sp.ver": "See the week",
 "sitio.suave_par": " (easy version)",
+"sitio.sync.boton": "Sync",
+"sitio.sync.espera": "Waiting for your history…",
 "sitio.tab.grupo": "Together",
 "sitio.tab.hoy": "Today",
 "sitio.tab.plan": "Plan",
