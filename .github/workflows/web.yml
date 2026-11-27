@@ -70,7 +70,7 @@ jobs:
             --set-env-vars "${VARS}"
 
       # Comandos de admin (invitar, crear-admin): un Cloud Run Job con la misma imagen y los mismos secretos, para que
-      # nadie copie la cadena de la base a su compu. Uso: gcloud run jobs execute ahi-cli --args="invitar,--nota,Adrián"
+      # nadie copie la cadena de la base a su compu. Uso: gcloud run jobs execute ahi-cli --args="-m,web.cli,invitar,--nota,Adrián" (el Job ya trae `--command python`)
       - name: Actualizar el Job de comandos de admin
         run: |
           gcloud run jobs deploy ahi-cli \
