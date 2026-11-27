@@ -8,6 +8,7 @@
 <h1 class="pag-t">{{ t("plan.titulo") }}</h1>
 {% if ok == "1" %}{% call aviso("ok") %}{{ t("plan.ok", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
 {% if ok == "rehecho" %}{% call aviso("ok") %}{{ t("plan.rehacer_ok", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
+{% if ok == "nuevo" %}{% call aviso("ok") %}{{ t("pn.ok_nuevo", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
 {% if ok == "sin" %}{% call aviso("warn") %}{{ t("plan.rehacer_sin") }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 <p class="pag-s">{{ t("plan.hoy", hoy=hoy, semana=(t("plan.semana_de", n=n) if n else "")) }}</p>
@@ -16,8 +17,7 @@
 {% set ints = [("solo_z2", t("aj.i_solo")), ("z2_poca_z3", t("aj.i_poca")), ("calidad", t("aj.i_calidad"))] %}
 {% if atleta.sin_plan %}{% call tarjeta(t("aj.sp_t")) %}
   <p>{{ t("plan.quiero_a") }}</p>
-  <form class="acciones" method="post" action="/ajustes/plan"><input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ boton(t("aj.sp_quiero"), tipo="submit", nombre="accion", valor="quiero") }}</form>
+  <div class="acciones">{{ boton(t("aj.sp_quiero"), href=pref ~ "/plan/nuevo") }}</div>
 {% endcall %}{% endif %}
 
 <h2 class="pag-h" id="cambios">{{ t("plan.cambios_t") }}</h2>
@@ -135,6 +135,11 @@
   </div>
 {% endcall %}
 
+{% if not atleta.sin_plan %}{% call tarjeta(t("pn.nuevo_t")) %}
+  <p class="pag-s">{{ t("pn.nuevo_a") }}</p>
+  <div class="acciones">{{ boton(t("pn.nuevo_b"), "sec", href=pref ~ "/plan/nuevo") }}</div>
+{% endcall %}{% endif %}
+<details class="desplegable"{% if rehacer_abierto %} open{% endif %}><summary>{{ t("pn.avanzado") }}</summary>
 {% call tarjeta(t("plan.rehacer_t")) %}
   <p class="pag-s">{{ t("plan.rehacer_a") }}</p>
   <div class="acciones"><button class="boton sec grande" type="button" data-abre="rehacer">{{ t("plan.rehacer_t") }}</button></div>
@@ -166,6 +171,7 @@
   </form>
   </div>
 </dialog>
+</details>
 {% if not pref and not atleta.sin_plan %}
 <form class="pila" method="post" action="/ajustes/plan">
   <input type="hidden" name="csrf" value="{{ csrf }}">

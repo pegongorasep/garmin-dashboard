@@ -9,10 +9,7 @@
   <div class="texto">
   <h2 class="pag-h">{{ t("aj.sp_t") }}</h2>
   <p>{{ t("aj.sp_a") }}</p>
-  <form class="pila" method="post" action="/ajustes/plan">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ boton(t("aj.sp_quiero"), tipo="submit", nombre="accion", valor="quiero") }}
-  </form>
+  <div class="acciones">{{ boton(t("aj.sp_quiero"), href="/plan/nuevo") }}</div>
   </div>
 {% endcall %}
 <div class="acciones">{{ boton(t("comun.volver"), "sec", href="/") }}</div>

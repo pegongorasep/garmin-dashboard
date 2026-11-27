@@ -158,7 +158,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             db.commit()
             return RedirectResponse("/", 303)
         usuario.uso = "completo"
-        usuario.sin_plan = form.get("plan") != "si"   # «¿Quieres un plan de running?»: por defecto «No, solo ver cómo voy»
+        usuario.sin_plan = True   # todos empiezan sin plan; lo arman desde la app (/plan/nuevo, Motor v6 F4)
         db.commit()
         return RedirectResponse("/bienvenida", 303)
 

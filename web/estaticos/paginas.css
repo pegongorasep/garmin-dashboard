@@ -77,3 +77,18 @@ details.sim-sem > summary::-webkit-details-marker { display: none; }
 details.sim-sem.falla > summary { background: var(--bad-bg); }
 .sim-ses { margin: var(--space-4) 0 var(--space-4) var(--space-16); padding: 0; display: grid; gap: var(--space-2); }
 .sim-fallos { padding-left: var(--space-16); display: grid; gap: var(--space-4); margin: 0; font-size: 13px; }
+
+/* «Quiero un plan» (Motor v6 F4): barras de minutos por semana con <progress> (alto fijo; el valor solo cambia el largo). */
+.pn-barras { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-6); }
+.pn-barra { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) minmax(5em, 9em); align-items: center; gap: var(--space-8); font-size: 13px; line-height: 18px; }
+.pn-barra progress { appearance: none; -webkit-appearance: none; width: 100%; height: 14px; border: 0; border-radius: var(--radius-bar); background: var(--grid); overflow: hidden; }
+.pn-barra progress::-webkit-progress-bar { background: var(--grid); }
+.pn-barra progress::-webkit-progress-value { background: var(--serie-1); border-radius: var(--radius-bar); }
+.pn-barra progress::-moz-progress-bar { background: var(--serie-1); border-radius: var(--radius-bar); }
+.pn-barra.descarga progress::-webkit-progress-value { background: var(--caminata); }
+.pn-barra.descarga progress::-moz-progress-bar { background: var(--caminata); }
+.pn-sem { color: var(--muted); }
+.pn-min { overflow-wrap: anywhere; }
+.pn-lista { margin: 0; }
+.pn-reserva { min-height: 1lh; }
+@media (max-width: 640px) { .pn-barra { grid-template-columns: 3.5em minmax(0, 1fr); } .pn-min { grid-column: 2; } }

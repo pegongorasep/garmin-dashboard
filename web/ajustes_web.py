@@ -198,7 +198,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
 
     @app.post("/ajustes/plan")
     async def ajustes_plan(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        """«Quiero un plan de running» (sin_plan=False y al cuestionario si aún no hay plan) o «Quitar mi plan» (sin_plan=True;
+        """«Quiero un plan de running» (lleva a /plan/nuevo) o «Quitar mi plan» (sin_plan=True;
         el plan guardado se queda). Solo la propia persona."""
         form = await formulario(request)
         if usuario is None:
@@ -207,9 +207,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             usuario.sin_plan = True
             db.commit()
             return RedirectResponse("/", 303)
-        usuario.sin_plan = False
-        db.commit()
-        return RedirectResponse("/" if db.get(Ajustes, usuario.id) else "/bienvenida", 303)
+        return RedirectResponse("/plan/nuevo", 303)   # el plan se arma ahí; sin_plan pasa a False al confirmar
 
     async def guardar_ajustes(request: Request, usuario, db, atleta_id):
         """Guardar los ajustes generales: nunca rehace el plan ni pide confirmación."""

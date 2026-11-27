@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso, tarjeta, pasos as barra_pasos %}
+{% block titulo %}{{ t("pn.titulo_pagina") }}{% endblock %}
+{% block clase %}ancha{% endblock %}
+{% macro ocultos(v) %}
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="nivel" value="{{ nivel }}">
+  {% for k, val in v.items() if k != "nivel" %}{% if val is string %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% else %}{% for x in val %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% endif %}{% endfor %}
+{% endmacro %}
+{% block contenido %}
+{% include "_nav.html" %}
+<h1 class="pag-t">{{ t("pn.titulo") }}</h1>
+{{ barra_pasos(t("pn.pasos").split(","), paso, t("pn.paso", n=paso, total=3), t("pn.avance")) }}
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+
+{% if paso == 1 %}
+{% call tarjeta(t("pn.ev_t")) %}
+  <ul class="texto pn-lista">{% for l in evidencia %}<li>{{ l }}</li>{% endfor %}</ul>
+{% endcall %}
+<form class="pila" method="post" action="{{ pref }}/plan/nuevo/preguntas">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2 class="pag-h">{{ t("pn.nivel_t") }}</h2>
+  <p class="pag-s">{{ t("pn.nivel_a") }}</p>
+  {% call opciones(t("pn.nivel_t")) %}
+    {% for n in niveles %}{{ opcion("nivel", t("pn.nivel." ~ n), valor=n, nota=t("pn.nivel_x." ~ n), tipo="radio", marcado=(n == nivel)) }}{% endfor %}
+  {% endcall %}
+  <p class="pag-s pn-reserva">{{ t("pn.nivel_calculado", nivel=t("pn.nivel." ~ calculado.nivel)) }}</p>
+  <div class="acciones">{{ boton(t("pn.continuar"), tipo="submit") }}</div>
+</form>
+
+{% elif paso == 2 %}
+<form class="pila" method="post" action="{{ pref }}/plan/nuevo/vista">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="nivel" value="{{ nivel }}">
+  <h2 class="pag-h">{{ t("pn.q_t") }}</h2>
+  <p class="pag-s">{{ t("pn.q_nivel", nivel=t("pn.nivel." ~ nivel)) }} {{ boton(t("pn.cambiar_nivel"), "texto", chico=True, href=pref ~ "/plan/nuevo") }}</p>
+  {% for a in avisos_nivel %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
+  {% if "dias" in campos %}{{ seleccion(t("pn.dias"), "dias", [("2", "2"), ("3", "3"), ("4", "4"), ("5", "5")], v.dias, ayuda=t("pn.dias_a"), error=errores.get("dias")) }}{% endif %}
+  {% if "pierna" in campos %}{% call opciones(t("pn.pierna"), t("pn.pierna_n")) %}
+    {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave, marcado=clave in v.pierna) }}{% endfor %}
+  {% endcall %}{% endif %}
+  {% if "dolor" in campos %}{% call opciones(t("pn.dolor")) %}
+    {{ opcion("dolor", t("pn.dolor_no"), valor="no", tipo="radio", marcado=v.dolor != "si") }}
+    {{ opcion("dolor", t("pn.dolor_si"), valor="si", tipo="radio", marcado=v.dolor == "si") }}
+  {% endcall %}{% endif %}
+  {% if "objetivo" in campos %}{% call opciones(t("pn.objetivo")) %}
+    {% for o in objetivos %}{{ opcion("objetivo", t("pn.o_" ~ o), valor=o, tipo="radio", marcado=(o == v.objetivo)) }}{% endfor %}
+  {% endcall %}{% endif %}
+  {% if "carrera" in campos %}
+    <h3 class="pag-h">{{ t("pn.carrera_t") }}</h3>
+    <p class="pag-s">{{ t("pn.carrera_a") }}</p>
+    {{ seleccion(t("pn.km"), "km", opciones_km, v.km, error=errores.get("km")) }}
+    {{ campo(t("pn.fecha"), "fecha", tipo="date", valor=v.fecha, error=errores.get("fecha")) }}
+  {% endif %}
+  {% if "dia_larga" in campos %}{{ seleccion(t("pn.dia_larga"), "dia_larga", opciones_dia, v.dia_larga) }}{% endif %}
+  {% if "tiempo" in campos %}{{ campo(t("pn.tiempo"), "tiempo", valor=v.tiempo, opcional=t("comun.opcional"), corto=True, ayuda=t("pn.tiempo_a"), error=errores.get("tiempo"), extra={"placeholder": "52:30"}) }}{% endif %}
+  {{ campo(t("pn.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, ayuda=t("pn.inicio_a"), error=errores.get("inicio")) }}
+  {{ campo(t("pn.edad"), "edad", tipo="number", valor=v.edad, corto=True, ayuda=t("pn.edad_a"), error=errores.get("edad"), extra={"min": "10", "max": "99"}) }}
+  {% if "zona" in campos %}
+    {% set zonas_op = [] %}{% for z in zonas %}{% set _ = zonas_op.append((z, z)) %}{% endfor %}
+    {{ seleccion(t("pn.zona"), "zona", zonas_op, v.zona) }}
+    {{ campo(t("pn.fc_max"), "fc_max", tipo="number", valor=v.fc_max, opcional=t("comun.opcional"), corto=True, error=errores.get("fc_max"), extra={"min": "120", "max": "230"}) }}
+  {% endif %}
+  <div class="acciones">{{ boton(t("pn.ver_previa"), tipo="submit") }}</div>
+</form>
+
+{% else %}
+{% set total = prev.semanas|length %}
+<h2 class="pag-h">{{ t("pn.prev_t") }}</h2>
+<p class="pag-s">{{ t("pn.prev_a", n=total, inicio=v.inicio) }}</p>
+{% if v.dolor == "si" %}{% call aviso("warn") %}{{ t("pn.prev_dolor") }}{% endcall %}{% endif %}
+{% for a in avisos_nivel %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
+{% for a in prev.avisos %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
+{% call tarjeta(t("pn.barras_t")) %}
+  <ol class="pn-barras">
+    {% for s in prev.semanas %}<li class="pn-barra {{ s.kind }}">
+      <span class="pn-sem">{{ t("pn.barra_sem", n=s.n) }}</span>
+      <progress max="{{ prev.tope }}" value="{{ s.min }}">{{ s.min }}</progress>
+      <span class="pn-min">{{ t("pn.barra_min", min=s.min) }}{% if s.evento == "carrera" %} · {{ t("pn.semana_carrera") }}{% elif s.kind == "descarga" %} · {{ t("pn.semana_descarga") }}{% endif %}</span>
+    </li>{% endfor %}
+  </ol>
+{% endcall %}
+{% call tarjeta(t("pn.detalle_t")) %}
+  {% for w in prev.detalle %}
+    <h3 class="pag-h">{{ t("pn.detalle_sem", n=w.n) }}</h3>
+    <ul class="texto pn-lista">{% for s in w.sesiones %}<li>{% if s.dia %}{{ t('dia.' ~ s.dia) }} · {% endif %}{{ t("pn.sesion", nombre=s.nombre, min=s.min) }}</li>{% endfor %}</ul>
+  {% endfor %}
+{% endcall %}
+{% call tarjeta(t("pn.porque_t")) %}
+  <ul class="texto pn-lista">{% for p in prev.porques %}<li>{{ p }}</li>{% endfor %}</ul>
+{% endcall %}
+<div class="acciones">
+  <form method="post" action="{{ pref }}/plan/nuevo/confirmar">{{ ocultos(v) }}{{ boton(t("pn.confirmar"), tipo="submit") }}</form>
+  <form method="post" action="{{ pref }}/plan/nuevo/preguntas">{{ ocultos(v) }}{{ boton(t("pn.cambiar"), "sec", tipo="submit") }}</form>
+</div>
+{% endif %}
+{% endblock %}

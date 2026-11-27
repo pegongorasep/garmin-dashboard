@@ -404,7 +404,11 @@ def test_onboarding_completo(ctx):
         c = db.query(Consentimiento).one()
         assert c.version_aviso == "2026-12" and c.fecha
     assert "¿Qué quieres usar?" in cl.get("/bienvenida").text
-    cl.post("/bienvenida/uso", data={"csrf": csrf_de(cl.get("/bienvenida").text), "uso": "completo", "plan": "si"})
+    cl.post("/bienvenida/uso", data={"csrf": csrf_de(cl.get("/bienvenida").text), "uso": "completo"})
+    with ctx.sesiones() as db:   # cuenta de antes de F4 (el onboarding aún preguntaba el plan): conserva su cuestionario del paso 7
+        assert db.get(Usuario, uid).sin_plan is True   # las cuentas nuevas ya empiezan sin plan
+        db.get(Usuario, uid).sin_plan = False
+        db.commit()
     assert "usuario de GitHub" in cl.get("/bienvenida").text
     # usuario inválido
     r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "no válido!"})

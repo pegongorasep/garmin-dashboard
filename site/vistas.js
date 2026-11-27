@@ -158,7 +158,7 @@ function renderPlan(d) {
   const guardado = new URLSearchParams(location.search).get("ok") === "plan";   // viene de guardar un formulario del plan
   if (guardado) history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
   if (ui().sin_plan) {   // sin plan: la pestaña no existe, pero la ruta #plan puede abrirse a mano
-    const accion = (ui().menu || []).length ? { texto: T("sitio.sl.quiero"), href: "/plan/acciones" } : null;
+    const accion = (ui().menu || []).length ? { texto: T("sitio.sl.quiero"), href: "/plan/nuevo" } : null;
     $("vista-plan").replaceChildren(DS.tarjeta({ titulo: T("sitio.sl.sin_plan_t") }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.sin_plan_t"), texto: T("sitio.sl.sin_plan_x"), accion })));
     return;
   }
