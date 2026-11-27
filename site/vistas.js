@@ -803,7 +803,7 @@ function pintarGrupo(g) {
   const nov = g.novedades.filter((n) => porId[n.usuario_id]);
   raiz.replaceChildren(...[
     h("div", { class: "grupo-cab ancha" }, h("h2", {}, g.grupo.nombre), h("a", { href: g.admin_url }, T("sitio.gr.administrar"))),
-    ui().grupos > 1 ? h("div", { class: "ancha" }, DS.boton(T("sitio.gr.todos"), { variante: "texto", chico: true, onclick: () => { location.hash = "#grupo"; } })) : null,
+    h("div", { class: "ancha" }, DS.boton(T("sitio.gr.todos"), { variante: "texto", chico: true, onclick: () => { location.hash = "#juntos"; } })),
     h("p", { class: "grupo-total ancha" }, T("sitio.gr.juntos", { km: fmt(g.total.km, 1), tiempo: grupoTiempo(g.total.minutos) })),
     nov.length ? DS.tarjeta({ titulo: T("sitio.gr.novedades"), clase: "ancha" }, h("ul", { class: "novedades" }, nov.map((n) => {
       const m = porId[n.usuario_id];
@@ -816,11 +816,13 @@ function pintarGrupo(g) {
 
 function pintarListaGrupos(lista) {
   $("vista-grupo").replaceChildren(h("h2", { class: "grupo-cab ancha" }, T("sitio.gr.tus_grupos")),
-    h("div", { class: "grupos-lista ancha" }, lista.map((x) => h("a", { class: "grupo-fila", href: `#grupo/${x.id}` },
-      h("span", {}, x.nombre), h("small", {}, T("sitio.gr.personas", { n: x.miembros_n }))))));
+    h("div", { class: "grupos-lista ancha" }, lista.map((x) => h("a", { class: "grupo-fila", href: `#juntos/${x.id}` },
+      h("span", {}, x.nombre), h("small", {}, T("sitio.gr.personas", { n: x.miembros_n }))))),
+    // Reserva del feed (S3 lo llena): altura fija, elegir un grupo no la mueve.
+    h("section", { class: "juntos-feed ancha", "aria-label": T("sitio.gr.feed") }, h("h3", {}, T("sitio.gr.feed")), h("p", {}, T("sitio.gr.feed_pronto"))));
 }
 
-// Caché en memoria de la pestaña Grupo: se precarga al abrir la app y se refresca en silencio al entrar.
+// Caché en memoria de la pestaña Juntos: se precarga al abrir la app y se refresca en silencio al entrar.
 const grupoCache = { lista: null, grupos: {}, vuelo: null };
 
 /** Baja la lista (y el grupo si es único, o el pedido) y la deja en la caché. Devuelve { lista, g, gid }. */
@@ -829,8 +831,7 @@ async function grupoBajar(id) {
   if (!gid) {
     lista = await grupoGet("/api/grupos");
     grupoCache.lista = lista;
-    if (lista.length !== 1) return { lista, g: null, gid: null };
-    gid = lista[0].id;
+    return { lista, g: null, gid: null };   // el inicio de Juntos muestra siempre los botones, también con un solo grupo
   }
   const g = await grupoGet(`/api/grupos/${encodeURIComponent(gid)}`);
   grupoCache.grupos[gid] = g;
@@ -840,17 +841,15 @@ async function grupoBajar(id) {
 /** Precarga en segundo plano (tras data.json, con al menos un grupo). Los errores se ignoran: al entrar se reintenta. */
 function precargarGrupo() {
   if (!(nGrupos() > 0) || grupoCache.vuelo) return;
-  grupoCache.vuelo = grupoBajar(null).catch(() => null).finally(() => { grupoCache.vuelo = null; });
+  grupoCache.vuelo = grupoBajar(null).then(async (r) => {   // y cada grupo, para que al tocarlo salga al instante
+    await Promise.all(r.lista.slice(0, 8).map((x) => grupoBajar(x.id).catch(() => null)));
+  }).catch(() => null).finally(() => { grupoCache.vuelo = null; });
 }
 
 const grupoPintarCache = (id) => {
   if (id) { const g = grupoCache.grupos[id]; if (g) { pintarGrupo(g); return true; } return false; }
-  const lista = grupoCache.lista;
-  if (!lista) return false;
-  if (lista.length !== 1) { pintarListaGrupos(lista); return true; }
-  const g = grupoCache.grupos[lista[0].id];
-  if (!g) return false;
-  pintarGrupo(g);
+  if (!grupoCache.lista) return false;
+  pintarListaGrupos(grupoCache.lista);
   return true;
 };
 
@@ -858,7 +857,7 @@ const grupoPintarCache = (id) => {
 async function cargarGrupo(id) {
   const turno = ++grupoTurno, raiz = $("vista-grupo");
   let pintado = grupoPintarCache(id);
-  const antes = pintado ? JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null, grupoCache.lista && grupoCache.lista.length === 1 ? grupoCache.grupos[grupoCache.lista[0].id] : null]) : "";
+  const antes = pintado ? JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null]) : "";
   try {
     if (!pintado) {
       raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando")));
@@ -872,7 +871,7 @@ async function cargarGrupo(id) {
     }
     const r = await grupoBajar(id);
     if (turno !== grupoTurno) return;
-    const despues = JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null, grupoCache.lista && grupoCache.lista.length === 1 ? grupoCache.grupos[grupoCache.lista[0].id] : null]);
+    const despues = JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null]);
     if (despues !== antes) { if (r.g) pintarGrupo(r.g); else pintarListaGrupos(r.lista); }
   } catch (e) {
     if (turno !== grupoTurno || pintado) return;   // con la caché ya pintada, un fallo del refresco no tumba la vista
@@ -898,7 +897,7 @@ const nGrupos = () => datos && ui().grupos != null ? ui().grupos : parseInt(($("
 const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
   ...(ui().sin_plan ? [] : [{ id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" }]),   // sin plan: no hay pestaña Plan (L2 la reemplaza por una tarjeta)
   { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" },
-  ...(nGrupos() > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#grupo" }] : [])];   // solo en la web y con al menos un grupo
+  ...(nGrupos() > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#juntos" }] : [])];   // solo en la web y con al menos un grupo
 const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
 
 /** Ícono de cada liga del menú ☰ (si ui.menu trae `icono`, gana el suyo). */
@@ -954,11 +953,13 @@ function actualizarEncabezado() {
 
 function mostrarVista() {
   const ruta = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
-  const [nombre, sub] = (ALIAS_RUTA[ruta] || ruta).split("/");
+  const [nombre0, sub] = (ALIAS_RUTA[ruta] || ruta.replace(/^grupo(?=\/|$)/, "juntos")).split("/");   // #grupo y #grupo/<id> (viejos) valen como #juntos
+  const nombre = nombre0 === "juntos" ? "grupo" : nombre0;
+  if (/^grupo(\/|$)/.test(ruta)) history.replaceState(null, "", `#${ruta.replace(/^grupo/, "juntos")}`);
   const solo = !!ui().solo_cuerpo;   // solo cuerpo: todo cae en Progreso > Cuerpo (la ayuda sigue)
   const v = solo && nombre !== "ayuda" ? "progreso" : nombre === "grupo" && !(nGrupos() > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
   subProgreso = solo || (v === "progreso" && sub === "cuerpo") ? "cuerpo" : "corridas";
-  if (v !== "ayuda") rutaPrevia = `#${ruta || "hoy"}`;
+  if (v !== "ayuda") rutaPrevia = `#${ruta.replace(/^grupo(?=\/|$)/, "juntos") || "hoy"}`;
   vistaActual = v;
   for (const id of VISTAS) $(`vista-${id}`).hidden = id !== v;
   for (const a of document.querySelectorAll(".tabs a")) {

@@ -597,3 +597,7 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .grupo-fila small { flex: none; color: var(--muted); font: 400 12.5px/17px var(--font-sans); }
 .grupo-fila span { min-width: 0; overflow-wrap: anywhere; }
 .miembro { align-self: start; }
+/* Juntos: reserva del feed (altura fija en em; S3 la llena) */
+.juntos-feed { min-height: 9em; padding: var(--space-12) var(--space-14); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-card); }
+.juntos-feed h3 { margin: 0 0 var(--space-4); font: 600 15px/20px var(--font-sans); }
+.juntos-feed p { margin: 0; color: var(--muted); font: 400 13px/18px var(--font-sans); }
