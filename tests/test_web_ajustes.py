@@ -11,6 +11,7 @@ from ajustes import normalizar_config
 from test_web_cuentas import CONFIG, csrf_de, entrar, post
 from web import cambios
 from web.modelos import Ajustes, Cambio, Coach, Consentimiento, DatoGarmin, InBody, Plan, Usuario
+from web.privacidad import VERSION_AVISO
 
 HOY = datetime(2026, 11, 25, 18, 0, tzinfo=timezone.utc)   # miércoles de la semana 3 (el plan empieza el 2026-11-09)
 
@@ -27,7 +28,7 @@ def listo(ctx, correo="a@x.com", con_plan=True):
         db.add(u)
         db.commit()
         db.add(Ajustes(usuario_id=u.id, config=copy.deepcopy(CONFIG)))
-        db.add(Consentimiento(usuario_id=u.id, version_aviso="2026-12"))
+        db.add(Consentimiento(usuario_id=u.id, version_aviso=VERSION_AVISO))
         db.add(DatoGarmin(usuario_id=u.id, tipo="dia", clave="2026-11-24",   # algo de datos: si no, la tarjeta de hoy es «primera sincronización»
                           contenido={"calendarDate": "2026-11-24", "heartRate": {"restingValue": 55}}))
         if con_plan:

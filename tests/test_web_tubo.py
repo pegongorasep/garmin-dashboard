@@ -20,6 +20,7 @@ from test_web_cuentas import CONFIG, crear_usuario, csrf_de, entrar, post
 from test_web_plan_nuevo import confirmar, lunes_siguiente
 from web import calculo, importar, onboarding, tubo
 from web.modelos import Ajustes, Cambio, Consentimiento, DatoGarmin, Plan, Subida, Usuario, ahora
+from web.privacidad import VERSION_AVISO
 
 ROOT = Path(__file__).parent.parent
 HAY_DATOS = (ROOT / "data" / "activities.json").exists() and (ROOT / "config.yaml").exists()
@@ -55,7 +56,7 @@ def usuario_amigo(ctx, owner="amigo", consentimiento=True, repo_id=None):
         db.add(u)
         db.commit()
         if consentimiento:
-            db.add(Consentimiento(usuario_id=u.id, version_aviso="2026-12"))
+            db.add(Consentimiento(usuario_id=u.id, version_aviso=VERSION_AVISO))
             db.commit()
         return u.id
 
@@ -221,7 +222,7 @@ def test_sin_consentimiento_o_owner_equivocado_no_hay_ni_codigo(ctx):
     cl = ctx.cliente()
     assert "codigo" not in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
     with ctx.sesiones() as db:
-        db.add(Consentimiento(usuario_id=1, version_aviso="2026-12"))
+        db.add(Consentimiento(usuario_id=1, version_aviso=VERSION_AVISO))
         db.commit()
     assert "codigo" not in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_owner="otro"))).json()
     assert "codigo" in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
@@ -403,7 +404,7 @@ def test_onboarding_completo(ctx):
     cl.post("/bienvenida/consentimiento", data={"csrf": csrf_de(cl.get("/bienvenida").text), "acepto": "on"})
     with ctx.sesiones() as db:
         c = db.query(Consentimiento).one()
-        assert c.version_aviso == "2026-12" and c.fecha
+        assert c.version_aviso == VERSION_AVISO and c.fecha
     assert "¿Qué quieres usar?" in cl.get("/bienvenida").text
     cl.post("/bienvenida/uso", data={"csrf": csrf_de(cl.get("/bienvenida").text), "uso": "completo"})
     with ctx.sesiones() as db:   # cuenta de antes de F4 (el onboarding aún preguntaba el plan): conserva su cuestionario del paso 7
@@ -461,7 +462,7 @@ def test_onboarding_usuario_de_github_repetido(ctx):
     crear_usuario(ctx, "otro@x.com")
     cl = entrar(ctx, ctx.cliente(), "otro@x.com")
     with ctx.sesiones() as db:
-        db.add(Consentimiento(usuario_id=2, version_aviso="2026-12"))
+        db.add(Consentimiento(usuario_id=2, version_aviso=VERSION_AVISO))
         db.commit()
     r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "OCUPADO"})
     assert r.status_code == 400 and "ya está ligado" in r.text
@@ -470,7 +471,7 @@ def test_onboarding_usuario_de_github_repetido(ctx):
 def test_privacidad_publica_con_lo_necesario(ctx):
     t = ctx.cliente().get("/privacidad").text
     for frase in ("consentimiento expreso", "datos sensibles", "Google Cloud", "Neon", "Resend", "GitHub", "Cloudflare",
-                  "Garmin", "ARCO", "no es consejo médico", "Datos de Garmin", "2026-12", ctx.settings.admin_correo):
+                  "Garmin", "ARCO", "no es consejo médico", "Datos de Garmin", VERSION_AVISO, ctx.settings.admin_correo):
         assert frase.lower() in t.lower(), frase
 
 

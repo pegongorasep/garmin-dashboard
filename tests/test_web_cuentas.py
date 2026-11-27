@@ -6,6 +6,7 @@ from datetime import timedelta
 from ajustes import leer_config_yaml
 from web import auth
 from web.modelos import Ajustes, CodigoLogin, Coach, Consentimiento, LigaLogin, Sesion, Usuario, ahora
+from web.privacidad import VERSION_AVISO
 
 
 CONFIG = json.loads(json.dumps(leer_config_yaml(Path(__file__).parent / "fixtures" / "config.yaml"), default=str))
@@ -52,7 +53,7 @@ def crear_usuario(ctx, correo="a@x.com", con_ajustes=False):
         db.commit()
         if con_ajustes:
             db.add(Ajustes(usuario_id=u.id, config=CONFIG))
-            db.add(Consentimiento(usuario_id=u.id, version_aviso="2026-12"))
+            db.add(Consentimiento(usuario_id=u.id, version_aviso=VERSION_AVISO))
             db.commit()
         return u.id
 

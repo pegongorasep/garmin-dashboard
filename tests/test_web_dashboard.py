@@ -14,6 +14,7 @@ import build
 import validar
 from web import calculo, cli, datos, importar
 from web.modelos import Ajustes, Base, Consentimiento, CacheData, DatoGarmin, Usuario
+from web.privacidad import VERSION_AVISO
 
 ROOT = Path(__file__).parent.parent
 HAY_DATOS = (ROOT / "data" / "activities.json").exists() and (ROOT / "config.yaml").exists()
@@ -116,7 +117,7 @@ def test_ruta_data_json_de_la_web_sirve_el_del_usuario(web_ctx):
     uid = usuario_pedro(web_ctx)
     with web_ctx.sesiones() as db:
         importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
-        db.add(Consentimiento(usuario_id=uid, version_aviso="2026-12"))
+        db.add(Consentimiento(usuario_id=uid, version_aviso=VERSION_AVISO))
         db.commit()
     from test_web_cuentas import entrar
     cl = entrar(web_ctx, web_ctx.cliente(), "pedro@example.com")
