@@ -264,6 +264,7 @@ function tarjetaPlan(plan, { editarUrls = {}, textoDescarga = "", sel = null, al
     ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: editarUrls[`${w.n}/${s.id}`] })] } : {})));
   const textoSesion = (s) => (unidad === "km" && s.km_est != null ? T("sitio.plan.vol_km_est", { k: fmt(s.km_est, 1) }) : T("sitio.min_n", { n: s.minutes }));
   const pintarSesiones = () => filas.querySelectorAll(".fila-ses").forEach((f, i) => { const sm = f.querySelector(".fs-n small"); if (sm && w.sessions[i]) sm.textContent = `· ${textoSesion(w.sessions[i])}`; });
+  pintarSesiones();   // la unidad ya puede ser km al abrir (p. ej. el perfil de otra persona): las filas nacen en minutos
   REPINTAR_UNIDAD.push({ conectado: () => c.isConnected, pintar: () => { vols.forEach(([v, x]) => { v.textContent = textoVolumen(x) || " "; }); pintarSesiones(); } });
   c.append(h("div", { class: "unidad-fila" }, selectorUnidad(), h("p", { class: "nota" }, T("sitio.u.nota"))), linea,
     h("p", { class: "nota" }, T("sitio.plan.nota", { d: textoDescarga || T("sitio.plan.descarga_nota") })),

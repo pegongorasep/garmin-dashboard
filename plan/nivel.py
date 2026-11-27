@@ -21,6 +21,9 @@ NIVELES = ("empezando", "base", "corredor")
 # Piso de minutos por semana de cada nivel: ni el arranque del plan ni el ajuste semanal (motor_v6 `ajuste_piso`) bajan de aquí.
 PISO_NIVEL = {"empezando": 45, "base": 60, "corredor": 90}   # 3 × 15' para Empezando
 
+# Ritmo fácil genérico (min/km) por nivel: estima los km del plan sin ritmo personal, o cuando no se puede mostrar el real.
+RITMO_NIVEL = {"empezando": 9.0, "base": 7.5, "corredor": 6.0}
+
 UMBRALES = {
     # Ventanas (en semanas, hacia atrás desde hoy)
     "semanas_frecuencia": 6,        # F: corridas por semana, promedio de estas semanas

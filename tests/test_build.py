@@ -1065,7 +1065,11 @@ def test_plan_visible_sin_actividades_no_filtra_el_ritmo():
         {"n": 2, "block": 1, "kind": "carga", "sessions": [{"id": "a", "minutes": 30, "km_est": 4.0}], "plan_min": 30, "plan_km": 4.0}]}
     con, sin = semanal.plan_visible(plan, True), semanal.plan_visible(plan, False)
     assert con["semanas"][0]["plan_km"] == 4.0 and con["semanas"][0]["sessions"][0]["km_est"] == 4.0
-    assert all("plan_km" not in w and all("km_est" not in s for s in w["sessions"]) for w in sin["semanas"])
+    plan["nivel"] = "base"
+    sin = semanal.plan_visible(plan, False)
+    assert all(w["plan_km"] == 4.0 and w["sessions"][0]["km_est"] == 4.0 for w in sin["semanas"])   # 30 min a 7.5 = 4.0, no el 4.0 «real»
+    plan["semanas"][0].update(plan_km=9.9, sessions=[{"id": "a", "minutes": 30, "km_est": 9.9}])    # un ritmo real distinto no se cuela
+    assert semanal.plan_visible(plan, False)["semanas"][0]["plan_km"] == 4.0
     assert sin["semanas"][0]["sessions"][0]["minutes"] == 30   # los minutos siguen
 
 
@@ -1081,3 +1085,29 @@ def test_build_trae_km_estimados_en_semanas_futuras_y_periodos_del_plan():
     assert fut and all("plan_km" in w and all("km_est" in s for s in w["sessions"]) for w in fut)
     import validar
     assert validar.problemas(out) == []
+
+
+def test_ritmo_facil_principiante_trote_camina_y_ritmo_por_nivel():
+    import semanal
+    from datetime import date
+    from nivel import RITMO_NIVEL
+    hoy = date(2026, 11, 25)
+    filas = _filas_ritmo(hoy, [12, 13.5, 15], km=1.0)   # 12–15 min/km, 1 km
+    filas[0]["minutos"] = 12
+    assert semanal.ritmo_facil(filas, hoy) == 13.5
+    assert semanal.ritmo_facil(_filas_ritmo(hoy, [10, 11, 12], km=0.6), hoy) == 11   # corridas cortas también cuentan
+    assert semanal.ritmo_o_nivel(None, "empezando") == RITMO_NIVEL["empezando"] and semanal.ritmo_o_nivel(8.0, "base") == 8.0
+    assert RITMO_NIVEL["empezando"] > RITMO_NIVEL["base"] > RITMO_NIVEL["corredor"]
+
+
+def test_perfil_sin_actividades_km_del_nivel_y_el_js_pinta_km_est():
+    import semanal
+    plan = {"nivel": "empezando", "largo": 1, "semanas": [
+        {"n": 1, "block": 1, "kind": "carga", "plan_min": 45, "plan_km": 3.5,
+         "sessions": [{"id": "a", "minutes": 15, "km_est": 2.5}]}]}   # 2.5 y 3.5 = ritmo real de 6 min/km
+    v = semanal.plan_visible(plan, False)["semanas"][0]
+    assert v["plan_km"] == 5.0 and v["sessions"][0]["km_est"] == 1.5   # 45/9 y 15/9 (a 0.5): nada del ritmo real
+    assert semanal.plan_visible(plan, True)["semanas"][0]["plan_km"] == 3.5
+    from pathlib import Path
+    js = (Path(__file__).resolve().parent.parent / "site" / "vistas.js").read_text()
+    assert "km_est" in js and "pintarSesiones();" in js and "tarjetaPlan(p.plan" in js   # el perfil usa la tarjeta compartida y la pinta al nacer

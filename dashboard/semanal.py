@@ -1,7 +1,9 @@
 """Ajuste semanal de los planes v6 (§3.8): la semana en curso se recalcula con lo que de verdad se corrió la anterior.
 Función pura sobre (plan, datos, config, hoy); la usa `build` para que Hoy y Plan lo muestren. Determinista: solo depende de las
 actividades (que ya entran a la huella de la caché de la web) y de la fecha. Los planes del motor viejo salen igual."""
+import sys
 from datetime import date, timedelta
+from pathlib import Path
 
 import metrics as m
 from i18n import tt
@@ -87,15 +89,22 @@ def volumen(resumen: dict, unidad: str = "min"):
 
 
 RITMO_SEMANAS, RITMO_MIN_CORRIDAS = 6, 3   # ventana de corridas reales y mínimo para fiarse del ritmo
-RITMO_LIMITES = (4.0, 13.0)                # min/km creíbles de trote o trote-caminata; fuera de esto se ignora la corrida
+RITMO_LIMITES = (4.0, 16.0)                # min/km creíbles de trote o trote-caminata (amplio: el principiante va a 9–15); fuera se ignora
+RITMO_MIN_CORRIDA = (0.5, 5)               # km y minutos mínimos para que una corrida cuente
+
+
+_PLAN = str(Path(__file__).resolve().parent.parent / "plan")
+if _PLAN not in sys.path:
+    sys.path.insert(0, _PLAN)
+from nivel import RITMO_NIVEL  # noqa: E402  (ritmo genérico por nivel, junto a PISO_NIVEL)
 
 
 def ritmo_facil(filas: list, hoy: date, semanas: int = RITMO_SEMANAS):
-    """Ritmo fácil reciente en min/km: mediana de las corridas reales (no carreras, mínimo 1 km y 10 min) de las últimas
+    """Ritmo fácil reciente en min/km: mediana de las corridas reales (no carreras, mínimo 0.5 km y 5 min; cuentan también las de trote-caminata) de las últimas
     `semanas` semanas, descartando ritmos fuera de RITMO_LIMITES. None si hay menos de RITMO_MIN_CORRIDAS (sin datos)."""
     ritmos = []
     for f in m.periodo_filas(filas, hoy, semanas):
-        if f.get("carrera") or (f.get("km") or 0) < 1 or (f.get("minutos") or 0) < 10:
+        if f.get("carrera") or (f.get("km") or 0) < RITMO_MIN_CORRIDA[0] or (f.get("minutos") or 0) < RITMO_MIN_CORRIDA[1]:
             continue
         r = f["minutos"] / f["km"]
         if RITMO_LIMITES[0] <= r <= RITMO_LIMITES[1]:
@@ -105,6 +114,11 @@ def ritmo_facil(filas: list, hoy: date, semanas: int = RITMO_SEMANAS):
     ritmos.sort()
     k = len(ritmos)
     return ritmos[k // 2] if k % 2 else (ritmos[k // 2 - 1] + ritmos[k // 2]) / 2
+
+
+def ritmo_o_nivel(ritmo, nivel):
+    """El ritmo para estimar km: el personal si lo hay; si no, el genérico del nivel (RITMO_NIVEL). Sin nivel conocido, el de Base."""
+    return ritmo or RITMO_NIVEL.get(nivel) or RITMO_NIVEL["base"]
 
 
 def volumen_plan(minutos, unidad: str = "min", ritmo=None):
@@ -222,8 +236,13 @@ def plan_visible(plan: dict, con_actividades: bool) -> dict | None:
                 x["marcas"] = marcas
         if con_actividades:
             x.update({k: w[k] for k in SEMANA_AVANCE if k in w})
-        else:   # el km estimado delata el ritmo real: sin actividades, la página muestra minutos
-            x["sessions"] = [{k: v for k, v in ses.items() if k != "km_est"} for ses in x.get("sessions", [])]
+        else:   # el km estimado con el ritmo real lo delata: sin actividades se recalcula con el ritmo genérico del nivel
+            ritmo = ritmo_o_nivel(None, plan.get("nivel"))
+            if "plan_km" in w or any("km_est" in ses for ses in x.get("sessions", [])):
+                x["plan_km"] = volumen_plan(x.get("plan_min"), "km", ritmo)
+            x["sessions"] = [{**{k: v for k, v in ses.items() if k != "km_est"},
+                              **({"km_est": volumen_plan(ses.get("minutes"), "km", ritmo)} if "km_est" in ses else {})}
+                             for ses in x.get("sessions", [])]
         out["semanas"].append(x)
     if con_actividades:
         if plan.get("faltan"):

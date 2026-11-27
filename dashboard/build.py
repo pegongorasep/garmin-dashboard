@@ -226,6 +226,7 @@ def detalle_marcas(w: dict, ini: date | None, config: dict, marcas: list) -> dic
 
 
 def semanas_plan(plan: dict, zonas: list, hoy: date, semanas_hoy: list, config: dict, ritmo=None) -> list:
+    ritmo = semanal.ritmo_o_nivel(ritmo, (plan.get("meta") or {}).get("nivel"))
     """Las semanas del plan para el Plan: `etiqueta` (carga/descarga), `marca` (evento del ícono) y `progreso`
     {hechas, total} de las pasadas y la actual (lo que dice estado_sesiones; las futuras no traen la clave) y `cumplimiento`
     (solo las pasadas: completa, casi o baja) y `estados` [{id, estado, ajustada}] de cada sesión (pasadas: hecha/incompleta/no_hecha;
@@ -258,7 +259,7 @@ def semanas_plan(plan: dict, zonas: list, hoy: date, semanas_hoy: list, config: 
         if "estados" not in cw and (ini is None or ini > monday(hoy)):
             cw["estados"] = [{"id": s["id"], "estado": "pendiente", "ajustada": False} for s in w["sessions"]]   # futura
         cw["plan_min"] = semanal.minutos_plan(w)   # el objetivo del plan solo existe en minutos
-        if ini is None or ini >= monday(hoy):   # km estimados (minutos ÷ ritmo fácil) de la semana actual y las futuras; None sin ritmo
+        if ini is None or ini >= monday(hoy):   # km estimados (minutos ÷ ritmo fácil, o el del nivel) de la semana actual y las futuras
             cw["plan_km"] = semanal.volumen_plan(cw["plan_min"], "km", ritmo) if ini is None or ini > monday(hoy) else None
             for ses in cw["sessions"]:
                 ses["km_est"] = semanal.volumen_plan(ses.get("minutes"), "km", ritmo)
