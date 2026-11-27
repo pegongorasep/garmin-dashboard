@@ -147,3 +147,25 @@ setTimeout(() => {{
     out = json.loads(r.stdout.split('<pre id="salida">')[1].split("</pre>")[0].replace("&quot;", '"'))
     assert not out["flota"] and out["sync"] and out["vuelve"] and out["mueve"] == 0, out
     assert set(out["enc"].values()) == {out["enc0"]} and set(out["act"].values()) == {out["act0"]}, out
+
+
+def _accion_sync(ui, viva=False):
+    """Corre accionSync de site/vistas.js en node con h/T/window de mentiras; devuelve lo que pinta."""
+    src = (SITE / "vistas.js").read_text()
+    i = src.index("function accionSync(u)")
+    fn = src[i:src.index("\n}\n", i) + 3]
+    js = ("const h=(t,a,x)=>({t,a,x}); const T=k=>k; const location={href:'/'}; let llamado=null;\n"
+          f"const window={{Franja:{{viva:()=>{str(viva).lower()},empezar:t=>{{llamado=t}}}}}};\n{fn}\n"
+          f"const r=accionSync({json.dumps(ui)}); if(r&&r.a.onclick)r.a.onclick();\n"
+          "console.log(JSON.stringify({r:r&&{t:r.t,id:r.a.id,href:r.a.href,disabled:r.a.disabled},llamado,href:location.href}));")
+    return json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout)
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="sin node")
+def test_encabezado_accion_sync():
+    sin = _accion_sync({"acciones_url": "https://g/x", "sync": {"puede": False, "url_autorizar": None}})
+    assert sin["r"]["id"] == "acciones-link" and sin["llamado"] is None
+    puede = _accion_sync({"acciones_url": "https://g/x", "sync": {"puede": True, "url_autorizar": None}})
+    assert puede["r"]["id"] == "sync-btn" and puede["llamado"] == "normal" and puede["href"] == "/"
+    auto = _accion_sync({"acciones_url": "https://g/x", "sync": {"puede": False, "url_autorizar": "/conectar/github?para=conectado"}})
+    assert auto["r"]["id"] == "sync-btn" and auto["llamado"] is None and auto["href"] == "/conectar/github?para=conectado"

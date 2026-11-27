@@ -1215,15 +1215,24 @@ function ponerMenu(abrir, foco = true) {
   } else if (foco && btn) btn.focus();
 }
 
+/** Ranura de sincronizar del encabezado. Con la GitHub App encendida (ui.sync trae `puede` o `url_autorizar`) siempre es el botón «Sincronizar»
+ *  (con `puede` sincroniza; sin él lleva a autorizar la app una vez); apagada, la liga «jalar datos» de siempre. */
+function accionSync(u) {
+  const sy = u.sync || {};
+  if (sy.puede || sy.url_autorizar) {
+    const viva = !!(window.Franja && window.Franja.viva());
+    return h("button", { id: "sync-btn", class: "enlace-boton", type: "button", disabled: sy.puede && viva,
+      onclick: () => { if (sy.puede) { if (window.Franja) window.Franja.empezar("normal"); } else location.href = sy.url_autorizar; } }, T("sitio.sync.boton"));
+  }
+  return u.acciones_url ? h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener", title: T("sitio.enc.acciones_tip") }, T("sitio.enc.jalar")) : null;
+}
+
 /** Encabezado del sistema: logo y título, «Actualizado hace…» (con la liga a Garmin si existe), ayuda, tema y, en la web, el ☰. */
 function pintarEncabezado() {
   const u = ui(), items = u.menu || [];
   if (u.titulo) document.title = `Garmin · ${u.titulo}`;
   const act = h("span", { id: "actualizado", "aria-live": "polite" });
-  const sy = u.sync || {};   // solo en la web: botón «Sincronizar» solo con `puede`; si no, EXACTAMENTE la liga de siempre
-  const viva = !!(window.Franja && window.Franja.viva());
-  const jalar = sy.puede ? h("button", { id: "sync-btn", class: "enlace-boton", type: "button", disabled: viva, onclick: () => window.Franja && window.Franja.empezar("normal") }, T("sitio.sync.boton"))
-    : u.acciones_url ? h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener", title: T("sitio.enc.acciones_tip") }, T("sitio.enc.jalar")) : null;
+  const jalar = accionSync(u);
   const enc = DS.encabezado({ nombre: u.titulo || T("sitio.titulo_defecto"), tema: temaActual() === "light" ? "claro" : "oscuro", conAyuda: !!(datos && (datos.ayuda || []).length),
     conMenu: items.length > 0, menuAbierto, actualizado: [act, ...(jalar ? [" · ", jalar] : [])],
     onAyuda: () => { location.hash = "#ayuda"; }, onTema: cambiarTema, onMenu: () => ponerMenu(!menuAbierto) });
