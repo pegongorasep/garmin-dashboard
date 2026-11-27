@@ -354,6 +354,7 @@ def test_regla_de_oro_por_el_tubo(ctx):
     esp = build.build(build.load_data(ROOT), build.load_plan(ROOT), {**cfg, "modo": "web", "menu": calculo.MENU, "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT)), "idioma": "es", "plan_url": calculo.PLAN_URL, "cuerpo_nuevo": "/cuerpo/nuevo",
                       "acciones_url": "https://github.com/amigo/garmin-prueba/actions/workflows/deploy.yml"}, local)
     web["ui"].pop("repo_estado")   # depende de la hora de la última subida; se prueba aparte
+    web["ui"].pop("primer_inicio")   # solo la web (E3); se prueba en test_web_primer_inicio
     assert json.dumps(web, sort_keys=True) == json.dumps(esp, sort_keys=True)
     assert validar.problemas(web) == []
 

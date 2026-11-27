@@ -674,6 +674,49 @@ function avisoMigrar() {
     accion: { texto: T("sitio.migrar.autorizar"), onclick: () => { dialogoAutorizar(s.url_autorizar || "/conectar/github?para=conectado"); } } });
 }
 
+/** Primer inicio (lo decide Python: ui.primer_inicio = {garmin, registrar, pasos}). La tarjeta de Garmin se cierra colapsando su ranura
+ *  (la altura baja suave, nada salta); «+ Registrar actividad» no se va nunca; cada primer paso se va solo al cumplirse. Sin la clave, nada. */
+function primerInicio() {
+  const pi = ui().primer_inicio;
+  if (!pi) return [];
+  const app = $("app"), csrf = app.dataset.csrf || "";
+  let ocultos = {};
+  try { ocultos = JSON.parse(app.dataset.avisosOcultos || "{}"); } catch (e) { /* sin mapa: nada oculto */ }
+  const out = [];
+  const g = pi.garmin;
+  if (g && !ocultos.garmin) {
+    const msg = h("p", { class: "pi-msg nota", role: "status" }, "\u00a0");   // ranura reservada: el resultado de «Mandarme la liga» no empuja nada
+    const ranura = h("div", { class: "pi-ranura ancha" });
+    const post = (url, extra = {}) => fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ csrf, ...extra }) });
+    const mandar = async () => {
+      let clave = "liga_error";
+      try { const r = await post(g.liga); if (r.ok) clave = /liga=limite/.test(r.url) ? "liga_limite" : "liga_ok"; } catch (e) { /* queda el error */ }
+      msg.textContent = T(`sitio.pi.${clave}`);
+    };
+    const quitar = async () => {
+      try { const r = await post(g.ocultar, { id: "garmin", huella: "0" }); if (!r.ok) return; } catch (e) { return; }
+      app.dataset.avisosOcultos = JSON.stringify({ ...ocultos, garmin: "0" });
+      ranura.classList.add("cerrada");
+      setTimeout(() => ranura.remove(), 400);
+    };
+    ranura.append(h("div", { class: "pi-colapsa" }, DS.tarjeta({ titulo: T("sitio.pi.garmin_t"), clase: "pi-garmin" },
+      h("p", {}, T("sitio.pi.garmin_x")),
+      h("div", { class: "pi-acciones" },
+        DS.boton(T("sitio.pi.conectar"), { href: g.conectar }),
+        csrf ? DS.boton(T("sitio.pi.liga"), { variante: "sec", onclick: mandar }) : null,
+        csrf ? DS.boton(T("sitio.pi.sin_garmin"), { variante: "texto", onclick: quitar }) : null),
+      csrf ? msg : null)));
+    out.push(ranura);
+  }
+  if (pi.registrar) out.push(h("div", { class: "pi-registrar ancha" }, DS.boton(T("sitio.pi.registrar"), { variante: "sec", href: pi.registrar })));
+  if ((pi.pasos || []).length) {
+    out.push(DS.tarjeta({ titulo: T("sitio.pi.pasos_t"), clase: "ancha pi-pasos" },
+      h("div", { class: "pi-lista" }, pi.pasos.map((p) => h("a", { class: "pi-paso", href: p.url }, T(`sitio.pi.paso_${p.id}`), h("span", { "aria-hidden": "true" }, "\u203a"))))));
+  }
+  return out;
+}
+
 function renderHoySinPlan(d) {
   const sl = d.semana_libre || {};
   const dif = (v, prom, unidad) => (prom ? [[T("sitio.sl.vs", { p: fmt(prom, 0), u: unidad }), "neutro"]] : [[T("sitio.sl.sin_prom"), "neutro"]]);
@@ -686,6 +729,7 @@ function renderHoySinPlan(d) {
   const racha = sl.racha_semanas || 0;
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
+    ...primerInicio(),
     avisoKeyRechazada(),
     avisoMigrar(),
     DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
@@ -711,6 +755,7 @@ function renderHoy(d) {
   if (semIdx === null) semIdx = Math.min(Math.max((d.semana_hoy_idx ?? 0) + semInicial, 0), Math.max(sems.length - 1, 0));
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
+    ...primerInicio(),
     avisoKeyRechazada(),
     avisoMigrar(),
     d.hoy.semaforo.repetir_semana

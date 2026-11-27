@@ -13,7 +13,7 @@ import i18n
 import validar
 from ajustes import normalizar_config
 
-from . import cambios, datos, manual, plan_vivo, tubo
+from . import cambios, datos, manual, plan_vivo, primer_inicio, tubo
 from .modelos import ActividadManual, Ajustes, CacheData, DatoGarmin, InBody, MiembroGrupo, Plan, Usuario, ahora
 
 log = logging.getLogger("web.calculo")
@@ -176,7 +176,7 @@ def contar_grupos(db: Session, usuario: Usuario, pref: str = "") -> int:
 
 
 def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, pref: str = "", idioma: str | None = None,
-             sync: dict | None = None) -> dict:
+             sync: dict | None = None, editable: bool = True) -> dict:
     """data.json de la persona (con el aviso de repo atrasado, que no se guarda en la caché porque depende de la hora).
     Truena con SinConfig o DataInvalido."""
     base = _calcular_cacheado(db, usuario, ahora_utc, idioma)
@@ -186,7 +186,7 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     # `coach`: solo cuando un coach ve a su atleta, con el mismo nombre que le muestra su página de atletas (nada más).
     coach = {"nombre": usuario.apodo or usuario.correo, "volver": "/coach"} if pref else None
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
-                             "grupos": n_grupos, "coach": coach,
+                             "grupos": n_grupos, "coach": coach, "primer_inicio": primer_inicio.de(db, usuario, pref, editable),
                              **({"sync": sync} if sync is not None and not pref else {})}}
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)

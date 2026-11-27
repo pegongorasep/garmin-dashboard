@@ -69,10 +69,9 @@ COOKIE_GUIA = "guia_paso"
 
 
 def guia_activa(settings, u: Usuario, e: dict) -> bool:
-    """La guía nueva (GitHub App) aplica con la app encendida, aviso aceptado y sin datos ni plan aún.
+    """La guía nueva (GitHub App) aplica con la app encendida, aviso aceptado y sin datos aún (tenga plan o no).
     Quien ya vinculó su copia por el camino viejo (sin instalación) sigue con la guía de siempre."""
-    return bool(settings.app_github and e["consentimiento"] and not e["ajustes"]
-                and not e["datos"] and (not e["vinculado"] or u.gh_instalacion))
+    return bool(settings.app_github and e["consentimiento"] and not e["datos"] and (not e["vinculado"] or u.gh_instalacion))
 
 
 def guia_paso_maximo(u: Usuario) -> int:

@@ -57,6 +57,7 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
         assert "serie" not in json.dumps(web)
     # diferencias permitidas: ui.menu (lista de la web), ui.repo_estado (None si no hay repo) y los textos de /ajustar
     assert web["ui"].pop("repo_estado") is None
+    web["ui"].pop("primer_inicio")   # solo la web (E3); se prueba en test_web_primer_inicio
     esp = norm(esperado(modo_web=True))
     assert norm(web) == esp
     pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)

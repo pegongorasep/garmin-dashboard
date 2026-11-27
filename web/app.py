@@ -324,7 +324,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         try:
             salida = calculo.calcular(db, atleta, app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None), pref,
                                       request.state.idioma,
-                                      sync=sync_web.sync_ui(settings, atleta) if atleta.id == getattr(usuario, 'id', None) else None)
+                                      sync=sync_web.sync_ui(settings, atleta) if atleta.id == getattr(usuario, 'id', None) else None,
+                                      editable=puede_editar(db, usuario, atleta_id))
             return JSONResponse({**salida, "idioma": request.state.idioma})   # el sitio se pinta en el idioma de quien lo ve
         except calculo.SinConfig:
             raise HTTPException(404)
