@@ -98,3 +98,6 @@ details.sim-sem.falla > summary { background: var(--bad-bg); }
 .guia-barra { background: var(--surface); border-radius: 0.25em; overflow: hidden; }
 .guia-barra-r { height: 100%; width: 0; background: var(--accent); transition: width .4s; }
 .guia-estado-b { min-height: 2.2em; }
+
+/* Dibujos simplificados de GitHub (guía): alto fijo, colores del diseño */
+.dibujo-gh { display: block; width: 100%; max-width: 420px; height: 240px; margin-block: var(--space-16); font-family: var(--font-sans); }

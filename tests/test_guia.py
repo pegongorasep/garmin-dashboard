@@ -164,3 +164,23 @@ def test_sin_subida_buena_no_esta_completo(ctx, gh):
         u = db.get(Usuario, uid)
         assert not onboarding.completo(db, u)
         assert cl.get("/", follow_redirects=False).status_code in (302, 303, 307)
+
+
+def test_dibujos_de_github_en_pantallas_2_3_4(ctx, gh):
+    import re
+    from pathlib import Path
+    cl, uid = sesion(ctx)
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        u.uso, u.sin_plan = "completo", True
+        db.commit()
+    for n, clave in ((2, "Create repository"), (3, "Install &amp; Authorize")):
+        r = cl.get(f"/bienvenida?paso={n}")
+        assert 'class="dibujo-gh"' in r.text and 'role="img"' in r.text and clave in r.text, n
+    volver(cl, empezar(cl))
+    r = cl.get("/bienvenida")
+    assert 'class="dibujo-gh"' in r.text and "New secret" in r.text
+    for n in (2, 3, 4):
+        src = Path(f"web/plantillas/_dibujo_paso{n}.html").read_text()
+        assert not re.search(r"#[0-9a-fA-F]{3,8}\b", src) and "rgb(" not in src, n
+        assert 'aria-label="' in src and "var(--" in src
