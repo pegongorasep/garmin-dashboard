@@ -1,4 +1,4 @@
-// Registra el service worker y avisa cuando hay una versión nueva esperando (sin recargar solo). Lo cargan las páginas de la web y el sitio.
+// Registra el service worker y, si sale una versión nueva con la app ya abierta, la ofrece (sin recargar solo). Lo cargan las páginas de la web y el sitio.
 (function () {
   // Selector de idioma del pie: al cambiar envía el mismo formulario (sin JS queda el botón del <noscript>).
   document.addEventListener("change", (e) => {
@@ -45,6 +45,14 @@
     si.focus();   // showModal ya atrapa el foco dentro del diálogo
   }
 
+  // Recién abierta o refrescada, la página ya trae lo último (el service worker pide primero a la red): la versión nueva se
+  // activa en silencio. Solo a la app que ya estaba abierta y a la que se regresa se le ofrece actualizar.
+  let volvio = false;
+  function llego(worker) {
+    if (volvio) return ofrecer(worker);
+    try { worker.postMessage("SKIP_WAITING"); } catch (_) {}
+  }
+
   // Solo recarga si la persona pidió actualizar (así la primera instalación, que también "toma el control", no recarga) y una sola vez.
   function recargar() {
     if (!pidio || recargando) return;
@@ -56,14 +64,13 @@
   navigator.serviceWorker.register("/sw.js").then((reg) => {
     registro = reg;
     const hayPrevio = () => !!navigator.serviceWorker.controller;   // sin controlador previo = primera instalación: no se avisa nada
-    if (reg.waiting && hayPrevio()) ofrecer(reg.waiting);
+    if (reg.waiting && hayPrevio()) llego(reg.waiting);
     reg.addEventListener("updatefound", () => {
       const nuevo = reg.installing;
       if (!nuevo) return;
-      nuevo.addEventListener("statechange", () => { if (nuevo.state === "installed" && hayPrevio()) ofrecer(nuevo);   // con el diálogo abierto no duplica; el clic usa siempre reg.waiting, o sea el más nuevo
-       });
+      nuevo.addEventListener("statechange", () => { if (nuevo.state === "installed" && hayPrevio()) llego(nuevo); });
     });
     // iOS casi nunca revisa solo: al volver a la app, preguntar.
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) { volvio = true; reg.update().catch(() => {}); } });
   }).catch(() => {});
 })();

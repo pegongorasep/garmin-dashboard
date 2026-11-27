@@ -44,6 +44,16 @@ def test_sw_espera_y_la_pagina_avisa(web_ctx):
         assert clave in js.text, clave
 
 
+def test_refrescar_trae_lo_ultimo_sin_aviso(web_ctx):
+    """El código va primero a la red; la versión que llega al abrir o refrescar se activa en silencio y solo se ofrece al regresar."""
+    cl = web_ctx.cliente()
+    sw, js = cl.get("/sw.js").text, cl.get("/actualizar.js").text
+    assert "const FIJOS = /^\\/(fuentes\\/|icono-)/;" in sw
+    assert sw.count("hit || fetch(r)") == 1   # copia primero solo en lo fijo
+    assert "if (volvio) return ofrecer(worker);" in js and "volvio = true" in js
+    assert js.count("llego(") == 3 and js.count("ofrecer(") == 2   # todo lo que llega pasa por llego()
+
+
 def test_sw_no_guarda_las_respuestas_de_grupos():
     """/api/grupos lleva datos de otras personas: el service worker solo deja pasar a la red (PROHIBIDO) y nunca lo lista como estático."""
     import re
