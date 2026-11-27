@@ -9,7 +9,7 @@ from sqlalchemy import select
 from . import ROOT, auth, cambios, importar, tubo
 from .config import desde_entorno
 from .db import crear_motor, crear_sesiones
-from .modelos import Ajustes, CacheData, Cambio, Usuario
+from .modelos import Ajustes, CacheData, Cambio, Plan, Usuario
 
 
 def main(argv=None, settings=None, motor=None) -> int:
@@ -32,7 +32,7 @@ def main(argv=None, settings=None, motor=None) -> int:
     p.add_argument("cambio_id", type=int)
     p = sub.add_parser("cargar-plan-viejo", help="reemplaza el plan de la cuenta por el plan viejo (plan.json) convertido al formato v6")
     p.add_argument("correo")
-    p.add_argument("--archivo", default=None, help="por defecto plan/plan.json (o plan/plan_viejo.json en la imagen)")
+    p.add_argument("--archivo", default=None, help="plan viejo en un archivo local (solo en tu compu); por defecto se busca en el historial de la cuenta")
     p.add_argument("--nivel", default="base", help="nivel v6 de la conversión (supuesto: base)")
     p.add_argument("--carrera", default="2027-01-10", help="fecha de la carrera de 10 km (meta con fecha; no cambia las sesiones)")
     p.add_argument("--km", type=int, default=10)
@@ -85,18 +85,43 @@ def main(argv=None, settings=None, motor=None) -> int:
         db.close()
 
 
+def _es_plan_viejo(p) -> bool:
+    return isinstance(p, dict) and bool(p.get("weeks")) and bool(p.get("start")) and (p.get("meta") or {}).get("motor") != "v6"
+
+
+def _buscar_plan_viejo(db, u, archivo=None):
+    """(plan viejo, de dónde salió). Con --archivo lee ese archivo; si no, busca en la base: el plan actual y luego el historial
+    de cambios (`antes`/`despues`, más nuevos primero). Así el plan personal no viaja en la imagen."""
+    if archivo:
+        return json.loads(Path(archivo).read_text()), f"archivo {archivo}"
+    fila = db.get(Plan, u.id)
+    if fila is not None and _es_plan_viejo(fila.plan):
+        return fila.plan, "el plan actual de la cuenta"
+    for c in db.scalars(select(Cambio).where(Cambio.atleta_id == u.id).order_by(Cambio.id.desc())):
+        for lado, dato in (("antes", c.antes), ("despues", c.despues)):
+            for cand in (dato, dato.get("plan") if isinstance(dato, dict) else None):
+                if _es_plan_viejo(cand):
+                    return cand, f"historial de la cuenta (cambio #{c.id}, «{lado}»)"
+    return None, ""
+
+
 def _cargar_plan_viejo(db, args) -> int:
     import convertir_viejo as cv   # web/__init__ puso plan/ en sys.path
     u = auth.buscar_por_correo(db, args.correo)
     if u is None:
         print(f"No hay cuenta con {args.correo}", file=sys.stderr)
         return 1
-    ruta = Path(args.archivo) if args.archivo else next((p for p in (ROOT / "plan" / "plan.json", ROOT / "plan" / "plan_viejo.json") if p.exists()), None)
-    if ruta is None or not ruta.exists():
-        print("No encuentro el plan viejo (usa --archivo)", file=sys.stderr)
-        return 1
     try:
-        plan = cv.convertir(json.loads(ruta.read_text()), nivel=args.nivel)
+        viejo, origen = _buscar_plan_viejo(db, u, args.archivo)
+    except (OSError, ValueError) as ex:
+        print(f"No se pudo leer el plan viejo: {ex}", file=sys.stderr)
+        return 1
+    if viejo is None:
+        print("No encuentro un plan viejo (weeks + start, sin meta v6) en el historial de la cuenta; usa --archivo", file=sys.stderr)
+        return 1
+    print(f"Plan viejo tomado de: {origen}")
+    try:
+        plan = cv.convertir(viejo, nivel=args.nivel)
     except (ValueError, KeyError) as ex:
         print(f"No se pudo convertir: {ex}", file=sys.stderr)
         return 1

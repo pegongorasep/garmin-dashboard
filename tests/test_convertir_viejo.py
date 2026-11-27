@@ -56,6 +56,31 @@ def _cuenta(ctx):
     return uid, siete
 
 
+def _con_historial_viejo(ctx, uid, donde="antes"):
+    """Siembra un cambio cuyo `antes` (o `despues`) trae el plan viejo, como si lo hubiera reemplazado un plan v6."""
+    with ctx.sesiones() as db:
+        db.add(Cambio(atleta_id=uid, via="sistema", descripcion="plan v6", antes={"plan": VIEJO} if donde == "antes" else None,
+                      despues={"plan": VIEJO} if donde == "despues" else {"plan": {"x": 1}}))
+        db.commit()
+
+
+@pytest.mark.parametrize("donde", ["antes", "despues"])
+def test_cli_busca_el_plan_viejo_en_el_historial(web_ctx, capsys, donde):
+    uid, siete = _cuenta(web_ctx)
+    _con_historial_viejo(web_ctx, uid, donde)
+    assert cli.main(["cargar-plan-viejo", "pedro@example.com"], web_ctx.settings, web_ctx.motor) == 0
+    out = capsys.readouterr().out
+    assert "tomado de: historial de la cuenta" in out and f"«{donde}»" in out and "12 semanas" in out
+    with web_ctx.sesiones() as db:
+        assert db.get(Plan, uid).plan == siete   # en seco
+
+
+def test_cli_sin_plan_viejo_en_el_historial_avisa(web_ctx, capsys):
+    _cuenta(web_ctx)
+    assert cli.main(["cargar-plan-viejo", "pedro@example.com"], web_ctx.settings, web_ctx.motor) == 1
+    assert "No encuentro un plan viejo" in capsys.readouterr().err
+
+
 def test_cli_en_seco_no_escribe(web_ctx, capsys):
     uid, siete = _cuenta(web_ctx)
     assert cli.main(["cargar-plan-viejo", "pedro@example.com", "--archivo", str(ROOT / "plan" / "plan.json")], web_ctx.settings, web_ctx.motor) == 0
@@ -67,6 +92,7 @@ def test_cli_en_seco_no_escribe(web_ctx, capsys):
 
 def test_cli_si_reemplaza_guarda_el_anterior_y_se_deshace(web_ctx, capsys):
     uid, siete = _cuenta(web_ctx)
+    _con_historial_viejo(web_ctx, uid)
     with web_ctx.sesiones() as db:
         db.add(CacheData(usuario_id=uid, contenido={"x": 1}, huella="h"))
         db.commit()
@@ -76,7 +102,7 @@ def test_cli_si_reemplaza_guarda_el_anterior_y_se_deshace(web_ctx, capsys):
         p = db.get(Plan, uid).plan
         assert len(p["weeks"]) == 12 and p["start"] == "2026-11-09" and motor_v6.es_v6(p)
         assert db.get(CacheData, uid) is None   # caché invalidada
-        c = db.query(Cambio).one()
+        c = db.query(Cambio).order_by(Cambio.id.desc()).first()
         assert c.antes["plan"] == siete   # el plan de 7 semanas queda en el historial
         metas = db.get(Ajustes, uid).config["corrida"]["metas"]
         assert any(m["fecha"] == "2027-01-10" and m["distancia_km"] == 10 for m in metas)
@@ -88,6 +114,7 @@ def test_cli_si_reemplaza_guarda_el_anterior_y_se_deshace(web_ctx, capsys):
 
 def test_round_trip_el_sitio_muestra_las_mismas_semanas(web_ctx):
     uid, _ = _cuenta(web_ctx)
+    _con_historial_viejo(web_ctx, uid)
     cli.main(["cargar-plan-viejo", "pedro@example.com", "--si"], web_ctx.settings, web_ctx.motor)
     with web_ctx.sesiones() as db:
         from web.modelos import Usuario
