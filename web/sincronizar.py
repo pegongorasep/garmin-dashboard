@@ -84,12 +84,23 @@ def avanzar(db: Session, sinc: Sincronizacion, paso: str, hechos: int | None = N
     db.commit()
 
 
+def marcar_key_rechazada(u: Usuario) -> bool:
+    """Marca el incidente (sin commit). True si es nuevo: ahí va el correo, uno por incidente."""
+    nuevo = u.key_rechazada_desde is None
+    u.key_rechazada_desde = ahora()   # si ya había incidente, se renueva: la key cambiada que falló otra vez cuenta como cambio nuevo
+    return nuevo
+
+
 def terminar(db: Session, sinc: Sincronizacion, ok: bool, error: str | None = None, nuevas: int | None = None) -> None:
     sinc.estado = "ok" if ok else "error"
     sinc.error = None if ok else (error or "otra")
     if nuevas is not None:
         sinc.nuevas = nuevas
     sinc.actualizada = sinc.terminada = ahora()
+    if error == "key_rechazada" and not ok:
+        u = db.get(Usuario, sinc.usuario_id)
+        if u is not None:
+            marcar_key_rechazada(u)
     if ok and sinc.tipo in ("comprobacion", "historial"):
         u = db.get(Usuario, sinc.usuario_id)
         if u is not None:

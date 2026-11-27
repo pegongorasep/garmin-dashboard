@@ -435,6 +435,8 @@
 "sitio.int.titulo": "Week intensity",
 "sitio.int.veinte": "· 20 %",
 "sitio.int.zona": "Zone",
+"sitio.key.aviso": "Garmin rejected your key and your data is not updating.",
+"sitio.key.cambiarla": "Change it",
 "sitio.km.cols": "Week,Km",
 "sitio.km.et": "Kilometers per week",
 "sitio.km.nota": "Kilometers per week (Mon–Sun), jogging and walking.",

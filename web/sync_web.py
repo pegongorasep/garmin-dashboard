@@ -123,7 +123,8 @@ def sync_ui(settings, u: Usuario) -> dict | None:
     if not settings.app_github:
         return None
     listo = conexion._gh_listo(u)
-    return {"puede": listo, "url_autorizar": None if listo else URL_APP, "historial_pendiente": bool(u.historial_pendiente)}
+    return {"puede": listo, "url_autorizar": None if listo else URL_APP, "historial_pendiente": bool(u.historial_pendiente),
+            "key_rechazada": u.key_rechazada_desde is not None}
 
 
 def _historial_fallido(db: Session, u: Usuario) -> Sincronizacion | None:

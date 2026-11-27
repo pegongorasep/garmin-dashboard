@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 import i18n
 from ajustes import ConfigError
 
-from . import ROOT, admin, aprende, ajustes_web, auth, calculo, coach, conexion, correo, cuenta, feed, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, sync_web, tubo
+from . import ROOT, admin, aprende, ajustes_web, auth, calculo, coach, conexion, correo, cuenta, feed, garmin_key, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, sync_web, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -254,6 +254,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     google.montar(app, get_db, actual, render, settings, poner_sesion)
     conexion.montar(app, get_db, actual, render, settings, formulario)
     sync_web.montar(app, get_db, actual, settings, formulario)
+    garmin_key.montar(app, get_db, actual, render, settings, formulario)
     mcp_servidor.montar(app, settings)
 
     @app.get("/instalar")

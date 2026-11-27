@@ -39,6 +39,7 @@ class Usuario(Base):
     juntos_visto: Mapped[datetime | None] = mapped_column()           # Social S4: la última vez que abrió Juntos (para el punto de «nuevo»); None = nunca
     gh_instalacion: Mapped[int | None] = mapped_column(sa.BigInteger)   # Conexión: id de la instalación de la GitHub App; None = no conectado así
     historial_pendiente: Mapped[bool] = mapped_column(default=False, server_default=sa.false())   # Conexión: la comprobación salió bien y falta bajar el historial
+    key_rechazada_desde: Mapped[datetime | None] = mapped_column()   # Conexión C11: Garmin rechazó la key desde este momento (None = bien); una subida buena lo limpia
     borrado: Mapped[datetime | None] = mapped_column()
 
 

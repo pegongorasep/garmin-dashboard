@@ -435,6 +435,8 @@
 "sitio.int.titulo": "Intensidad de la semana",
 "sitio.int.veinte": "· 20 %",
 "sitio.int.zona": "Zona",
+"sitio.key.aviso": "Garmin rechazó tu key y tus datos no se están actualizando.",
+"sitio.key.cambiarla": "Cambiarla",
 "sitio.km.cols": "Semana,Km",
 "sitio.km.et": "Kilómetros por semana",
 "sitio.km.nota": "Kilómetros por semana (lun–dom), trote y caminata.",

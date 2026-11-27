@@ -197,6 +197,17 @@ def sinc_del_run(db: Session, u: Usuario, claims: dict):
     return vivas[0] if vivas else None
 
 
+def avisar_key_rechazada(enviar, settings, u: Usuario) -> None:
+    """Correo único del incidente «Garmin rechazó tu key» (con liga a /garmin/key). Nunca tumba la petición."""
+    import i18n
+    idioma = u.idioma or "es"
+    try:
+        enviar(settings, u.correo, i18n.t("conexion.key_asunto", idioma),
+               i18n.t("conexion.key_texto", idioma, liga=settings.base_url.rstrip("/") + "/garmin/key"))
+    except Exception:   # noqa: BLE001
+        log.warning("no se mandó el correo de key rechazada a %s", u.id, exc_info=True)
+
+
 def instrucciones_v2(db: Session, u: Usuario, claims: dict) -> dict:
     """Instrucciones del motor nuevo: según la sincronización viva (o una nueva), con rangos por tipo."""
     from . import sincronizar
@@ -328,10 +339,18 @@ def montar(app, get_db, settings) -> None:
         except TuboError as e:
             return error(e)
         sinc = sinc_del_run(db, u, request.state.claims)
+        nuevo_incidente = False
+        if err == "key_rechazada":
+            nuevo_incidente = u.key_rechazada_desde is None   # uno por incidente, haya o no sincronización
         if sinc is not None:
             sincronizar.avanzar(db, sinc, c["paso"], **nums)
             if err:
                 sincronizar.terminar(db, sinc, ok=False, error=err if err in ERRORES else "otra")
+        elif err == "key_rechazada":
+            sincronizar.marcar_key_rechazada(u)
+            db.commit()
+        if nuevo_incidente:
+            avisar_key_rechazada(request.app.state.enviar, settings, u)
         return {"ok": True}
 
     @app.post("/api/tubo/subida")
@@ -364,6 +383,7 @@ def montar(app, get_db, settings) -> None:
         db.commit()   # el paquete queda guardado antes de importar (un rollback ahí no debe tirarlo)
         _importar_personales(db, u, pq.get("personales"))
         db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=True))
+        u.key_rechazada_desde = None   # una subida buena: la key vuelve a servir
         u.historial_desde = None   # el pedido pendiente se cumplió con esta subida
         db.commit()
         _cerrar_sinc(db, u, request, True, (cuentas.get("actividad") or {}).get("nuevos"))

@@ -22,7 +22,7 @@ def test_ui_sync_por_defecto_en_build():
     from ajustes import cargar_config
     cfg = cargar_config(None) if callable(cargar_config) else {}
     ui = build.build_ui(cfg, {"weeks": []}, [])
-    assert ui["sync"] == {"puede": False, "url_autorizar": None, "historial_pendiente": False}
+    assert ui["sync"] == {"puede": False, "url_autorizar": None, "historial_pendiente": False, "key_rechazada": False}
 
 
 def test_sync_ui_sin_app_deja_el_default(ctx):
@@ -38,7 +38,7 @@ def test_sync_ui_con_app(ctx, gh):
         u = db.get(Usuario, uid)
         u.historial_pendiente = True
         db.commit()
-        assert sync_web.sync_ui(ctx.settings, u) == {"puede": True, "url_autorizar": None, "historial_pendiente": True}
+        assert sync_web.sync_ui(ctx.settings, u) == {"puede": True, "url_autorizar": None, "historial_pendiente": True, "key_rechazada": False}
         u.gh_instalacion = None
         assert sync_web.sync_ui(ctx.settings, u)["url_autorizar"] == "/conectar/github?para=conectado"
 

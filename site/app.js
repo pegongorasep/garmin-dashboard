@@ -659,6 +659,13 @@ function tarjetaCarreraHoy(c) {
 }
 
 /** Sin plan: «tu semana». Python ya calculó todo (`semana_libre`); aquí solo se pinta. */
+/** Aviso fijo (sin «Entendido»): Garmin rechazó la key y hay que cambiarla. Solo en la web (`ui.sync.key_rechazada`). */
+function avisoKeyRechazada() {
+  if (!(ui().sync || {}).key_rechazada) return null;
+  return DS.aviso({ clase: "bad", simbolo: "✕", extra: "ancha", texto: T("sitio.key.aviso"),
+    accion: { texto: T("sitio.key.cambiarla"), onclick: () => { location.href = "/garmin/key"; } } });
+}
+
 function renderHoySinPlan(d) {
   const sl = d.semana_libre || {};
   const dif = (v, prom, unidad) => (prom ? [[T("sitio.sl.vs", { p: fmt(prom, 0), u: unidad }), "neutro"]] : [[T("sitio.sl.sin_prom"), "neutro"]]);
@@ -671,6 +678,7 @@ function renderHoySinPlan(d) {
   const racha = sl.racha_semanas || 0;
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
+    avisoKeyRechazada(),
     DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
       sl.actividades ? DS.tiles({ etiqueta: T("sitio.sl.titulo") },
         DS.tile({ k: T("sitio.sl.minutos"), valor: fmt(sl.minutos, 0), unidad: T("sitio.sl.min"), deltas: dif(sl.minutos, sl.promedio_minutos, T("sitio.sl.min")) }),
@@ -693,6 +701,7 @@ function renderHoy(d) {
   if (semIdx === null) semIdx = Math.min(Math.max((d.semana_hoy_idx ?? 0) + semInicial, 0), Math.max(sems.length - 1, 0));
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
+    avisoKeyRechazada(),
     d.hoy.semaforo.repetir_semana
       ? avisoCerrable("repetir", { clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
       : null,
