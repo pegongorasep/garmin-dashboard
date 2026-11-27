@@ -36,6 +36,7 @@ class Usuario(Base):
     apellido: Mapped[str | None] = mapped_column(sa.String(60))
     compartir_actividades: Mapped[bool] = mapped_column(default=True, server_default=sa.true())   # Social: los grupos ven mis actividades (apagado: solo totales de la semana)
     compartir_plan: Mapped[bool] = mapped_column(default=True, server_default=sa.true())          # Social: los grupos ven mi plan (calendario, etapa, avance)
+    juntos_visto: Mapped[datetime | None] = mapped_column()           # Social S4: la última vez que abrió Juntos (para el punto de «nuevo»); None = nunca
     borrado: Mapped[datetime | None] = mapped_column()
 
 
@@ -88,6 +89,18 @@ class ReaccionActividad(Base):
     de_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
     emoji: Mapped[str] = mapped_column(sa.String(8))
     creada: Mapped[datetime] = mapped_column(default=ahora)
+
+
+class Comentario(Base):
+    """Social S4: comentario de una persona (`autor_id`) en una actividad de otra (`dueno_id`), colgado de la misma clave opaca que
+    las reacciones. Texto plano, ≤ 280 caracteres."""
+    __tablename__ = "comentarios_actividad"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    clave: Mapped[str] = mapped_column(sa.String(32), index=True)
+    dueno_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    autor_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    texto: Mapped[str] = mapped_column(sa.String(280))
+    creado: Mapped[datetime] = mapped_column(default=ahora)
 
 
 class InvitacionGrupo(Base):

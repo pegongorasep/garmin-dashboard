@@ -798,12 +798,45 @@ function feedDetalle(it) {
     z ? p(T("sitio.gr.f.zonas", { bajo: fmt(z.bajo, 0), limbo: fmt(z.limbo, 0), alto: fmt(z.alto, 0) })) : null,
     t ? p(T("sitio.gr.f.trote", { pct: fmt(t.pct_trote, 0), t: fmt(t.trote_min, 0), c: fmt(t.camina_min, 0) })) : null,
     it.partes && it.partes.length > 1 ? p(T("sitio.gr.f.partes", { n: it.partes.length })) : null,
-    h("p", { class: "muted" }, T("sitio.gr.f.visible"))].filter(Boolean);
+  ].filter(Boolean);
+}
+
+/** Comentarios de una actividad (texto plano: el panel los pinta como nodos de texto). Se bajan al abrir la fila la primera vez. */
+function feedPostComentarios(url, campos) {
+  return fetch(url, { method: "POST", headers: { Accept: "application/json" }, body: new URLSearchParams({ csrf: $("app").dataset.csrf || "", ...campos }) })
+    .then(async (r) => {
+      if (r.status === 429) throw new Error(T("sitio.gr.f.com_limite"));
+      if (!r.ok) throw new Error(T("sitio.gr.f.com_err"));
+      return r.json();
+    });
+}
+
+function feedComentarios(it, alCambiar) {
+  let estado = { cargando: true, items: [], listo: false };
+  const aItems = (r) => r.comentarios.map((c) => ({ id: c.id, texto: c.texto, puede_borrar: c.puede_borrar,
+    nombre: c.mia ? T("sitio.gr.f.yo") : c.nombre || T("sitio.gr.f.alguien"), cuando: feedCuando(c.creado.slice(0, 10)) }));
+  const recibir = (r) => { estado = { listo: true, items: aItems(r) }; it.comentarios = r.n; panel.pintar(estado); alCambiar(); };
+  const panel = DS.panelComentarios({ max: 280, ayuda: T("sitio.gr.f.com_ayuda"), etiquetaCaja: T("sitio.gr.f.com_caja"), placeholder: T("sitio.gr.f.com_ph"),
+    enviarTxt: T("sitio.gr.f.com_enviar"), borrarTxt: T("sitio.gr.f.com_borrar"), vacio: T("sitio.gr.f.com_vacio"), cargandoTxt: T("sitio.gr.f.com_cargando"),
+    onEnviar: async (texto) => recibir(await feedPostComentarios("/api/juntos/comentar", { dueno: String(it.usuario_id), clave: it.clave, texto })),
+    onBorrar: async (c) => { try { recibir(await feedPostComentarios("/api/juntos/comentario/borrar", { id: String(c.id) })); } catch (e) { panel.pintar({ ...estado, error: e.message }); } } });
+  panel.cargar = async () => {
+    if (estado.listo) return;
+    panel.pintar({ cargando: true });
+    try { recibir(await grupoGet(`/api/juntos/comentarios?dueno=${it.usuario_id}&clave=${encodeURIComponent(it.clave)}`)); }
+    catch (e) { panel.pintar({ error: T("sitio.gr.f.com_err"), items: [] }); }
+  };
+  panel.pintar(estado);
+  return panel;
 }
 
 function feedFila(it, aviso) {
   const nombre = it.mia ? T("sitio.gr.f.yo") : it.nombre;
   const fila = h("div", { class: "reacciones" });
+  let articulo = null;
+  const panel = feedComentarios(it, () => repintar());
+  const botonCom = () => DS.botonComentarios({ n: it.comentarios || 0, etiqueta: T("sitio.gr.f.com_n", { n: it.comentarios || 0, tipo: it.tipo, nombre }),
+    onclick: () => { const cab = articulo.querySelector(".act-cab"); if (cab.getAttribute("aria-expanded") !== "true") cab.click(); articulo.querySelector(".coments-caja").focus(); } });
   const repintar = (nuevo) => {
     fila.replaceChildren(...[...feedCache.emojis.filter((e) => it.reacciones[e]).map((e) => {
       const r = it.reacciones[e], quienes = r.quienes.join(", ");
@@ -811,7 +844,7 @@ function feedFila(it, aviso) {
         etiqueta: r.mia ? T("sitio.gr.quitar", { emoji: e, quienes }) : T("sitio.gr.ver_quienes", { emoji: e, quienes }),
         onclick: r.mia ? () => enviar(e)
           : () => grupoDialogo(T("sitio.gr.quienes_t", { emoji: e }), [h("p", {}, T("sitio.gr.quienes", { emoji: e })), quienes ? h("p", {}, quienes) : null].filter(Boolean)) });
-    }), it.mia ? null : DS.botonReaccion({ etiqueta: T("sitio.gr.f.reaccionar", { nombre: it.nombre }), onclick: elegir })].filter(Boolean));
+    }), it.mia ? null : DS.botonReaccion({ etiqueta: T("sitio.gr.f.reaccionar", { nombre: it.nombre }), onclick: elegir }), botonCom()].filter(Boolean));
   };
   const enviar = async (emoji) => {
     try {
@@ -827,10 +860,12 @@ function feedFila(it, aviso) {
   repintar();
   const iniciales = it.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
   const resumen = [it.km != null ? T("sitio.km_n", { n: fmt(it.km, 1) }) : null, it.minutos ? T("sitio.min_n", { n: fmt(it.minutos, 0) }) : null].filter(Boolean).join(" · ");
-  return DS.filaActividad({ nombre, foto: it.foto, iniciales, color: it.usuario_id, cuando: feedCuando(it.fecha), emoji: it.emoji, tipo: it.tipo, resumen,
+  articulo = DS.filaActividad({ nombre, foto: it.foto, iniciales, color: it.usuario_id, cuando: feedCuando(it.fecha), emoji: it.emoji, tipo: it.tipo, resumen,
     esfuerzo: textoEsfuerzo(it), sesion: it.sesion ? T("sitio.gr.f.sesion", { sesion: it.sesion.nombre, n: it.sesion.n }) : null,
-    detalle: feedDetalle(it), reacciones: fila, abierto: feedAbiertas.has(it.clave), etiquetaAbrir: T("sitio.gr.f.ver", { tipo: it.tipo, nombre }),
-    onAlternar: (on) => { if (on) feedAbiertas.add(it.clave); else feedAbiertas.delete(it.clave); } });
+    detalle: feedDetalle(it), reacciones: fila, comentarios: panel, abierto: feedAbiertas.has(it.clave), etiquetaAbrir: T("sitio.gr.f.ver", { tipo: it.tipo, nombre }),
+    onAlternar: (on) => { if (on) { feedAbiertas.add(it.clave); panel.cargar(); } else feedAbiertas.delete(it.clave); } });
+  if (feedAbiertas.has(it.clave)) panel.cargar();
+  return articulo;
 }
 
 function pintarFeed(sec, error) {
@@ -897,9 +932,23 @@ async function grupoBajar(id) {
   return { lista, g, gid };
 }
 
+/** Pregunta en silencio si hay novedades (un GET ligero) y enciende o apaga el puntito de la pestaña. */
+function juntosRevisar() {
+  if (!(nGrupos() > 0)) return;
+  grupoGet("/api/juntos/nuevo").then((r) => { juntosNuevo = !!r.nuevo && location.hash.replace(/^#/, "").split("/")[0] !== "juntos"; pintarPuntoJuntos(); }).catch(() => {});
+}
+
+/** Abrir el inicio de Juntos lo marca como visto (POST con CSRF) y apaga el puntito. */
+function juntosVisto() {
+  juntosNuevo = false; pintarPuntoJuntos();
+  fetch("/api/juntos/visto", { method: "POST", headers: { Accept: "application/json" }, body: new URLSearchParams({ csrf: $("app").dataset.csrf || "" }) }).catch(() => {});
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) juntosRevisar(); });
+
 /** Precarga en segundo plano (tras data.json, con al menos un grupo). Los errores se ignoran: al entrar se reintenta. */
 function precargarGrupo() {
   if (!(nGrupos() > 0) || grupoCache.vuelo) return;
+  juntosRevisar();
   grupoCache.vuelo = grupoBajar(null).then(async (r) => {   // y cada grupo, para que al tocarlo salga al instante
     await Promise.all(r.lista.slice(0, 8).map((x) => grupoBajar(x.id).catch(() => null)));
   }).catch(() => null).finally(() => { grupoCache.vuelo = null; });
@@ -915,6 +964,7 @@ const grupoPintarCache = (id) => {
 /** Entrar a la pestaña: pinta la caché al instante (sin cargador) y refresca en silencio; sin caché, baja con cargador. */
 async function cargarGrupo(id) {
   const turno = ++grupoTurno, raiz = $("vista-grupo");
+  if (!id) juntosVisto();
   let pintado = grupoPintarCache(id);
   const antes = pintado ? JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null]) : "";
   try {
@@ -956,7 +1006,9 @@ const nGrupos = () => datos && ui().grupos != null ? ui().grupos : parseInt(($("
 const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
   ...(ui().sin_plan ? [] : [{ id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" }]),   // sin plan: no hay pestaña Plan (L2 la reemplaza por una tarjeta)
   { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" },
-  ...(nGrupos() > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#juntos" }] : [])];   // solo en la web y con al menos un grupo
+  ...(nGrupos() > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#juntos", punto: true, nuevo: juntosNuevo }] : [])];   // solo en la web y con al menos un grupo
+let juntosNuevo = false;   // ¿hay algo nuevo en Juntos desde la última vez que se abrió? (lo decide el servidor)
+const pintarPuntoJuntos = () => { const a = document.querySelector('#tabs [data-tab="grupo"]'); if (a) a.dataset.nuevo = String(juntosNuevo); };
 const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
 
 /** Ícono de cada liga del menú ☰ (si ui.menu trae `icono`, gana el suyo). */

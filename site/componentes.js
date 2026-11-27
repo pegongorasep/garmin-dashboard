@@ -276,10 +276,12 @@ const DS = (() => {
     h("details", { class: `desplegable${liga ? " liga-d" : ""}${clase ? ` ${clase}` : ""}`, open: !!abierto },
       h("summary", {}, titulo, sub ? " " : null, sub ? h("small", {}, `· ${sub}`) : null, ico("flecha-abajo")), ...hijos);
 
-  /** Barra de navegación inferior. Recibe { items:[{id, texto, icono, href}], actual (id) }. */
+  /** Barra de navegación inferior. Recibe { items:[{id, texto, icono, href, punto, nuevo}], actual (id) }.
+   *  `punto`: la pestaña reserva su puntito de «nuevo» (fuera del flujo: no mueve nada); `nuevo` lo enciende (también con data-nuevo="true"). */
   const tabs = ({ items = [], actual } = {}) =>
     h("nav", { class: "tabs", "aria-label": T("sitio.ds.secciones") }, items.map((it) =>
-      h("a", { href: it.href, "data-tab": it.id, "aria-current": it.id === actual ? "page" : null }, ico(it.icono), it.texto)));
+      h("a", { href: it.href, "data-tab": it.id, "data-nuevo": it.punto ? String(!!it.nuevo) : null, "aria-current": it.id === actual ? "page" : null },
+        ico(it.icono), it.texto, it.punto ? h("span", { class: "tab-punto", "aria-hidden": "true" }) : null)));
 
   /** Selector de semana. Recibe { texto, onAnterior, onSiguiente, sinAnterior, sinSiguiente }. */
   const selectorSemana = ({ texto, onAnterior, onSiguiente, sinAnterior, sinSiguiente } = {}) =>
@@ -573,12 +575,48 @@ const DS = (() => {
       reacciones, pausa ? null : cuerpo);
   };
 
+  /** Botón de comentarios de una actividad (💬 y la cuenta si hay). Recibe { n, etiqueta, onclick }. */
+  const botonComentarios = ({ n = 0, etiqueta, onclick } = {}) =>
+    h("button", { type: "button", class: "reac-com", "aria-label": etiqueta, onclick },
+      h("span", { "aria-hidden": "true" }, "💬"), n > 0 ? h("span", {}, String(n)) : null);
+
+  /** Comentarios de una actividad: lista, caja con contador y la línea de quién los ve. Solo texto plano (todo entra con nodos de texto,
+   *  nunca como HTML). Recibe { max, ayuda, etiquetaCaja, placeholder, enviarTxt, borrarTxt, vacio, onEnviar(texto) → Promise, onBorrar(item) → Promise }.
+   *  Devuelve el nodo; `nodo.pintar({ cargando, error, items:[{id, nombre, cuando, texto, puede_borrar}] })` lo llena. */
+  const panelComentarios = ({ max = 280, ayuda, etiquetaCaja, placeholder, enviarTxt, borrarTxt, vacio, cargandoTxt, onEnviar, onBorrar } = {}) => {
+    const lista = h("ul", { class: "coments-lista", "aria-live": "polite" });
+    const caja = h("textarea", { class: "coments-caja", rows: "2", maxlength: String(max), "aria-label": etiquetaCaja, placeholder });
+    const cuenta = h("span", { class: "coments-cuenta" }, `0/${max}`);
+    const enviar = h("button", { type: "submit", class: "boton chico coments-enviar", disabled: true }, enviarTxt);
+    const error = h("p", { class: "coments-error", role: "alert" });
+    const form = h("form", { class: "coments-form" }, caja, h("div", { class: "coments-pie" }, cuenta, enviar), error);
+    const largo = () => caja.value.trim().length;
+    caja.addEventListener("input", () => { cuenta.textContent = `${caja.value.length}/${max}`; enviar.disabled = !largo(); });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!largo() || enviar.disabled) return;
+      enviar.disabled = true;
+      try { await onEnviar(caja.value.trim()); caja.value = ""; cuenta.textContent = `0/${max}`; } catch (err) { error.textContent = err && err.message ? err.message : ""; enviar.disabled = !largo(); }
+    });
+    const nodo = h("div", { class: "coments" }, lista, form, h("p", { class: "coments-ayuda" }, ayuda));
+    nodo.pintar = ({ cargando = false, error: fallo = "", items = [] } = {}) => {
+      error.textContent = fallo;
+      lista.replaceChildren(...(cargando ? [h("li", { class: "coments-aviso" }, cargandoTxt)]
+        : items.length ? items.map((c) => h("li", { class: "coment" },
+          h("div", { class: "coment-cab" }, h("span", { class: "coment-nombre" }, c.nombre), h("span", { class: "coment-cuando" }, c.cuando),
+            c.puede_borrar ? h("button", { type: "button", class: "coment-borrar", "aria-label": `${borrarTxt}: ${c.nombre}`, onclick: () => onBorrar(c) }, borrarTxt) : null),
+          h("p", { class: "coment-texto" }, c.texto)))
+          : [h("li", { class: "coments-aviso" }, vacio)]));
+    };
+    return nodo;
+  };
+
   /** Fila de una actividad del feed, cerrada por defecto (al abrirla solo se muestra el detalle; la altura de lo cerrado es fija).
    *  Recibe { nombre, foto, iniciales, color, cuando (texto), emoji, tipo, resumen (km · min), esfuerzo (texto), sesion (texto con ✓),
-   *  detalle (nodos), reacciones (nodo), abierto, etiquetaAbrir, onAlternar(abierto) }. */
-  const filaActividad = ({ nombre, foto, iniciales, color = 0, cuando, emoji, tipo, resumen, esfuerzo, sesion, detalle = [], reacciones = null,
+   *  detalle (nodos), reacciones (nodo), comentarios (nodo, va al final del detalle), abierto, etiquetaAbrir, onAlternar(abierto) }. */
+  const filaActividad = ({ nombre, foto, iniciales, color = 0, cuando, emoji, tipo, resumen, esfuerzo, sesion, detalle = [], reacciones = null, comentarios = null,
     abierto = false, etiquetaAbrir, onAlternar } = {}) => {
-    const cuerpo = h("div", { class: "act-detalle", hidden: !abierto }, detalle);
+    const cuerpo = h("div", { class: "act-detalle", hidden: !abierto }, detalle, comentarios);
     const cab = h("button", { type: "button", class: "act-cab", "aria-expanded": String(!!abierto), "aria-label": etiquetaAbrir, onclick: () => {
       const on = cab.getAttribute("aria-expanded") !== "true";
       cab.setAttribute("aria-expanded", String(on));
@@ -599,7 +637,7 @@ const DS = (() => {
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
-    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad,
+    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad, botonComentarios, panelComentarios,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */
     silueta: (tramos, { alto = 44, conTip = true, rachas = null, ...rampas } = {}) => siluetaSesion(tramos, alto, conTip, rachas, rampas),
   };

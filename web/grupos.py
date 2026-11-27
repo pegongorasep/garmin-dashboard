@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import auth, grupos_resumen, permisos
-from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, ReaccionActividad, Usuario, ahora
+from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, Comentario, ReaccionActividad, Usuario, ahora
 
 MAX_MIEMBROS = 12
 MAX_GRUPOS = 5          # por persona (los que crea o a los que se une)
@@ -61,6 +61,7 @@ def quitar_de_todos(db: Session, usuario_id: int) -> None:
     for gid in db.scalars(select(MiembroGrupo.grupo_id).where(MiembroGrupo.usuario_id == usuario_id)).all():
         _salir(db, gid, usuario_id)
     db.execute(sa.delete(ReaccionActividad).where(sa.or_(ReaccionActividad.de_id == usuario_id, ReaccionActividad.dueno_id == usuario_id)))
+    db.execute(sa.delete(Comentario).where(sa.or_(Comentario.autor_id == usuario_id, Comentario.dueno_id == usuario_id)))
     db.execute(sa.update(InvitacionGrupo).where(InvitacionGrupo.creada_por == usuario_id).values(creada_por=None))
     db.execute(sa.update(Grupo).where(Grupo.creado_por == usuario_id).values(creado_por=None))
 

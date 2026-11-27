@@ -127,6 +127,9 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 /* Barra de navegación */
 .tabs { display: flex; border-top: 1px solid var(--grid); background: var(--surface); }
 .tabs a { flex: 1 1 0; min-width: 0; display: grid; justify-items: center; gap: 3px; padding: 8px 2px 10px; font: 600 11px/14px var(--font-sans); color: var(--ink-2); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.tabs a { position: relative; }
+.tab-punto { position: absolute; top: 6px; left: calc(50% + 13px); width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); opacity: 0; pointer-events: none; }   /* ocupa su lugar siempre: encender no mueve nada */
+.tabs a[data-nuevo="true"] .tab-punto { opacity: 1; }
 .tabs svg { width: 20px; height: 20px; padding: 3px 12px; border-radius: var(--radius-pill); }
 .tabs a[aria-current="page"] { color: var(--ink); }
 .tabs a[aria-current="page"] svg { background: var(--accent-bg); color: var(--accent); }
@@ -616,3 +619,25 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .act-detalle p { margin: 0; font: 400 13px/18px var(--font-sans); color: var(--ink-2); overflow-wrap: anywhere; }
 .act-detalle p.muted { color: var(--muted); }
 .feed-mas { display: flex; justify-content: center; }
+
+/* Comentarios de una actividad: dentro del detalle abierto, así que solo cambia esa fila. */
+.reac-com { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-4); min-height: 2.2em; padding: 0 var(--space-8); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--ink-2); font: 600 12px/1 var(--font-sans); cursor: pointer; }
+.reac-com:hover { background: var(--ring); color: var(--ink); }
+.reac-com:focus-visible, .coment-borrar:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coments { display: grid; gap: var(--space-8); min-width: 0; padding-top: var(--space-8); border-top: 1px solid var(--grid); }
+.coments-lista { display: grid; gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
+.coments-aviso { color: var(--muted); font: 400 13px/18px var(--font-sans); }
+.coment { display: grid; gap: 2px; min-width: 0; }
+.coment-cab { display: flex; align-items: baseline; gap: var(--space-8); min-width: 0; font: 600 13px/18px var(--font-sans); }
+.coment-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coment-cuando { flex: none; color: var(--muted); font: 400 12px/18px var(--font-sans); }
+.coment-borrar { margin-left: auto; flex: none; padding: 0 var(--space-4); border: 0; background: transparent; color: var(--ink-2); font: 400 12px/18px var(--font-sans); text-decoration: underline; cursor: pointer; }
+.coment-texto { margin: 0; font: 400 14px/19px var(--font-sans); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.coments-form { display: grid; gap: var(--space-6); }
+.coments-caja { width: 100%; box-sizing: border-box; min-height: 3.6em; padding: 8px 10px; resize: none; font: 400 14px/1.3 var(--font-sans); color: var(--ink); background: var(--page); border: 1px solid var(--axis); border-radius: var(--radius-control); }
+.coments-caja:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.coments-pie { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
+.coments-cuenta { min-width: 7ch; color: var(--muted); font: 400 12px/1 var(--font-sans); font-variant-numeric: tabular-nums; }
+.coments-error { min-height: 1.2em; margin: 0; color: var(--bad); font: 400 12.5px/1.2em var(--font-sans); }
+.coments-ayuda { margin: 0; color: var(--muted); font: 400 12.5px/17px var(--font-sans); }
+.coments-enviar { flex: none; }

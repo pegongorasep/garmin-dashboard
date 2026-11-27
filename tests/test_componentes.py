@@ -38,6 +38,8 @@ COMPONENTES = {
     "Pestanas": ("segmento", "segmento"),
     "Pie": ("pie", "pie"),
     "FilaActividad": ("act-fila", "filaActividad"),
+    "PanelComentarios": ("coments", "panelComentarios"),
+    "BotonComentarios": ("reac-com", "botonComentarios"),
     "Ranking": ("marca-t", "ranking"),
     "Senales": ("senales", "senales"),
     "Silueta": ("slt", "silueta"),

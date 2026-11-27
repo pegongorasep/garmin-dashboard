@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import calculo, grupos, grupos_resumen, permisos
-from .modelos import MiembroGrupo, ReaccionActividad, Usuario, ahora
+from .modelos import Comentario, DatoGarmin, MiembroGrupo, ReaccionActividad, Usuario, ahora
 
 log = logging.getLogger("web.feed")
 
@@ -27,6 +27,10 @@ MAX_PERSONAS = 60          # 5 grupos de 12 como tope: acota el trabajo por peti
 MAX_POR_PERSONA = 120
 EMOJIS = ("👏", "🔥", "💪", "🚀", "❤️", "😂", "🫡", "🏆")
 MAX_REACCIONES_HORA = 60
+MAX_COMENTARIO = 280
+MAX_COMENTARIOS_VENTANA = 20      # por persona
+VENTANA_COMENTARIOS = timedelta(minutes=10)
+MAX_POR_ACTIVIDAD = 200
 # Lo único del detalle de la actividad que sale al feed (nada de curvas ni ritmos por km).
 CAMPOS_DETALLE = ("fc_max", "kcal", "desnivel_m", "te_etiqueta", "zonas", "ritmo_s", "vel_kmh", "cadencia")
 
@@ -127,6 +131,56 @@ def reacciones_de(db: Session, viewer: Usuario, claves: list[str]) -> dict:
     return {k: {e: v[e] for e in EMOJIS if e in v} for k, v in out.items()}
 
 
+def conteo_comentarios(db: Session, claves: list[str]) -> dict[str, int]:
+    if not claves:
+        return {}
+    filas = db.execute(select(Comentario.clave, sa.func.count()).where(Comentario.clave.in_(claves)).group_by(Comentario.clave)).all()
+    return {k: n for k, n in filas}
+
+
+def _comentario_json(db: Session, viewer: Usuario, c: Comentario, nombres: dict, admin_de: set) -> dict:
+    """El nombre del autor sigue la regla de las reacciones: solo si el que mira lo ve en alguno de sus grupos (si no, vacío)."""
+    if c.autor_id not in nombres:
+        nombres[c.autor_id] = grupos.nombre_de(db.get(Usuario, c.autor_id)) if permisos.puede_ver_social(db, viewer, c.autor_id) else ""
+    return {"id": c.id, "texto": c.texto, "creado": c.creado.isoformat(timespec="seconds"), "nombre": nombres[c.autor_id],
+            "usuario_id": c.autor_id if nombres[c.autor_id] else None, "mia": c.autor_id == viewer.id,
+            "puede_borrar": puede_borrar_comentario(db, viewer, c)}
+
+
+def puede_borrar_comentario(db: Session, quien: Usuario, c: Comentario) -> bool:
+    """El autor, el dueño de la actividad, o un admin de algún grupo que contenga al dueño y al autor."""
+    if quien.id in (c.autor_id, c.dueno_id):
+        return True
+    admin = select(MiembroGrupo.grupo_id).where(MiembroGrupo.usuario_id == quien.id, MiembroGrupo.rol == "admin")
+    en = lambda uid: select(MiembroGrupo.grupo_id).where(MiembroGrupo.usuario_id == uid)  # noqa: E731
+    return db.scalar(select(MiembroGrupo.id).where(MiembroGrupo.usuario_id == c.dueno_id, MiembroGrupo.grupo_id.in_(admin),
+                                                   MiembroGrupo.grupo_id.in_(en(c.autor_id))).limit(1)) is not None
+
+
+def comentarios_de(db: Session, viewer: Usuario, dueno_id: int, clave: str) -> dict:
+    filas = db.scalars(select(Comentario).where(Comentario.clave == clave, Comentario.dueno_id == dueno_id)
+                       .order_by(Comentario.id).limit(MAX_POR_ACTIVIDAD)).all()
+    nombres: dict = {}
+    return {"clave": clave, "n": len(filas), "comentarios": [_comentario_json(db, viewer, c, nombres, set()) for c in filas]}
+
+
+def hay_nuevo(db: Session, viewer: Usuario, secret: str) -> bool:
+    """¿Hay algo nuevo en Juntos desde la última vez que abrió el inicio? Comentarios en MIS actividades de otros (una consulta) o
+    actividades de otros: su última subida es posterior Y tienen actividad del día de la visita en adelante (el feed no guarda hora)."""
+    visto = viewer.juntos_visto or viewer.creado
+    if db.scalar(select(sa.func.count()).select_from(Comentario).where(
+            Comentario.dueno_id == viewer.id, Comentario.autor_id != viewer.id, Comentario.creado > visto)):
+        return True
+    desde = (visto - timedelta(days=1)).date().isoformat()
+    for d in duenos_visibles(db, viewer):
+        if d.id == viewer.id:
+            continue
+        sync = db.scalar(select(sa.func.max(DatoGarmin.actualizado)).where(DatoGarmin.usuario_id == d.id, DatoGarmin.tipo == "actividad"))
+        if sync is not None and sync > visto and any(a["fecha"] >= desde for a in actividades_de(db, d, secret, False)):
+            return True
+    return False
+
+
 def feed(db: Session, viewer: Usuario, secret: str, antes: str | None = None) -> dict:
     duenos = duenos_visibles(db, viewer)
     items: list[dict] = []
@@ -137,12 +191,14 @@ def feed(db: Session, viewer: Usuario, secret: str, antes: str | None = None) ->
     pagina, hay_mas = items[:POR_PAGINA], len(items) > POR_PAGINA
     por_id = {d.id: d for d in duenos}
     reac = reacciones_de(db, viewer, [x["clave"] for x in pagina])
+    ncom = conteo_comentarios(db, [x["clave"] for x in pagina])
     salida = []
     for x in pagina:
         u = por_id[x["usuario_id"]]
         salida.append({**{k: v for k, v in x.items() if k != "orden"}, "nombre": grupos.nombre_de(u),
                        "foto": f"/perfil/foto/{u.id}" if grupos.perfil_tiene_foto(db, u.id) else None,
-                       "mia": u.id == viewer.id, "reacciones": reac.get(x["clave"], {})})
+                       "mia": u.id == viewer.id, "reacciones": reac.get(x["clave"], {}),
+                       "comentarios": ncom.get(x["clave"], 0)})
     return {"items": salida, "siguiente": _cursor(pagina[-1]) if hay_mas else None, "emojis": list(EMOJIS), "yo": viewer.id}
 
 
@@ -183,3 +239,82 @@ def montar(app, get_db, actual, formulario, settings) -> None:
             db.add(ReaccionActividad(clave=clave, dueno_id=dueno_id, de_id=usuario.id, emoji=emoji))
         db.commit()
         return {"clave": clave, "reacciones": reacciones_de(db, usuario, [clave]).get(clave, {})}
+
+
+    def _actividad(db, usuario, dueno_id, clave):
+        """Misma comprobación que las reacciones: la persona es visible para quien mira y esa actividad existe. None = 404."""
+        dueno = next((d for d in duenos_visibles(db, usuario) if d.id == dueno_id), None)
+        if dueno is None:
+            return None
+        return next((x for x in actividades_de(db, dueno, settings.secret_key, False) if x["clave"] == clave), None)
+
+    def _no_encontrado():
+        return JSONResponse({"error": "No encontrado."}, status_code=404)
+
+    @app.get("/api/juntos/comentarios")
+    def api_comentarios(dueno: int = 0, clave: str = "", usuario=Depends(actual), db: Session = Depends(get_db)):
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        if _actividad(db, usuario, dueno, clave) is None:
+            return _no_encontrado()
+        return comentarios_de(db, usuario, dueno, clave)
+
+    @app.post("/api/juntos/comentar")
+    async def api_comentar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+        form = await formulario(request)
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        try:
+            dueno_id = int(form.get("dueno", ""))
+        except ValueError:
+            return _no_encontrado()
+        clave = str(form.get("clave", ""))
+        if _actividad(db, usuario, dueno_id, clave) is None:
+            return _no_encontrado()
+        texto = str(form.get("texto", "")).strip()
+        if not texto:
+            return JSONResponse({"error": "Escribe algo."}, status_code=400)
+        if len(texto) > MAX_COMENTARIO:
+            return JSONResponse({"error": "Máximo 280 caracteres."}, status_code=400)
+        recientes = db.scalar(select(sa.func.count()).select_from(Comentario).where(
+            Comentario.autor_id == usuario.id, Comentario.creado > ahora() - VENTANA_COMENTARIOS))
+        if recientes >= MAX_COMENTARIOS_VENTANA:
+            return JSONResponse({"error": "Demasiados comentarios. Espera unos minutos."}, status_code=429)
+        db.add(Comentario(clave=clave, dueno_id=dueno_id, autor_id=usuario.id, texto=texto))
+        db.commit()
+        return comentarios_de(db, usuario, dueno_id, clave)
+
+    @app.post("/api/juntos/comentario/borrar")
+    async def api_borrar_comentario(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+        form = await formulario(request)
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        try:
+            c = db.get(Comentario, int(form.get("id", "")))
+        except ValueError:
+            c = None
+        if c is None:
+            return _no_encontrado()
+        if not puede_borrar_comentario(db, usuario, c):
+            # quien ni siquiera ve la actividad recibe 404 (no se entera de que el comentario existe); los demás, 403
+            visible = any(d.id == c.dueno_id for d in duenos_visibles(db, usuario))
+            return JSONResponse({"error": "No puedes borrarlo."}, status_code=403) if visible else _no_encontrado()
+        dueno_id, clave = c.dueno_id, c.clave
+        db.delete(c)
+        db.commit()
+        return comentarios_de(db, usuario, dueno_id, clave)
+
+    @app.get("/api/juntos/nuevo")
+    def api_nuevo(usuario=Depends(actual), db: Session = Depends(get_db)):
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        return {"nuevo": hay_nuevo(db, usuario, settings.secret_key)}
+
+    @app.post("/api/juntos/visto")
+    async def api_visto(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+        await formulario(request)
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        usuario.juntos_visto = ahora()
+        db.commit()
+        return {"nuevo": False}

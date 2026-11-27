@@ -303,6 +303,15 @@ def("Grupo", "Fila de actividad", "DS.filaActividad()", "Una actividad del feed 
   DS.filaActividad({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, cuando: "Hace 3 días", emoji: "🏋️", tipo: "Fuerza", resumen: "45 min", esfuerzo: "Esfuerzo 6.0",
     reacciones: h("div", { class: "reacciones" }, DS.botonReaccion({ onclick: () => {} })) }));
 
+def("Grupo", "Comentarios de una actividad", "DS.panelComentarios()", "Dentro del detalle abierto de una actividad: la lista (solo texto plano), la caja con contador de 280 y la línea de quién los ve. `nodo.pintar({ items })` la llena. Va con el botón 💬 de la fila de reacciones (DS.botonComentarios) y, en las pestañas, con el puntito de «nuevo» (item `punto`, `nuevo`).",
+  (() => {
+    const p = DS.panelComentarios({ ayuda: "Lo ven quienes pueden ver esta actividad.", etiquetaCaja: "Escribe un comentario", placeholder: "Escribe un comentario…", enviarTxt: "Enviar", borrarTxt: "Borrar",
+      vacio: "Aún no hay comentarios.", cargandoTxt: "Cargando…", onEnviar: async () => {}, onBorrar: async () => {} });
+    p.pintar({ items: [{ id: 1, nombre: "Mario Ruiz", cuando: "Ayer", texto: "¡Qué ritmo! <b>así se ve el texto</b>", puede_borrar: true }, { id: 2, nombre: "Tú", cuando: "Hoy", texto: "Gracias", puede_borrar: true }] });
+    return p;
+  })(),
+  h("div", { class: "reacciones" }, DS.botonReaccion({ onclick: () => {} }), DS.botonComentarios({ n: 2, etiqueta: "Comentarios (2)", onclick: () => {} })));
+
 const raiz = document.getElementById("catalogo");
 for (const [grupo, secciones] of Object.entries(GRUPOS)) raiz.append(h("h2", { class: "grupo" }, grupo), ...secciones);
 </script>
