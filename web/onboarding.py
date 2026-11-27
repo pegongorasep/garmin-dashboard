@@ -42,6 +42,8 @@ def estado(db: Session, u: Usuario) -> dict:
 
 def completo(db: Session, u: Usuario) -> bool:
     e = estado(db, u)
+    if u.gh_instalacion and not e["datos"] and not e["ajustes"] and e["uso"] != "cuerpo":
+        return False   # va por la guía nueva: falta la primera subida buena (no entra a «/» a medias)
     # sin plan: basta con tener el repo conectado (no hay cuestionario del plan)
     return bool(e["consentimiento"] and (e["ajustes"] or e["uso"] == "cuerpo" or (e["sin_plan"] and e["vinculado"])))
 

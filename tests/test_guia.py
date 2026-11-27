@@ -133,3 +133,34 @@ def test_liga_por_correo_con_limite(ctx, gh):
     assert len(enviados) == 3 and enviados[0][0] == "ana@x.com" and "/bienvenida" in enviados[0][1]
     with ctx.sesiones() as db:
         assert db.query(Cambio).filter_by(atleta_id=uid).count() == 3
+
+
+def test_cada_pantalla_rinde_con_sus_botones(ctx, gh):
+    cl, uid = sesion(ctx)
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        u.uso, u.sin_plan = "completo", True
+        db.commit()
+    esperado = {0: ["/bienvenida?paso=1", "/bienvenida/liga"], 1: ["github.com/signup", "paso=2"],
+                2: ["template_name=", "paso=3"], 3: ["/conectar/github?para=guia"]}
+    for n, ligas in esperado.items():
+        r = cl.get(f"/bienvenida?paso={n}")
+        assert r.status_code == 200 and "bv.g" not in r.text and 'id="guia-celular"' in r.text
+        for liga in ligas:
+            assert liga in r.text, (n, liga)
+    assert "error=" not in cl.get("/bienvenida?paso=3").text
+    assert "Elige solo tu copia" in cl.get("/bienvenida?paso=3&error=repos").text
+    volver(cl, empezar(cl))
+    r = cl.get("/bienvenida")
+    for x in ("PERSONAL_API_KEY", "/settings/secrets/actions/new", "guia-estado", "/api/conexion/comprobar", "Add secret"):
+        assert x in r.text, x
+    assert r.text.index("secrets/actions/new") < r.text.index("personalApiToken")   # nombre en GitHub antes que la key
+
+
+def test_sin_subida_buena_no_esta_completo(ctx, gh):
+    from web import onboarding
+    cl, uid = conectada(ctx, gh)
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert not onboarding.completo(db, u)
+        assert cl.get("/", follow_redirects=False).status_code in (302, 303, 307)

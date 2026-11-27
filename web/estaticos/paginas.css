@@ -91,3 +91,10 @@ details.sim-sem.falla > summary { background: var(--bad-bg); }
 .pn-lista { margin: 0; }
 .pn-reserva { min-height: 1lh; }
 @media (max-width: 640px) { .pn-barra { grid-template-columns: 3.5em minmax(0, 1fr); } .pn-min { grid-column: 2; } }
+
+/* Guía nueva (GitHub App): estado de la comprobación con altura reservada */
+.guia-estado { min-height: 6.5em; display: grid; grid-template-rows: 2.6em 0.5em 2.2em; gap: 0.5em; margin-block: var(--space-16); align-content: start; }
+.guia-estado-t { margin: 0; overflow: hidden; }
+.guia-barra { background: var(--surface); border-radius: 0.25em; overflow: hidden; }
+.guia-barra-r { height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+.guia-estado-b { min-height: 2.2em; }
