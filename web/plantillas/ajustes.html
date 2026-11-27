@@ -23,6 +23,7 @@
   <p class="pag-s">{{ t("aj.rehace") }} {{ boton(t("aj.ir_plan"), "texto", chico=True, href=pref ~ "/plan/acciones") }}</p>
   <div class="acciones">{{ boton(t("comun.guardar"), tipo="submit") }}</div>
 </form>
+{% include "_garmin.html" %}
 {% include "_compartir.html" %}
 {% if not pref %}
 <form class="pila" method="post" action="/idioma">

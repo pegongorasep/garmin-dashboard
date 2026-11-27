@@ -1,0 +1,41 @@
+{% if garmin %}
+{% from "componentes.html" import boton, tarjeta, aviso %}
+<h2 class="pag-h">{{ t("aj.g_t") }}</h2>
+{% if garmin_aviso == "desconectado" %}{% call aviso("ok") %}{{ t("aj.g_fuera_a") }} <a href="https://github.com/settings/installations" target="_blank" rel="noopener">{{ t("aj.g_fuera_liga") }}</a>. {{ t("aj.g_fuera_b") }}{% endcall %}{% endif %}
+{% call tarjeta() %}
+  <div class="texto garmin-caja">
+  {% if garmin.estado == "sin_conectar" %}
+    <p>{{ t("aj.g_sin") }}</p>
+    <div class="acciones">{{ boton(t("aj.g_conectar"), href="/bienvenida") }}</div>
+  {% else %}
+    <p class="garmin-estado"><strong>{{ t("aj.g_conectado") }}</strong> · {{ garmin.repo }} · {% if garmin.ultima %}{{ t("aj.g_ultima", cuando=garmin.ultima) }}{% else %}{{ t("aj.g_nunca") }}{% endif %}</p>
+    {% if garmin.estado == "con_app" %}
+      <div class="acciones">
+        {{ boton(t("sitio.sync.boton"), "sec", chico=True, nombre="g-sync") }}
+        {{ boton(t("aj.g_treinta"), "sec", chico=True, nombre="g-treinta") }}
+        {{ boton(t("aj.g_desconectar"), "texto", chico=True, nombre="g-desc") }}
+      </div>
+      <form class="garmin-conf" method="post" action="/ajustes/garmin/desconectar" id="g-conf">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <span class="garmin-conf-t">{{ t("aj.g_seguro") }}</span>
+        {{ boton(t("aj.g_si"), tipo="submit", chico=True) }}
+        {{ boton(t("aj.g_no"), "texto", chico=True, nombre="g-no") }}
+      </form>
+      <script>
+      (function () {
+        var q = function (n) { return document.querySelector('[name="' + n + '"]'); }, conf = document.getElementById("g-conf");
+        function lanzar(tipo) { if (window.Franja) window.Franja.empezar(tipo); }
+        q("g-sync").addEventListener("click", function () { lanzar("normal"); });
+        q("g-treinta").addEventListener("click", function () { lanzar("treinta"); });
+        q("g-desc").addEventListener("click", function () { conf.classList.add("abierta"); });
+        q("g-no").addEventListener("click", function () { conf.classList.remove("abierta"); });
+      })();
+      </script>
+    {% elif garmin.estado == "sin_app" %}
+      <p>{{ t("aj.g_autoriza") }}</p>
+      <div class="acciones">{{ boton(t("aj.g_autorizar"), href="/conectar/github?para=conectado") }}</div>
+    {% endif %}
+  {% endif %}
+  </div>
+{% endcall %}
+{% endif %}

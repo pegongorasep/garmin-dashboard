@@ -7,12 +7,13 @@ from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ajustes import SENSORES, ConfigError, normalizar_config
 
 from . import cambios
-from .modelos import Ajustes, Plan, Usuario
+from .modelos import Ajustes, Cambio, Plan, Subida, Usuario, ahora
 from .errores import ErrorT, texto
 from .onboarding import ZONAS
 from .permisos import puede_editar
@@ -110,6 +111,39 @@ def campo_del_error(mensaje: str):
     return next((c for frag, c in ERROR_CAMPO if frag in mensaje), None)
 
 
+def hace_texto(t, desde) -> str:
+    seg = max(0, int((ahora() - desde).total_seconds()))
+    if seg < 90:
+        return t("sitio.hace_momento")
+    if seg < 3600 * 2:
+        return t("sitio.hace_min", n=seg // 60)
+    if seg < 86400 * 2:
+        return t("sitio.hace_h", n=seg // 3600)
+    return t("sitio.hace_d", n=seg // 86400)
+
+
+def desconectar_garmin(db: Session, u: Usuario) -> None:
+    """Suelta la conexión con la copia de GitHub (repo, instalación, historial pendiente). Los datos se quedan. No hace commit."""
+    antes = {"repo": u.repo, "repo_id": u.repo_id, "gh_instalacion": u.gh_instalacion}
+    u.repo = u.repo_id = u.gh_instalacion = None
+    u.historial_pendiente = False
+    db.add(Cambio(atleta_id=u.id, autor_id=None, via="sistema", visto=True, descripcion="Garmin desconectado",
+                  antes=antes, despues={"repo": None, "repo_id": None}))
+
+
+def contexto_garmin(db: Session, u: Usuario, t, settings) -> dict:
+    """Estado de la sección «Garmin» de Ajustes: sin_conectar | con_app | sin_app."""
+    ultima = db.scalar(select(func.max(Subida.fecha)).where(Subida.usuario_id == u.id, Subida.ok.is_(True)))
+    app = bool(settings.app_github)
+    if not u.repo_id:
+        estado = "sin_conectar"
+    elif u.gh_instalacion and app:
+        estado = "con_app"
+    else:
+        estado = "sin_app" if app else "solo_estado"
+    return {"estado": estado, "repo": u.repo, "ultima": hace_texto(t, ultima) if ultima else None}
+
+
 def montar(app, get_db, actual, render, formulario, settings) -> None:
     # ---------- ajustes ----------
     def pantalla_ajustes(request, usuario, db, atleta_id, **extra):
@@ -120,10 +154,18 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if crudo is None and atleta.uso == "cuerpo":
             return render(request, "ajustes_cuerpo.html", atleta=atleta, pref=prefijo(usuario, atleta))
         if crudo is None and atleta.sin_plan and atleta.repo_id:
-            return render(request, "ajustes_sin_plan.html", atleta=atleta, pref=prefijo(usuario, atleta))
+            return render(request, "ajustes_sin_plan.html", atleta=atleta, pref=prefijo(usuario, atleta),
+                          **garmin_extra(request, db, usuario, atleta))
         if crudo is None:
             return RedirectResponse("/bienvenida", 303)
-        return render(request, "ajustes.html", **contexto_ajustes(db, atleta, usuario, crudo, ok=request.query_params.get("ok"), **extra))
+        return render(request, "ajustes.html", **contexto_ajustes(db, atleta, usuario, crudo, ok=request.query_params.get("ok"),
+                      **garmin_extra(request, db, usuario, atleta), **extra))
+
+    def garmin_extra(request, db, usuario, atleta) -> dict:
+        if atleta.id != usuario.id:   # un coach viendo a su atleta no ve ni toca su conexión
+            return {}
+        return {"garmin": contexto_garmin(db, atleta, request.state.t, settings),
+                "garmin_aviso": request.query_params.get("garmin")}
 
     @app.get("/ajustes")
     def ajustes_get(request: Request, usuario=Depends(actual), db=Depends(get_db)):
@@ -143,6 +185,17 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             usuario.uso = "completo"
             db.commit()
         return RedirectResponse("/bienvenida", 303)
+
+    @app.post("/ajustes/garmin/desconectar")
+    async def ajustes_garmin_desconectar(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        """«Sí, desconectar»: solo la propia persona. Los datos se quedan; se pierde el vínculo con la copia y la app."""
+        await formulario(request)
+        if usuario is None:
+            return RedirectResponse("/entrar", 303)
+        if usuario.repo_id or usuario.gh_instalacion:
+            desconectar_garmin(db, usuario)
+            db.commit()
+        return RedirectResponse("/ajustes?garmin=desconectado", 303)
 
     @app.post("/ajustes/compartir")
     async def ajustes_compartir(request: Request, usuario=Depends(actual), db=Depends(get_db)):

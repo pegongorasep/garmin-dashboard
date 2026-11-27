@@ -101,3 +101,7 @@ details.sim-sem.falla > summary { background: var(--bad-bg); }
 
 /* Dibujos simplificados de GitHub (guía): alto fijo, colores del diseño */
 .dibujo-gh { display: block; width: 100%; max-width: 420px; height: 240px; margin-block: var(--space-16); font-family: var(--font-sans); }
+
+/* Garmin en Ajustes: la confirmación de desconectar vive en una ranura de altura reservada */
+.garmin-conf { min-height: 2.6em; display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: center; margin-top: var(--space-8); visibility: hidden; }
+.garmin-conf.abierta { visibility: visible; }

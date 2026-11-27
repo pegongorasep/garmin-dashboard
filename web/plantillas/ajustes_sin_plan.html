@@ -12,6 +12,7 @@
   <div class="acciones">{% if atleta.historial_pendiente %}{{ boton(t("sitio.sync.espera"), deshabilitado=True) }}{% else %}{{ boton(t("aj.sp_quiero"), href="/plan/nuevo") }}{% endif %}</div>
   </div>
 {% endcall %}
+{% include "_garmin.html" %}
 {% include "_compartir.html" %}
 <div class="acciones">{{ boton(t("comun.volver"), "sec", href="/") }}</div>
 {% endblock %}
