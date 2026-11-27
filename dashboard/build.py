@@ -983,7 +983,7 @@ def build_ui(config: dict, plan: dict) -> dict:
         "acciones_url": acciones,
         "sin_plan": bool(config.get("sin_plan", False)),
         "plan_acciones": list(config.get("plan_acciones") or []),   # solo en la web: [{texto, url}] sobre el plan
-        "liga_ajustar_plan": config.get("liga_ajustar_plan") or None,   # solo en la web: url de «Ajustar mi plan»; null = sin botón
+        "plan_url": config.get("plan_url") or None,   # solo en la web: url del plan (botón «Ajustar mi plan»; null = sin botón
         "cuerpo_nuevo": config.get("cuerpo_nuevo") or None,   # solo en la web: url de «Agregar medición»; null = sin botón
         "coach": None,   # solo en la web: {nombre, volver} cuando un coach ve a su atleta (la web lo pone al servir; nunca en la caché)
         "grupos": int(config.get("grupos") or 0),   # solo en la web: en cuántos grupos está la persona (0 = sin pestaña Grupo)

@@ -851,11 +851,11 @@ def test_semana_libre_solo_sin_plan_promedios_racha_y_sin_claves_prohibidas():
     assert "semana_libre" not in build.build(fixture(), gen_plan.generar(CONFIG_CORREDOR), CONFIG_CORREDOR, AHORA)
 
 
-def test_liga_ajustar_plan_null_por_defecto_y_solo_con_la_clave():
+def test_plan_url_null_por_defecto_y_solo_con_la_clave():
     plan = gen_plan.generar(CONFIG_CORREDOR)
-    assert build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)["ui"]["liga_ajustar_plan"] is None
-    cfg = {**CONFIG_CORREDOR, "liga_ajustar_plan": "/plan/acciones"}
-    assert build.build(fixture(), plan, cfg, AHORA)["ui"]["liga_ajustar_plan"] == "/plan/acciones"
+    assert build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)["ui"]["plan_url"] is None
+    cfg = {**CONFIG_CORREDOR, "plan_url": "/plan/acciones"}
+    assert build.build(fixture(), plan, cfg, AHORA)["ui"]["plan_url"] == "/plan/acciones"
 
 
 def test_tarjeta_hoy_trae_opciones_y_recomendada(monkeypatch):

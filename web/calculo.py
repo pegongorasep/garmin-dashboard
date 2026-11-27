@@ -34,7 +34,7 @@ def plan_acciones(idioma: str = "es") -> list[dict]:
              ("carrera", "/plan/acciones#carrera"), ("repetir", "/plan/acciones"))]
 
 
-LIGA_AJUSTAR_PLAN = "/plan/acciones"   # la página «Ajustar mi plan» (cambios en el camino + rehacer)
+PLAN_URL = "/plan"   # la página del plan (ajustes en el camino, eventos, rehacer): botón «Ajustar mi plan»
 MENU_CUERPO = ("/ajustes", "/cuerpo", "/privacidad", "/salir")   # lo que tiene sentido sin entreno: sin historial ni coach
 MENU = menu_de("es")
 PLAN_ACCIONES = plan_acciones("es")
@@ -65,7 +65,7 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: s
     crudo = {**base, "modo": "web", "menu": menu_de(idioma) if menu is None else menu,
              "plan_acciones": plan_acciones(idioma), "idioma": idioma}
     if aj is not None and not usuario.sin_plan:
-        crudo["liga_ajustar_plan"] = LIGA_AJUSTAR_PLAN
+        crudo["plan_url"] = PLAN_URL
     if crudo.get("inbody", True):   # InBody activo: botón «Agregar medición» en Progreso > Cuerpo
         crudo["cuerpo_nuevo"] = "/cuerpo/nuevo"
     if not (crudo.get("perfil") or {}).get("sensor"):   # el sensor vive en los ajustes; el onboarding lo dejó en el usuario
@@ -136,7 +136,7 @@ def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") ->
                            .where(DatoGarmin.usuario_id == usuario.id)).one()
     aj, pl = db.get(Ajustes, usuario.id), db.get(Plan, usuario.id)
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
-    partes = [hoy_local, idioma, json.dumps([menu_de(idioma), plan_acciones(idioma), LIGA_AJUSTAR_PLAN]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
+    partes = [hoy_local, idioma, json.dumps([menu_de(idioma), plan_acciones(idioma), PLAN_URL]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
               usuario.repo, usuario.sensor, bool(usuario.sin_plan), CODIGO]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
@@ -170,7 +170,7 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     ui = salida["ui"]
     ui = {**ui, "menu": [{**m, "url": f(m["url"])} for m in ui.get("menu") or [] if m["url"] != "/coach"],
           "plan_acciones": [{**a, "url": f(a["url"])} for a in ui.get("plan_acciones") or []],
-          "liga_ajustar_plan": f(ui.get("liga_ajustar_plan")),
+          "plan_url": f(ui.get("plan_url")),
           "editar_urls": {k: f(v) for k, v in (ui.get("editar_urls") or {}).items()}}
     if ui.get("cuerpo_nuevo"):
         ui["cuerpo_nuevo"] = f(ui["cuerpo_nuevo"])

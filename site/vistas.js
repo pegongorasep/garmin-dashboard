@@ -165,6 +165,7 @@ function renderPlan(d) {
   $("vista-plan").replaceChildren(...[
     guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: T("sitio.plan.listo"), texto: T("sitio.plan.guardado") }) : null,
     acciones.length ? h("div", { class: "botones ancha" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
+    ui().plan_url ? h("div", { class: "botones ancha" }, DS.boton(T("sitio.plan.ajustar"), { variante: "sec", href: ui().plan_url })) : null,
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
@@ -217,8 +218,7 @@ function tarjetaDoceSemanas(d) {
     h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), (ui().editar_urls || {})[`${w.n}/${s.id}`]
       ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: ui().editar_urls[`${w.n}/${s.id}`] })] } : {}))),
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, T("sitio.plan.repetidas", { l: plan.semanas_repetidas.join(", ") }))] : []),
-    ...listaEventos(plan.eventos),
-    ...(ui().liga_ajustar_plan ? [h("div", { class: "botones" }, DS.boton(T("sitio.plan.ajustar"), { variante: "sec", href: ui().liga_ajustar_plan }))] : []));
+    ...listaEventos(plan.eventos));
   return c;
 }
 

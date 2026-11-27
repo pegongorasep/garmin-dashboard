@@ -226,7 +226,7 @@ def normalizar_config(crudo: dict) -> dict:
         "menu": list(cfg.get("menu") or []),   # solo la web: [{texto, url}] para ui.menu
         "acciones_url": cfg.get("acciones_url"),
         "plan_acciones": [{"texto": str(i["texto"]), "url": str(i["url"])} for i in cfg.get("plan_acciones") or []],   # solo la web
-        "liga_ajustar_plan": cfg.get("liga_ajustar_plan") or None,   # solo la web: página «Ajustar mi plan» (sin ella, sin botón)
+        "plan_url": cfg.get("plan_url") or None,   # solo la web: página del plan, botón «Ajustar mi plan» (sin ella, sin botón)
         "cuerpo_nuevo": cfg.get("cuerpo_nuevo") or None,   # solo la web: liga de «Agregar medición» (sin ella, sin botón)
         "editar_urls": dict(cfg.get("editar_urls") or {}),   # solo la web: {"<n>/<id>": url}
         **umbrales,
