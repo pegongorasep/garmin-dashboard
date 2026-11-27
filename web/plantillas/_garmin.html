@@ -33,7 +33,8 @@
       </script>
     {% elif garmin.estado == "sin_app" %}
       <p>{{ t("aj.g_autoriza") }}</p>
-      <div class="acciones">{{ boton(t("aj.g_autorizar"), href="/conectar/github?para=ajustes") }}</div>
+      <div class="acciones"><a class="boton" href="/conectar/github?para=ajustes" data-abre="dlg-autorizar">{{ t("aj.g_autorizar") }}</a></div>
+      {% with url="/conectar/github?para=ajustes", repo=garmin.repo %}{% include "_dialogo_autorizar.html" %}{% endwith %}
     {% endif %}
   {% endif %}
   </div>

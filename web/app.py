@@ -6,6 +6,7 @@ import re
 from datetime import datetime, timezone
 from html import escape
 
+from markupsafe import Markup
 from sqlalchemy import select
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -31,8 +32,13 @@ ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "ch
                   "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css",
                   "sw.js": "text/javascript", "manifest.webmanifest": "application/manifest+json",
                   "icono-192.png": "image/png", "icono-512.png": "image/png", "icono-maskable-512.png": "image/png",
-                  "apple-touch-icon.png": "image/png"}
+                  "apple-touch-icon.png": "image/png", "dibujo-github.svg": "image/svg+xml"}
 FUENTES = {"Lexend-latin.woff2"}
+def negritas(texto) -> Markup:
+    """Escapa el texto y convierte **x** en <strong>x</strong> (para los textos de i18n que llevan negritas)."""
+    return Markup(re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", str(escape(texto))))
+
+
 def pie_sitio(idioma: str, csrf: str = "", ruta: str = "/") -> str:
     """Pie y registro del service worker que la web agrega al sitio, en el idioma de quien lo ve."""
     opciones = "".join(
@@ -63,6 +69,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     app.state.settings, app.state.motor, app.state.sesiones, app.state.enviar = settings, motor, sesiones, enviar
     app.state.reloj = reloj or (lambda: datetime.now(timezone.utc))   # las pruebas lo cambian para fijar «hoy»
     plantillas = Jinja2Templates(directory=str(WEB / "plantillas"))
+    plantillas.env.filters["negritas"] = negritas
     app.mount("/estaticos", StaticFiles(directory=str(WEB / "estaticos")), name="estaticos")
 
     @app.middleware("http")

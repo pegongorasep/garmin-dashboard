@@ -671,7 +671,7 @@ function avisoMigrar() {
   const s = ui().sync || {};
   if (!s.migrar || s.key_rechazada) return null;
   return DS.aviso({ clase: "bad", simbolo: "✕", extra: "ancha", texto: T("sitio.migrar.aviso"),
-    accion: { texto: T("sitio.migrar.autorizar"), onclick: () => { location.href = s.url_autorizar || "/conectar/github?para=conectado"; } } });
+    accion: { texto: T("sitio.migrar.autorizar"), onclick: () => { dialogoAutorizar(s.url_autorizar || "/conectar/github?para=conectado"); } } });
 }
 
 function renderHoySinPlan(d) {

@@ -1,0 +1,17 @@
+{# Diálogo «Autoriza una vez» (Ajustes). Recibe url (la liga a GitHub) y repo (owner/repo o vacío). Sin JS el botón de afuera es una liga normal. #}
+{% from "componentes.html" import boton %}
+<dialog class="dialogo dialogo-pagina dialogo-autorizar" id="dlg-autorizar" aria-labelledby="dlg-autorizar-t">
+  <div class="dl-cab"><h2 class="dl-t" id="dlg-autorizar-t">{{ t("sitio.auth.titulo") }}</h2></div>
+  <div class="dl-cuerpo">
+    <p>{{ t("sitio.auth.intro") }}</p>
+    <ol class="auth-pasos">
+      <li>{{ t("sitio.auth.p1")|negritas }}</li>
+      <li>{% if repo %}{{ t("sitio.auth.p2", repo=repo)|negritas }}{% else %}{{ t("sitio.auth.p2_sin")|negritas }}{% endif %}</li>
+      <li>{{ t("sitio.auth.p3")|negritas }} <small class="auth-nota">{{ t("sitio.auth.nota") }}</small></li>
+    </ol>
+    <div class="dl-dibujo" role="img" aria-label="{{ t('sitio.auth.dibujo_aria') }}">{% include "_dibujo_paso3.html" %}</div>
+    <p>{{ t("sitio.auth.vuelta") }}</p>
+    <p class="auth-nota">{{ t("sitio.auth.permisos") }}</p>
+    <div class="acciones">{{ boton(t("sitio.auth.ir"), href=url) }} <button class="boton sec" type="button" data-cierra>{{ t("sitio.auth.ahora_no") }}</button></div>
+  </div>
+</dialog>

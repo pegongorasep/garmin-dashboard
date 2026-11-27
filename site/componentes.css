@@ -697,3 +697,11 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .encabezado.sync-on .franja-enc-barra { display: block; }   /* fuera de `.sync-on` no existe: ni loader vacío ni barra verde colgada */
 .franja-enc-barra i { display: block; height: 100%; width: 0; background: var(--accent); }
 .franja-enc-barra[data-estado="error"] i { background: var(--bad); }
+
+/* Diálogo «Autoriza una vez»: el dibujo reserva su alto (no brinca al cargar) */
+.dl-dibujo { aspect-ratio: 420 / 240; width: 100%; max-width: 420px; }
+.dl-dibujo svg { display: block; margin: 0; width: 100%; height: 100%; font-family: var(--font-sans); }
+.auth-pasos { margin: 0; padding-left: 1.4em; display: grid; gap: var(--space-4); }
+.auth-nota { color: var(--muted); font-size: 0.85em; }
+.dialogo-autorizar .acciones { display: flex; gap: var(--space-8); flex-wrap: wrap; }
+html:not(.js) dialog.dialogo-autorizar:not([open]) { display: none; }

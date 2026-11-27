@@ -1215,6 +1215,38 @@ function ponerMenu(abrir, foco = true) {
   } else if (foco && btn) btn.focus();
 }
 
+/** Texto con **negritas** → nodos (texto y <strong>). */
+function conNegritas(texto) {
+  return String(texto).split("**").map((x, i) => (i % 2 ? h("strong", {}, x) : x));
+}
+
+/** Diálogo «Autoriza una vez»: explica qué pasa en GitHub antes de mandar a la persona (liga `url`, normalmente ui.sync.url_autorizar).
+ *  El nombre de su copia sale de ui.sync.repo. El dibujo es el mismo SVG de la guía, metido inline para que tome los colores del tema;
+ *  su caja reserva el alto (aspect-ratio) y, si no carga, queda vacía sin mover nada. */
+function dialogoAutorizar(url) {
+  const repo = (ui().sync || {}).repo;
+  const dibujo = h("div", { class: "dl-dibujo", role: "img", "aria-label": T("sitio.auth.dibujo_aria") });
+  fetch("/dibujo-github.svg").then((r) => (r.ok ? r.text() : "")).then((svg) => { if (svg.startsWith("<svg")) dibujo.innerHTML = svg; }).catch(() => {});
+  const d = DS.dialogo({ titulo: T("sitio.auth.titulo"), cerrar: T("sitio.auth.ahora_no"), cuerpo: [
+    h("p", {}, T("sitio.auth.intro")),
+    h("ol", { class: "auth-pasos" },
+      h("li", {}, conNegritas(T("sitio.auth.p1"))),
+      h("li", {}, conNegritas(repo ? T("sitio.auth.p2", { repo }) : T("sitio.auth.p2_sin"))),
+      h("li", {}, conNegritas(T("sitio.auth.p3")), " ", h("small", { class: "auth-nota" }, T("sitio.auth.nota")))),
+    dibujo,
+    h("p", {}, T("sitio.auth.vuelta")),
+    h("p", { class: "auth-nota" }, T("sitio.auth.permisos")),
+    h("div", { class: "acciones" },
+      DS.boton(T("sitio.auth.ir"), { href: url || "/conectar/github?para=conectado" }),
+      DS.boton(T("sitio.auth.ahora_no"), { variante: "sec", onclick: () => d.close() })),
+  ] });
+  d.classList.add("dialogo-autorizar");
+  d.addEventListener("close", () => d.remove());
+  document.body.append(d);
+  d.showModal();
+  return d;
+}
+
 /** Ranura de sincronizar del encabezado. Con la GitHub App encendida (ui.sync trae `puede` o `url_autorizar`) siempre es el botón «Sincronizar»
  *  (con `puede` sincroniza; sin él lleva a autorizar la app una vez); apagada, la liga «jalar datos» de siempre. */
 function accionSync(u) {
@@ -1222,7 +1254,7 @@ function accionSync(u) {
   if (sy.puede || sy.url_autorizar) {
     const viva = !!(window.Franja && window.Franja.viva());
     return h("button", { id: "sync-btn", class: "enlace-boton", type: "button", disabled: sy.puede && viva,
-      onclick: () => { if (sy.puede) { if (window.Franja) window.Franja.empezar("normal"); } else location.href = sy.url_autorizar; } }, T("sitio.sync.boton"));
+      onclick: () => { if (sy.puede) { if (window.Franja) window.Franja.empezar("normal"); } else dialogoAutorizar(sy.url_autorizar); } }, T("sitio.sync.boton"));
   }
   return u.acciones_url ? h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener", title: T("sitio.enc.acciones_tip") }, T("sitio.enc.jalar")) : null;
 }
