@@ -741,14 +741,14 @@ function pintarGrupo(g) {
     const fila = h("div", { class: "reacciones" });
     const repintar = (nuevo) => {
       fila.replaceChildren(
-        ...g.emojis.filter((e) => m.reacciones[e]).map((e) => {
+        ...[...g.emojis.filter((e) => m.reacciones[e]).map((e) => {
           const r = m.reacciones[e], quienes = r.quienes.join(", ");
           return DS.chipReaccion({ emoji: e, n: r.n, mia: r.mia, nueva: e === nuevo,
             etiqueta: r.mia ? T("sitio.gr.quitar", { emoji: e, quienes }) : T("sitio.gr.ver_quienes", { emoji: e, quienes }),
             onclick: r.mia ? () => enviar(m, e)
               : () => grupoDialogo(T("sitio.gr.quienes_t", { emoji: e }), [h("p", {}, T("sitio.gr.quienes", { emoji: e })), h("p", {}, quienes)]) });
         }),
-        m.usuario_id === yo ? null : DS.botonReaccion({ etiqueta: T("sitio.gr.reaccionar_a", { nombre: m.nombre }), onclick: () => elegir(m) }));
+        m.usuario_id === yo ? null : DS.botonReaccion({ etiqueta: T("sitio.gr.reaccionar_a", { nombre: m.nombre }), onclick: () => elegir(m) })].filter(Boolean));
     };
     m._pintarReacciones = repintar;
     repintar();
@@ -801,7 +801,7 @@ function pintarGrupo(g) {
   };
 
   const nov = g.novedades.filter((n) => porId[n.usuario_id]);
-  raiz.replaceChildren(
+  raiz.replaceChildren(...[
     h("div", { class: "grupo-cab ancha" }, h("h2", {}, g.grupo.nombre), h("a", { href: g.admin_url }, T("sitio.gr.administrar"))),
     ui().grupos > 1 ? h("div", { class: "ancha" }, DS.boton(T("sitio.gr.todos"), { variante: "texto", chico: true, onclick: () => { location.hash = "#grupo"; } })) : null,
     h("p", { class: "grupo-total ancha" }, T("sitio.gr.juntos", { km: fmt(g.total.km, 1), tiempo: grupoTiempo(g.total.minutos) })),
@@ -811,7 +811,7 @@ function pintarGrupo(g) {
         m.usuario_id === yo ? null : DS.botonReaccion({ texto: "", etiqueta: T("sitio.gr.reaccionar_a", { nombre: m.nombre }), onclick: () => elegir(m) }));
     }))) : null,
     aviso,
-    ...g.miembros.map(tarjeta));
+    ...g.miembros.map(tarjeta)].filter(Boolean));
 }
 
 function pintarListaGrupos(lista) {

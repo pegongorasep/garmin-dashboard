@@ -13,6 +13,9 @@ body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el con
 #app .vista > *, #app .vista #hoy-semana > *, #app .vista .sub > * { margin: 0; min-width: 0; }
 #hoy-semana, .sub { display: contents; }
 .ancha { grid-column: 1 / -1; }
+/* Grupo: lo ancho (cabecera, total, novedades, aviso) siempre arriba; las tarjetas de miembros después, en 2 columnas */
+#vista-grupo > .ancha { order: 0; }
+#vista-grupo > :not(.ancha) { order: 1; }
 @media (min-width: 900px) {
   .top, #carga, #app, body > .pie { max-width: 1080px; }
   .vista { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 14px 16px; }

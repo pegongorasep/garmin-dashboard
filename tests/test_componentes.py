@@ -172,10 +172,34 @@ def test_simulador_solo_admin_y_completo(web_ctx):
     assert r.status_code == 200 and "sim-matriz" in r.text and "Umbrales" in r.text
     for p in simulador.cargar_personas():
         assert p["nombre"].replace("'", "&#39;") in r.text
-    assert '<option value="actual"' in r.text and '<option value="v6"' in r.text and "Motor v6" in r.text
-    v6 = c.get("/admin/simulador?motor=v6")
-    assert v6.status_code == 200 and "sim-matriz" in v6.text and "progresion_pct" in v6.text   # los umbrales del motor v6 a la vista
-    assert "progresion_pct" not in r.text
-    assert c.get("/admin/simulador?motor=actual").status_code == 200
-    assert c.get("/admin/simulador?motor=no_existe").status_code == 200       # cae al primero
+    assert "progresion_pct" in r.text and "<option" not in r.text.split("sim-matriz")[0].split("<h1")[-1]   # umbrales del motor v6 a la vista, sin selector de motor
     assert "/admin/simulador" in c.get("/admin").text
+
+
+def _args_replace_children(src):
+    """Argumentos (texto) de cada `.replaceChildren(...)` con paréntesis balanceados."""
+    for m in re.finditer(r"replaceChildren\(", src):
+        i, nivel = m.end(), 1
+        while i < len(src) and nivel:
+            nivel += {"(": 1, ")": -1}.get(src[i], 0)
+            i += 1
+        yield src[m.end():i - 1]
+
+
+def test_replacechildren_no_recibe_null_sin_filtrar():
+    """`replaceChildren(null)` escribe «null» en la página: si un hijo puede ser null, se filtra."""
+    malos = []
+    for js in sorted((ROOT / "site").glob("*.js")):
+        for args in _args_replace_children(js.read_text()):
+            plano, nivel = "", 0   # solo lo que está fuera de (...) y {...}: los hijos directos
+            for c in args:
+                if c in "({":
+                    nivel += 1
+                if nivel == 0:
+                    plano += c
+                if c in ")}":
+                    nivel -= 1
+            tern_null = re.search(r"\?\s*null\s*:|\?[^?:]*:\s*null\s*[,)\]]", plano)
+            if tern_null and ".filter(" not in args:
+                malos.append(f"{js.name}: {args[:60]!r}")
+    assert not malos, malos
