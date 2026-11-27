@@ -37,6 +37,8 @@ class Usuario(Base):
     compartir_actividades: Mapped[bool] = mapped_column(default=True, server_default=sa.true())   # Social: los grupos ven mis actividades (apagado: solo totales de la semana)
     compartir_plan: Mapped[bool] = mapped_column(default=True, server_default=sa.true())          # Social: los grupos ven mi plan (calendario, etapa, avance)
     juntos_visto: Mapped[datetime | None] = mapped_column()           # Social S4: la última vez que abrió Juntos (para el punto de «nuevo»); None = nunca
+    gh_instalacion: Mapped[int | None] = mapped_column(sa.BigInteger)   # Conexión: id de la instalación de la GitHub App; None = no conectado así
+    historial_pendiente: Mapped[bool] = mapped_column(default=False, server_default=sa.false())   # Conexión: la comprobación salió bien y falta bajar el historial
     borrado: Mapped[datetime | None] = mapped_column()
 
 
@@ -89,6 +91,26 @@ class ReaccionActividad(Base):
     de_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
     emoji: Mapped[str] = mapped_column(sa.String(8))
     creada: Mapped[datetime] = mapped_column(default=ahora)
+
+
+class Sincronizacion(Base):
+    """Conexión: una corrida del workflow de la persona. tipo: comprobacion|historial|normal|treinta|programada;
+    estado: esperando|corriendo|ok|error; error: sin_key|nombre_mal|key_rechazada|otra;
+    paso: arranca|prepara|busca|encuentra|detalles|salud|sube|termina."""
+    __tablename__ = "sincronizaciones"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(sa.ForeignKey("usuarios.id"), index=True)
+    tipo: Mapped[str] = mapped_column(sa.String(16))
+    estado: Mapped[str] = mapped_column(sa.String(12), default="esperando")
+    error: Mapped[str | None] = mapped_column(sa.String(32))
+    paso: Mapped[str | None] = mapped_column(sa.String(16))
+    hechos: Mapped[int | None] = mapped_column()
+    total: Mapped[int | None] = mapped_column()
+    nuevas: Mapped[int | None] = mapped_column()
+    run_id: Mapped[int | None] = mapped_column(sa.BigInteger, index=True)
+    creada: Mapped[datetime] = mapped_column(default=ahora)
+    actualizada: Mapped[datetime] = mapped_column(default=ahora)
+    terminada: Mapped[datetime | None] = mapped_column()
 
 
 class Comentario(Base):
