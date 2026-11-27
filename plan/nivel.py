@@ -40,7 +40,8 @@ UMBRALES = {
     "consistente_min": 30,
     # Desentrenamiento (días desde la última corrida)
     "pausa_leve_dias": 14,          # más de esto: el arranque se recorta
-    "pausa_leve_factor": 0.8,
+    "pausa_leve_factor": 0.75,      # tras una pausa leve el arranque es este % del promedio ANTES de la pausa (§1.11: 15–28 días, ~½–¾ del plan)
+    "pausa_larga_factor": 0.5,      # tras una pausa de más de `pausa_baja_nivel_dias` (>4 semanas se pierden las ganancias)
     "pausa_baja_nivel_dias": 28,    # más de esto: se baja un nivel (§1.11: «reclasificar»)
     # Minutos de la semana 1
     "inicio_pct": 0.10,             # ≤ 110 % del promedio real de las últimas `semanas_volumen` semanas
@@ -152,9 +153,15 @@ def nivel_desde_datos(actividades: list, hoy, config: dict | None = None, detall
     ev["desentrenamiento"] = pausa
 
     prom = ev["minutos_sem_prom"]
-    if prom <= 0:
+    if pausa:   # el promedio de 4 semanas incluiría los ceros de la pausa: se toma el de las 4 semanas anteriores a ella
+        s0 = dias_pausa // 7 + 1
+        prom = round(sum(por_semana.get(k, (0, 0.0))[1] for k in range(s0, s0 + u["semanas_volumen"])) / u["semanas_volumen"], 1)
+        ev["minutos_sem_pre_pausa"] = prom
+        inicio = prom * (u["pausa_larga_factor"] if pausa == "baja_nivel" else u["pausa_leve_factor"])
+        inicio = int(inicio // u["inicio_redondeo"] * u["inicio_redondeo"]) if inicio > 10 else int(inicio)
+    elif prom <= 0:
         inicio = u["inicio_sin_historial_min"]
     else:
-        inicio = prom * (1 + u["inicio_pct"]) * (u["pausa_leve_factor"] if pausa else 1.0)
+        inicio = prom * (1 + u["inicio_pct"])
         inicio = int(inicio // u["inicio_redondeo"] * u["inicio_redondeo"]) if inicio > 10 else int(inicio)
     return {"nivel": nivel, "evidencia": ev, "inicio_minutos": inicio}

@@ -86,8 +86,13 @@ UMBRALES = {
         42: {"empezando": None, "base_corta": None, "base": 18, "corredor": 16},
     },
     # Ajuste semanal (§3.8)
-    "ajuste_pct": 0.10,               # la semana no pasa de 110 % de lo que de verdad se corrió la anterior
-    "ajuste_tras_hueco_min": 30,      # si la semana anterior fue 0: como mucho una sesión de regreso
+    "ajuste_pct": 0.10,               # sube: la semana no pasa de 110 % de lo que de verdad se corrió la anterior
+    "ajuste_sube_desde": 0.90,        # real ≥ 90 % del objetivo de la semana anterior → sube (progresión normal)
+    "ajuste_repite_desde": 0.50,      # real entre 50 y 90 % → repite (el objetivo de la semana anterior, sin subir)
+    "ajuste_baja_pct": 0.70,          # real < 50 % → da un paso atrás: máx(real × 1.10, 70 % del objetivo anterior)
+    "ajuste_reinicio_semanas": 2,     # ≥ 2 semanas seguidas en ~0 → reinicia desde `inicio_minutos`
+    "ajuste_piso": {"empezando": 45, "base": 60, "corredor": 90},   # piso duro por nivel (3 × 15' para Empezando); nunca más que lo planeado
+    "ajuste_picos_semanas": 3,        # taper: el pico es el mayor de las últimas 3 semanas de carga (ya ajustadas) hasta 2 semanas antes de la carrera
 }
 
 # Calidad: zona, tope de Z3+ como % de la semana, mínimos para que valga la pena, estructura. Las claves de tipo son las de gen_plan.
@@ -589,6 +594,7 @@ def generar_v6(entrada: dict) -> dict:
         w = {"n": n, "block": (n - 1) // u["ciclo"] + 1, "kind": "carga" if kind == "carga" else "descarga", "focus": "", "sessions": sesiones}
         if kind in ("carrera", "taper"):
             w["evento"] = "carrera" if kind == "carrera" else "descarga_carrera"
+            w["taper"] = taper[n - (n_semanas - len(taper)) - 1]   # fracción del pico (la usa ajustar_semana)
         w["focus"] = foco(w["kind"], sesiones, w.get("evento", ""), carrera["nombre"] if carrera else "")
         semanas.append(w)
         totales.append(minutos_semana(w))
@@ -662,33 +668,59 @@ def _reescalar(s: dict, minutos: int, usados: set) -> dict:
     return {**_sesion(s["id"], s["tipo"], s["name"], minutos, pasos_facil(minutos, esc, s["tipo"] == "larga"), esc), "dia": s.get("dia")}
 
 
-def ajustar_semana(plan: dict, n: int, real_prev_min, max_sesion_real_min=None, real_normal_min=None) -> dict:
-    """§3.8: la semana `n` del plan con sus minutos topados. Función pura (no cambia `plan`). Topes (se aplica el menor):
-    - lo que de verdad se corrió la semana anterior × 1.10 (`real_prev_min`; None = no se sabe, no se ajusta). Si fue 0 el tope es una sesión de regreso;
-    - en semanas de carga, la última semana que no fue descarga (ya ajustada, tal como está en `plan`) × 1.10: así una semana que bajó no rebota;
-    - ninguna sesión pasa de 110 % de la sesión real más larga de las últimas 4 semanas (`max_sesion_real_min`, si se da).
-    Si la semana anterior fue una descarga, el tope sale de lo real de la última semana normal (`real_normal_min`, si se da; si no, se estima
-    como real × planeado de esa semana / planeado de la descarga) para no frenar el regreso al volumen de antes.
-    Las sesiones se escalan por igual (hacia abajo; nunca crecen). Las que quedarían de menos de 10' se juntan quitando la más corta (nunca la larga).
-    Una calidad que ya no cabe pasa a Z2. La larga nunca pasa de su tope (% de la semana) con las sesiones que quedan.
-    La semana trae `ajuste` = {planeado, real_prev, tope, minutos, ajustada} (para decir «ajustada a lo que corriste»)."""
+def pico_ajustado(semanas: list, n_carrera: int) -> int:
+    """Pico para medir el taper: el mayor de las últimas semanas de carga (ya ajustadas) hasta 2 semanas antes de la carrera."""
+    cargas = [minutos_semana(w) for w in semanas if w["kind"] == "carga" and w["n"] <= n_carrera - 2]
+    return max(cargas[-UMBRALES["ajuste_picos_semanas"]:], default=0)
+
+
+def ajustar_semana(plan: dict, n: int, real_prev_min, max_sesion_real_min=None, real_normal_min=None, semanas_en_cero=None) -> dict:
+    """§3.8: la semana `n` del plan con su objetivo ajustado a lo que de verdad se corrió. Función pura (no cambia `plan`).
+    Solo se topa la SUBIDA; quien hace menos no persigue al plan hacia abajo cada semana. Con `objetivo_prev` = lo que quedó planeado la semana
+    anterior (ya ajustado, tal como está en `plan`) y real/objetivo_prev:
+    - ≥ 90 %: «sube», objetivo = min(planeado, real × 1.10), la progresión normal;
+    - 50–90 %: «repite», objetivo = min(planeado, objetivo_prev) (la semana se repite);
+    - < 50 % (enfermedad, viaje, hueco): «baja», objetivo = máx(real × 1.10, 70 % de objetivo_prev) como paso atrás;
+    - ≥ 2 semanas seguidas en ~0 (`semanas_en_cero`; si no se da: 1 si real_prev = 0): «reinicia» desde `meta.inicio_minutos`.
+    Después de todo: un piso duro por nivel (`ajuste_piso`, nunca más que lo planeado) y, en carga, ≤ 110 % de la última semana normal.
+    Con la semana anterior en descarga, la referencia es la última semana normal (`real_normal_min` = lo real de esa; si no se da se estima
+    real × planeado normal / planeado de la descarga). Las semanas de taper/carrera siguen su fracción del pico ajustado y no se topan por lo real.
+    Ninguna sesión pasa de 110 % de la real más larga de 4 semanas (`max_sesion_real_min`). Las sesiones se escalan por igual hacia abajo; las de
+    menos de 10' se juntan quitando la más corta (nunca la larga); una calidad que no cabe pasa a Z2.
+    La semana trae `ajuste` = {razon: sube|repite|baja|reinicia|taper, planeado, objetivo_prev, real_prev, tope, minutos, ajustada, piso} (para el «por qué»)."""
     u = UMBRALES
     semanas = {w["n"]: w for w in plan["weeks"]}
     w = copy.deepcopy(semanas[n])
     if real_prev_min is None or n - 1 not in semanas:
         return w
-    planeado, ref, prev = minutos_semana(w), real_prev_min, semanas[n - 1]
+    planeado, prev = minutos_semana(w), semanas[n - 1]
     normal = next((semanas[k] for k in range(n - 1, 0, -1) if semanas[k]["kind"] != "descarga"), None)
-    if prev["kind"] == "descarga" and real_prev_min > 0 and normal:
-        if real_normal_min is not None:
-            ref = real_normal_min
-        elif minutos_semana(prev):
-            ref = int(real_prev_min * minutos_semana(normal) / minutos_semana(prev))   # entero hacia abajo: lo hecho se redondea por sesión
-    tope = u["ajuste_tras_hueco_min"] if ref <= 0 else int(ref * (1 + u["ajuste_pct"]) + 1e-9)
-    if w["kind"] == "carga" and normal:
-        tope = min(tope, int(minutos_semana(normal) * (1 + u["ajuste_pct"]) + 1e-9))
+    objetivo_prev, real = minutos_semana(prev), real_prev_min
+    if prev["kind"] == "descarga" and normal:
+        objetivo_prev = minutos_semana(normal)
+        if real_prev_min > 0:
+            real = real_normal_min if real_normal_min is not None else int(real_prev_min * objetivo_prev / max(minutos_semana(prev), 1))
+    ratio = real / objetivo_prev if objetivo_prev else 1.0
+    cero = semanas_en_cero if semanas_en_cero is not None else (1 if real_prev_min <= 0 else 0)
+    nivel = (plan.get("meta") or {}).get("nivel", "base")
+    piso = u["ajuste_piso"][nivel]
+    if w.get("taper") is not None:
+        razon, tope = "taper", int(w["taper"] * pico_ajustado(list(semanas.values()), max(semanas)))
+    else:
+        if cero >= u["ajuste_reinicio_semanas"]:
+            razon, tope = "reinicia", int((plan.get("meta") or {}).get("inicio_minutos") or objetivo_prev)
+        elif ratio >= u["ajuste_sube_desde"]:
+            razon, tope = "sube", int(real * (1 + u["ajuste_pct"]) + 1e-9)
+        elif ratio >= u["ajuste_repite_desde"]:
+            razon, tope = "repite", objetivo_prev
+        else:
+            razon, tope = "baja", max(int(real * (1 + u["ajuste_pct"]) + 1e-9), int(u["ajuste_baja_pct"] * objetivo_prev))
+        if w["kind"] == "carga" and normal:
+            tope = min(tope, int(minutos_semana(normal) * (1 + u["ajuste_pct"]) + 1e-9))
+        tope = max(tope, min(planeado, piso))
     tope_ses = int(max_sesion_real_min * (1 + u["sesion_pct"]) + 1e-9) if max_sesion_real_min else None
-    w["ajuste"] = {"planeado": planeado, "real_prev": real_prev_min, "tope": tope, "minutos": min(planeado, tope), "ajustada": False}
+    w["ajuste"] = {"razon": razon, "planeado": planeado, "objetivo_prev": objetivo_prev, "real_prev": real_prev_min, "tope": tope,
+                   "minutos": min(planeado, tope), "ajustada": False, "piso": piso}
     ses = list(w["sessions"])
     nuevos = [s["minutes"] for s in ses]
     if planeado > tope:
@@ -698,8 +730,20 @@ def ajustar_semana(plan: dict, n: int, real_prev_min, max_sesion_real_min=None, 
             if min(nuevos) >= u["sesion_min"] or len(ses) == 1:
                 break
             ses.remove(min([s for s in ses if s["tipo"] != "larga"] or ses, key=lambda s: s["minutes"]))
-    if tope_ses:
+    if tope_ses:   # excepción: el piso repartido entre las sesiones se puede cumplir aunque lo real haya sido poco
+        tope_ses = max(tope_ses, -(-piso // len(ses)))
         nuevos = [min(m, tope_ses) for m in nuevos]
+    resto = min(planeado, tope) - sum(nuevos)   # minutos que los redondeos o el tope de sesión dejaron sueltos: de uno en uno, primero a las fáciles
+    pct_lg = u["larga_tope_pct"][min(len(ses), 5)] if len(ses) > 1 else 1.0
+    orden = [i for i, s in enumerate(ses) if s["tipo"] != "larga"] + [i for i, s in enumerate(ses) if s["tipo"] == "larga"]
+    avanza = True
+    while resto > 0 and avanza:
+        avanza = False
+        for i in orden:
+            if resto > 0 and nuevos[i] < (tope_ses or ses[i]["minutes"]) and (ses[i]["tipo"] != "larga" or nuevos[i] + 1 <= pct_lg * (sum(nuevos) + 1)):
+                nuevos[i] += 1
+                resto -= 1
+                avanza = True
     if len(ses) > 1:   # con menos sesiones (o por los redondeos) la larga podría pasar de su % de la semana: se recorta
         i_lg = next((i for i, s in enumerate(ses) if s["tipo"] == "larga"), None)
         pct = u["larga_tope_pct"][min(len(ses), 5)]

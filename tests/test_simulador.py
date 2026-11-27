@@ -116,8 +116,11 @@ def test_sube_10():
 
 def test_sube_real_10():
     assert regla(persona(), plan(*carga(90, 95, 100)), "sube_real_10")["ok"] is True
-    mal = regla(persona(adherencia={"base": 0.5}), plan(*carga(90, 90, 90)), "sube_real_10")
+    assert regla(persona(adherencia={"base": 0.5}), plan(*carga(90, 90, 90)), "sube_real_10")["ok"] is True   # 50–90 %: repetir la semana vale
+    mal = regla(persona(adherencia={"base": 0.5}), plan(*carga(90, 100, 110)), "sube_real_10")             # pero subir no
     assert mal["ok"] is False and mal["semanas_fallan"] == [2, 3]
+    assert regla(persona(adherencia={"base": 0.4}), plan(*carga(90, 63, 44)), "sube_real_10")["ok"] is True   # < 50 %: paso atrás (≥ 70 %)
+    assert regla(persona(adherencia={"base": 0.4}), plan(*carga(90, 50)), "sube_real_10")["ok"] is True        # bajar más de lo necesario no sube nada
     tras_hueco = regla(persona(adherencia={"base": 1.0, "huecos": [[1, 1]]}), plan(*carga(90, 90)), "sube_real_10")
     assert tras_hueco["semanas_fallan"] == [2]   # venía de 0 y planea 90'
 
