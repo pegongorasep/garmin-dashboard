@@ -666,20 +666,17 @@ const DS = (() => {
       h("div", { class: "pers-quien" }, h("h2", { class: "pers-nombre" }, nombre),
         h("p", { class: "pers-nivel" }, nivel ? chip(nivel, "suave") : null), h("p", { class: "pers-grupos" }, grupos)));
 
-  /** Calendario del plan de una persona: una fila de 7 días por semana (✓ si la sesión se hizo, aro si estaba planeada) y debajo las sesiones de esa semana.
-   *  Recibe { semanas:[{ titulo, dias:[{ nombre, numero, hoy, hecha, etiqueta }], sesiones:[{ texto, hecha }] }] }. */
-  const calendarioPlan = ({ semanas = [] } = {}) =>
-    h("div", { class: "pers-cal" }, semanas.map((sm) => h("div", { class: "pers-sem" }, h("p", { class: "pers-sem-t" }, sm.titulo),
-      calendario(sm.dias.map((d) => diaCal({ nombre: d.nombre, numero: d.numero, hoy: d.hoy, titulo: d.etiqueta || undefined,
-        hijos: [h("span", { class: `pers-marca${d.hecha ? " hecha" : d.etiqueta ? " plan" : ""}`, "aria-hidden": "true" }, d.hecha ? "✓" : "")] }))),
-      h("p", { class: "pers-ses" }, sm.sesiones.map((x) => chip(`${x.hecha ? "✓ " : ""}${x.texto}`, x.hecha ? "suave" : undefined))))));
+  /** Selector min / km de las gráficas y del bloque del plan: un segmento de dos botones que no cambia de tamaño al elegir.
+   *  Recibe { etiqueta, activo ("min" o "km"), textos { min, km }, onCambio(id) }. */
+  const selectorUnidad = ({ etiqueta, activo = "min", textos = { min: "min", km: "km" }, onCambio } = {}) =>
+    segmento({ etiqueta, modo: "grupo", clase: "unidad", activo, opciones: [{ id: "min", texto: textos.min }, { id: "km", texto: textos.km }], onCambio });
 
   return {
     animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, dialogoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
-    anilloMini, barraFina, puntosSemana, miniSemana, semanaPlanTarjeta, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad, botonComentarios, panelComentarios, cabeceraPersona, calendarioPlan,
+    anilloMini, barraFina, puntosSemana, miniSemana, semanaPlanTarjeta, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad, botonComentarios, panelComentarios, cabeceraPersona, selectorUnidad,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */
     silueta: (tramos, { alto = 44, conTip = true, rachas = null, ...rampas } = {}) => siluetaSesion(tramos, alto, conTip, rachas, rampas),
   };

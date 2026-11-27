@@ -243,7 +243,8 @@ function barChart(cfg) {
     if (cfg.etiquetaFinal && i === semanas.length - 1) {
       svg.append(sv("text", { class: "dato", x: Math.min(cx + 6, W - 2), y: Math.max(y(Math.max(total(s), s.meta || 0)) - 5, 10), "text-anchor": "end" }, cfg.etiquetaFinal));
     }
-    if (i % cada === 0) svg.append(sv("text", { x: cx, y: H - 6, "text-anchor": "middle" }, fechaCorta2(parseFecha(s.inicio).getTime())));
+    if (s.actual) svg.append(sv("rect", { class: "sem-actual", x: cx - slot / 2 + 2, y: H - mb, width: Math.max(slot - 4, 2), height: 3, rx: 1.5 }, sv("title", {}, T("sitio.ch.actual"))));   // la semana de hoy, aunque no sea la primera ni la última
+    if (i % cada === 0) svg.append(sv("text", { class: s.actual ? "dato" : null, x: cx, y: H - 6, "text-anchor": "middle" }, fechaCorta2(parseFecha(s.inicio).getTime())));
     const hit = sv("rect", { class: "capa", x: cx - slot / 2, y: 0, width: slot, height: H - mb, tabindex: 0,
       "aria-label": cfg.texto(s) });
     const ver = () => tip.mostrar(cfg.texto(s), cx, y(total(s)));

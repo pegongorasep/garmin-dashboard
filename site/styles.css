@@ -132,6 +132,9 @@ body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el con
 .sem-ev[data-ev="prueba"] { color: var(--morado); }
 .sem-prog { display: block; height: 16px; line-height: 16px; font-size: 12px; font-variant-numeric: tabular-nums; margin-top: var(--space-2); color: var(--muted); white-space: pre; }
 .sem-prog[data-cump="completa"], .sem-prog[data-cump="casi"] { color: var(--bien); font-weight: 700; }
+.sem-vol { display: block; height: 14px; line-height: 14px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: pre; }
+.unidad-fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-6); min-height: 42px; }
+.unidad-fila .nota { margin: 0; flex: 1 1 12em; }
 .sem-barra { display: block; width: 70%; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
 .sem-barra i { display: block; height: 100%; background: currentColor; }
 .sem-barra.completa i { background: var(--ok); }

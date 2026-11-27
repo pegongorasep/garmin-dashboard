@@ -250,12 +250,14 @@ def semanas_plan(plan: dict, zonas: list, hoy: date, semanas_hoy: list, config: 
         if ini is not None and ini <= monday(hoy):
             sem = por_inicio[ini.isoformat()]
             cw["progreso"] = {"hechas": sem["plan"]["hechas"], "total": sem["plan"]["total"], "pct": sem["plan"]["pct"]}
+            cw["minutos"], cw["km"] = sem["stats"]["minutos"], sem["stats"]["km"]   # lo hecho de la semana (volumen), en las dos unidades
             if ini < monday(hoy):
                 cw["cumplimiento"] = semanal.cumplimiento(cw["progreso"]["hechas"], cw["progreso"]["total"])
                 # pasada: lo que no se hizo es «no_hecha» (la actual lleva el suyo en plan.estado_sesiones)
                 cw["estados"] = [{"id": e["id"], "estado": e["estado"], "ajustada": e["ajustada"]} for e in sem["sesiones"]]
         if "estados" not in cw and (ini is None or ini > monday(hoy)):
             cw["estados"] = [{"id": s["id"], "estado": "pendiente", "ajustada": False} for s in w["sessions"]]   # futura
+        cw["plan_min"] = semanal.minutos_plan(w)   # el objetivo del plan solo existe en minutos
         out.append(cw)
     return out
 
@@ -745,7 +747,7 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
         r = semanal.resumen_semana(ini, ini + timedelta(days=6), data, config)
         n = m.semana_del_plan(ini, config)
         semana = next((w for w in plan["weeks"] if w["n"] == n), None)
-        out.append({"inicio": ini.isoformat(), "minutos": r["minutos"], "km": r["km"],
+        out.append({"inicio": ini.isoformat(), "actual": ini == monday(hoy), "minutos": r["minutos"], "km": r["km"],
                     "min_trote": r["min_trote"], "min_camina": r["min_camina"],
                     "plan_min": semanal.minutos_plan(semana),
                     "entrenos": entrenos_semana(ini, data, config)})
@@ -900,7 +902,7 @@ def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj, plan
     semanas = []
     for s in semanal.serie_semanas(hoy, plan, config):
         c = m.week_load(acts, data["details"], s, config)
-        semanas.append({"inicio": s.isoformat(),
+        semanas.append({"inicio": s.isoformat(), "actual": s == ini,
                         "cargas": {k["id"]: r1(c[k["id"]]) for k in config["categorias"]},
                         "carga_corrida": r1(c["run"])})
     return {
@@ -1143,7 +1145,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "corridas": build_runs(data, config, plan),
                      "semanas": semanas_12,
                      "mejora": mejora,
-                     "intensidad_semanas": [{"inicio": i.isoformat(), **intensidad_semana(data["activities"], i)}
+                     "intensidad_semanas": [{"inicio": i.isoformat(), "actual": i == monday(hoy), **intensidad_semana(data["activities"], i)}
                                             for i in semanal.serie_semanas(hoy, plan, config)],
                      "numeros": build_numeros(hoy, filas, mejora["modo"]),
                      "dias": build_days(hoy, data)},

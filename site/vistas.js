@@ -186,44 +186,86 @@ function ayudaSemanas() {
   ].map(([m, k]) => DS.filaMuestra(m, T(`sitio.plan.ayuda_${k}`)));
 }
 
-function tarjetaDoceSemanas(d) {
-  const plan = d.plan || {};
-  const semanas = plan.semanas || [];
-  const ayuda = DS.dialogo({ titulo: T("sitio.plan.ayuda_t"), cuerpo: ayudaSemanas() });
-  const c = DS.tarjeta({ titulo: [T("sitio.plan.doce"), DS.botonIco("ayuda", T("sitio.plan.ayuda_btn"), { onclick: () => ayuda.showModal() })], clase: "ancha" }, ayuda);
+// --- unidad de las gráficas y del bloque: min o km (solo cambia qué valor se pinta; Python manda los dos) ---
+const UNIDADES = ["min", "km"];
+let unidad = (() => { try { const u = localStorage.getItem("unidad"); return UNIDADES.includes(u) ? u : "min"; } catch (e) { return "min"; } })();
+const REPINTAR_UNIDAD = [];   // cada pieza que muestra volumen se apunta aquí; las que ya no están en la página se sueltan
+
+/** Cambia la unidad (se recuerda en este navegador) y repinta lo que depende de ella. */
+function elegirUnidad(u) {
+  if (!UNIDADES.includes(u) || u === unidad) return;
+  unidad = u;
+  try { localStorage.setItem("unidad", u); } catch (e) { /* sin almacenamiento: vale solo esta visita */ }
+  for (let i = REPINTAR_UNIDAD.length - 1; i >= 0; i--) { if (REPINTAR_UNIDAD[i].conectado()) REPINTAR_UNIDAD[i].pintar(); else REPINTAR_UNIDAD.splice(i, 1); }
+}
+
+/** El selector min / km de la página; todos los selectores abiertos marcan siempre la unidad vigente. */
+function selectorUnidad() {
+  const caja = DS.selectorUnidad({ etiqueta: T("sitio.u.etiqueta"), activo: unidad, textos: { min: T("sitio.u.min"), km: T("sitio.u.km") }, onCambio: elegirUnidad });
+  REPINTAR_UNIDAD.push({ conectado: () => caja.isConnected, pintar: () => caja.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === unidad))) });
+  return caja;
+}
+
+/** Volumen de una semana del bloque en la unidad vigente. Del plan solo hay minutos; en km sale lo hecho (vacío si aún no hay). */
+function textoVolumen(x) {
+  const hecho = x.minutos != null;
+  if (unidad === "km") return hecho ? T("sitio.plan.vol_km", { k: fmt(x.km || 0, 1) }) : "";
+  if (hecho) return x.plan_min ? T("sitio.plan.vol_hp", { h: fmt(x.minutos, 0), p: x.plan_min }) : T("sitio.plan.vol_h", { h: fmt(x.minutos, 0) });
+  return x.plan_min ? T("sitio.plan.vol_p", { p: x.plan_min }) : "";
+}
+
+/**
+ * El bloque del plan de cualquier largo (8, 12, 16 semanas…): lo usan la pestaña Plan y el perfil de otra persona, con el mismo `plan` de Python
+ * (en el perfil, ya filtrado en el servidor). Recibe el plan y opciones: { editarUrls ({"n/id": url}; sin ligas, solo lectura), textoDescarga,
+ * sel (semana abierta al inicio), alElegir (n), titulo, clase }. No lee nada global del sitio, así vale en ambos lados.
+ */
+function tarjetaPlan(plan, { editarUrls = {}, textoDescarga = "", sel = null, alElegir = null, titulo = null, clase = "ancha" } = {}) {
+  const semanas = (plan || {}).semanas || [];
+  const largo = plan.largo || semanas.length;
+  const ayuda = DS.dialogo({ titulo: T("sitio.plan.ayuda_t", { n: largo }), cuerpo: ayudaSemanas() });
+  const c = DS.tarjeta({ titulo: [titulo || T("sitio.plan.n_sem", { n: largo }), DS.botonIco("ayuda", T("sitio.plan.ayuda_btn"), { onclick: () => ayuda.showModal() })], clase }, ayuda);
   if (!semanas.length) { c.append(DS.estadoVacio({ icono: null, titulo: T("sitio.plan.sin_plan") })); return c; }
   const actual = plan.semana_actual ?? null;
-  if (planSel === null || !semanas.some((w) => w.n === planSel)) planSel = actual ?? semanas[0].n;
-  const w = semanas.find((x) => x.n === planSel);
+  if (sel === null || !semanas.some((w) => w.n === sel)) sel = actual ?? semanas[0].n;
+  const w = semanas.find((x) => x.n === sel);
+  const bloques = plan.bloques || [...new Set(semanas.map((x) => x.block))];
+  const vols = [];
   const linea = h("div", { class: "linea" });
-  for (const bloque of [1, 2, 3]) {
+  for (const bloque of bloques) {
     const del = semanas.filter((x) => x.block === bloque);
     if (!del.length) continue;
     linea.append(h("div", { class: "bloque" }, h("div", { class: "nota" }, T("sitio.plan.bloque", { n: bloque })),
-      h("div", { class: "semanas" }, del.map((x) =>
-        h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""} ${anilloSemana(x, actual)}`,
-          "aria-pressed": x.n === planSel ? "true" : "false",
+      h("div", { class: "semanas" }, del.map((x) => {
+        const vol = h("span", { class: "sem-vol", "aria-hidden": "true" }, textoVolumen(x) || " ");
+        vols.push([vol, x]);
+        return h("button", { type: "button", class: `sem ${x.kind === "descarga" ? "desc" : ""} ${x.n === actual ? "actual" : ""} ${anilloSemana(x, actual)}`,
+          "aria-pressed": x.n === sel ? "true" : "false",
           "aria-label": T("sitio.plan.aria", { n: x.n, e: etiquetaSemana(x), act: (x.n === actual ? T("sitio.plan.act_aria") : "") + textoMarca(x) }),
-          onclick: () => { planSel = x.n; const n = tarjetaDoceSemanas(d); c.replaceWith(n); const b = n.querySelector('.sem[aria-pressed="true"]'); if (b) b.focus({ preventScroll: true }); } },
+          onclick: () => { if (alElegir) alElegir(x.n); const n = tarjetaPlan(plan, { editarUrls, textoDescarga, sel: x.n, alElegir, titulo, clase }); c.replaceWith(n); const b = n.querySelector('.sem[aria-pressed="true"]'); if (b) b.focus({ preventScroll: true }); } },
           x.n === actual ? h("em", {}, T("sitio.plan.actual")) : null,
           h("span", { class: "sem-cab" }, h("strong", {}, x.n),
             iconosSemana(x).map((k) => DS.burbuja(h("span", { class: "sem-ev", "data-ev": k }, DS.ico(ICONO_MARCA[k])), textoBurbuja(x, k)))),
           h("span", {}, tipoSemana(x.etiqueta || x.kind)),
-          marcaProgreso(x, actual))))));
+          marcaProgreso(x, actual), vol);
+      }))));
   }
+  REPINTAR_UNIDAD.push({ conectado: () => c.isConnected, pintar: () => vols.forEach(([v, x]) => { v.textContent = textoVolumen(x) || " "; }) });
   const est = actual === w.n ? plan.estado_sesiones ?? [] : w.estados ?? [];   // el estado de cada semana lo calcula Python
-  c.append(linea,
-    h("p", { class: "nota" }, T("sitio.plan.nota", { d: ui().textos.descarga || T("sitio.plan.descarga_nota") })),
+  c.append(h("div", { class: "unidad-fila" }, selectorUnidad(), h("p", { class: "nota" }, T("sitio.u.nota"))), linea,
+    h("p", { class: "nota" }, T("sitio.plan.nota", { d: textoDescarga || T("sitio.plan.descarga_nota") })),
     h("h3", { class: "titular" }, T("sitio.plan.titulo_sem", { n: w.n, b: w.block, k: tipoSemana(w.kind) })),
     h("p", { class: "nota" }, w.focus || ""),
     ...(w.ajuste_texto ? [h("p", { class: "nota" }, w.ajuste_texto)] : []),   // append(null) escribiría «null»
     ...(actual === w.n && plan.faltan ? [h("p", { class: "nota" }, plan.faltan)] : []),
-    h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), (ui().editar_urls || {})[`${w.n}/${s.id}`]
-      ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: ui().editar_urls[`${w.n}/${s.id}`] })] } : {}))),
+    h("div", { class: "filas" }, (w.sessions || []).map((s) => filaSesion(s, est.find((e) => e.id === s.id), editarUrls[`${w.n}/${s.id}`]
+      ? { cuerpo: [...cuerpoPlan(s), DS.boton(T("sitio.plan.editar"), { variante: "sec", chico: true, href: editarUrls[`${w.n}/${s.id}`] })] } : {}))),
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, T("sitio.plan.repetidas", { l: plan.semanas_repetidas.join(", ") }))] : []),
     ...listaEventos(plan.eventos));
   return c;
 }
+
+/** La tarjeta de la pestaña Plan: el bloque con las opciones propias de quien lo ve (ligas de editar, texto de descarga, semana elegida). */
+const tarjetaDoceSemanas = (d) => tarjetaPlan(d.plan || {}, { editarUrls: ui().editar_urls || {}, textoDescarga: (ui().textos || {}).descarga, sel: planSel, alElegir: (n) => { planSel = n; } });
 
 const nombreEvento = (t) => (["viaje", "enfermedad", "lesion", "carrera"].includes(t) ? T(`sitio.ev.${t}`) : t);
 const tipoSemana = (k) => (k === "descarga" || k === "carga" ? T(`sitio.plan.${k}`) : k);
@@ -299,7 +341,7 @@ function graficaVolumen(d, ancho) {
   const semanas = (prog.semanas || []).slice(-periodo);
   const hay = semanas.some((s) => (s.minutos || 0) > 0 || s.plan_min);
   if (!hay) return DS.estadoVacio({ icono: null, titulo: T("sitio.vol.sin") });
-  const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [s.min_trote || 0, s.min_camina || 0], meta: s.plan_min || 0, s }));
+  const barras = semanas.map((s) => ({ inicio: s.inicio, actual: s.actual, valores: [s.min_trote || 0, s.min_camina || 0], meta: s.plan_min || 0, s }));
   return h("div", {}, h("p", { class: "nota" }, T("sitio.vol.nota")),
     barChart({ ancho, semanas: barras, clases: ["s1", "walk"], etiqueta: T("sitio.vol.et"),
       entrenos: semanas.some((s) => (s.entrenos || []).length) ? (b) => b.s.entrenos || [] : null,
@@ -313,7 +355,7 @@ function graficaKm(d, ancho) {
   const semanas = ((d.progreso || {}).semanas || []).slice(-periodo);
   if (!semanas.some((s) => (s.km || 0) > 0)) return DS.estadoVacio({ icono: null, titulo: T("sitio.vol.sin") });
   return h("div", {}, h("p", { class: "nota" }, T("sitio.km.nota")),
-    barChart({ ancho, semanas: semanas.map((s) => ({ inicio: s.inicio, valores: [s.km || 0], s })), clases: ["s1"],
+    barChart({ ancho, semanas: semanas.map((s) => ({ inicio: s.inicio, actual: s.actual, valores: [s.km || 0], s })), clases: ["s1"],
       etiqueta: T("sitio.km.et"),
       texto: (b) => T("sitio.km.txt", { f: fechaLarga(b.inicio), k: fmt(b.s.km) }) }),
     tablaDatos(T("sitio.km.cols").split(","), semanas.slice().reverse().map((s) => [fechaLarga(s.inicio), fmt(s.km)]), T("sitio.vol.tabla")));
@@ -364,7 +406,7 @@ function tarjetaIntensidadSemanas(d) {
     caja.replaceChildren(barChart({
       ancho, alto: 130, tope: 100, ref: { y: 80, etiqueta: T("sitio.ig.meta_ref") }, clases: intGrupos().map((g) => g[2]),
       etiqueta: T("sitio.ig.et"),
-      semanas: sem.map((x) => ({ inicio: x.inicio, valores: intGrupos().map(([k]) => x[k] || 0), x })),
+      semanas: sem.map((x) => ({ inicio: x.inicio, actual: x.actual, valores: intGrupos().map(([k]) => x[k] || 0), x })),
       texto: (b) => T("sitio.ig.txt", { f: fechaLarga(b.inicio), b: fmt(b.x.bajo, 0), l: fmt(b.x.limbo, 0), a: fmt(b.x.alto, 0) }),
     }));
     pie.replaceChildren(DS.leyenda([...intGrupos().map(([, n, c]) => [COLOR_CLASE[c], n]), ["raya-disc", T("sitio.ig.leyenda")]]),
@@ -645,7 +687,7 @@ function tarjetaCarga(det) {
   PINTAR.progreso.push(dibujarDetalles);
   const c = bloqueCarga(det);
   DET.carga = { sub: h("p", { class: "nota" }), chart: h("div", { class: "chart-wrap" }), extra: h("div", { class: "pie-graf" }) };
-  c.append(h("h3", { class: "titular" }, T("sitio.carga.12")), DET.carga.sub, DET.carga.chart, DET.carga.extra);
+  c.append(h("h3", { class: "titular" }, T("sitio.ult_n_sem", { n: (det.carga_semanas || []).length })), DET.carga.sub, DET.carga.chart, DET.carga.extra);
   c.classList.add("ancha");
   return c;
 }
@@ -658,7 +700,7 @@ function dibujarDetalles() {
   const semanas = ((datos.detalles || {}).carga_semanas || []);
   const cats = ui().categorias, clases = [...cats.map((c) => c.clase), "s2"];
   const nombres = [...cats.map((c) => c.nombre), T("sitio.carga.corrida")];
-  const barras = semanas.map((s) => ({ inicio: s.inicio, valores: [...cats.map((c) => (s.cargas || {})[c.id] || 0), s.carga_corrida || 0] }));
+  const barras = semanas.map((s) => ({ inicio: s.inicio, actual: s.actual, valores: [...cats.map((c) => (s.cargas || {})[c.id] || 0), s.carga_corrida || 0] }));
   const suma = (s) => s.valores.reduce((a, v) => a + v, 0);
   t.sub.textContent = T("sitio.carga.nota");
   t.chart.replaceChildren(barChart({
@@ -1008,6 +1050,20 @@ function personaFaltan(f) {
   return personaLista(f.map((x) => (x.k === "facil" ? T(x.n === 1 ? "sitio.gr.p.f_facil_uno" : "sitio.gr.p.f_facil_n", { n: x.n }) : T(`sitio.gr.p.f_${x.k}`))));
 }
 
+/** Minutos o km de carrera por semana del perfil: todas las semanas (con ceros), la actual marcada; el selector solo cambia qué valor se pinta. */
+function graficaPersona(semanas) {
+  const caja = h("div", { class: "pers-graf" });
+  const pintar = () => {
+    const km = unidad === "km";
+    caja.replaceChildren(DS.graficaBarras({ alto: 120, clases: ["s1"], etiqueta: T(km ? "sitio.gr.p.graf_km" : "sitio.gr.p.graf", { n: semanas.length }),
+      semanas: semanas.map((w) => ({ inicio: w.inicio, actual: w.actual, valores: [(km ? w.km : w.minutos) || 0] })),
+      texto: (w) => (km ? T("sitio.gr.p.graf_tip_km", { fecha: fechaCorta(w.inicio), km: fmt(w.valores[0], 1) }) : T("sitio.gr.p.graf_tip", { fecha: fechaCorta(w.inicio), min: fmt(w.valores[0], 0) })) }));
+  };
+  REPINTAR_UNIDAD.push({ conectado: () => caja.isConnected, pintar });
+  pintar();
+  return h("div", {}, selectorUnidad(), caja);
+}
+
 function pintarPersona(p) {
   const oculto = (clave) => h("p", { class: "pers-oculto" }, T(clave));
   const sec = (titulo, ...hijos) => DS.tarjeta({ titulo, clase: "pers-sec ancha" }, ...hijos.filter(Boolean));
@@ -1028,19 +1084,12 @@ function pintarPersona(p) {
       s ? h("p", { class: "pers-dato" }, s.objetivo ? T("sitio.gr.p.min_de", { hechos: fmt(s.minutos, 0), meta: fmt(s.objetivo, 0) }) : T("sitio.gr.p.min_solo", { hechos: fmt(s.minutos, 0) })) : oculto("sitio.gr.p.sin_datos"),
       p.comparte.plan && s && s.objetivo ? h("p", { class: "pers-faltan" }, s.faltan.length ? T("sitio.gr.p.faltan", { lista: personaFaltan(s.faltan) }) : T("sitio.gr.p.al_dia")) : null,
       !p.comparte.plan ? oculto("sitio.gr.p.no_plan") : null));
-    // Calendario del plan: esta semana y la siguiente
-    if (p.calendario) {
-      partes.push(sec(T("sitio.gr.p.plan_t"), DS.calendarioPlan({ semanas: p.calendario.map((w) => ({
-        titulo: w.n ? T("sitio.gr.p.sem_n", { n: w.n, fecha: fechaCorta(w.inicio) }) : T("sitio.gr.p.sem_f", { fecha: fechaCorta(w.inicio) }),
-        dias: w.dias.map((d) => ({ nombre: d.dia, numero: parseFecha(d.fecha).getDate(), hoy: d.hoy, hecha: d.hecha, etiqueta: d.etiqueta })),
-        sesiones: w.sesiones.map((x) => ({ texto: x.nombre, hecha: x.estado === "hecha" })) })) })));
-    }
+    // El plan: el mismo bloque de la pestaña Plan (sin días de la semana: no los asignamos), con lo que su dueña comparte
+    if (p.plan) partes.push(tarjetaPlan(p.plan, { titulo: T("sitio.gr.p.plan_n", { n: p.plan.largo || (p.plan.semanas || []).length }), clase: "pers-sec ancha" }));
     // Progreso
     const pr = p.progreso;
     partes.push(sec(T("sitio.gr.p.prog_t"),
-      pr && pr.semanas.length ? h("div", { class: "pers-graf" }, DS.graficaBarras({ alto: 120, clases: ["s1"], etiqueta: T("sitio.gr.p.graf"),
-        semanas: pr.semanas.map((w) => ({ inicio: w.inicio, valores: [w.minutos] })),
-        texto: (w) => T("sitio.gr.p.graf_tip", { fecha: fechaCorta(w.inicio), min: fmt(w.valores[0], 0) }) })) : oculto("sitio.gr.p.sin_datos"),
+      pr && pr.semanas.length ? graficaPersona(pr.semanas) : oculto("sitio.gr.p.sin_datos"),
       p.nivel ? h("p", { class: "pers-dato" }, T("sitio.gr.p.nivel_l", { nivel: T(`sitio.gr.p.nivel.${p.nivel}`) })) : null,
       pr && pr.racha !== null ? h("p", { class: "pers-dato" }, pr.racha > 0 ? `🔥 ${T("sitio.gr.racha", { n: pr.racha })}` : T("sitio.gr.p.sin_racha")) : null,
       pr && pr.carreras ? (pr.carreras.length ? h("ul", { class: "pers-lista" }, pr.carreras.map((c) => h("li", {}, `🏁 ${c.distancia_km ? T("sitio.gr.p.carrera", { km: fmt(c.distancia_km, 1), fecha: fechaCorta(c.fecha) }) : T("sitio.gr.p.carrera_sola", { fecha: fechaCorta(c.fecha) })}`)))

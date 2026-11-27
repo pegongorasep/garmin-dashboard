@@ -1,7 +1,7 @@
 """Social S5: el perfil de una persona dentro de Juntos (`GET /api/juntos/persona/<id>`).
 
 Todo sale del data.json ya calculado (y en caché) de esa persona, igual que `feed.py` y `grupos_resumen.py`, y solo una lista blanca:
-nombre, foto, nivel, grupos en común, minutos de la semana, qué le falta del plan, calendario del plan (sesiones del plan, no nombres de
+nombre, foto, nivel, grupos en común, minutos de la semana, qué le falta del plan, el plan por bloques (sesiones del plan, no nombres de
 Garmin), minutos por semana, racha, carreras (distancia y fecha) y actividades (las del feed). Nunca nombres de Garmin, GPS, IDs, fecha
 de nacimiento, correo, peso/InBody, HRV ni FC en reposo. Quién la ve lo decide `permisos` (grupo en común + interruptores);
 sin grupo en común es 404. El perfil propio sale como lo vería un miembro de tus grupos (respeta tus interruptores).
@@ -13,6 +13,8 @@ from fastapi import Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+import semanal
 
 from . import calculo, feed, grupos, grupos_resumen, permisos, semana_plan
 from .modelos import Grupo, MiembroGrupo, Plan, Usuario
@@ -47,18 +49,6 @@ def _nivel(db: Session, uid: int) -> str | None:
     return n if n in NIVELES else None
 
 
-def _semana_cal(s: dict, hoy: str, con_act: bool = True) -> dict:
-    hechas = {x["fecha"]: x["name"] for x in s.get("sesiones") or [] if x.get("estado") == "hecha" and x.get("fecha")}
-    dias = []
-    for d in s.get("dias") or []:
-        f = d["fecha"]
-        dias.append({"fecha": f, "dia": d.get("dia_semana"), "hoy": f == hoy, "hecha": f in hechas and con_act,
-                     "etiqueta": (hechas.get(f) if con_act else None) or d.get("plan_ses") or ""})
-    return {"inicio": s["inicio"], "n": s.get("n"), "actual": s.get("estado") == "actual",
-            "sesiones": [{"nombre": x["name"], "tipo": x["tipo"], "estado": x["estado"] if con_act else "pendiente"} for x in s.get("sesiones") or []],
-            "dias": dias}
-
-
 def _datos(db: Session, dueno: Usuario) -> dict | None:
     try:
         return calculo.calcular(db, dueno)
@@ -82,7 +72,7 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
            "nivel": _nivel(db, dueno.id), "grupos": _en_comun(db, viewer, dueno),
            "comparte": {"plan": ver_plan, "actividades": ver_act},
            "interruptores": {"plan": bool(dueno.compartir_plan), "actividades": bool(dueno.compartir_actividades)},
-           "semana": None, "plan": None, "calendario": None, "progreso": None, "actividades": None}
+           "semana": None, "plan": None, "progreso": None, "actividades": None}
     data = None if pausa else _datos(db, dueno)
     if data and (data.get("plan") or {}).get("nivel") in NIVELES:
         out["nivel"] = data["plan"]["nivel"]   # misma fuente que el sitio; sin data.json (pausa) queda el de la base
@@ -95,12 +85,10 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
             out["semana"] = semana_plan.semana_vs_plan(actual, False)
             if ver_plan:
                 out["semana"] = semana_plan.semana_vs_plan(actual, True)
-                total = (data.get("plan") or {}).get("largo") or None
-                out["plan"] = {"n": actual.get("n"), "total": total}
-                out["calendario"] = [_semana_cal(s, hoy, ver_act) for s in semanas[idx:idx + 2]]
+                out["plan"] = semanal.plan_visible(data.get("plan"), ver_act)   # el mismo plan de la pestaña Plan, sin lo privado
         elif libre:
             out["semana"] = {"minutos": round(libre.get("minutos") or 0), "objetivo": None, "faltan": []}
-        prog = {"semanas": [{"inicio": s["inicio"], "minutos": round(s.get("minutos") or 0)}
+        prog = {"semanas": [{"inicio": s["inicio"], "actual": bool(s.get("actual")), "minutos": round(s.get("minutos") or 0), "km": round(s.get("km") or 0, 1)}
                             for s in (data.get("progreso") or {}).get("semanas") or []],   # el largo lo decide semanal.serie_semanas
                 "racha": None, "carreras": None}
         if ver_plan:

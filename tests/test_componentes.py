@@ -39,7 +39,7 @@ COMPONENTES = {
     "Pie": ("pie", "pie"),
     "FilaActividad": ("act-fila", "filaActividad"),
     "CabeceraPersona": ("pers-cab", "cabeceraPersona"),
-    "CalendarioPlan": ("pers-cal", "calendarioPlan"),
+    "SelectorUnidad": ("unidad", "selectorUnidad"),
     "Semana de una tarjeta de miembro": ("mini-semana", "miniSemana"),
     "PanelComentarios": ("coments", "panelComentarios"),
     "BotonComentarios": ("reac-com", "botonComentarios"),

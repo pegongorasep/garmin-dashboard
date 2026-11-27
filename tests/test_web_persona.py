@@ -72,7 +72,7 @@ def test_perfil_completo_de_un_miembro(web_ctx, monkeypatch):
     assert p["usuario_id"] == ua and p["mia"] is False and p["nivel"] == "base" and len(p["grupos"]) == 1
     assert p["semana"]["minutos"] == 24 and p["semana"]["objetivo"] == 95
     assert p["semana"]["faltan"] == [{"k": "facil", "n": 1}, {"k": "larga"}]
-    assert [s["n"] for s in p["calendario"]] == [3, 4]
+    assert p["plan"]["semanas"] and p["plan"].get("largo", len(p["plan"]["semanas"])) == len(p["plan"]["semanas"])
     assert len(p["progreso"]["semanas"]) == 12 and p["progreso"]["racha"] == 1
     assert p["progreso"]["carreras"] == [{"fecha": (HOY + timedelta(days=30)).isoformat(), "distancia_km": 10}]
     assert len(p["actividades"]["items"]) == 2 and all(x["usuario_id"] == ua for x in p["actividades"]["items"])
@@ -84,7 +84,7 @@ def test_matriz_de_interruptores(web_ctx, monkeypatch):
         db.get(Usuario, ua).compartir_plan = False
         db.commit()
     p = get(b, ua).json()
-    assert p["calendario"] is None and p["plan"] is None and p["semana"]["objetivo"] is None and p["semana"]["faltan"] == []
+    assert p["plan"] is None and p["semana"]["objetivo"] is None and p["semana"]["faltan"] == []
     assert p["progreso"]["racha"] is None and p["progreso"]["carreras"] is None and len(p["progreso"]["semanas"]) == 12   # totales sí
     assert p["actividades"] is not None
     with web_ctx.sesiones() as db:
@@ -92,9 +92,10 @@ def test_matriz_de_interruptores(web_ctx, monkeypatch):
         u.compartir_plan, u.compartir_actividades = True, False
         db.commit()
     p = get(b, ua).json()
-    assert p["actividades"] is None and p["calendario"] is not None
-    assert not any(d["hecha"] for w in p["calendario"] for d in w["dias"])   # sin días llenos ni nombres de actividades
-    assert all(x["estado"] != "hecha" for w in p["calendario"] for x in w["sesiones"])
+    assert p["actividades"] is None and p["plan"] is not None
+    PRIVADOS = {"progreso", "cumplimiento", "estados", "minutos", "km", "ajuste_texto", "marcas_det"}   # sin avance si no comparte actividades
+    assert not any(PRIVADOS & set(w) for w in p["plan"]["semanas"])
+    assert not ({"estado_sesiones", "faltan", "eventos", "semanas_repetidas", "ui", "editar_urls"} & set(p["plan"]))
     assert b.get("/api/juntos/feed", params={"persona": ua}).json()["items"] == []   # el feed tampoco la muestra
 
 
@@ -135,7 +136,7 @@ def test_perfil_sin_campos_prohibidos(web_ctx, monkeypatch):
                           "correo", "a@x.com", "peso", "80.1", "hrv", "rhr", "composicion", "inbody", "fecha_nacimiento", "latitud", "gps"):
             assert prohibido.lower() not in crudo.lower(), prohibido
         assert set(json.loads(crudo)) <= {"usuario_id", "nombre", "mia", "pausa", "foto", "nivel", "grupos", "comparte", "interruptores", "semana",
-                                          "plan", "calendario", "progreso", "actividades", "emojis", "yo"}
+                                          "plan", "progreso", "actividades", "emojis", "yo"}
 
 
 # ---- S6: tarjetas del grupo con semana vs plan y mini calendario ----
@@ -194,3 +195,24 @@ def test_matriz_de_interruptores_en_la_tarjeta(web_ctx, monkeypatch, act_on, pla
         assert t["cal"][0]["cats"] == ["run"]
     else:   # actividades apagadas: nada por día (solo totales)
         assert t["cal"] is None and t["dias"] == [] and t["ultima"] is None
+
+
+def test_plan_visible_matriz():
+    """El filtro compartido: sin plan nada; sin actividades sin avance; nunca ligas de edición, eventos ni viajes."""
+    import semanal
+    plan = {"inicio": "2026-11-09", "semana_actual": 2, "nivel": "base", "largo": 2, "bloques": [1], "faltan": "Te faltan: 1", "eventos": [{"tipo": "viaje"}],
+            "semanas_repetidas": [1], "estado_sesiones": [{"id": "a", "estado": "hecha", "ajustada": False, "corrida": {"fecha": "x"}}],
+            "semanas": [{"n": 1, "block": 1, "kind": "carga", "etiqueta": "carga", "focus": "f", "sessions": [{"id": "a", "minutes": 20}], "plan_min": 20,
+                         "progreso": {"hechas": 1, "total": 1}, "cumplimiento": "completa", "estados": [], "minutos": 21.0, "km": 3.0, "marca": "viaje",
+                         "marcas": ["viaje", "carrera"], "marcas_det": {"viaje": {}}, "ajuste_texto": "t"},
+                        {"n": 2, "block": 1, "kind": "carga", "sessions": [], "plan_min": 0}]}
+    assert semanal.plan_visible(None, True) is None and semanal.plan_visible({"semanas": []}, True) is None
+    con, sin = semanal.plan_visible(plan, True), semanal.plan_visible(plan, False)
+    assert con["semanas"][0]["progreso"] and con["semanas"][0]["km"] == 3.0 and con["estado_sesiones"] == [{"id": "a", "estado": "hecha", "ajustada": False}]
+    assert con["semanas"][0]["marca"] == "carrera" and "marcas" not in con["semanas"][0]
+    for p in (con, sin):
+        assert not ({"eventos", "semanas_repetidas", "ui", "editar_urls"} & set(p))
+        assert not any({"ajuste_texto", "marcas_det"} & set(w) for w in p["semanas"])
+    assert not ({"estado_sesiones", "faltan"} & set(sin))
+    assert not any({"progreso", "cumplimiento", "estados", "minutos", "km"} & set(w) for w in sin["semanas"])
+    assert sin["semanas"][0]["plan_min"] == 20

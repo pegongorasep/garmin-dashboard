@@ -659,7 +659,7 @@ def test_mejora_otras_e_intensidad_por_semana():
     assert total > 0 and abs(semana["bajo"] - (mins["Z1"] + mins["Z2"]) / total * 100) < 0.1
     assert abs(semana["bajo"] + semana["limbo"] + semana["alto"] - 100) < 0.2
     iw = out["progreso"]["intensidad_semanas"]
-    assert len(iw) == 2 and iw[-1]["inicio"] == "2026-11-02" and iw[-1] == {"inicio": "2026-11-02", **semana}
+    assert len(iw) == 2 and iw[-1]["inicio"] == "2026-11-02" and {k: v for k, v in iw[-1].items() if k != "actual"} == {"inicio": "2026-11-02", **semana}
     libre = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), {**CONFIG_FIXTURE, "sin_plan": True}, AHORA)
     iw_libre = libre["progreso"]["intensidad_semanas"]   # sin plan: 12 semanas que terminan en la actual
     assert len(iw_libre) == 12 and iw_libre[-1]["inicio"] == "2026-11-02"
@@ -992,3 +992,22 @@ def test_ui_grupos_cero_por_defecto():
     plan = planes_v6.generar(CONFIG_CORREDOR)
     out = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)
     assert out["ui"]["grupos"] == 0 and validar.problemas(out) == []
+
+
+# --- Unificar U3: el bloque y las series miden el largo real del plan (8, 12, 16) ---
+
+def test_bloques_y_series_siguen_el_largo_del_plan():
+    for n in (8, 12, 16):
+        cfg = {**CONFIG_FIXTURE, "plan_semanas": n}
+        plan = planes_v6.generar(cfg)
+        out = build.build(fixture(), plan, cfg, datetime(2026, 11, 25, 12, 0, tzinfo=ZoneInfo("America/Merida")))
+        p = out["plan"]
+        assert p["largo"] == n == len(p["semanas"]) and p["bloques"] == sorted({w["block"] for w in p["semanas"]})
+        assert all(w["block"] in p["bloques"] and w["plan_min"] is not None for w in p["semanas"])
+        assert len(out["progreso"]["semanas"]) == len(out["detalles"]["carga_semanas"]) == len(out["progreso"]["intensidad_semanas"]) == n
+        for serie in (out["progreso"]["semanas"], out["detalles"]["carga_semanas"], out["progreso"]["intensidad_semanas"]):
+            assert [s["actual"] for s in serie].count(True) == 1 and serie[-1]["actual"]
+        hechas = [w for w in p["semanas"] if "minutos" in w]
+        assert hechas and all(w["km"] is not None for w in hechas)   # lo hecho viene en minutos y en km; el objetivo solo en minutos
+        assert not any("plan_km" in w or "objetivo_km" in w for w in p["semanas"])
+        revisar_privacidad(out)

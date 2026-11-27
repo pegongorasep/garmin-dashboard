@@ -269,6 +269,7 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 
 /* Pestañas secundarias (segmento) */
 .segmento { display: flex; gap: 2px; padding: 3px; border-radius: var(--radius-pill); background: var(--surface); box-shadow: var(--shadow-card); width: fit-content; max-width: 100%; overflow-x: auto; }
+.segmento.unidad { flex: none; }   /* el selector min / km mide lo mismo con cualquiera elegida */
 .segmento button { min-height: 36px; padding: 0 14px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--ink-2); font: 600 13px/1 var(--font-sans); cursor: pointer; white-space: nowrap; }
 .segmento button[aria-pressed="true"], .segmento button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card), 0 0 0 1px var(--ring); }
 .card .segmento { background: var(--page); box-shadow: none; }
@@ -481,6 +482,7 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .graf .serie.violeta { fill: var(--cat-3); } .graf .serie.amarillo { fill: var(--cat-4); }
 .graf line.meta { stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: none; stroke-linecap: round; }
 .graf .meta-ref { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.graf .sem-actual { fill: var(--serie-1); }
 .graf .ico-sem { color: var(--ink-2); pointer-events: none; }
 .graf text.ico-n { font-size: 10px; font-weight: 600; fill: var(--ink-2); }
 .slt-w { width: 100%; min-width: 0; }
@@ -667,12 +669,5 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .pers-oculto { margin: 0; color: var(--muted); font: 400 13.5px/1.4em var(--font-sans); }
 .pers-graf { height: 8.5em; }   /* la gráfica ocupa su ranura aunque tarde en medir el ancho */
 .pers-lista { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; font: 400 13.5px/1.4em var(--font-sans); }
-.pers-cal { display: grid; gap: var(--space-10); }
-.pers-sem { display: grid; gap: var(--space-4); }
-.pers-sem-t { margin: 0; font: 600 13px/1.4em var(--font-sans); color: var(--ink-2); }
-.pers-ses { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; min-height: 1.9em; }
-.pers-marca { display: grid; place-items: center; width: 1.9em; height: 1.9em; margin-top: var(--space-2); box-sizing: border-box; border-radius: var(--radius-pill); font: 600 12px/1 var(--font-sans); }
-.pers-marca.hecha { background: var(--accent); color: var(--on-accent); }
-.pers-marca.plan { box-shadow: inset 0 0 0 2px var(--accent); }
 .pers-acts { display: grid; gap: var(--space-8); }
 .pers-ver { font: 600 13px/1.4em var(--font-sans); color: var(--accent); }

@@ -155,3 +155,36 @@ def serie_semanas(hoy: date, plan: dict = None, config: dict = None) -> list:
     n = len(plan["weeks"]) if con_plan else SEMANAS_SIN_PLAN
     ini = hoy - timedelta(days=hoy.weekday())
     return [ini - timedelta(weeks=i) for i in range(n - 1, -1, -1)]
+
+
+# --- el plan que se comparte (perfil): un solo filtro sobre el plan de la persona ---
+
+SEMANA_PUBLICA = ("n", "block", "kind", "etiqueta", "focus", "sessions", "plan_min")
+SEMANA_AVANCE = ("progreso", "cumplimiento", "estados", "minutos", "km")   # salen de sus actividades
+EVENTOS_PUBLICOS = ("carrera", "prueba")   # viajes y enfermedades son privados
+
+
+def plan_visible(plan: dict, con_actividades: bool) -> dict | None:
+    """El `plan` de data.json tal como lo ve otra persona: el mismo objeto que usa la pestaña Plan, sin lo privado.
+    Sin `con_actividades` no lleva marcas ni avance (hechas, cumplimiento, minutos y km reales, faltan). Nunca lleva
+    eventos (viajes, enfermedades), ajustes ni ligas de edición (esas viven en `ui`, que no se comparte)."""
+    if not plan or not plan.get("semanas"):
+        return None
+    out = {k: plan[k] for k in ("inicio", "semana_actual", "nivel", "largo", "bloques") if k in plan}
+    out["semanas"] = []
+    for w in plan["semanas"]:
+        x = {k: w[k] for k in SEMANA_PUBLICA if k in w}
+        marcas = [k for k in ([w.get("marca")] + list(w.get("marcas") or [])) if k in EVENTOS_PUBLICOS]
+        if marcas:
+            x["marca"] = marcas[0]
+            if len(marcas) > 1:
+                x["marcas"] = marcas
+        if con_actividades:
+            x.update({k: w[k] for k in SEMANA_AVANCE if k in w})
+        out["semanas"].append(x)
+    if con_actividades:
+        if plan.get("faltan"):
+            out["faltan"] = plan["faltan"]
+        out["estado_sesiones"] = [{"id": e["id"], "estado": e["estado"], "ajustada": e.get("ajustada", False)}
+                                  for e in plan.get("estado_sesiones") or []]
+    return out
