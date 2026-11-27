@@ -156,3 +156,23 @@ def test_styles_css_no_tiene_reglas_muertas():
     propias = _clases_de((ROOT / "site" / "styles.css").read_text())
     muertas = {c for c in propias if c not in dinamicas and not re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", codigo)}
     assert not muertas, muertas
+
+
+def test_simulador_solo_admin_y_completo(web_ctx):
+    import simulador
+    assert web_ctx.cliente().get("/admin/simulador").status_code == 404      # sin sesión
+    crear_usuario(web_ctx, "normal@x.com")
+    assert entrar(web_ctx, web_ctx.cliente(), "normal@x.com").get("/admin/simulador").status_code == 404
+    admin = crear_usuario(web_ctx, "admin@x.com")
+    with web_ctx.sesiones() as db:
+        db.get(Usuario, admin).es_admin = True
+        db.commit()
+    c = entrar(web_ctx, web_ctx.cliente(), "admin@x.com")
+    r = c.get("/admin/simulador")
+    assert r.status_code == 200 and "sim-matriz" in r.text and "Umbrales" in r.text
+    for p in simulador.cargar_personas():
+        assert p["nombre"].replace("'", "&#39;") in r.text
+    assert '<option value="actual"' in r.text
+    assert c.get("/admin/simulador?motor=actual").status_code == 200
+    assert c.get("/admin/simulador?motor=no_existe").status_code == 200       # cae al primero
+    assert "/admin/simulador" in c.get("/admin").text

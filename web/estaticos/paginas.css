@@ -45,3 +45,35 @@ ul.pila { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--spa
 .articulo-res { color: var(--muted); font-size: 16px; }
 a.aprende-tarjeta { text-decoration: none; color: inherit; display: block; }
 a.aprende-tarjeta .card:hover { box-shadow: var(--shadow-card), inset 0 0 0 1px var(--accent); }
+
+/* Simulador de planes (admin, Motor v6 F0b): matriz, barras en CSS y tabla de semanas. Todo dentro de contenedores con scroll propio. */
+.sim-scroll { overflow-x: auto; max-width: 100%; }
+.sim-motor { display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: end; }
+.sim-matriz { border-collapse: collapse; font-size: 13px; }
+.sim-matriz th, .sim-matriz td { padding: var(--space-4) var(--space-8); text-align: center; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.sim-matriz th[scope="row"], .sim-matriz thead th:first-child { text-align: left; }
+.sim-ok { color: var(--bien); } .sim-mal { color: var(--mal); font-weight: 600; } .sim-na { color: var(--muted); }
+details.sim-persona > summary, details.sim-umbrales > summary { cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: var(--space-2) var(--space-8); align-items: baseline; list-style: none; }
+details.sim-umbrales > summary { display: block; font: 600 14px/18px var(--font-sans); }
+details.sim-persona > summary::-webkit-details-marker, details.sim-umbrales > summary::-webkit-details-marker { display: none; }
+.sim-nombre { font: 600 15px/20px var(--font-sans); }
+.sim-desc { grid-column: 1 / -1; }
+.sim-cuerpo { display: grid; gap: var(--space-8); margin-top: var(--space-8); min-width: 0; }
+.sim-barras { display: flex; gap: var(--space-4); height: 150px; min-width: max-content; align-items: stretch; }
+.sim-col { width: 2.2em; display: grid; grid-template-rows: 1fr 1.2em 1.2em; text-align: center; font-size: 11px; line-height: 1.2em; }
+.sim-col b { font-weight: 400; } .sim-col em { font-style: normal; color: var(--mal); }
+.sim-par { display: flex; align-items: flex-end; gap: 2px; height: 100%; }
+.sim-par i, .sim-leyenda i { display: block; flex: 1; border-radius: 3px 3px 0 0; background: var(--serie-1); min-height: 1px; }
+.sim-par i.hecho, .sim-leyenda i.hecho { background: var(--accent); }
+.sim-col.descarga .sim-par i.plan, .sim-leyenda i.descarga { background: var(--muted); }
+.sim-col.falla { background: var(--bad-bg); border-radius: var(--radius-bar); }
+.sim-leyenda { display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: center; }
+.sim-leyenda i { display: inline-block; flex: none; width: 1em; height: 1em; border-radius: 3px; }
+.sim-tabla { min-width: 44em; font-size: 13px; }
+.sim-fila { display: grid; grid-template-columns: 2.5em 5.5em 4em 5em 4em 4em 4em 7em 4em; gap: var(--space-4); padding: var(--space-4) 0; border-bottom: 1px solid var(--grid); list-style: none; }
+.sim-cab { font-weight: 600; color: var(--ink-2); }
+details.sim-sem > summary { cursor: pointer; }
+details.sim-sem > summary::-webkit-details-marker { display: none; }
+details.sim-sem.falla > summary { background: var(--bad-bg); }
+.sim-ses { margin: var(--space-4) 0 var(--space-4) var(--space-16); padding: 0; display: grid; gap: var(--space-2); }
+.sim-fallos { padding-left: var(--space-16); display: grid; gap: var(--space-4); margin: 0; font-size: 13px; }

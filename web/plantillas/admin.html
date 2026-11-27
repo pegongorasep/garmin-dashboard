@@ -27,6 +27,11 @@
 {% else %}<p>{{ t("admin.no_pend") }}</p>{% endif %}
 {% endcall %}
 
+{% call tarjeta(t("sim.titulo")) %}
+<p>{{ t("admin.simulador_nota") }}</p>
+<div class="acciones">{{ boton(t("sim.abrir"), "texto", chico=True, href="/admin/simulador") }}</div>
+{% endcall %}
+
 {% call tarjeta(t("admin.personas")) %}
 <p>{{ t("admin.atrasado_nota", dias=dias) }}</p>
 <div style="overflow-x:auto"><table>
