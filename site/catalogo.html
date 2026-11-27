@@ -121,6 +121,8 @@ def("Contenedores", "Marcas de semana del Plan", "DS.ico() · anillos", "Anillo 
     h("span", { class: "sem-prog", "data-cump": "completa" }, "✓✓"), h("span", { class: "sem-prog", "data-cump": "casi" }, "✓"), h("span", { class: "sem-prog", "data-cump": "baja" }, "–"))));
 def("Contenedores", "Burbuja", "DS.burbuja(el, texto)", "Texto corto al pasar el mouse o enfocar con teclado; absoluta, no cambia el layout y se recorta al viewport. En celular no hay hover.",
   DS.tarjeta({}, h("div", { style: "padding-top:2.5em" }, DS.burbuja(h("span", { class: "sem-ev", "data-ev": "carrera", style: "display:inline-block" }, DS.ico("medalla")), "Semana de carrera: sáb 12 dic"))));
+def("Controles", "Botón grande que abre un diálogo", ".boton.grande[data-abre]", "Web: web/estaticos/dialogos.js abre el <dialog id> con showModal; Esc o «Cancelar» (data-cierra) lo cierran, y #id en la URL o data-abierto lo abren al cargar. Sin JS el formulario queda visible en la página.",
+  h("div", { class: "botones-grandes" }, h("button", { class: "boton sec grande", type: "button" }, "✈️ Voy de viaje"), h("button", { class: "boton sec grande", type: "button" }, "🏁 Agregar carrera"))));
 def("Contenedores", "Formulario", "DS.formulario()", "Grupos de campos con su título y botones.",
   DS.formulario({
     secciones: [

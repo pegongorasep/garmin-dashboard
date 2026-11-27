@@ -3,6 +3,7 @@
 {% block titulo %}{{ t("plan.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
+<script>document.documentElement.classList.add("js")</script>
 {% include "_nav.html" %}
 <h1 class="pag-t">{{ t("plan.titulo") }}</h1>
 {% if ok == "1" %}{% call aviso("ok") %}{{ t("plan.ok", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}
@@ -53,42 +54,54 @@
       {{ boton(t("comun.quitar"), "sec", chico=True, tipo="submit") }}</form></div>
   {% endfor %}
   <p class="pag-s">{{ t("plan.reanuda") }}</p>
+  <div class="botones-grandes">
+    <button class="boton sec grande" type="button" data-abre="viaje">✈️ {{ t("plan.viaje_t") }}</button>
+    <button class="boton sec grande" type="button" data-abre="enfermo">🤒 {{ t("plan.enfermo_t") }}</button>
+    <button class="boton sec grande" type="button" data-abre="carrera">🏁 {{ t("plan.agregar_carrera") }}</button>
+  </div>
 {% endcall %}
 
-<div id="viaje">{% call tarjeta(t("plan.viaje_t")) %}
+<dialog class="dialogo" id="viaje" aria-labelledby="viaje-t">
+  <div class="dl-cab"><h2 class="dl-t" id="viaje-t">{{ t("plan.viaje_t") }}</h2></div>
+  <div class="dl-cuerpo">
   <form class="pila" method="post" action="{{ pref }}/plan/viaje">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ campo(t("plan.salgo"), "desde", tipo="date", requerido=True) }}
-    {{ campo(t("plan.regreso"), "hasta", tipo="date", requerido=True) }}
-    {% call opciones(t("plan.como")) %}
-      {{ opcion("modo", t("plan.v_pausa"), valor="pausa", tipo="radio", marcado=True) }}
-      {{ opcion("modo", t("plan.v_menos"), valor="menos", tipo="radio") }}
-      {{ opcion("modo", t("plan.v_igual"), valor="igual", tipo="radio") }}
-    {% endcall %}
-    <div class="acciones">{{ boton(t("plan.agregar_viaje"), tipo="submit") }}</div>
-  </form>
-{% endcall %}</div>
-
-<div id="enfermo">{% call tarjeta(t("plan.enfermo_t")) %}
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      {{ campo(t("plan.salgo"), "desde", tipo="date", requerido=True) }}
+      {{ campo(t("plan.regreso"), "hasta", tipo="date", requerido=True) }}
+      {% call opciones(t("plan.como")) %}
+        {{ opcion("modo", t("plan.v_pausa"), valor="pausa", tipo="radio", marcado=True) }}
+        {{ opcion("modo", t("plan.v_menos"), valor="menos", tipo="radio") }}
+        {{ opcion("modo", t("plan.v_igual"), valor="igual", tipo="radio") }}
+      {% endcall %}
+      <div class="acciones">{{ boton(t("plan.agregar_viaje"), tipo="submit") }} <button class="boton sec" type="button" data-cierra>{{ t("comun.cancelar") }}</button></div>
+    </form>
+  </div>
+</dialog>
+<dialog class="dialogo" id="enfermo" aria-labelledby="enfermo-t">
+  <div class="dl-cab"><h2 class="dl-t" id="enfermo-t">{{ t("plan.enfermo_t") }}</h2></div>
+  <div class="dl-cuerpo">
   <form class="pila" method="post" action="{{ pref }}/plan/enfermedad">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ seleccion(t("plan.que_paso"), "tipo", [("enfermedad", t("plan.ev_enfermedad")), ("lesion", t("plan.ev_lesion"))]) }}
-    {{ campo(t("plan.desde"), "desde", tipo="date", valor=hoy) }}
-    <p class="pag-s">{{ t("plan.enfermo_n") }}</p>
-    <div class="acciones">{{ boton(t("plan.pausar"), tipo="submit") }}</div>
-  </form>
-{% endcall %}</div>
-
-<div id="carrera">{% call tarjeta(t("plan.agregar_carrera")) %}
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      {{ seleccion(t("plan.que_paso"), "tipo", [("enfermedad", t("plan.ev_enfermedad")), ("lesion", t("plan.ev_lesion"))]) }}
+      {{ campo(t("plan.desde"), "desde", tipo="date", valor=hoy) }}
+      <p class="pag-s">{{ t("plan.enfermo_n") }}</p>
+      <div class="acciones">{{ boton(t("plan.pausar"), tipo="submit") }} <button class="boton sec" type="button" data-cierra>{{ t("comun.cancelar") }}</button></div>
+    </form>
+  </div>
+</dialog>
+<dialog class="dialogo" id="carrera" aria-labelledby="carrera-t">
+  <div class="dl-cab"><h2 class="dl-t" id="carrera-t">{{ t("plan.agregar_carrera") }}</h2></div>
+  <div class="dl-cuerpo">
   <form class="pila" method="post" action="{{ pref }}/plan/carrera">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ campo(t("plan.nombre"), "nombre", placeholder="{{ t('plan.ph_carrera') }}", extra={"maxlength": 60}) }}
-    {{ campo(t("plan.fecha"), "fecha", tipo="date", requerido=True) }}
-    {{ campo(t("plan.distancia"), "distancia_km", opcional=t("comun.opcional"), extra={"inputmode": "decimal"}) }}
-    <p class="pag-s">{{ t("plan.carrera_n2") }}</p>
-    <div class="acciones">{{ boton(t("plan.agregar_carrera"), tipo="submit") }}</div>
-  </form>
-{% endcall %}</div>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      {{ campo(t("plan.nombre"), "nombre", placeholder=t("plan.ph_carrera"), extra={"maxlength": 60}) }}
+      {{ campo(t("plan.fecha"), "fecha", tipo="date", requerido=True) }}
+      {{ campo(t("plan.distancia"), "distancia_km", opcional=t("comun.opcional"), extra={"inputmode": "decimal"}) }}
+      <p class="pag-s">{{ t("plan.carrera_n2") }}</p>
+      <div class="acciones">{{ boton(t("plan.agregar_carrera"), tipo="submit") }} <button class="boton sec" type="button" data-cierra>{{ t("comun.cancelar") }}</button></div>
+    </form>
+  </div>
+</dialog>
 
 {% call tarjeta(t("plan.repetir_t")) %}
   <p>{% if n %}{{ t("plan.rep_si", n=n) }}{% else %}{{ t("plan.rep_no") }}{% endif %}</p>
@@ -153,3 +166,4 @@
 </form>
 {% endif %}
 {% endblock %}
+{% block scripts %}<script src="/estaticos/dialogos.js"></script>{% endblock %}
