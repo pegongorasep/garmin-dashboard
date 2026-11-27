@@ -496,8 +496,8 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .boton.grande { width: 100%; justify-content: center; min-height: 3em; }
 /* Sin JS los diálogos con formulario quedan como tarjetas dentro de la página */
 html:not(.js) .botones-grandes { display: none; }
-html:not(.js) dialog.dialogo:not([open]) { display: block; position: static; width: auto; margin: var(--space-12) 0 0; }
-html:not(.js) dialog.dialogo [data-cierra] { display: none; }
+html:not(.js) dialog.dialogo-pagina:not([open]) { display: block; position: static; width: auto; margin: var(--space-12) 0 0; }
+html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 
 /* Diálogo nativo (DS.dialogo) */
 .dialogo { width: min(92vw, 420px); max-height: 85vh; padding: var(--space-14); border: 0; border-radius: var(--radius-card); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card), 0 0 0 1px var(--ring); }

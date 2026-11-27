@@ -61,7 +61,7 @@
   </div>
 {% endcall %}
 
-<dialog class="dialogo" id="viaje" aria-labelledby="viaje-t">
+<dialog class="dialogo dialogo-pagina" id="viaje" aria-labelledby="viaje-t">
   <div class="dl-cab"><h2 class="dl-t" id="viaje-t">{{ t("plan.viaje_t") }}</h2></div>
   <div class="dl-cuerpo">
   <form class="pila" method="post" action="{{ pref }}/plan/viaje">
@@ -77,7 +77,7 @@
     </form>
   </div>
 </dialog>
-<dialog class="dialogo" id="enfermo" aria-labelledby="enfermo-t">
+<dialog class="dialogo dialogo-pagina" id="enfermo" aria-labelledby="enfermo-t">
   <div class="dl-cab"><h2 class="dl-t" id="enfermo-t">{{ t("plan.enfermo_t") }}</h2></div>
   <div class="dl-cuerpo">
   <form class="pila" method="post" action="{{ pref }}/plan/enfermedad">
@@ -89,7 +89,7 @@
     </form>
   </div>
 </dialog>
-<dialog class="dialogo" id="carrera" aria-labelledby="carrera-t">
+<dialog class="dialogo dialogo-pagina" id="carrera" aria-labelledby="carrera-t">
   <div class="dl-cab"><h2 class="dl-t" id="carrera-t">{{ t("plan.agregar_carrera") }}</h2></div>
   <div class="dl-cuerpo">
   <form class="pila" method="post" action="{{ pref }}/plan/carrera">
@@ -139,7 +139,7 @@
   <p class="pag-s">{{ t("plan.rehacer_a") }}</p>
   <div class="acciones"><button class="boton sec grande" type="button" data-abre="rehacer">{{ t("plan.rehacer_t") }}</button></div>
 {% endcall %}
-<dialog class="dialogo" id="rehacer" aria-labelledby="rehacer-t"{% if rehacer_abierto %} data-abierto{% endif %}>
+<dialog class="dialogo dialogo-pagina" id="rehacer" aria-labelledby="rehacer-t"{% if rehacer_abierto %} data-abierto{% endif %}>
   <div class="dl-cab"><h2 class="dl-t" id="rehacer-t">{{ t("plan.rehacer_t") }}</h2></div>
   <div class="dl-cuerpo">
   {% if error and rehacer_abierto %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
