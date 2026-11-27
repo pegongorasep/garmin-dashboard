@@ -193,23 +193,39 @@ def adherencia(semanas: list, ultimas: int = 4):
 SEMANAS_SIN_PLAN = 12
 
 
+def _lunes(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def _tramo_plan(plan: dict = None, config: dict = None):
+    """(lunes del inicio, lunes de la última semana, semanas) del plan; None sin plan (o en modo libre)."""
+    if not (plan and plan.get("weeks")) or (config or {}).get("sin_plan"):
+        return None
+    ini = _lunes(date.fromisoformat(str(plan.get("start") or (config or {}).get("plan_start"))[:10]))
+    n = len(plan["weeks"])
+    return ini, ini + timedelta(weeks=n - 1), n
+
+
 def periodos_progreso(hoy: date, plan: dict = None, config: dict = None) -> list:
-    """Opciones del selector de periodo de Progreso: [{"n", "todo"}]. Con plan: 4, 8 y 12 que quepan y «todo el plan»
-    (su largo real, p. ej. 16); sin plan: 4, 8 y 12. La página solo corta la serie con el `n` que marca Python."""
-    n = len(serie_semanas(hoy, plan, config))
-    con_plan = bool(plan and plan.get("weeks")) and not (config or {}).get("sin_plan")
-    if not con_plan:
-        return [{"n": k, "todo": False} for k in (4, 8, 12)]
-    return [{"n": k, "todo": False} for k in (4, 8, 12) if k < n] + [{"n": n, "todo": True}]
+    """Opciones del selector de periodo de Progreso: [{"n", "todo"}]. SIEMPRE 4, 8 y 12 (las últimas N semanas hasta la
+    actual, con ceros donde no hay nada) y, con plan, «todo el plan» (su largo real, con `desde`/`hasta` = primer y último
+    lunes). La página solo elige la ventana de `serie_semanas`."""
+    ops = [{"n": k, "todo": False} for k in (4, 8, 12)]
+    t = _tramo_plan(plan, config)
+    if t:
+        ops.append({"n": t[2], "todo": True, "desde": t[0].isoformat(), "hasta": t[1].isoformat()})
+    return ops
 
 
 def serie_semanas(hoy: date, plan: dict = None, config: dict = None) -> list:
-    """Lunes (del más viejo al de esta semana) de toda serie por semanas: tantas como semanas tiene el plan
-    (8, 12, 16…) o 12 si no hay plan. Gráficas, intensidad y carga usan esta lista, así todas miden lo mismo."""
-    con_plan = bool(plan and plan.get("weeks")) and not (config or {}).get("sin_plan")
-    n = len(plan["weeks"]) if con_plan else SEMANAS_SIN_PLAN
-    ini = hoy - timedelta(days=hoy.weekday())
-    return [ini - timedelta(weeks=i) for i in range(n - 1, -1, -1)]
+    """Lunes (del más viejo al más nuevo) de toda serie por semanas. Cubre las últimas 12 semanas hasta la actual
+    (SEMANAS_SIN_PLAN) y, con plan, también todas sus semanas (aunque empiecen antes o terminen después)."""
+    ini = _lunes(hoy)
+    desde, hasta = ini - timedelta(weeks=SEMANAS_SIN_PLAN - 1), ini
+    t = _tramo_plan(plan, config)
+    if t:
+        desde, hasta = min(desde, t[0]), max(hasta, t[1])
+    return [desde + timedelta(weeks=i) for i in range((hasta - desde).days // 7 + 1)]
 
 
 # --- el plan que se comparte (perfil): un solo filtro sobre el plan de la persona ---

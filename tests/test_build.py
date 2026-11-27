@@ -94,10 +94,10 @@ def test_forma_y_json_valido(salida):
     assert salida["plan"]["semana_actual"] == 2
     assert len(salida["semana"]["dias"]) == 7 and len(salida["zonas"]) == 5
     p = salida["progreso"]
-    assert len(p["dias"]) == 84 and len(p["semanas"]) == 2 and set(p["resumen"]) == {"4", "8", "12"}
+    assert len(p["dias"]) == 84 and len(p["semanas"]) >= 12 and set(p["resumen"]) == {"4", "8", "12"}
     assert set(salida["detalles"]) >= {"distribucion", "carga", "carga_anterior", "carga_semanas",
                                        "fc_max", "umbrales"}
-    assert len(salida["detalles"]["carga_semanas"]) == 2   # el largo del plan (serie_semanas)
+    assert len(salida["detalles"]["carga_semanas"]) >= 12   # serie_semanas: 12 semanas o el plan, lo que abarque más
     assert salida["generado"].startswith("2026-11-04T12:00")
     assert salida["datos_al"].startswith("2026-11-04T11:00")  # 17:00 UTC = 11:00 Mérida
 
@@ -1045,17 +1045,27 @@ def test_volumen_plan_km_redondea_y_cae_a_minutos():
     assert semanal.volumen_plan(None, "km", 7.0) is None
 
 
-def test_periodos_de_progreso_con_plan_de_16_semanas_y_sin_plan():
+def test_periodos_de_progreso_siempre_4_8_12_y_todo_el_plan():
     import semanal
-    from datetime import date
-    hoy = date(2026, 11, 25)
-    plan16 = {"weeks": [{"n": i} for i in range(1, 17)]}
-    ops = semanal.periodos_progreso(hoy, plan16, {})
-    assert [p["n"] for p in ops] == [4, 8, 12, 16] and [p["todo"] for p in ops] == [False, False, False, True]
-    assert len(semanal.serie_semanas(hoy, plan16, {})) == 16
-    assert [p["n"] for p in semanal.periodos_progreso(hoy, {"weeks": [{"n": 1}] * 8}, {})] == [4, 8]
+    from datetime import date, timedelta
+    hoy = date(2026, 11, 25)   # miércoles; la semana actual empieza el 2026-11-23
+    def plan(n, inicio="2026-10-12"):
+        return {"start": inicio, "weeks": [{"n": i} for i in range(1, n + 1)]}
+    def forma(ops):
+        return [(p["n"], p["todo"]) for p in ops]
+    assert forma(semanal.periodos_progreso(hoy, plan(7), {})) == [(4, False), (8, False), (12, False), (7, True)]
+    assert forma(semanal.periodos_progreso(hoy, plan(16), {})) == [(4, False), (8, False), (12, False), (16, True)]
     assert semanal.periodos_progreso(hoy, None, {}) == [{"n": k, "todo": False} for k in (4, 8, 12)]
-    assert semanal.periodos_progreso(hoy, plan16, {"sin_plan": True})[-1] == {"n": 12, "todo": False}
+    assert semanal.periodos_progreso(hoy, plan(16), {"sin_plan": True}) == [{"n": k, "todo": False} for k in (4, 8, 12)]
+    todo = semanal.periodos_progreso(hoy, plan(7), {})[-1]
+    assert (todo["desde"], todo["hasta"]) == ("2026-10-12", "2026-11-23")
+    for p in (plan(7), plan(16), None):   # la serie alcanza para 12 semanas hasta la actual y para todo el plan
+        serie = semanal.serie_semanas(hoy, p, {})
+        assert len(serie) >= 12 and serie[-1] >= date(2026, 11, 23) and all(b - a == timedelta(weeks=1) for a, b in zip(serie, serie[1:]))
+        assert date(2026, 11, 23) - timedelta(weeks=11) >= serie[0]
+    s16 = semanal.serie_semanas(hoy, plan(16), {})
+    assert len(s16) == 16 and s16[0] == date(2026, 10, 12)
+    assert [s.isoformat() for s in s16][-1] == "2027-01-25"
 
 
 def test_plan_visible_sin_actividades_no_filtra_el_ritmo():
@@ -1080,7 +1090,7 @@ def test_build_trae_km_estimados_en_semanas_futuras_y_periodos_del_plan():
     cfg = {**CONFIG_FIXTURE, "plan_semanas": 16}
     out = build.build(fixture(), planes_v6.generar(cfg), cfg, datetime(2026, 11, 25, 12, 0, tzinfo=ZoneInfo("America/Merida")))
     assert [p["n"] for p in out["progreso"]["periodos"]] == [4, 8, 12, 16] and out["progreso"]["periodos"][-1]["todo"]
-    assert len(out["progreso"]["semanas"]) == 16 and "16" in out["progreso"]["numeros"]["periodos"]
+    assert len(out["progreso"]["semanas"]) >= 16 and "16" in out["progreso"]["numeros"]["periodos"]
     fut = [w for w in out["plan"]["semanas"] if w["n"] > out["plan"]["semana_actual"]]
     assert fut and all("plan_km" in w and all("km_est" in s for s in w["sessions"]) for w in fut)
     import validar

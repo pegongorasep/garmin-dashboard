@@ -46,6 +46,18 @@ function tarjetaConVistas(vista, titulo, resumen, vistas, opts = {}) {
 // --- Progreso ---
 
 let periodo = 8;
+let periodoTodo = false;   // «Todo el plan»: la ventana son las semanas del plan, no las últimas `periodo`
+
+/** Ventana del periodo elegido sobre una serie por semanas (de la más vieja a la actual): «todo el plan» = las semanas entre
+ *  `desde` y `hasta` que manda Python; si no, las últimas `n` que terminan en la semana actual. Python ya dejó semanas de sobra. */
+function ventanaSemanas(serie, ops, n = periodo, todo = periodoTodo) {
+  const t = todo ? (ops || []).find((p) => p.todo) : null;
+  if (t && t.desde) return serie.filter((s) => s.inicio >= t.desde && s.inicio <= t.hasta);
+  let i = serie.length - 1;
+  while (i > 0 && !serie[i].actual) i--;
+  return serie.slice(Math.max(0, i - n + 1), i + 1);
+}
+const opsDe = (d) => (d.progreso || {}).periodos;
 let planSel = null;
 
 const NUMEROS = () => ({
@@ -91,7 +103,9 @@ function opcionesPeriodo(d) {
 
 function renderProgreso(d) {
   const ops = opcionesPeriodo(d);
-  if (!ops.some((p) => p.n === periodo)) periodo = (ops.find((p) => p.n === 8) || ops[ops.length - 1]).n;   // el elegido ya no existe (otro plan)
+  if (periodoTodo && !ops.some((p) => p.todo)) periodoTodo = false;   // ya no hay plan
+  if (!periodoTodo && ![4, 8, 12].includes(periodo)) periodo = 8;
+  if (periodoTodo) periodo = ops.find((p) => p.todo).n;   // para los textos y los números del periodo
   PINTAR.progreso = [];
   PINTAR.cuerpo = [];
   const raiz = $("vista-progreso");
@@ -104,8 +118,8 @@ function renderProgreso(d) {
   }
   raiz.replaceChildren(selectorProgreso(),
     h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...[
-      DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodo, opciones: opcionesPeriodo(d).map((p) => ({ id: p.n, texto: p.todo ? T("sitio.prog.todo") : T("sitio.prog.n_sem", { n: p.n }) })),
-        onCambio: (n) => { periodo = Number(n); renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }),
+      DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodoTodo ? "todo" : periodo, opciones: opcionesPeriodo(d).map((p) => ({ id: p.todo ? "todo" : p.n, texto: p.todo ? T("sitio.prog.todo") : T("sitio.prog.n_sem", { n: p.n }) })),
+        onCambio: (n) => { periodoTodo = n === "todo"; periodo = periodoTodo ? periodo : Number(n); renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }),
       filaNumeros(d),
       tarjetaMejora(d),
       tarjetaCorridasProgreso(d),
@@ -319,9 +333,11 @@ function listaEventos(eventos) {
 function contextoPeriodo(d) {
   const prog = d.progreso || {};
   const hoyMs = parseFecha((d.generado || "").slice(0, 10) || "2000-01-01").getTime();
-  const corte = hoyMs - periodo * 7 * 86400000;
-  return { prog, dominio: [corte + 86400000, hoyMs],
-    aire: (prog.corridas || []).filter((r) => !r.caminadora && parseFecha(r.fecha).getTime() > corte) };
+  const t = periodoTodo ? (prog.periodos || []).find((p) => p.todo) : null;
+  const corte = t && t.desde ? parseFecha(t.desde).getTime() - 86400000 : hoyMs - periodo * 7 * 86400000;
+  const fin = t && t.hasta ? Math.max(hoyMs, parseFecha(t.hasta).getTime() + 6 * 86400000) : hoyMs;
+  return { prog, dominio: [corte + 86400000, fin],
+    aire: (prog.corridas || []).filter((r) => !r.caminadora && parseFecha(r.fecha).getTime() > corte && parseFecha(r.fecha).getTime() <= fin) };
 }
 
 function graficaCorridas(d, ancho, id) {
@@ -353,7 +369,7 @@ function graficaCorridas(d, ancho, id) {
 
 function graficaVolumen(d, ancho) {
   const prog = d.progreso || {};
-  const semanas = (prog.semanas || []).slice(-periodo);
+  const semanas = ventanaSemanas(prog.semanas || [], prog.periodos);
   const hay = semanas.some((s) => (s.minutos || 0) > 0 || s.plan_min);
   if (!hay) return DS.estadoVacio({ icono: null, titulo: T("sitio.vol.sin") });
   const barras = semanas.map((s) => ({ inicio: s.inicio, actual: s.actual, valores: [s.min_trote || 0, s.min_camina || 0], meta: s.plan_min || 0, s }));
@@ -367,7 +383,7 @@ function graficaVolumen(d, ancho) {
 }
 
 function graficaKm(d, ancho) {
-  const semanas = ((d.progreso || {}).semanas || []).slice(-periodo);
+  const semanas = ventanaSemanas((d.progreso || {}).semanas || [], opsDe(d));
   if (!semanas.some((s) => (s.km || 0) > 0)) return DS.estadoVacio({ icono: null, titulo: T("sitio.vol.sin") });
   return h("div", {}, h("p", { class: "nota" }, T("sitio.km.nota")),
     barChart({ ancho, semanas: semanas.map((s) => ({ inicio: s.inicio, actual: s.actual, valores: [s.km || 0], s })), clases: ["s1"],
@@ -415,7 +431,7 @@ function tarjetaIntensidadSemanas(d) {
   const pintar = () => {
     const ancho = caja.clientWidth;
     if (!ancho) return;
-    const sem = todas.slice(-periodo);
+    const sem = ventanaSemanas(todas, opsDe(d));
     const con = sem.filter((x) => Object.values(x.minutos || {}).some((v) => v > 0));
     if (!con.length) { caja.replaceChildren(DS.estadoVacio({ icono: null, titulo: T("sitio.ig.sin") })); pie.replaceChildren(); return; }
     caja.replaceChildren(barChart({
@@ -1066,17 +1082,25 @@ function personaFaltan(f) {
 }
 
 /** Minutos o km de carrera por semana del perfil: todas las semanas (con ceros), la actual marcada; el selector solo cambia qué valor se pinta. */
-function graficaPersona(semanas) {
+function graficaPersona(semanas, periodos) {
   const caja = h("div", { class: "pers-graf" });
+  const ops = periodos && periodos.length ? periodos : [4, 8, 12].map((n) => ({ n, todo: false }));
+  let sel = ops.some((p) => p.n === 8 && !p.todo) ? 8 : ops[0].n, todo = false;   // altura fija: elegir solo cambia las barras
+  const selector = h("div", {});
   const pintar = () => {
     const km = unidad === "km";
-    caja.replaceChildren(DS.graficaBarras({ alto: 120, clases: ["s1"], etiqueta: T(km ? "sitio.gr.p.graf_km" : "sitio.gr.p.graf", { n: semanas.length }),
-      semanas: semanas.map((w) => ({ inicio: w.inicio, actual: w.actual, valores: [(km ? w.km : w.minutos) || 0] })),
+    const ven = ventanaSemanas(semanas, ops, sel, todo);
+    caja.replaceChildren(DS.graficaBarras({ alto: 120, clases: ["s1"], etiqueta: T(km ? "sitio.gr.p.graf_km" : "sitio.gr.p.graf", { n: ven.length }),
+      semanas: ven.map((w) => ({ inicio: w.inicio, actual: w.actual, valores: [(km ? w.km : w.minutos) || 0] })),
       texto: (w) => (km ? T("sitio.gr.p.graf_tip_km", { fecha: fechaCorta(w.inicio), km: fmt(w.valores[0], 1) }) : T("sitio.gr.p.graf_tip", { fecha: fechaCorta(w.inicio), min: fmt(w.valores[0], 0) })) }));
   };
+  const pintarSel = () => selector.replaceChildren(DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", activo: todo ? "todo" : sel,
+    opciones: ops.map((p) => ({ id: p.todo ? "todo" : p.n, texto: p.todo ? T("sitio.prog.todo") : T("sitio.prog.n_sem", { n: p.n }) })),
+    onCambio: (id) => { todo = id === "todo"; if (!todo) sel = Number(id); pintarSel(); pintar(); } }));
   REPINTAR_UNIDAD.push({ conectado: () => caja.isConnected, pintar });
+  pintarSel();
   pintar();
-  return h("div", {}, selectorUnidad(), caja);
+  return h("div", {}, selectorUnidad(), selector, caja);
 }
 
 function pintarPersona(p) {
@@ -1104,7 +1128,7 @@ function pintarPersona(p) {
     // Progreso
     const pr = p.progreso;
     partes.push(sec(T("sitio.gr.p.prog_t"),
-      pr && pr.semanas.length ? graficaPersona(pr.semanas) : oculto("sitio.gr.p.sin_datos"),
+      pr && pr.semanas.length ? graficaPersona(pr.semanas, pr.periodos) : oculto("sitio.gr.p.sin_datos"),
       p.nivel ? h("p", { class: "pers-dato" }, T("sitio.gr.p.nivel_l", { nivel: T(`sitio.gr.p.nivel.${p.nivel}`) })) : null,
       pr && pr.racha !== null ? h("p", { class: "pers-dato" }, pr.racha > 0 ? `🔥 ${T("sitio.gr.racha", { n: pr.racha })}` : T("sitio.gr.p.sin_racha")) : null,
       pr && pr.carreras ? (pr.carreras.length ? h("ul", { class: "pers-lista" }, pr.carreras.map((c) => h("li", {}, `🏁 ${c.distancia_km ? T("sitio.gr.p.carrera", { km: fmt(c.distancia_km, 1), fecha: fechaCorta(c.fecha) }) : T("sitio.gr.p.carrera_sola", { fecha: fechaCorta(c.fecha) })}`)))

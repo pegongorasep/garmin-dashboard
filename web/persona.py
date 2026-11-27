@@ -90,6 +90,8 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
             out["semana"] = {"minutos": round(libre.get("minutos") or 0), "objetivo": None, "faltan": []}
         prog = {"semanas": [{"inicio": s["inicio"], "actual": bool(s.get("actual")), "minutos": round(s.get("minutos") or 0), "km": round(s.get("km") or 0, 1)}
                             for s in (data.get("progreso") or {}).get("semanas") or []],   # el largo lo decide semanal.serie_semanas
+                "periodos": [{k: v for k, v in o.items() if k in ("n", "todo", "desde", "hasta")}
+                             for o in (data.get("progreso") or {}).get("periodos") or [] if ver_plan or not o.get("todo")],   # 4/8/12 y (si comparte el plan) todo el plan
                 "racha": None, "carreras": None}
         if ver_plan:
             prog["racha"] = (data.get("racha") or {}).get("semanas") or 0
