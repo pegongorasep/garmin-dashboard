@@ -40,6 +40,7 @@ COMPONENTES = {
     "FilaActividad": ("act-fila", "filaActividad"),
     "CabeceraPersona": ("pers-cab", "cabeceraPersona"),
     "CalendarioPlan": ("pers-cal", "calendarioPlan"),
+    "Semana de una tarjeta de miembro": ("mini-semana", "miniSemana"),
     "PanelComentarios": ("coments", "panelComentarios"),
     "BotonComentarios": ("reac-com", "botonComentarios"),
     "Ranking": ("marca-t", "ranking"),

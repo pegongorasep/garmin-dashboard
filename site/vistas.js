@@ -736,6 +736,13 @@ function pintarGrupo(g) {
       if (s.km > 0 || s.minutos > 0) partes.push(`🏃 ${T("sitio.gr.corrida", { km: fmt(s.km, 1), min: fmt(s.minutos, 0) })}`);
       for (const [c, n] of Object.entries(s.otras || {})) partes.push(`${catEmoji(c)} ${n}`);
     }
+    const sp = t.sem_plan, letras = [0, 1, 2, 3, 4, 5, 6].map((i) => T(`sitio.gr.c.d${i}`));
+    const semana = DS.semanaPlanTarjeta(pausa || !sp ? {} : {
+      minutos: sp.objetivo ? T("sitio.gr.p.min_de", { hechos: fmt(sp.minutos, 0), meta: fmt(sp.objetivo, 0) }) : T("sitio.gr.p.min_solo", { hechos: fmt(sp.minutos, 0) }),
+      faltan: !sp.objetivo ? "" : sp.faltan.length ? T("sitio.gr.p.faltan", { lista: personaFaltan(sp.faltan) }) : T("sitio.gr.c.completa"),
+      completa: !!sp.objetivo && !sp.faltan.length });
+    const cal = !pausa && t.cal && t.cal.length === 7 ? DS.miniSemana({ letras, etiqueta: T("sitio.gr.c.dias_aria", { n: t.cal.filter((d) => d.hecha).length }),
+      celdas: t.cal.map((d) => ({ hecha: d.hecha, hoy: d.hoy, emoji: d.cats.length ? (d.cats[0] === "run" ? "🏃" : catEmoji(d.cats[0])) : null })) }) : DS.miniSemana({ letras });
     const detalle = [];
     if (t.plan && t.plan.n) {
       const p = t.progreso;
@@ -755,6 +762,7 @@ function pintarGrupo(g) {
       pausa: pausa ? T("sitio.gr.pausa") : null,
       linea: partes.length ? partes.join(" · ") : T(t.semana ? "sitio.gr.sin_actividad" : "sitio.gr.sin_datos"),
       dias: t.dias || [], etiquetaDias: T("sitio.gr.dias_aria", { n: (t.dias || []).filter((d) => d === "hecha").length }),
+      semana, calendario: cal,
       detalle: [...detalle, personaEnlace(m.usuario_id, m.nombre)], alPersona: () => { location.hash = `#juntos/persona/${m.usuario_id}`; },
       abierto: !!grupoAbiertos()[clave], etiquetaAbrir: T("sitio.gr.detalle", { nombre: m.nombre }),
       onAlternar: (on) => grupoGuardarAbierto(clave, on) });
@@ -1026,7 +1034,7 @@ function pintarPersona(p) {
         titulo: w.n ? T("sitio.gr.p.sem_n", { n: w.n, fecha: fechaCorta(w.inicio) }) : T("sitio.gr.p.sem_f", { fecha: fechaCorta(w.inicio) }),
         dias: w.dias.map((d) => ({ nombre: d.dia, numero: parseFecha(d.fecha).getDate(), hoy: d.hoy, hecha: d.hecha, etiqueta: d.etiqueta })),
         sesiones: w.sesiones.map((x) => ({ texto: x.nombre, hecha: x.estado === "hecha" })) })) })));
-    } else partes.push(sec(T("sitio.gr.p.plan_t"), oculto("sitio.gr.p.no_plan")));
+    }
     // Progreso
     const pr = p.progreso;
     partes.push(sec(T("sitio.gr.p.prog_t"),
@@ -1034,7 +1042,7 @@ function pintarPersona(p) {
         semanas: pr.semanas.map((w) => ({ inicio: w.inicio, valores: [w.minutos] })),
         texto: (w) => T("sitio.gr.p.graf_tip", { fecha: fechaCorta(w.inicio), min: fmt(w.valores[0], 0) }) })) : oculto("sitio.gr.p.sin_datos"),
       p.nivel ? h("p", { class: "pers-dato" }, T("sitio.gr.p.nivel_l", { nivel: T(`sitio.gr.p.nivel.${p.nivel}`) })) : null,
-      pr && pr.racha !== null ? h("p", { class: "pers-dato" }, pr.racha > 0 ? `🔥 ${T("sitio.gr.racha", { n: pr.racha })}` : T("sitio.gr.p.sin_racha")) : oculto("sitio.gr.p.no_plan"),
+      pr && pr.racha !== null ? h("p", { class: "pers-dato" }, pr.racha > 0 ? `🔥 ${T("sitio.gr.racha", { n: pr.racha })}` : T("sitio.gr.p.sin_racha")) : null,
       pr && pr.carreras ? (pr.carreras.length ? h("ul", { class: "pers-lista" }, pr.carreras.map((c) => h("li", {}, `🏁 ${c.distancia_km ? T("sitio.gr.p.carrera", { km: fmt(c.distancia_km, 1), fecha: fechaCorta(c.fecha) }) : T("sitio.gr.p.carrera_sola", { fecha: fechaCorta(c.fecha) })}`)))
         : h("p", { class: "pers-dato" }, T("sitio.gr.p.sin_carreras"))) : null));
     // Actividades recientes
@@ -1159,7 +1167,7 @@ function mostrarVista() {
   const solo = !!ui().solo_cuerpo;   // solo cuerpo: todo cae en Progreso > Cuerpo (la ayuda sigue)
   const v = solo && nombre !== "ayuda" ? "progreso" : nombre === "grupo" && !(nGrupos() > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
   subProgreso = solo || (v === "progreso" && sub === "cuerpo") ? "cuerpo" : "corridas";
-  if (v === "grupo" && sub === "persona" && /^#juntos(\/\d+)?$/.test(rutaPrevia)) personaVolver = rutaPrevia;   // el «volver» del perfil
+  if (v === "grupo" && sub === "persona" && !/^#juntos\/persona\//.test(rutaPrevia)) personaVolver = /^#juntos(\/\d+)?$/.test(rutaPrevia) ? rutaPrevia : "#juntos";   // el «volver» del perfil; sin historial, a Juntos
   if (v !== "ayuda") rutaPrevia = `#${ruta.replace(/^grupo(?=\/|$)/, "juntos") || "hoy"}`;
   vistaActual = v;
   for (const id of VISTAS) $(`vista-${id}`).hidden = id !== v;

@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 
 from dashboard.build import cumplimiento_semana
 
-from . import calculo
+from . import calculo, semana_plan
 from .modelos import Ajustes, MiembroGrupo, Plan, Usuario
 
 log = logging.getLogger("web.grupos_resumen")
 
 CAMPOS = {"usuario_id", "estado", "meta", "etapa_n", "adherencia", "dias", "ultima", "libre",
-          "semana", "plan", "progreso", "racha", "carrera"}   # lo único que sale de una tarjeta
+          "semana", "plan", "progreso", "racha", "carrera", "sem_plan", "cal"}   # lo único que sale de una tarjeta
 MAX_NOVEDADES = 3
 # Emoji de cada categoría de «otras sesiones» (la pestaña solo pinta). Lo que no esté aquí usa «otra».
 EMOJI_CATEGORIA = {"crossfit": "🔥", "hiit": "🔥", "fuerza": "🏋️", "gym": "🏋️", "pesas": "🏋️", "bici": "🚴", "cardio": "🚴",
@@ -51,7 +51,8 @@ def _otras(dias: list) -> dict:
 def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tuple[dict, dict]:
     """(tarjeta, hitos): los hitos (corrida más larga, récord, semana completa) alimentan insignias y novedades y no salen."""
     base = {"usuario_id": usuario.id, "estado": "ok", "meta": None, "etapa_n": None, "adherencia": None, "dias": [], "ultima": None,
-            "libre": None, "semana": None, "plan": None, "progreso": None, "racha": None, "carrera": None}
+            "libre": None, "semana": None, "plan": None, "progreso": None, "racha": None, "carrera": None,
+            "sem_plan": None, "cal": None}
     if miembro.pausado:
         return {**base, "estado": "pausa"}, {}
     sin_plan = {**base, "estado": "sin_plan"}
@@ -72,7 +73,10 @@ def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tupl
         corridas = [a["minutos"] for a in items if a.get("cat", "run") == "run"]
         semana = {"km": round(sl.get("km") or 0, 1), "minutos": sum(a["minutos"] for a in items if a.get("cat", "run") == "run"),
                   "otras": otras, "extra_min": sum(a["minutos"] for a in items if a.get("cat", "run") != "run")}
-        return ({**base, "estado": "libre", "dias": dias, "semana": semana,
+        hoy_i = max((i for i, d in enumerate(sl["dias"]) if not d["futuro"]), default=-1)
+        cal = [{"hoy": i == hoy_i, "hecha": bool(d["actividades"]), "cats": [a.get("cat", "run") for a in d["actividades"]]} for i, d in enumerate(sl["dias"])]
+        return ({**base, "estado": "libre", "dias": dias, "semana": semana, "cal": cal,
+                 "sem_plan": {"minutos": semana["minutos"] + semana["extra_min"], "objetivo": None, "faltan": []},
                  "libre": {"actividades": sl["actividades"], "minutos": round(sl["minutos"]), "racha": sl["racha_semanas"]}},
                 {"larga": max(corridas, default=0)})
     if db.get(Ajustes, usuario.id) is None or db.get(Plan, usuario.id) is None:
@@ -117,7 +121,8 @@ def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tupl
     return ({**base, "meta": carreras[0]["nombre"] if carreras else None, "etapa_n": actual.get("n"),
              "adherencia": _adherencia(semanas), "dias": dias, "ultima": ((data.get("ultima_corrida") or {}).get("fecha")),
              "semana": semana, "plan": {"n": actual.get("n"), "total": total_plan},
-             "progreso": {"hechas": p["hechas"], "total": p["total"]}, "racha": racha, "carrera": carrera}, hitos)
+             "progreso": {"hechas": p["hechas"], "total": p["total"]}, "racha": racha, "carrera": carrera,
+             "sem_plan": semana_plan.semana_vs_plan(actual, True), "cal": semana_plan.calendario_semana(actual["dias"], hoy)}, hitos)
 
 
 def aplicar_privacidad(usuario: Usuario, t: dict, hitos: dict) -> tuple[dict, dict]:
@@ -126,6 +131,8 @@ def aplicar_privacidad(usuario: Usuario, t: dict, hitos: dict) -> tuple[dict, di
     t, hitos = dict(t), dict(hitos)
     if not usuario.compartir_actividades:
         t["dias"], t["ultima"] = [], None
+        if t.get("cal"):
+            t["cal"] = [{**d, "cats": []} for d in t["cal"]]   # solo días llenos o vacíos, sin categorías
         if t.get("semana"):
             t["semana"] = {**t["semana"], "otras": {}}
         if t.get("libre"):
@@ -133,6 +140,8 @@ def aplicar_privacidad(usuario: Usuario, t: dict, hitos: dict) -> tuple[dict, di
         hitos.update({k: v for k, v in (("larga", 0), ("record", None)) if k in hitos})
     if not usuario.compartir_plan:
         t.update(meta=None, etapa_n=None, adherencia=None, plan=None, progreso=None, racha=None, carrera=None)
+        if t.get("sem_plan"):
+            t["sem_plan"] = {**t["sem_plan"], "objetivo": None, "faltan": []}   # solo minutos
         if t.get("libre"):
             t["libre"] = {**t["libre"], "racha": 0}
         hitos.update({k: v for k, v in (("completa_ahora", False), ("completa_antes", False), ("racha", 0)) if k in hitos})

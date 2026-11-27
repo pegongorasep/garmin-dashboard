@@ -541,6 +541,15 @@ const DS = (() => {
   const puntosSemana = ({ dias = [], etiqueta } = {}) =>
     h("div", { class: "puntos-sem", role: "img", "aria-label": etiqueta }, dias.map((d) => h("span", { class: `pt ${d}` })));
 
+  /** Mini calendario de la semana (lun-dom) de una tarjeta: 7 celdas de tamaño fijo con la letra del día y, si se hizo algo, el emoji de su categoría
+   *  (o un punto lleno si no se conoce) ; la de hoy lleva marco. Sin `celdas` (en pausa o sin datos) reserva el mismo espacio, invisible.
+   *  Recibe { celdas:[{ hecha, hoy, emoji, etiqueta }], letras:[7 textos], etiqueta }. */
+  const miniSemana = ({ celdas = [], letras = [], etiqueta } = {}) =>
+    h("div", Object.assign({ class: `mini-semana${celdas.length ? "" : " vacia"}` }, celdas.length ? { role: "img", "aria-label": etiqueta } : { "aria-hidden": "true" }),
+      letras.map((l, i) => { const c = celdas[i] || {};
+        return h("span", { class: "ms-col" }, h("span", { class: "ms-d" }, l),
+          h("span", { class: `ms-c${c.hecha ? " hecha" : ""}${c.hoy ? " hoy" : ""}`, title: c.etiqueta || null }, c.hecha && c.emoji ? c.emoji : null)); }));
+
   /** Reacción recibida. Recibe { emoji, n, mia, etiqueta, nueva, onclick }; la cuenta solo se ve con n > 1. */
   const chipReaccion = ({ emoji, n = 1, mia = false, etiqueta, nueva = false, onclick } = {}) =>
     h("button", { type: "button", class: `reac${mia ? " mia" : ""}${nueva ? " nueva" : ""}`, "aria-label": etiqueta, "aria-pressed": String(!!mia), onclick },
@@ -565,9 +574,9 @@ const DS = (() => {
   };
 
   /** Tarjeta de una persona del grupo, cerrada por defecto. Recibe { nombre, foto, iniciales, color, pct, etiquetaAnillo, insignias:[texto],
-   *  linea (texto), pausa (texto), dias, etiquetaDias, reacciones (nodos), detalle (nodos), abierto, etiquetaAbrir, onAlternar(abierto),
+   *  linea (texto), pausa (texto), dias, etiquetaDias, semana (nodo de miniSemana-plan: DS.semanaPlanTarjeta), calendario (nodo de DS.miniSemana), reacciones (nodos), detalle (nodos), abierto, etiquetaAbrir, onAlternar(abierto),
    *  alPersona (tocar el avatar o el nombre abre su perfil en vez de desplegar) }. */
-  const tarjetaMiembro = ({ nombre, foto, iniciales, color = 0, pct = null, etiquetaAnillo, insignias = [], linea, pausa, dias = [], etiquetaDias, reacciones = null,
+  const tarjetaMiembro = ({ nombre, foto, iniciales, color = 0, pct = null, etiquetaAnillo, insignias = [], linea, pausa, dias = [], etiquetaDias, semana = null, calendario = null, reacciones = null,
     detalle = [], abierto = false, etiquetaAbrir, onAlternar, alPersona } = {}) => {
     const cuerpo = h("div", { class: "mi-detalle", hidden: !abierto }, detalle);
     const cab = h("button", { type: "button", class: "mi-cab", "aria-expanded": String(!!abierto), "aria-label": etiquetaAbrir, onclick: () => {
@@ -582,9 +591,13 @@ const DS = (() => {
       pct === null ? null : anilloMini({ pct, etiqueta: etiquetaAnillo }), ico("flecha-abajo"));
     abrirPersona(cab, alPersona);
     return h("article", { class: "card miembro" }, cab,
-      pausa ? h("p", { class: "mi-linea muted" }, pausa) : [h("p", { class: "mi-linea" }, linea), dias.length ? puntosSemana({ dias, etiqueta: etiquetaDias }) : null],
-      reacciones, pausa ? null : cuerpo);
+      pausa ? h("p", { class: "mi-linea muted" }, pausa) : [h("p", { class: "mi-linea" }, linea), dias.length && !calendario ? puntosSemana({ dias, etiqueta: etiquetaDias }) : null],
+      semana, calendario, reacciones, pausa ? null : cuerpo);
   };
+
+  /** Semana contra el plan de una tarjeta: dos líneas de ranura fija (minutos y «le faltan…» / «semana completa ✓»); vacías si no hay texto. */
+  const semanaPlanTarjeta = ({ minutos = "", faltan = "", completa = false } = {}) =>
+    h("div", { class: "mi-semplan" }, h("p", { class: "mi-sp-min" }, minutos), h("p", { class: `mi-sp-falta${completa ? " completa" : ""}` }, faltan));
 
   /** Botón de comentarios de una actividad (💬 y la cuenta si hay). Recibe { n, etiqueta, onclick }. */
   const botonComentarios = ({ n = 0, etiqueta, onclick } = {}) =>
@@ -666,7 +679,7 @@ const DS = (() => {
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
-    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad, botonComentarios, panelComentarios, cabeceraPersona, calendarioPlan,
+    anilloMini, barraFina, puntosSemana, miniSemana, semanaPlanTarjeta, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad, botonComentarios, panelComentarios, cabeceraPersona, calendarioPlan,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */
     silueta: (tramos, { alto = 44, conTip = true, rachas = null, ...rampas } = {}) => siluetaSesion(tramos, alto, conTip, rachas, rampas),
   };

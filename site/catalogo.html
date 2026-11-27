@@ -303,6 +303,13 @@ def("Grupo", "Fila de actividad", "DS.filaActividad()", "Una actividad del feed 
   DS.filaActividad({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, cuando: "Hace 3 días", emoji: "🏋️", tipo: "Fuerza", resumen: "45 min", esfuerzo: "Esfuerzo 6.0",
     reacciones: h("div", { class: "reacciones" }, DS.botonReaccion({ onclick: () => {} })) }));
 
+def("Grupo", "Semana de una tarjeta de miembro", "DS.semanaPlanTarjeta() + DS.miniSemana()", "Dentro de la tarjeta de cada persona: minutos contra el objetivo, «le faltan…» o «semana completa ✓», y 7 celdas de tamaño fijo (lun-dom) con el emoji de la categoría de cada día hecho y marco en hoy. Sin datos (pausa, sin plan) reservan el mismo espacio.",
+  DS.tarjeta({}, DS.semanaPlanTarjeta({ minutos: "42 de 95 min", faltan: "Le faltan: 1 fácil y la larga" }),
+    DS.miniSemana({ letras: ["L", "M", "M", "J", "V", "S", "D"], etiqueta: "Días con actividad: 3",
+      celdas: [{ hecha: true, emoji: "🏃" }, {}, { hecha: true, emoji: "🔥" }, { hoy: true, hecha: true }, {}, {}, {}] })),
+  DS.tarjeta({}, DS.semanaPlanTarjeta({ minutos: "95 de 95 min", faltan: "Semana completa ✓", completa: true }),
+    DS.miniSemana({ letras: ["L", "M", "M", "J", "V", "S", "D"], celdas: [] })));
+
 def("Grupo", "Cabecera de perfil", "DS.cabeceraPersona()", "Arriba del perfil de una persona: foto, nombre, nivel y grupos en común. Cada línea tiene su ranura de alto fijo, falte o no el nivel.",
   DS.tarjeta({}, DS.cabeceraPersona({ nombre: "Ana López", iniciales: "AL", color: 1, nivel: "Base", grupos: "Grupos en común: Corredores del parque" })),
   DS.tarjeta({}, DS.cabeceraPersona({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, grupos: "Grupos en común: Corredores del parque, Oficina" })));

@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import calculo, feed, grupos, grupos_resumen, permisos
+from . import calculo, feed, grupos, grupos_resumen, permisos, semana_plan
 from .modelos import Grupo, MiembroGrupo, Plan, Usuario
 
 log = logging.getLogger("web.persona")
@@ -46,18 +46,6 @@ def _nivel(db: Session, uid: int) -> str | None:
     p = db.get(Plan, uid)
     n = ((p.plan or {}).get("meta") or {}).get("nivel") if p else None
     return n if n in NIVELES else None
-
-
-def _faltan(sesiones: list) -> list[dict]:
-    """Lo que falta de la semana, estructurado (el JS arma la frase en el idioma de quien mira), en el orden de `faltan_texto`."""
-    pend = [s for s in sesiones if s.get("estado") == "pendiente"]
-    facil = sum(1 for s in pend if s["tipo"] not in ("larga", "calidad", "prueba"))
-    out = [{"k": "facil", "n": facil}] if facil else []
-    if any(s["tipo"] == "calidad" for s in pend):
-        out.append({"k": "calidad"})
-    if any(s["tipo"] in ("larga", "prueba") for s in pend):
-        out.append({"k": "larga"})
-    return out
 
 
 def _semana_cal(s: dict, hoy: str) -> dict:
@@ -103,10 +91,9 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
         actual = semanas[idx] if idx < len(semanas) else None
         libre = data.get("semana_libre")
         if actual and actual.get("plan"):
-            st = actual.get("stats") or {}
-            out["semana"] = {"minutos": round(st.get("minutos") or 0), "objetivo": None, "faltan": []}
+            out["semana"] = semana_plan.semana_vs_plan(actual, False)
             if ver_plan:
-                out["semana"].update(objetivo=actual["plan"].get("plan_min"), faltan=_faltan(actual.get("sesiones") or []))
+                out["semana"] = semana_plan.semana_vs_plan(actual, True)
                 total = len((data.get("plan") or {}).get("semanas") or []) or None
                 out["plan"] = {"n": actual.get("n"), "total": total}
                 out["calendario"] = [_semana_cal(s, hoy) for s in semanas[idx:idx + 2]]
