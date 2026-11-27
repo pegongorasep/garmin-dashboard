@@ -224,13 +224,27 @@ def esfuerzo(minutos: dict):
 
 
 def esfuerzo_de(activity: dict, details: dict, config: dict):
-    """Esfuerzo de una actividad, de su serie de FC o de las zonas del reloj; None si no hay."""
+    """Esfuerzo de una actividad, de su serie de FC o de las zonas del reloj; None si no hay.
+    En una sesión encadenada (ver `unir_encadenadas`) es el máximo de sus partes."""
+    if activity.get("_partes"):
+        es = [e for p in activity["_partes"] if (e := esfuerzo_de(p, details, config)) is not None]
+        return max(es) if es else None
     zm = zona_minutos(activity, details, zonas_de(config))
     return None if zm is None else esfuerzo(zm)
 
 
+def rpe_de(activity: dict, details: dict):
+    """RPE de una actividad (el máximo de sus partes si es una sesión encadenada); None si no hay."""
+    partes = activity.get("_partes") or [activity]
+    rs = [r for p in partes if (r := (details.get(str(id_de(p))) or {}).get("rpe")) is not None]
+    return max(rs) if rs else None
+
+
 def session_load(activity: dict, details: dict, config: dict):
-    """Carga = esfuerzo × minutos de la actividad; None si no hay esfuerzo."""
+    """Carga = esfuerzo × minutos de la actividad; None si no hay esfuerzo. Encadenada: suma de la carga de sus partes."""
+    if activity.get("_partes"):
+        cs = [c for p in activity["_partes"] if (c := session_load(p, details, config)) is not None]
+        return sum(cs) if cs else None
     e = esfuerzo_de(activity, details, config)
     return None if e is None else e * activity["duration"] / 60
 
@@ -337,7 +351,7 @@ def ayer_duro(day: date, activities: list, details: dict, config: dict):
         return None
     a, c = max(cands, key=lambda x: esfuerzo_de(x[0], details, config) or 0)
     return {"categoria": nombres[c], "esfuerzo": esfuerzo_de(a, details, config),
-            "rpe": (details.get(str(id_de(a))) or {}).get("rpe")}
+            "rpe": rpe_de(a, details)}
 
 
 def _motivos() -> dict:
@@ -826,22 +840,71 @@ def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
             "ritmo_ref": promedio([f.get("ritmo_ref_s") for f in g])}
 
 
-def sin_repetidas(activities: list, config: dict, horas: float = 3) -> list:
-    """Quita las actividades no-corrida que empiezan a menos de `horas` de la anterior que se quedó de su misma categoría
-    (p. ej. un CrossFit grabado en dos partes cuenta como una sola sesión). Las corridas no se tocan."""
-    out, ultima = [], {}
-    for a in sorted(activities, key=lambda a: a["startTimeLocal"]):
-        c = classify(a, config)
-        if c and c != "run":
-            t = datetime.fromisoformat(a["startTimeLocal"])
-            if c in ultima and t - ultima[c] < timedelta(hours=horas):
-                continue
-            ultima[c] = t
-        out.append(a)
+ENCADENADA_MIN = 30   # minutos máximos entre el fin de una actividad y el inicio de la siguiente para contarlas como una sesión
+
+
+def _fin(a: dict) -> datetime:
+    return datetime.fromisoformat(a["startTimeLocal"]) + timedelta(seconds=a.get("duration") or 0)
+
+
+def _nombre_tipo(a: dict, respaldo: str) -> str:
+    """Nombre del tipo de actividad según el catálogo (motor.tipo.*); si no está, el de su categoría. Nunca el nombre de Garmin."""
+    clave = f"motor.tipo.{a['activityType']['typeKey']}"
+    n = tt(clave)
+    return respaldo if n == clave else n
+
+
+def _unir(partes: list, config: dict) -> dict:
+    """Una sola actividad con las partes de una sesión encadenada. Categoría = la más intensa (`intensa`, luego la más
+    larga); minutos, distancia, calorías, desnivel y minutos por zona suman; FC prom. pesada por duración, FC máx. el máximo.
+    Guarda las originales en `_partes` (no sale en el data.json) y `partes` [{cat, nombre, minutos}] con nombres del catálogo."""
+    cats = {c["id"]: c for c in config.get("categorias", [])}
+    gana = max(partes, key=lambda a: (bool(cats[classify(a, config)].get("intensa")), a.get("duration") or 0))
+    suma = lambda k: sum(a.get(k) or 0 for a in partes)   # noqa: E731
+    out = {**gana, "startTimeLocal": partes[0]["startTimeLocal"], "duration": suma("duration"), "distance": suma("distance"),
+           "calories": suma("calories") or gana.get("calories"), "elevationGain": suma("elevationGain") or gana.get("elevationGain")}
+    if any(a.get("movingDuration") for a in partes):
+        out["movingDuration"] = sum(a.get("movingDuration") or a.get("duration") or 0 for a in partes)
+    for i in range(1, 6):
+        k = f"hrTimeInZone_{i}"
+        out[k] = suma(k) if any(a.get(k) is not None for a in partes) else None
+    con_fc = [a for a in partes if a.get("averageHR")]
+    peso = sum(a.get("duration") or 0 for a in con_fc)
+    out["averageHR"] = sum(a["averageHR"] * (a.get("duration") or 0) for a in con_fc) / peso if peso else gana.get("averageHR")
+    out["maxHR"] = max((a["maxHR"] for a in partes if a.get("maxHR")), default=gana.get("maxHR"))
+    for k in ("aerobicTrainingEffect", "anaerobicTrainingEffect"):
+        out[k] = max((a[k] for a in partes if a.get(k)), default=None)
+    out["_partes"] = partes
+    out["partes"] = [{"cat": classify(a, config), "nombre": _nombre_tipo(a, cats[classify(a, config)]["nombre"]),
+                      "minutos": round((a.get("duration") or 0) / 60)} for a in partes]
     return out
 
 
-
+def unir_encadenadas(activities: list, config: dict, gap_min: float = ENCADENADA_MIN) -> list:
+    """Las actividades no-corrida (de cualquier categoría que se muestre) donde la siguiente empieza a ≤ `gap_min`
+    minutos de que acabó la anterior son UNA sesión (un CrossFit grabado como fuerza + hiit; también cadenas de 3 o más).
+    Las corridas y lo que no se muestra no se tocan. Devuelve la lista ordenada con cada cadena ya unida (`_unir`)."""
+    ordenadas = sorted(activities, key=lambda a: a["startTimeLocal"])
+    cadenas, cadena = [], []
+    for a in ordenadas:
+        c = classify(a, config)
+        if not c or c == "run":
+            continue
+        if cadena and datetime.fromisoformat(a["startTimeLocal"]) - max(_fin(x) for x in cadena) <= timedelta(minutes=gap_min):
+            cadena.append(a)
+        else:
+            cadena = [a]
+            cadenas.append(cadena)
+    union = {id(a): ch for ch in cadenas if len(ch) > 1 for a in ch}
+    out, hechas = [], set()
+    for a in ordenadas:
+        ch = union.get(id(a))
+        if ch is None:
+            out.append(a)
+        elif id(ch) not in hechas:
+            hechas.add(id(ch))
+            out.append(_unir(ch, config))
+    return out
 
 
 # --- prueba al terminar el plan ---
@@ -956,7 +1019,7 @@ def stats_carrera(activity: dict, details: dict, config: dict) -> dict:
            if activity.get("averageRunningCadenceInStepsPerMinute") else None,
            "desnivel_m": round(activity["elevationGain"]) if activity.get("elevationGain") is not None else None,
            "caminadora": activity["activityType"]["typeKey"] == "treadmill_running",
-           "esfuerzo": esfuerzo_de(activity, details, config), "rpe": det.get("rpe"),
+           "esfuerzo": esfuerzo_de(activity, details, config), "rpe": rpe_de(activity, details),
            "km": det.get("ritmos_km") or None}
     return out
 

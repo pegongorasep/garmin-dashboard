@@ -343,6 +343,14 @@ const diaTexto = (x) => {
   return `${fechaCorta(x.fecha)}: ${partes.length ? partes.join("; ") : T("sitio.dia.sin")}`;
 };
 
+/** Varias sesiones en un día: una fila reservada de íconos chicos (máx. 3) y «+n» si hay más; el alto de la celda no cambia. */
+const MAX_MARCAS_DIA = 3;
+function marcasVarias(marcas) {
+  if (marcas.length < 2) return marcas;
+  const extra = marcas.length - MAX_MARCAS_DIA;
+  return [h("span", { class: "cf-varias" }, ...marcas.slice(0, MAX_MARCAS_DIA), extra > 0 ? h("span", { class: "cf-mas" }, `+${extra}`) : null)];
+}
+
 function diaCalendario(x, hoyIso, seleccionado, alTocar) {
   const varias = ui().categorias.length > 1;   // con una sola categoría no hace falta distinguir por color
   const marcaCat = (cat, cfTxt) => {
@@ -356,7 +364,8 @@ function diaCalendario(x, hoyIso, seleccionado, alTocar) {
       h("span", { class: "sn" }, DS.ico(x.corrida.icono || (x.corrida.carrera ? "medalla" : "correr")), h("span", {}, `${fmt(x.corrida.minutos, 0)}' ${x.corrida.sesion_nombre}` + (x.corridas_n > 1 ? ` +${x.corridas_n - 1}` : ""))),
       x.corrida.carrera ? h("span", { class: "sn-carrera" }, T("sitio.dia.carrera")) : null];
   }
-  const cfMarca = (x.otras || []).map((cf) => marcaCat(cf.cat, cf.esfuerzo != null ? fmt(cf.esfuerzo, 1) : null));
+  const otras = x.otras || [];
+  const cfMarca = otras.length === 1 ? [marcaCat(otras[0].cat, otras[0].esfuerzo != null ? fmt(otras[0].esfuerzo, 1) : null)] : marcasVarias(otras.map((cf) => marcaCat(cf.cat, null)));
   return DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.fecha === hoyIso, titulo: diaTexto(x), numeroEnMarca: marca.length > 0, hijos: [...marca, ...cfMarca], seleccionado, alTocar });
 }
 
@@ -372,7 +381,8 @@ function detalleActividad(dt, a) {
     ? h("p", {}, T("sitio.act.te", { a: dt.te_aerobico != null ? fmt(dt.te_aerobico, 1) : "—", n: dt.te_anaerobico != null ? fmt(dt.te_anaerobico, 1) : "—" }) + (dt.te_etiqueta ? ` · ${dt.te_etiqueta}` : "")) : null;
   const pulso = dt.pulso ? h("p", { class: "nota" }, T("sitio.act.pulso", { p: T(dt.pulso === "banda" ? "sitio.act.pulso_banda" : "sitio.act.pulso_muneca") })
     + (dt.pulso === "muñeca" && dt.ritmo_s != null ? ` · ${T("sitio.act.sin_deriva")}` : "")) : null;
-  return h("div", { class: "act-cuerpo" }, DS.tiles({ etiqueta: a.nombre, clase: "act-tiles" }, ...tiles), pulso,
+  const partes = (a.partes || []).length > 1 ? h("p", { class: "nota" }, T("sitio.act.partes", { n: a.partes.length, l: a.partes.map((p) => `${p.nombre} ${fmt(p.minutos, 0)}′`).join(" · ") })) : null;
+  return h("div", { class: "act-cuerpo" }, partes, DS.tiles({ etiqueta: a.nombre, clase: "act-tiles" }, ...tiles), pulso,
     dt.zonas ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.zonas")), DS.barraZonas(dt.zonas, { compacta: true, sinMeta: true, leyenda: true })) : null, te,
     dt.ritmos_km ? h("p", { class: "nota" }, `${T("sitio.act.por_km")}: ${dt.ritmos_km.map(mmss).join(" · ")}`) : null,
     dt.curva_fc ? h("div", {}, h("p", { class: "nota" }, T("sitio.act.curva_t")), DS.curvaFc(dt.curva_fc)) : null);
@@ -645,7 +655,8 @@ function renderHoySinPlan(d) {
   const hoyIso = (d.generado || "").slice(0, 10);
   const dias = calendarioTocable(sl.dias || [], hoyIso, (x, sel, tocar) => DS.diaCal({ nombre: x.dia_semana, numero: parseFecha(x.fecha).getDate(), hoy: x.hoy,
     titulo: `${fechaCorta(x.fecha)}: ${x.actividades.length ? x.actividades.map((a) => `${a.nombre} ${T("sitio.min_n", { n: fmt(a.minutos, 0) })}`).join("; ") : T("sitio.dia.sin")}`,
-    hijos: x.actividades.map((a) => h("span", { class: "cf" }, DS.ico(a.icono || "punto"), h("span", {}, fmt(a.minutos, 0)))), seleccionado: sel, alTocar: tocar }));
+    hijos: x.actividades.length === 1 ? [h("span", { class: "cf" }, DS.ico(x.actividades[0].icono || "punto"), h("span", {}, fmt(x.actividades[0].minutos, 0)))]
+      : marcasVarias(x.actividades.map((a) => h("span", { class: "cf" }, DS.ico(a.icono || "punto")))), seleccionado: sel, alTocar: tocar }));
   const rec = sl.recuperacion;
   const racha = sl.racha_semanas || 0;
   $("vista-hoy").replaceChildren(...[

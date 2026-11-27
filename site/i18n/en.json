@@ -8,6 +8,7 @@
 "sitio.act.fc": "Avg HR",
 "sitio.act.fcmax": "Max HR",
 "sitio.act.kcal": "Calories",
+"sitio.act.partes": "{n} parts: {l}",
 "sitio.act.por_km": "Pace per km",
 "sitio.act.ppm": "steps/min",
 "sitio.act.pulso": "HR sensor: {p}",

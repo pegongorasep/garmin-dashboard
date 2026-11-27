@@ -377,7 +377,7 @@ def last_run(data: dict, config: dict, plan: dict):
 
 def registro_esfuerzo(a: dict, details: dict, config: dict) -> dict:
     """Esfuerzo calculado con la FC y el RPE manual (si lo hay) de una actividad: se publican los dos."""
-    return {"esfuerzo": m.esfuerzo_de(a, details, config), "rpe": (details.get(str(m.id_de(a))) or {}).get("rpe")}
+    return {"esfuerzo": m.esfuerzo_de(a, details, config), "rpe": m.rpe_de(a, details)}
 
 
 def datos_serie(a: dict, data: dict, config: dict) -> dict:
@@ -419,16 +419,19 @@ def corrida_de_sesion(e: dict, semana: dict, data: dict, config: dict):
 
 
 def otras_del_dia(d: date, data: dict, config: dict) -> list:
-    """Actividades no-corrida del día, una entrada por categoría: esfuerzo máx, RPE máx y minutos sumados."""
+    """Actividades no-corrida del día, UNA ENTRADA POR SESIÓN (en orden de hora; `data["activities"]` ya trae las
+    encadenadas unidas): categoría, esfuerzo, RPE y minutos. Una sesión unida lleva `partes` ([{nombre, minutos}])."""
+    iconos = {c["id"]: c.get("icono", "punto") for c in config["categorias"]}
     out = []
-    for c in config["categorias"]:
-        acts = [a for a in data["activities"] if m.classify(a, config) == c["id"] and m.day_of(a) == d]
-        if not acts:
+    for a in sorted(data["activities"], key=lambda a: a["startTimeLocal"]):
+        c = m.classify(a, config)
+        if c not in iconos or m.day_of(a) != d:
             continue
-        esf = [e for a in acts if (e := m.esfuerzo_de(a, data["details"], config)) is not None]
-        rpes = [r for a in acts if (r := (data["details"].get(str(m.id_de(a))) or {}).get("rpe")) is not None]
-        out.append({"cat": c["id"], "icono": c.get("icono", "punto"), "esfuerzo": max(esf) if esf else None,
-                    "rpe": max(rpes) if rpes else None, "minutos": r1(sum(a["duration"] for a in acts) / 60)})
+        e = {"cat": c, "icono": iconos[c], "esfuerzo": m.esfuerzo_de(a, data["details"], config),
+             "rpe": m.rpe_de(a, data["details"]), "minutos": r1(a["duration"] / 60)}
+        if a.get("partes"):
+            e["partes"] = [{"nombre": p["nombre"], "minutos": p["minutos"]} for p in a["partes"]]
+        out.append(e)
     return out
 
 
@@ -526,12 +529,12 @@ def detalle_actividad(a: dict, details: dict, config: dict) -> dict:
             "cadencia": round(a["averageRunningCadenceInStepsPerMinute"]) if corrida and a.get("averageRunningCadenceInStepsPerMinute") else None,
             "ritmos_km": [round(x) for x in ritmos] if ritmos else None,
             "pulso": m.pulso_de(a, details, config),
-            "curva_fc": curva_fc(det.get("serie"))}
+            "curva_fc": None if a.get("_partes") else curva_fc(det.get("serie"))}
 
 
 def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None, details=None) -> list:
     """Todo lo que se hizo un día, una fila por actividad: tipo (texto del catálogo), minutos, km, FC prom. y, en
-    corridas, la sesión del plan que cumplió. `acts` ya viene sin repetidas. Nunca nombres, IDs ni GPS."""
+    corridas, la sesión del plan que cumplió. `acts` ya viene con las encadenadas unidas (`m.unir_encadenadas`). Nunca nombres, IDs ni GPS."""
     nombres = {"run": (tt("motor.entreno.run"), "correr"), "carrera": (tt("motor.entreno.carrera"), "medalla"),
                **{c["id"]: (c["nombre"], c.get("icono", "punto")) for c in config["categorias"]}}
     out = []
@@ -545,6 +548,7 @@ def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None, detail
         out.append({"cat": c, "nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(a["duration"] / 60),
                     "km": r2(km) if km >= 0.05 else None, "fc_prom": round(a["averageHR"]) if a.get("averageHR") else None,
                     "carrera": carrera, "sesion": {"nombre": e["name"], "estado": e["estado"]} if e else None,
+                    "partes": [{"nombre": p["nombre"], "minutos": p["minutos"]} for p in a.get("partes") or []],
                     "detalle": detalle_actividad(a, details or {}, config)})
     return out
 
@@ -553,7 +557,7 @@ def build_semana_libre(hoy: date, data: dict, config: dict) -> dict:
     """«Tu semana» (modo sin plan): actividades por día, minutos y km contra el promedio de las 4 semanas anteriores,
     zonas, recuperación y racha de semanas activas. Nunca nombres, IDs ni GPS: solo tipo y minutos."""
     ini = monday(hoy)
-    acts = m.sin_repetidas(data["activities"], config)
+    acts = data["activities"]
 
     def de_semana(i):
         a, b = i, i + timedelta(days=7)
@@ -602,7 +606,7 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
             sin_asignar.remove(clave)
         else:
             extras.append({"fecha": clave[0], **corrida_plana(a, None, data, config)})
-    acts = m.sin_repetidas(data["activities"], config)
+    acts = data["activities"]
     dias = [dia_de_semana(ini + timedelta(days=i), hoy, runs, sesiones, data, config, acts) for i in range(7)]
     marcar_planeados(dias, sesiones, hoy, pasada)
     for s in sesiones:
@@ -793,12 +797,11 @@ def build_weeks(hoy: date, data: dict, config: dict, plan: dict) -> list:
 
 def entrenos_semana(ini: date, data, config) -> list:
     """Entrenos registrados en la semana, uno por tipo con su cuenta: [{"icono", "nombre", "n"}]. Primero corridas y
-    carreras, luego cada categoría en el orden de la config. Dos de la misma categoría a menos de 3 h cuentan como uno
-    (m.sin_repetidas)."""
+    carreras, luego cada categoría en el orden de la config. Las encadenadas (`m.unir_encadenadas`) ya son una sola."""
     if data is None or config is None:
         return []
     cuenta = {}
-    for a in m.sin_repetidas(data["activities"], config):
+    for a in data["activities"]:
         c = m.classify(a, config)
         if c and ini <= m.day_of(a) < ini + timedelta(days=7):
             k = ("carrera" if m.es_carrera(a, config) else "run") if c == "run" else c
@@ -1090,6 +1093,8 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     # La FC en reposo solo cuenta si esa noche hubo sueño registrado (señal, promedio 7 días, zonas y gráfica).
     data = {**data, "daily_summaries": m.rhr_con_sueno(data["daily_summaries"], data["sleep"])}
     fc_max = m.max_hr_progress(data["activities"], config, data["details"])
+    # Una sesión grabada en varias partes seguidas (fuerza + hiit) es UNA para todo lo que cuenta sesiones.
+    data = {**data, "activities": m.unir_encadenadas(data["activities"], config)}
     hoy = ahora.date()
     ayer = hoy - timedelta(days=1)
     rhr = m.rhr_7d(data["daily_summaries"], hoy) or 60

@@ -8,6 +8,7 @@
 "sitio.act.fc": "FC prom.",
 "sitio.act.fcmax": "FC máx.",
 "sitio.act.kcal": "Calorías",
+"sitio.act.partes": "{n} partes: {l}",
 "sitio.act.por_km": "Ritmo por km",
 "sitio.act.ppm": "pasos/min",
 "sitio.act.pulso": "Pulso: {p}",

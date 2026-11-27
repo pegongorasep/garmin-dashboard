@@ -983,3 +983,50 @@ def test_deriva_solo_con_banda(monkeypatch):
         fila = m.run_rows([a], det, CFG)[0]
         assert fila["pulso"] == pulso
         assert (fila["deriva_pct"] is not None) == hay
+
+
+# --- sesiones encadenadas (unir_encadenadas) ---
+
+CATS = {"run_types": ["running", "treadmill_running"],
+        "categorias": [{"id": "fuerza", "nombre": "Fuerza", "tipos": ["strength_training"], "intensa": False},
+                       {"id": "hiit", "nombre": "HIIT", "tipos": ["hiit"], "intensa": True},
+                       {"id": "cardio", "nombre": "Cardio", "tipos": ["cycling"], "intensa": False}]}
+
+
+def _a(i, tipo, ini, minutos, **kw):
+    return {"activityId": i, "activityName": "Secreto Garmin", "startTimeLocal": f"2026-11-02 {ini}", "duration": minutos * 60.0,
+            "activityType": {"typeKey": tipo}, "distance": 0.0, **kw}
+
+
+def test_une_si_la_segunda_empieza_a_30_min_del_fin_y_no_a_31():
+    a = _a(1, "strength_training", "18:00:00", 40)
+    assert len(m.unir_encadenadas([a, _a(2, "hiit", "19:10:00", 20)], CATS)) == 1      # 40' + 30'
+    assert len(m.unir_encadenadas([a, _a(2, "hiit", "19:11:00", 20)], CATS)) == 2      # 31'
+
+
+def test_las_corridas_no_se_unen_ni_se_tocan():
+    r1, r2 = _a(1, "running", "18:00:00", 30), _a(2, "running", "18:30:00", 30)
+    out = m.unir_encadenadas([r1, r2, _a(3, "hiit", "18:40:00", 10)], CATS)
+    assert r1 in out and r2 in out and len(out) == 3
+
+
+def test_cadena_de_tres_y_categorias_distintas_con_la_mas_intensa():
+    cs = [_a(1, "strength_training", "18:00:00", 30, hrTimeInZone_2=1800), _a(2, "hiit", "18:40:00", 10, hrTimeInZone_4=600),
+          _a(3, "cycling", "19:05:00", 20, hrTimeInZone_1=1200)]
+    out = m.unir_encadenadas(cs, CATS)
+    assert len(out) == 1 and m.classify(out[0], CATS) == "hiit" and out[0]["duration"] == 3600
+    assert [p["minutos"] for p in out[0]["partes"]] == [30, 10, 20]
+
+
+def test_unida_suma_zonas_pesa_fc_y_toma_maximos():
+    cs = [_a(1, "strength_training", "18:00:00", 40, hrTimeInZone_2=2400, averageHR=120, maxHR=140),
+          _a(2, "hiit", "18:50:00", 20, hrTimeInZone_2=300, hrTimeInZone_4=900, averageHR=160, maxHR=180)]
+    u = m.unir_encadenadas(cs, CATS)[0]
+    assert m.zone_minutes(u)["Z2"] == 45 and m.zone_minutes(u)["Z4"] == 15
+    assert round(u["averageHR"], 1) == 133.3 and u["maxHR"] == 180
+
+
+def test_partes_sin_nombres_de_garmin():
+    u = m.unir_encadenadas([_a(1, "strength_training", "18:00:00", 40), _a(2, "hiit", "18:45:00", 20)], CATS)[0]
+    assert u["partes"] == [{"cat": "fuerza", "nombre": "Fuerza", "minutos": 40}, {"cat": "hiit", "nombre": "HIIT", "minutos": 20}]
+    assert "Secreto" not in str(u["partes"])

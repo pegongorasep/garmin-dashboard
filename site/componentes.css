@@ -99,6 +99,9 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .sn { font-size: 10px; font-weight: 600; }
 .cf { font-size: 10.5px; color: var(--muted); display: grid; justify-items: center; gap: 1px; margin-top: 5px; }   /* ícono de la actividad separado del círculo del día */
 .cf svg { width: 15px; height: 15px; }
+.cf-varias { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 1px; margin-top: 5px; min-height: 28px; max-width: 100%; }   /* varias sesiones: íconos chicos en una fila (máx. 3) y «+n»; 28 px = lo que ocupa un ícono con su número, así la celda no crece */
+.cf-varias .cf { margin-top: 0; } .cf-varias .cf svg { width: 13px; height: 13px; }
+.cf-mas { flex-basis: 100%; text-align: center; font-size: 10px; font-weight: 600; color: var(--muted); line-height: 13px; }
 
 /* Sesión de hoy */
 .sesion { border-radius: var(--radius-inner); background: var(--page); box-shadow: 0 0 0 1.5px var(--accent); padding: 11px 12px; display: grid; gap: 5px; }

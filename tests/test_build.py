@@ -200,6 +200,9 @@ def test_privacidad_con_datos_reales():
     out = build.build(build.load_data(), build.load_plan(), CONFIG, datetime.now(ZoneInfo(CONFIG["timezone"])))
     extras = {a["activityName"] for a in json.loads((ROOT / "data" / "activities.json").read_text())}
     perfil = json.loads((ROOT / "data" / "profile.json").read_text())
+    # Un nombre de Garmin que coincide con un texto del catálogo (p. ej. una actividad llamada «HIIT») no es una fuga.
+    catalogo = {build.i18n.t(f"motor.tipo.{t}") for t in ("strength_training", "hiit", "cycling", "yoga")} | {c["nombre"] for c in CONFIG["categorias"]}
+    extras -= catalogo
     extras |= {v for k, v in _flat(perfil) if k in ("displayName", "fullName", "emailAddress", "userName") and isinstance(v, str)}
     revisar_privacidad(out, extras)
     assert len(json.dumps(out, ensure_ascii=False).encode()) < 300 * 1024
@@ -354,16 +357,30 @@ def test_dia_futuro_vacio_sin_categoria_planeada():
     assert s["dias"][1]["otras"] == [] and s["dias"][1]["corrida"] is None
 
 
-def test_otras_del_dia_toma_esfuerzo_maximo_y_suma_minutos():
+def _unidas(data, config=CONFIG_FIXTURE):
+    return {**data, "activities": build.m.unir_encadenadas(data["activities"], config)}
+
+
+def test_otras_del_dia_una_entrada_por_sesion_unida():
     data = fixture()
-    data["activities"] = [_act(20, "2026-11-02", "strength_training", minutos=14, hrTimeInZone_1=0, hrTimeInZone_2=840,
+    data["activities"] = [_act(20, "2026-11-02", "strength_training", minutos=14, hora="18:00:00", hrTimeInZone_1=0, hrTimeInZone_2=840,
                                hrTimeInZone_3=0, hrTimeInZone_4=0, hrTimeInZone_5=0),
-                          _act(21, "2026-11-02", "hiit", minutos=16, hrTimeInZone_1=0, hrTimeInZone_2=0,
+                          _act(21, "2026-11-02", "hiit", minutos=16, hora="18:14:00", hrTimeInZone_1=0, hrTimeInZone_2=0,
                                hrTimeInZone_3=0, hrTimeInZone_4=960, hrTimeInZone_5=0)]
     data["details"] = {"20": {"rpe": 5.0}, "21": {"rpe": 7.0}}
-    s = _semana(data, date(2026, 11, 4), date(2026, 11, 2))
-    assert s["dias"][0]["otras"] == [{"cat": "crossfit", "icono": "rayo", "esfuerzo": 7.5, "rpe": 7.0, "minutos": 30}]
+    s = _semana(_unidas(data), date(2026, 11, 4), date(2026, 11, 2))
+    assert s["dias"][0]["otras"] == [{"cat": "crossfit", "icono": "rayo", "esfuerzo": 7.5, "rpe": 7.0, "minutos": 30.0,
+                                      "partes": [{"nombre": "Fuerza", "minutos": 14}, {"nombre": "HIIT", "minutos": 16}]}]
     assert s["dias"][1]["otras"] == []
+
+
+def test_calendario_con_tres_sesiones_separadas_las_muestra_todas():
+    data = fixture()
+    data["activities"] = [_act(30 + i, "2026-11-02", "strength_training", minutos=20, hora=h)
+                          for i, h in enumerate(("07:00:00", "12:00:00", "18:00:00"))]
+    s = _semana(_unidas(data), date(2026, 11, 4), date(2026, 11, 2))
+    assert [o["minutos"] for o in s["dias"][0]["otras"]] == [20.0, 20.0, 20.0]
+    assert len(s["dias"][0]["actividades"]) == 3 and all(a["partes"] == [] for a in s["dias"][0]["actividades"])
 
 
 # --- v3.2 F2 ---
@@ -635,7 +652,7 @@ def test_iconos_en_data_json_y_validador():
 
 def test_mejora_otras_e_intensidad_por_semana():
     data = fixture()
-    # el fixture ya trae CrossFit el 2 y el 3 nov a las 18:00; la de las 19:30 es la misma clase grabada en dos partes
+    # el fixture ya trae CrossFit el 2 y el 3 nov a las 18:00; la de las 19:30 empieza a 60' del fin de la de las 18:00: ya no se junta, cuenta aparte
     data["activities"] = [*data["activities"], _act(30, "2026-11-02", "hiit", hora="07:00:00"),
                           _act(31, "2026-11-03", "strength_training", hora="07:00:00"), _act(32, "2026-11-03", "hiit", hora="19:30:00"),
                           _act(33, "2026-10-13", "hiit"), _act(34, "2026-10-14", "hiit")]
@@ -643,7 +660,7 @@ def test_mejora_otras_e_intensidad_por_semana():
     # entrenos de la semana (Progreso › Corridas): uno por tipo con su cuenta, primero corridas, luego CrossFit
     ent = out["progreso"]["semanas"][-1]["entrenos"]
     corridas = sum(1 for a in data["activities"] if build.m.classify(a, CONFIG_FIXTURE) == "run" and a["startTimeLocal"] >= "2026-11-02")
-    assert ent[-1] == {"icono": "rayo", "nombre": "CrossFit", "n": 4}
+    assert ent[-1] == {"icono": "rayo", "nombre": "CrossFit", "n": 5}
     assert sum(e["n"] for e in ent[:-1]) == corridas and all(e["icono"] in ("correr", "medalla") for e in ent[:-1])
     # 80/20: misma cuenta que la barra de Detalles; porcentajes Z1–Z2 / Z3 / Z4–Z5, Z0 fuera
     semana = out["semanas_hoy"][out["semana_hoy_idx"]]["intensidad"]
