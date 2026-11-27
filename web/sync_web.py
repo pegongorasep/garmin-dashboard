@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import conexion, sincronizar
+from .github_app import InstalacionPerdida
 from .modelos import Sincronizacion, Usuario, ahora
 
 log = logging.getLogger("web.sync")
@@ -120,6 +121,9 @@ def revisar_corrida(app, settings, cache: dict, db: Session, u: Usuario, viva: S
         return
     try:
         r = _corrida(cache, conexion.app_de(app, settings), u, viva)
+    except InstalacionPerdida:
+        conexion.soltar_instalacion(db, u)
+        return
     except Exception as e:   # noqa: BLE001  GitHub caído: se sigue mostrando lo que hay
         log.warning("no se pudo leer la corrida de %s: %s", u.id, getattr(e, "status", type(e).__name__))
         return
@@ -159,6 +163,8 @@ def montar(app, get_db, actual, settings, formulario) -> None:
         viva = sincronizar.actual(db, usuario.id)
         if viva is not None:
             revisar_corrida(app, settings, cache, db, usuario, viva)
+            if not conexion._gh_listo(usuario):   # se soltó la instalación: se responde como sin app
+                return {"sinc": None}
             db.refresh(viva)
         s = viva if viva is not None and viva.estado in sincronizar.VIVAS else _reciente(db, usuario.id)
         if s is None:
@@ -187,6 +193,9 @@ def montar(app, get_db, actual, settings, formulario) -> None:
         gh = conexion.app_de(app, settings)
         try:
             secreto, _ = conexion.estado_secreto(gh.secretos(usuario.gh_instalacion, usuario.repo))
+        except InstalacionPerdida:
+            conexion.soltar_instalacion(db, usuario)
+            return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
         except Exception as e:   # noqa: BLE001
             log.warning("no se pudieron leer los secretos de %s: %s", usuario.id, getattr(e, "status", type(e).__name__))
             secreto = "otra"
@@ -195,4 +204,6 @@ def montar(app, get_db, actual, settings, formulario) -> None:
             sincronizar.terminar(db, sinc, ok=False, error={"falta": "sin_key", "nombre_mal": "nombre_mal"}.get(secreto, "otra"))
             return {"sinc": a_json(sinc, t), "nueva": True}
         sinc = conexion.disparar(db, usuario, tipo, gh)
+        if sinc is None:   # desinstalaron la app: disparar soltó la instalación
+            return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
         return {"sinc": a_json(sinc, t), "nueva": True}

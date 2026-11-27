@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import onboarding, sincronizar, tubo
-from .github_app import GitHubApp, GitHubError
+from .github_app import GitHubApp, GitHubError, InstalacionPerdida
 from .modelos import Cambio, Usuario, VinculoPendiente, ahora
 
 log = logging.getLogger("web.conexion")
@@ -27,6 +27,20 @@ DESTINOS = {"guia": "/bienvenida?paso={paso}", "conectado": "/conexiones?", "aju
 def app_de(app, settings) -> GitHubApp:
     """La GitHub App de esta web (las pruebas dejan una falsa en app.state.github_app)."""
     return getattr(app.state, "github_app", None) or GitHubApp(settings)
+
+
+DESCRIPCION_SUELTA = "GitHub App desinstalada: se soltó la instalación"
+
+
+def soltar_instalacion(db: Session, u: Usuario) -> None:
+    """La app ya no está en la copia de la persona: se olvida la instalación, se cierran sin ruido las sincronizaciones
+    vivas (no programadas) y se deja constancia. La web responde entonces como si nunca hubiera autorizado."""
+    for s in sincronizar._vivas(db, u.id, False):
+        db.delete(s)
+    if u.gh_instalacion:
+        db.add(Cambio(atleta_id=u.id, autor_id=None, via="sistema", visto=True, descripcion=DESCRIPCION_SUELTA))
+    u.gh_instalacion = None
+    db.commit()
 
 
 def disparar(db: Session, u: Usuario, tipo: str, gh: GitHubApp, rama: str | None = None):
@@ -42,6 +56,10 @@ def disparar(db: Session, u: Usuario, tipo: str, gh: GitHubApp, rama: str | None
             rama = next((r["default_branch"] for r in gh.repos_de_instalacion(u.gh_instalacion)
                          if r["id"] == u.repo_id), "main")
         gh.disparar(u.gh_instalacion, u.repo, rama)
+    except InstalacionPerdida:
+        log.warning("la instalación de %s ya no existe: se suelta", u.id)
+        soltar_instalacion(db, u)
+        return None
     except Exception as e:   # noqa: BLE001  el fallo de GitHub nunca tumba a quien llama
         log.warning("no se pudo disparar %s para %s: %s", tipo, u.id, getattr(e, "status", type(e).__name__))
         sincronizar.terminar(db, sinc, ok=False, error="otra")
@@ -183,6 +201,9 @@ def montar(app, get_db, actual, render, settings, formulario=None) -> None:
             try:
                 out["secreto"], out["nombre"] = estado_secreto(
                     app_de(app, settings).secretos(usuario.gh_instalacion, usuario.repo))
+            except InstalacionPerdida:
+                soltar_instalacion(db, usuario)
+                out["conectado"], out["sinc"], out["viva"] = False, None, False
             except Exception as e:   # noqa: BLE001
                 log.warning("no se pudieron leer los secretos de %s: %s", usuario.id, getattr(e, "status", type(e).__name__))
                 out["error"] = "otra"
@@ -199,6 +220,9 @@ def montar(app, get_db, actual, render, settings, formulario=None) -> None:
         gh = app_de(app, settings)
         try:
             secreto, _ = estado_secreto(gh.secretos(usuario.gh_instalacion, usuario.repo))
+        except InstalacionPerdida:
+            soltar_instalacion(db, usuario)
+            return JSONResponse({"error": "sin_conexion"}, status_code=409)
         except Exception:   # noqa: BLE001
             return JSONResponse({"error": "otra"}, status_code=502)
         if secreto != "listo":

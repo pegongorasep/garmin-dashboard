@@ -682,7 +682,7 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .franja-barra { background: var(--axis); overflow: hidden; }
 .franja-barra i { display: block; height: 100%; width: 0; background: var(--accent); }
 .franja[data-estado="ok"] .franja-barra i { background: var(--accent); }
-.franja[data-estado="error"] .franja-barra i { background: var(--bad); }
+.franja[data-estado="error"] .franja-barra { visibility: hidden; }   /* en error: solo texto y su botón, sin barra */
 .enlace-boton { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .enlace-boton:disabled { opacity: .5; cursor: default; }
 /* Franja en el encabezado: el estatus ocupa la ranura de «Actualizado hace…» (misma línea) y la barra (3 px) es absoluta al borde de abajo. */
@@ -696,7 +696,7 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .franja-enc-barra { display: none; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--axis); overflow: hidden; pointer-events: none; }
 .encabezado.sync-on .franja-enc-barra { display: block; }   /* fuera de `.sync-on` no existe: ni loader vacío ni barra verde colgada */
 .franja-enc-barra i { display: block; height: 100%; width: 0; background: var(--accent); }
-.franja-enc-barra[data-estado="error"] i { background: var(--bad); }
+.encabezado.sync-on .franja-enc-barra[data-estado="error"] { display: none; }
 
 /* Diálogo «Autoriza una vez»: el dibujo reserva su alto (no brinca al cargar) */
 .dl-dibujo { aspect-ratio: 420 / 240; width: 100%; max-width: 420px; }

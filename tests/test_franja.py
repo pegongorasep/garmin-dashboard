@@ -252,3 +252,48 @@ setTimeout(() => {{
     assert 0 < out["w1"] < out["w2"] < 30 and out["w3"] >= out["w2"], out
     assert out["ok_w"] > 95 and out["ok_vis"], out
     assert not out["fin_vis"] and out["fin_w"] == 0, out
+
+
+@pytest.mark.skipif(not Path(CHROME).exists() and not shutil.which(CHROME), reason="sin Chrome")
+def test_error_sin_barra_y_se_esconde_a_los_10s(tmp_path):
+    pagina = tmp_path / "x.html"
+    err = {"estado": "error", "error": "otra", "tipo": "normal", "texto": "No pudimos bajar tus datos", "porcentaje": 5,
+           "accion": {"texto": "Reintentar", "post": {"url": "/api/sync", "tipo": "normal"}}}
+    hist = dict(err, tipo="historial", texto="Falta tu historial")
+    viejo = dict(err, terminada_hace_s=45)
+    pagina.write_text(f"""<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="file://{SITE}/tokens.css"><link rel="stylesheet" href="file://{SITE}/componentes.css">
+<body><div id="encabezado"><header class="encabezado"><div class="encabezado-fila">Titulo</div><p class="act"><span>Actualizado hace 1 h</span></p></header></div>
+<pre id="salida"></pre>
+<script>window.fetch = () => Promise.resolve({{ ok: true, json: () => Promise.resolve({{ sinc: null }}) }});</script>
+<script src="file://{SITE}/franja.js" data-campo="x"></script>
+<script>
+const cab = () => document.querySelector(".encabezado");
+const barra = () => getComputedStyle(document.querySelector(".franja-enc-barra")).display !== "none";
+const out = {{}};
+setTimeout(() => {{
+  Franja._pintar({json.dumps(err)});
+  out.e_on = cab().classList.contains("sync-on"); out.e_barra = barra();
+  out.e_boton = [...document.querySelectorAll(".franja-b")].some((b) => !b.hidden);
+  setTimeout(() => {{
+    out.e_5s = cab().classList.contains("sync-on");
+    setTimeout(() => {{
+      out.e_11s = cab().classList.contains("sync-on");
+      Franja._pintar({json.dumps(hist)});
+      setTimeout(() => {{
+        out.h_20s = cab().classList.contains("sync-on"); out.h_barra = barra();
+        Franja._pintar({json.dumps(viejo)});   // terminó hace 45 s: quedan 0 s... no, 10 s - 45 s < 0: no se pinta
+        out.viejo = cab().classList.contains("sync-on");
+        document.getElementById("salida").textContent = JSON.stringify(out);
+      }}, 20000);
+    }}, 6000);
+  }}, 5000);
+}}, 200);
+</script>""")
+    r = subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--no-sandbox", "--allow-file-access-from-files",
+                        "--virtual-time-budget=40000", "--window-size=390,700", "--dump-dom", f"file://{pagina}"],
+                       capture_output=True, text=True, timeout=90)
+    out = json.loads(r.stdout.split('<pre id="salida">')[1].split("</pre>")[0].replace("&quot;", '"'))
+    assert out["e_on"] and not out["e_barra"] and out["e_boton"], out
+    assert out["e_5s"] and not out["e_11s"], out
+    assert out["h_20s"] and not out["h_barra"] and not out["viejo"], out

@@ -16,6 +16,10 @@ class GitHubError(Exception):
         self.mensaje = mensaje
 
 
+class InstalacionPerdida(GitHubError):
+    """La instalación ya no existe o no llega al repo (la persona desinstaló la app): distinta de una caída de red o un 5xx."""
+
+
 def _ts(iso: str) -> float:
     from datetime import datetime
     return datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp()
@@ -53,14 +57,29 @@ class GitHubApp:
         t = self._tokens.get(instalacion_id)
         if t and t[1] - 300 > time.time():
             return t[0]
-        r = self._pedir("POST", f"/app/installations/{instalacion_id}/access_tokens",
-                        auth=f"Bearer {self.jwt_app()}", ok=(201,))
+        try:
+            r = self._pedir("POST", f"/app/installations/{instalacion_id}/access_tokens",
+                            auth=f"Bearer {self.jwt_app()}", ok=(201,))
+        except GitHubError as e:
+            if e.status == 404:
+                self._tokens.pop(instalacion_id, None)
+                raise InstalacionPerdida(e.status, e.mensaje) from e
+            raise
         d = r.json()
         self._tokens[instalacion_id] = (d["token"], _ts(d["expires_at"]))
         return d["token"]
 
     def _inst(self, instalacion_id, metodo, ruta, **kw):
-        return self._pedir(metodo, ruta, auth=f"token {self.token_instalacion(instalacion_id)}", **kw)
+        try:
+            return self._pedir(metodo, ruta, auth=f"token {self.token_instalacion(instalacion_id)}", **kw)
+        except InstalacionPerdida:
+            raise
+        except GitHubError as e:
+            limite = "rate limit" in (e.mensaje or "").lower()   # un 403 por límite de uso no es una desinstalación
+            if e.status in (401, 404) or (e.status == 403 and not limite):
+                self._tokens.pop(int(instalacion_id), None)
+                raise InstalacionPerdida(e.status, e.mensaje) from e
+            raise
 
     # --- instalación y verificación ---
     def url_instalar(self, state: str) -> str:

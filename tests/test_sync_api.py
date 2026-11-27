@@ -147,3 +147,81 @@ def test_usuario_ajeno_no_ve_nada(ctx, gh):
     otro = ctx.cliente()
     entrar(ctx, otro, "otro@x.com")
     assert otro.get("/api/sync").json()["sinc"] is None
+
+
+def _desinstalada(gh, donde):
+    from web.github_app import InstalacionPerdida
+
+    def boom(*a, **k):
+        raise InstalacionPerdida(404, "Not Found")
+    setattr(gh, donde, boom)
+
+
+@pytest.mark.parametrize("donde", ["secretos", "disparar", "repos_de_instalacion"])
+def test_desinstalada_suelta_la_instalacion(ctx, gh, donde):
+    from web.modelos import Cambio, Usuario
+    cl, uid, tk = listo(ctx, gh)
+    _desinstalada(gh, donde)
+    r = cl.post("/api/sync", data={"csrf": tk})
+    assert r.status_code == 409 and r.json() == {"error": "sin_app", "url": "/conectar/github?para=conectado"}
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert u.gh_instalacion is None
+        assert db.query(Cambio).filter(Cambio.atleta_id == uid, Cambio.via == "sistema",
+                                       Cambio.descripcion.like("GitHub App desinstalada%")).count() == 1
+        assert db.query(Sincronizacion).filter(Sincronizacion.estado.in_(("esperando", "corriendo"))).count() == 0
+        assert db.query(Sincronizacion).filter(Sincronizacion.estado == "error").count() == 0   # sin error visible
+        assert sync_web.sync_ui(ctx.settings, u)["puede"] is False
+    assert cl.get("/api/sync").json() == {"sinc": None}
+    assert cl.post("/api/sync", data={"csrf": tk}).status_code == 409
+
+
+def test_desinstalada_detectada_al_consultar_la_corrida(ctx, gh):
+    from web.modelos import Usuario
+    cl, uid, tk = listo(ctx, gh)
+    cl.post("/api/sync", data={"csrf": tk})
+    _desinstalada(gh, "corridas")
+    with ctx.sesiones() as db:
+        s = db.query(Sincronizacion).one()
+        s.actualizada = ahora() - timedelta(seconds=30)
+        db.commit()
+    assert cl.get("/api/sync").json() == {"sinc": None}
+    with ctx.sesiones() as db:
+        assert db.get(Usuario, uid).gh_instalacion is None
+
+
+def test_5xx_de_github_sigue_siendo_otra(ctx, gh):
+    from web.modelos import Usuario
+    cl, uid, tk = listo(ctx, gh)
+    gh.falla_disparo = True
+    j = cl.post("/api/sync", data={"csrf": tk}).json()["sinc"]
+    assert j["error"] == "otra"
+    with ctx.sesiones() as db:
+        assert db.get(Usuario, uid).gh_instalacion == 55
+
+
+def test_cliente_github_distingue_instalacion_perdida():
+    import httpx
+    from web.github_app import GitHubApp, GitHubError, InstalacionPerdida
+
+    class S:
+        github_app_id, github_app_slug, github_app_private_key = "1", "x", "k"
+
+    def app(codigo_token, codigo, msg=""):
+        def h(req):
+            if req.url.path.endswith("/access_tokens"):
+                return httpx.Response(codigo_token, json={"token": "t", "expires_at": "2099-01-01T00:00:00Z"})
+            return httpx.Response(codigo, json={"message": msg})
+        g = GitHubApp(S(), transport=httpx.MockTransport(h))
+        g.jwt_app = lambda: "jwt"
+        return g
+
+    for c in (401, 403, 404):
+        with pytest.raises(InstalacionPerdida):
+            app(201, c).secretos(7, "a/b")
+    with pytest.raises(InstalacionPerdida):
+        app(404, 200).secretos(7, "a/b")
+    for g in (app(201, 500), app(201, 403, "API rate limit exceeded"), app(500, 200)):
+        with pytest.raises(GitHubError) as e:
+            g.secretos(7, "a/b")
+        assert not isinstance(e.value, InstalacionPerdida)

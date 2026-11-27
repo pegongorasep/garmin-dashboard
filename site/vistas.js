@@ -1380,6 +1380,7 @@ async function recargarDatos() {
   } catch (e) { console.error("recargarDatos:", e); }
 }
 window.addEventListener("franja:lista", recargarDatos);
+window.addEventListener("franja:sin_app", (ev) => { ev.preventDefault(); recargarDatos(); });   // desinstalaron la app: el encabezado vuelve a ofrecer autorizar
 window.addEventListener("franja:estado", (ev) => { const b = $("sync-btn"); if (b && b.tagName === "BUTTON") b.disabled = !!(ev.detail && ev.detail.viva); });
 
 /** Pinta todas las vistas con `datos` (al arrancar y cuando cambia algo local, como dar un aviso por «Entendido»). */

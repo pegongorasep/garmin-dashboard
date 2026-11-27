@@ -5,7 +5,7 @@
   if (window.Franja || /^\/a\//.test(location.pathname)) return;   // un coach viendo a su atleta no sincroniza por él
   const script = document.currentScript;
   const CSRF = (script && script.dataset.campo) || "";
-  const OK_MS = 4000;
+  const OK_MS = 4000, ERROR_MS = 10000;   // un error se ve 10 s (salvo «Falta tu historial», que sigue hasta reintentar)
   // Dos modos, un solo componente: en la página del sitio (con `.encabezado .act`) el texto ocupa la ranura de «Actualizado hace…»
   // y una barra de 3 px absoluta pega al borde de abajo del encabezado; en las demás páginas, una franja fija que flota sin empujar nada.
   let flota = null, enc = null, pend = null, temporizador = null, ocultar = null, vistaViva = false, viva = false, ultimo = null, visible = false;
@@ -123,7 +123,11 @@
       return;
     }
     vistaViva = false;
-    mostrar(true);   // error: se queda hasta que la persona toque la acción o el servidor ya no lo traiga
+    if (s.tipo === "historial") { mostrar(true); return; }   // «Falta tu historial»: sigue mientras el servidor lo traiga, con [Reintentar]
+    const resta = ERROR_MS - (s.terminada_hace_s || 0) * 1000;
+    if (resta <= 0) { mostrar(false); return; }
+    mostrar(true);
+    ocultar = setTimeout(() => mostrar(false), Math.min(resta, ERROR_MS));
   }
 
   async function sondear() {
@@ -139,7 +143,11 @@
       const r = await fetch("/api/sync", { method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ csrf: CSRF, tipo: tipo || "normal" }) });
       const j = await r.json().catch(() => ({}));
-      if (r.status === 409 && j.url) { location.href = j.url; return; }
+      if (r.status === 409 && j.url) {   // sin app: el sitio repinta el encabezado (que ya ofrece autorizar); sin sitio, se va a autorizar
+        pintar(null);
+        if (window.dispatchEvent(new CustomEvent("franja:sin_app", { cancelable: true, detail: { url: j.url } }))) location.href = j.url;
+        return;
+      }
       if (r.status === 429) { pintar({ estado: "error", texto: j.texto || "", porcentaje: 0, accion: null }); return; }
       if (j.sinc) { vistaViva = true; pintar(j.sinc); }
     } catch (e) { /* sin red: no pasa nada, se vuelve a intentar al tocar */ }
