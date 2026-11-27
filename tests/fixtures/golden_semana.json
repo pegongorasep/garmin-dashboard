@@ -146,6 +146,7 @@
    },
    "carga_semanas": [
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -155,6 +156,7 @@
      "inicio": "2026-08-17"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -164,6 +166,7 @@
      "inicio": "2026-08-24"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -173,6 +176,7 @@
      "inicio": "2026-08-31"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -182,6 +186,7 @@
      "inicio": "2026-09-07"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -191,6 +196,7 @@
      "inicio": "2026-09-14"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -200,6 +206,7 @@
      "inicio": "2026-09-21"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -209,6 +216,7 @@
      "inicio": "2026-09-28"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -218,6 +226,7 @@
      "inicio": "2026-10-05"
     },
     {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -227,6 +236,7 @@
      "inicio": "2026-10-12"
     },
     {
+     "actual": false,
      "carga_corrida": 409.0,
      "cargas": {
       "cardio": 0.0,
@@ -236,6 +246,7 @@
      "inicio": "2026-10-19"
     },
     {
+     "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
       "cardio": 0.0,
@@ -245,6 +256,7 @@
      "inicio": "2026-10-26"
     },
     {
+     "actual": true,
      "carga_corrida": 223.2,
      "cargas": {
       "cardio": 0.0,
@@ -530,7 +542,10 @@
      "etiqueta": "carga",
      "focus": "Larga 40'",
      "kind": "carga",
+     "km": 15.8,
+     "minutos": 115.0,
      "n": 1,
+     "plan_min": 80,
      "progreso": {
       "hechas": 3,
       "pct": 100,
@@ -778,7 +793,11 @@
      "etiqueta": "carga",
      "focus": "Larga 50' · picos Z3 opcionales",
      "kind": "carga",
+     "km": 8.4,
+     "minutos": 58.0,
      "n": 2,
+     "plan_km": null,
+     "plan_min": 100,
      "progreso": {
       "hechas": 2,
       "pct": 67,
@@ -827,6 +846,7 @@
        },
        "forma": "continuo",
        "id": "z2a",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #1",
        "rachas": [
@@ -1005,6 +1025,7 @@
        },
        "forma": "continuo",
        "id": "z2b",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #2",
        "rachas": [
@@ -1083,6 +1104,7 @@
        },
        "forma": "continuo",
        "id": "larga",
+       "km_est": 7.0,
        "minutes": 50,
        "name": "Larga",
        "rachas": [
@@ -2290,6 +2312,7 @@
    "fc_ref": 144,
    "intensidad_semanas": [
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-08-17",
@@ -2303,6 +2326,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-08-24",
@@ -2316,6 +2340,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-08-31",
@@ -2329,6 +2354,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-09-07",
@@ -2342,6 +2368,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-09-14",
@@ -2355,6 +2382,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-09-21",
@@ -2368,6 +2396,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-09-28",
@@ -2381,6 +2410,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-10-05",
@@ -2394,6 +2424,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-10-12",
@@ -2407,6 +2438,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-10-19",
@@ -2420,6 +2452,7 @@
      }
     },
     {
+     "actual": false,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-10-26",
@@ -2433,6 +2466,7 @@
      }
     },
     {
+     "actual": true,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-11-02",
@@ -2567,6 +2601,20 @@
      ]
     }
    },
+   "periodos": [
+    {
+     "n": 4,
+     "todo": false
+    },
+    {
+     "n": 8,
+     "todo": false
+    },
+    {
+     "n": 12,
+     "todo": false
+    }
+   ],
    "resumen": {
     "12": "Sin corridas en Z2 en las 12 semanas anteriores para comparar el ritmo",
     "4": "Sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo",
@@ -2574,6 +2622,7 @@
    },
    "semanas": [
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-08-17",
      "km": 0,
@@ -2583,6 +2632,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-08-24",
      "km": 0,
@@ -2592,6 +2642,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-08-31",
      "km": 0,
@@ -2601,6 +2652,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-09-07",
      "km": 0,
@@ -2610,6 +2662,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-09-14",
      "km": 0,
@@ -2619,6 +2672,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-09-21",
      "km": 0,
@@ -2628,6 +2682,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-09-28",
      "km": 0,
@@ -2637,6 +2692,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-10-05",
      "km": 0,
@@ -2646,6 +2702,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-10-12",
      "km": 0,
@@ -2655,6 +2712,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [
       {
        "icono": "correr",
@@ -2670,6 +2728,7 @@
      "plan_min": null
     },
     {
+     "actual": false,
      "entrenos": [
       {
        "icono": "correr",
@@ -2690,6 +2749,7 @@
      "plan_min": 80
     },
     {
+     "actual": true,
      "entrenos": [
       {
        "icono": "correr",
@@ -5002,6 +5062,107 @@
    },
    "carga_semanas": [
     {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-24"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-31"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-07"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-14"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-21"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-28"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-05"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-12"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 409.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-19"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 437.5,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 114.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-26"
+    },
+    {
+     "actual": false,
      "carga_corrida": 223.2,
      "cargas": {
       "cardio": 0.0,
@@ -5011,6 +5172,7 @@
      "inicio": "2026-11-02"
     },
     {
+     "actual": true,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -5409,7 +5571,10 @@
      "etiqueta": "carga",
      "focus": "Larga 40'",
      "kind": "carga",
+     "km": 15.8,
+     "minutos": 115.0,
      "n": 1,
+     "plan_min": 80,
      "progreso": {
       "hechas": 3,
       "pct": 100,
@@ -5657,7 +5822,11 @@
      "etiqueta": "carga",
      "focus": "Larga 50' · picos Z3 opcionales",
      "kind": "carga",
+     "km": 0,
+     "minutos": 0,
      "n": 2,
+     "plan_km": null,
+     "plan_min": 100,
      "progreso": {
       "hechas": 0,
       "pct": 0,
@@ -5706,6 +5875,7 @@
        },
        "forma": "continuo",
        "id": "z2a",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #1",
        "rachas": [
@@ -5884,6 +6054,7 @@
        },
        "forma": "continuo",
        "id": "z2b",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #2",
        "rachas": [
@@ -5962,6 +6133,7 @@
        },
        "forma": "continuo",
        "id": "larga",
+       "km_est": 7.0,
        "minutes": 50,
        "name": "Larga",
        "rachas": [
@@ -7171,6 +7343,147 @@
    "fc_ref": 144,
    "intensidad_semanas": [
     {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-24",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-31",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-07",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-14",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-21",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-28",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-05",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-12",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-19",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 15.0,
+      "Z2": 45.0,
+      "Z3": 15.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-26",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 25.0,
+      "Z2": 75.0,
+      "Z3": 25.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-11-02",
@@ -7184,6 +7497,7 @@
      }
     },
     {
+     "actual": true,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-11-09",
@@ -7221,6 +7535,7 @@
    "numeros": {
     "caminatas": {
      "12": true,
+     "2": true,
      "4": true,
      "8": true
     },
@@ -7252,6 +7567,36 @@
        "anterior": null,
        "bueno": null,
        "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ],
+     "2": [
+      {
+       "anterior": 2.5,
+       "bueno": false,
+       "delta": -0.5,
+       "id": "corridas",
+       "valor": 2.0
+      },
+      {
+       "anterior": 87.5,
+       "bueno": false,
+       "delta": -31.0,
+       "id": "minutos",
+       "valor": 56.5
+      },
+      {
+       "anterior": 12.0,
+       "bueno": false,
+       "delta": -4.2,
+       "id": "km",
+       "valor": 7.8
+      },
+      {
+       "anterior": 66.7,
+       "bueno": null,
+       "delta": 0.0,
        "id": "pct_trote",
        "valor": 66.7
       }
@@ -7318,6 +7663,26 @@
      ]
     }
    },
+   "periodos": [
+    {
+     "n": 4,
+     "todo": false
+    },
+    {
+     "n": 8,
+     "todo": false
+    },
+    {
+     "n": 12,
+     "todo": false
+    },
+    {
+     "desde": "2026-10-26",
+     "hasta": "2026-11-02",
+     "n": 2,
+     "todo": true
+    }
+   ],
    "resumen": {
     "12": "Sin corridas en Z2 en las 12 semanas anteriores para comparar el ritmo",
     "4": "Sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo",
@@ -7325,6 +7690,124 @@
    },
    "semanas": [
     {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-24",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-31",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-07",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-14",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-21",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-28",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-05",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-12",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 3,
+       "nombre": "Corrida"
+      }
+     ],
+     "inicio": "2026-10-19",
+     "km": 15.5,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 115.0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 4,
+       "nombre": "Corrida"
+      },
+      {
+       "icono": "rayo",
+       "n": 1,
+       "nombre": "CrossFit"
+      }
+     ],
+     "inicio": "2026-10-26",
+     "km": 15.8,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 115.0,
+     "plan_min": 80
+    },
+    {
+     "actual": false,
      "entrenos": [
       {
        "icono": "correr",
@@ -7345,6 +7828,7 @@
      "plan_min": null
     },
     {
+     "actual": true,
      "entrenos": [],
      "inicio": "2026-11-09",
      "km": 0,
@@ -9598,6 +10082,107 @@
    },
    "carga_semanas": [
     {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-17"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-24"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-31"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-07"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-14"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-21"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-28"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-05"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-12"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 409.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-19"
+    },
+    {
+     "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
       "cardio": 0.0,
@@ -9607,6 +10192,7 @@
      "inicio": "2026-10-26"
     },
     {
+     "actual": true,
      "carga_corrida": 223.2,
      "cargas": {
       "cardio": 0.0,
@@ -9969,7 +10555,10 @@
      "etiqueta": "carga",
      "focus": "Larga 40'",
      "kind": "carga",
+     "km": 15.8,
+     "minutos": 115.0,
      "n": 1,
+     "plan_min": 80,
      "progreso": {
       "hechas": 3,
       "pct": 100,
@@ -10217,7 +10806,11 @@
      "etiqueta": "carga",
      "focus": "Larga 50' · picos Z3 opcionales",
      "kind": "carga",
+     "km": 8.4,
+     "minutos": 58.0,
      "n": 2,
+     "plan_km": null,
+     "plan_min": 100,
      "progreso": {
       "hechas": 2,
       "pct": 67,
@@ -10266,6 +10859,7 @@
        },
        "forma": "continuo",
        "id": "z2a",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #1",
        "rachas": [
@@ -10444,6 +11038,7 @@
        },
        "forma": "continuo",
        "id": "z2b",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #2",
        "rachas": [
@@ -10522,6 +11117,7 @@
        },
        "forma": "continuo",
        "id": "larga",
+       "km_est": 7.0,
        "minutes": 50,
        "name": "Larga",
        "rachas": [
@@ -11729,6 +12325,147 @@
    "fc_ref": 144,
    "intensidad_semanas": [
     {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-17",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-24",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-31",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-07",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-14",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-21",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-28",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-05",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-12",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-19",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 15.0,
+      "Z2": 45.0,
+      "Z3": 15.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-10-26",
@@ -11742,6 +12479,7 @@
      }
     },
     {
+     "actual": true,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-11-02",
@@ -11779,6 +12517,7 @@
    "numeros": {
     "caminatas": {
      "12": true,
+     "2": true,
      "4": true,
      "8": true
     },
@@ -11805,6 +12544,36 @@
        "delta": null,
        "id": "km",
        "valor": 3.3
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ],
+     "2": [
+      {
+       "anterior": 1.5,
+       "bueno": true,
+       "delta": 1.5,
+       "id": "corridas",
+       "valor": 3.0
+      },
+      {
+       "anterior": 57.5,
+       "bueno": true,
+       "delta": 29.0,
+       "id": "minutos",
+       "valor": 86.5
+      },
+      {
+       "anterior": 7.8,
+       "bueno": true,
+       "delta": 4.3,
+       "id": "km",
+       "valor": 12.1
       },
       {
        "anterior": null,
@@ -11876,6 +12645,26 @@
      ]
     }
    },
+   "periodos": [
+    {
+     "n": 4,
+     "todo": false
+    },
+    {
+     "n": 8,
+     "todo": false
+    },
+    {
+     "n": 12,
+     "todo": false
+    },
+    {
+     "desde": "2026-10-26",
+     "hasta": "2026-11-02",
+     "n": 2,
+     "todo": true
+    }
+   ],
    "resumen": {
     "12": "Sin corridas en Z2 en las 12 semanas anteriores para comparar el ritmo",
     "4": "Sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo",
@@ -11883,6 +12672,113 @@
    },
    "semanas": [
     {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-17",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-24",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-31",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-07",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-14",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-21",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-28",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-05",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-12",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 3,
+       "nombre": "Corrida"
+      }
+     ],
+     "inicio": "2026-10-19",
+     "km": 15.5,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 115.0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
      "entrenos": [
       {
        "icono": "correr",
@@ -11903,6 +12799,7 @@
      "plan_min": 80
     },
     {
+     "actual": true,
      "entrenos": [
       {
        "icono": "correr",
@@ -13960,6 +14857,107 @@
    },
    "carga_semanas": [
     {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-24"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-31"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-07"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-14"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-21"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-28"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-05"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-12"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 409.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-19"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 437.5,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 114.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-26"
+    },
+    {
+     "actual": false,
      "carga_corrida": 223.2,
      "cargas": {
       "cardio": 0.0,
@@ -13969,6 +14967,7 @@
      "inicio": "2026-11-02"
     },
     {
+     "actual": true,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -14156,7 +15155,10 @@
      "etiqueta": "carga",
      "focus": "Larga 40'",
      "kind": "carga",
+     "km": 15.8,
+     "minutos": 115.0,
      "n": 1,
+     "plan_min": 80,
      "progreso": {
       "hechas": 3,
       "pct": 100,
@@ -14422,7 +15424,10 @@
      "etiqueta": "carga",
      "focus": "Larga 50' · picos Z3 opcionales",
      "kind": "carga",
+     "km": 8.4,
+     "minutos": 58.0,
      "n": 2,
+     "plan_min": 100,
      "progreso": {
       "hechas": 2,
       "pct": 67,
@@ -15934,6 +16939,147 @@
    "fc_ref": 144,
    "intensidad_semanas": [
     {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-24",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-31",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-07",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-14",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-21",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-28",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-05",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-12",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-19",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 15.0,
+      "Z2": 45.0,
+      "Z3": 15.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-26",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 25.0,
+      "Z2": 75.0,
+      "Z3": 25.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-11-02",
@@ -15947,6 +17093,7 @@
      }
     },
     {
+     "actual": true,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-11-09",
@@ -15984,6 +17131,7 @@
    "numeros": {
     "caminatas": {
      "12": true,
+     "2": true,
      "4": true,
      "8": true
     },
@@ -16010,6 +17158,36 @@
        "delta": null,
        "id": "km",
        "valor": 3.3
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ],
+     "2": [
+      {
+       "anterior": 2.0,
+       "bueno": true,
+       "delta": 0.5,
+       "id": "corridas",
+       "valor": 2.5
+      },
+      {
+       "anterior": 72.5,
+       "bueno": false,
+       "delta": -1.0,
+       "id": "minutos",
+       "valor": 71.5
+      },
+      {
+       "anterior": 9.8,
+       "bueno": true,
+       "delta": 0.3,
+       "id": "km",
+       "valor": 10.1
       },
       {
        "anterior": null,
@@ -16081,6 +17259,26 @@
      ]
     }
    },
+   "periodos": [
+    {
+     "n": 4,
+     "todo": false
+    },
+    {
+     "n": 8,
+     "todo": false
+    },
+    {
+     "n": 12,
+     "todo": false
+    },
+    {
+     "desde": "2026-10-26",
+     "hasta": "2026-11-02",
+     "n": 2,
+     "todo": true
+    }
+   ],
    "resumen": {
     "12": "Sin corridas en Z2 en las 12 semanas anteriores para comparar el ritmo",
     "4": "Sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo",
@@ -16088,6 +17286,124 @@
    },
    "semanas": [
     {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-24",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-31",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-07",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-14",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-21",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-28",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-05",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-12",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 3,
+       "nombre": "Corrida"
+      }
+     ],
+     "inicio": "2026-10-19",
+     "km": 15.5,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 115.0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 4,
+       "nombre": "Corrida"
+      },
+      {
+       "icono": "rayo",
+       "n": 1,
+       "nombre": "CrossFit"
+      }
+     ],
+     "inicio": "2026-10-26",
+     "km": 15.8,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 115.0,
+     "plan_min": 80
+    },
+    {
+     "actual": false,
      "entrenos": [
       {
        "icono": "correr",
@@ -16108,6 +17424,7 @@
      "plan_min": 100
     },
     {
+     "actual": true,
      "entrenos": [],
      "inicio": "2026-11-09",
      "km": 0,
@@ -18254,6 +19571,107 @@
    },
    "carga_semanas": [
     {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-17"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-24"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-31"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-07"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-14"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-21"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-28"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-05"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-12"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 409.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-19"
+    },
+    {
+     "actual": false,
      "carga_corrida": 437.5,
      "cargas": {
       "cardio": 0.0,
@@ -18263,6 +19681,7 @@
      "inicio": "2026-10-26"
     },
     {
+     "actual": true,
      "carga_corrida": 223.2,
      "cargas": {
       "cardio": 0.0,
@@ -18548,7 +19967,10 @@
      "etiqueta": "carga",
      "focus": "Larga 40'",
      "kind": "carga",
+     "km": 15.8,
+     "minutos": 115.0,
      "n": 1,
+     "plan_min": 80,
      "progreso": {
       "hechas": 3,
       "pct": 100,
@@ -18796,7 +20218,11 @@
      "etiqueta": "carga",
      "focus": "Larga 50' · picos Z3 opcionales",
      "kind": "carga",
+     "km": 8.4,
+     "minutos": 58.0,
      "n": 2,
+     "plan_km": null,
+     "plan_min": 100,
      "progreso": {
       "hechas": 2,
       "pct": 67,
@@ -18845,6 +20271,7 @@
        },
        "forma": "continuo",
        "id": "z2a",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #1",
        "rachas": [
@@ -19023,6 +20450,7 @@
        },
        "forma": "continuo",
        "id": "z2b",
+       "km_est": 3.5,
        "minutes": 25,
        "name": "Z2 #2",
        "rachas": [
@@ -19101,6 +20529,7 @@
        },
        "forma": "continuo",
        "id": "larga",
+       "km_est": 7.0,
        "minutes": 50,
        "name": "Larga",
        "rachas": [
@@ -20308,6 +21737,147 @@
    "fc_ref": 144,
    "intensidad_semanas": [
     {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-17",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-24",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-31",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-07",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-14",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-21",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-28",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-05",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-12",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-19",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 15.0,
+      "Z2": 45.0,
+      "Z3": 15.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-10-26",
@@ -20321,6 +21891,7 @@
      }
     },
     {
+     "actual": true,
      "alto": 0.0,
      "bajo": 80.0,
      "inicio": "2026-11-02",
@@ -20358,6 +21929,7 @@
    "numeros": {
     "caminatas": {
      "12": true,
+     "2": true,
      "4": true,
      "8": true
     },
@@ -20384,6 +21956,36 @@
        "delta": null,
        "id": "km",
        "valor": 3.3
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ],
+     "2": [
+      {
+       "anterior": 0.5,
+       "bueno": true,
+       "delta": 3.5,
+       "id": "corridas",
+       "valor": 4.0
+      },
+      {
+       "anterior": 12.5,
+       "bueno": true,
+       "delta": 119.0,
+       "id": "minutos",
+       "valor": 131.5
+      },
+      {
+       "anterior": 1.5,
+       "bueno": true,
+       "delta": 16.9,
+       "id": "km",
+       "valor": 18.4
       },
       {
        "anterior": null,
@@ -20455,6 +22057,26 @@
      ]
     }
    },
+   "periodos": [
+    {
+     "n": 4,
+     "todo": false
+    },
+    {
+     "n": 8,
+     "todo": false
+    },
+    {
+     "n": 12,
+     "todo": false
+    },
+    {
+     "desde": "2026-10-26",
+     "hasta": "2026-11-02",
+     "n": 2,
+     "todo": true
+    }
+   ],
    "resumen": {
     "12": "Sin corridas en Z2 en las 12 semanas anteriores para comparar el ritmo",
     "4": "Sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo",
@@ -20462,6 +22084,113 @@
    },
    "semanas": [
     {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-17",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-24",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-31",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-07",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-14",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-21",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-28",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-05",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-12",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 3,
+       "nombre": "Corrida"
+      }
+     ],
+     "inicio": "2026-10-19",
+     "km": 15.5,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 115.0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
      "entrenos": [
       {
        "icono": "correr",
@@ -20482,6 +22211,7 @@
      "plan_min": 80
     },
     {
+     "actual": true,
      "entrenos": [
       {
        "icono": "correr",
@@ -22539,6 +24269,107 @@
    },
    "carga_semanas": [
     {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-08-31"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-07"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-14"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-21"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-09-28"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-05"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-12"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-19"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 114.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-10-26"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 114.0,
+     "cargas": {
+      "cardio": 0.0,
+      "crossfit": 228.0,
+      "movilidad": 0.0
+     },
+     "inicio": "2026-11-02"
+    },
+    {
+     "actual": false,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -22548,6 +24379,7 @@
      "inicio": "2026-11-09"
     },
     {
+     "actual": true,
      "carga_corrida": 0.0,
      "cargas": {
       "cardio": 0.0,
@@ -22703,7 +24535,10 @@
      "etiqueta": "carga",
      "focus": "Larga 40'",
      "kind": "carga",
+     "km": 4.5,
+     "minutos": 30.0,
      "n": 1,
+     "plan_min": 80,
      "progreso": {
       "hechas": 1,
       "pct": 33,
@@ -22969,7 +24804,10 @@
      "etiqueta": "carga",
      "focus": "Larga 50' · picos Z3 opcionales",
      "kind": "carga",
+     "km": 4.5,
+     "minutos": 30.0,
      "n": 2,
+     "plan_min": 100,
      "progreso": {
       "hechas": 1,
       "pct": 33,
@@ -24299,6 +26137,147 @@
    "fc_ref": 144,
    "intensidad_semanas": [
     {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-31",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-07",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-14",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-21",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-28",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-05",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-12",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-19",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-26",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 5.0,
+      "Z2": 15.0,
+      "Z3": 5.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-11-02",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 15.0,
+      "Z2": 45.0,
+      "Z3": 15.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-11-09",
@@ -24312,6 +26291,7 @@
      }
     },
     {
+     "actual": true,
      "alto": 0.0,
      "bajo": 0.0,
      "inicio": "2026-11-16",
@@ -24349,6 +26329,7 @@
    "numeros": {
     "caminatas": {
      "12": true,
+     "2": false,
      "4": true,
      "8": true
     },
@@ -24382,6 +26363,36 @@
        "delta": null,
        "id": "pct_trote",
        "valor": 66.7
+      }
+     ],
+     "2": [
+      {
+       "anterior": 1.0,
+       "bueno": null,
+       "delta": null,
+       "id": "corridas",
+       "valor": null
+      },
+      {
+       "anterior": 30.0,
+       "bueno": null,
+       "delta": null,
+       "id": "minutos",
+       "valor": null
+      },
+      {
+       "anterior": 4.5,
+       "bueno": null,
+       "delta": null,
+       "id": "km",
+       "valor": null
+      },
+      {
+       "anterior": 66.7,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": null
       }
      ],
      "4": [
@@ -24446,6 +26457,26 @@
      ]
     }
    },
+   "periodos": [
+    {
+     "n": 4,
+     "todo": false
+    },
+    {
+     "n": 8,
+     "todo": false
+    },
+    {
+     "n": 12,
+     "todo": false
+    },
+    {
+     "desde": "2026-10-26",
+     "hasta": "2026-11-02",
+     "n": 2,
+     "todo": true
+    }
+   ],
    "resumen": {
     "12": "Sin corridas en Z2 en las 12 semanas anteriores para comparar el ritmo",
     "4": "Sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo",
@@ -24453,6 +26484,124 @@
    },
    "semanas": [
     {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-31",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-07",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-14",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-21",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-28",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-05",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-12",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-19",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 1,
+       "nombre": "Corrida"
+      }
+     ],
+     "inicio": "2026-10-26",
+     "km": 4.5,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 30.0,
+     "plan_min": 80
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 1,
+       "nombre": "Corrida"
+      },
+      {
+       "icono": "rayo",
+       "n": 2,
+       "nombre": "CrossFit"
+      }
+     ],
+     "inicio": "2026-11-02",
+     "km": 4.5,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 30.0,
+     "plan_min": 100
+    },
+    {
+     "actual": false,
      "entrenos": [],
      "inicio": "2026-11-09",
      "km": 0,
@@ -24462,6 +26611,7 @@
      "plan_min": null
     },
     {
+     "actual": true,
      "entrenos": [],
      "inicio": "2026-11-16",
      "km": 0,

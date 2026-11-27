@@ -146,7 +146,6 @@ def test_progreso(salida):
     assert ultima["inicio"] == "2026-11-02" and ultima["minutos"] == 30 and ultima["min_trote"] == 20
     assert ultima["min_camina"] == 10 and ultima["plan_min"] == 100   # semana 2 del ejemplo: 25+25+50
     assert p["semanas"][-2]["plan_min"] == 80                         # semana 1: 20+20+40
-    assert p["semanas"][0]["plan_min"] == 80
     d = p["dias"][-1]
     assert d["fecha"] == "2026-11-04" and d["hrv"] == 34 and d["hrv_7d"] == 34 and d["sueño_7d"] == 6.94
     assert p["dias"][0]["hrv_7d"] is None            # sin datos 84 días atrás
@@ -659,7 +658,7 @@ def test_mejora_otras_e_intensidad_por_semana():
     assert total > 0 and abs(semana["bajo"] - (mins["Z1"] + mins["Z2"]) / total * 100) < 0.1
     assert abs(semana["bajo"] + semana["limbo"] + semana["alto"] - 100) < 0.2
     iw = out["progreso"]["intensidad_semanas"]
-    assert len(iw) == 2 and iw[-1]["inicio"] == "2026-11-02" and {k: v for k, v in iw[-1].items() if k != "actual"} == {"inicio": "2026-11-02", **semana}
+    assert len(iw) == 12 and iw[-1]["inicio"] == "2026-11-02" and {k: v for k, v in iw[-1].items() if k != "actual"} == {"inicio": "2026-11-02", **semana}
     libre = build.build(data, build.load(ROOT / "plan" / "plan.example.json"), {**CONFIG_FIXTURE, "sin_plan": True}, AHORA)
     iw_libre = libre["progreso"]["intensidad_semanas"]   # sin plan: 12 semanas que terminan en la actual
     assert len(iw_libre) == 12 and iw_libre[-1]["inicio"] == "2026-11-02"
@@ -1004,9 +1003,9 @@ def test_bloques_y_series_siguen_el_largo_del_plan():
         p = out["plan"]
         assert p["largo"] == n == len(p["semanas"]) and p["bloques"] == sorted({w["block"] for w in p["semanas"]})
         assert all(w["block"] in p["bloques"] and w["plan_min"] is not None for w in p["semanas"])
-        assert len(out["progreso"]["semanas"]) == len(out["detalles"]["carga_semanas"]) == len(out["progreso"]["intensidad_semanas"]) == n
+        assert len(out["progreso"]["semanas"]) == len(out["detalles"]["carga_semanas"]) == len(out["progreso"]["intensidad_semanas"]) >= max(n, 12)   # 12 semanas y todo el plan
         for serie in (out["progreso"]["semanas"], out["detalles"]["carga_semanas"], out["progreso"]["intensidad_semanas"]):
-            assert [s["actual"] for s in serie].count(True) == 1 and serie[-1]["actual"]
+            assert [s["actual"] for s in serie].count(True) == 1 and len(serie) >= n
         hechas = [w for w in p["semanas"] if "minutos" in w]
         assert hechas and all(w["km"] is not None for w in hechas)   # lo hecho viene en minutos y en km; el objetivo solo en minutos
         assert not any("objetivo_km" in w for w in p["semanas"])   # el objetivo del plan no tiene km; plan_km es solo un estimado de las futuras
@@ -1064,7 +1063,7 @@ def test_periodos_de_progreso_siempre_4_8_12_y_todo_el_plan():
         assert len(serie) >= 12 and serie[-1] >= date(2026, 11, 23) and all(b - a == timedelta(weeks=1) for a, b in zip(serie, serie[1:]))
         assert date(2026, 11, 23) - timedelta(weeks=11) >= serie[0]
     s16 = semanal.serie_semanas(hoy, plan(16), {})
-    assert len(s16) == 16 and s16[0] == date(2026, 10, 12)
+    assert len(s16) == 21 and s16[0] == date(2026, 9, 7)   # 12 semanas hasta la actual + las 16 del plan (10 oct → 25 ene)
     assert [s.isoformat() for s in s16][-1] == "2027-01-25"
 
 
