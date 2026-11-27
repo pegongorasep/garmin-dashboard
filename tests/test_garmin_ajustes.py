@@ -40,7 +40,7 @@ def test_estado_con_app_y_sin_app(ctx, gh):
         db.add(Subida(usuario_id=uid, ok=True))
         db.commit()
     h = cl.get("/ajustes").text          # conectado con el código viejo: sin instalación
-    assert "Autoriza una vez" in h and "/conectar/github?para=conectado" in h and "Desconectar Garmin" not in h
+    assert "Autoriza una vez" in h and "/conectar/github?para=ajustes" in h and "Desconectar Garmin" not in h
     assert "última descarga hace un momento" in h
     with ctx.sesiones() as db:
         db.get(Usuario, uid).gh_instalacion = 55

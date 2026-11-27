@@ -22,7 +22,7 @@ def test_ui_sync_por_defecto_en_build():
     from ajustes import cargar_config
     cfg = cargar_config(None) if callable(cargar_config) else {}
     ui = build.build_ui(cfg, {"weeks": []}, [])
-    assert ui["sync"] == {"puede": False, "url_autorizar": None, "historial_pendiente": False, "key_rechazada": False}
+    assert ui["sync"] == {"puede": False, "url_autorizar": None, "historial_pendiente": False, "key_rechazada": False, "migrar": False}
 
 
 def test_sync_ui_sin_app_deja_el_default(ctx):
@@ -38,7 +38,7 @@ def test_sync_ui_con_app(ctx, gh):
         u = db.get(Usuario, uid)
         u.historial_pendiente = True
         db.commit()
-        assert sync_web.sync_ui(ctx.settings, u) == {"puede": True, "url_autorizar": None, "historial_pendiente": True, "key_rechazada": False}
+        assert sync_web.sync_ui(ctx.settings, u) == {"puede": True, "url_autorizar": None, "historial_pendiente": True, "key_rechazada": False, "migrar": False}
         u.gh_instalacion = None
         assert sync_web.sync_ui(ctx.settings, u)["url_autorizar"] == "/conectar/github?para=conectado"
 
@@ -169,3 +169,24 @@ def test_encabezado_accion_sync():
     assert puede["r"]["id"] == "sync-btn" and puede["llamado"] == "normal" and puede["href"] == "/"
     auto = _accion_sync({"acciones_url": "https://g/x", "sync": {"puede": False, "url_autorizar": "/conectar/github?para=conectado"}})
     assert auto["r"]["id"] == "sync-btn" and auto["llamado"] is None and auto["href"] == "/conectar/github?para=conectado"
+
+
+def test_sync_ui_migrar_y_prioridad(ctx, gh):
+    from web import sync_web
+    u = Usuario(correo="m@x.mx", repo="a/b", repo_id=7)
+    assert sync_web.sync_ui(ctx.settings, u)["migrar"] is True          # app + copia sin instalación
+    u.gh_instalacion = 5
+    assert sync_web.sync_ui(ctx.settings, u)["migrar"] is False         # con instalación
+    u2 = Usuario(correo="n@x.mx")
+    assert sync_web.sync_ui(ctx.settings, u2)["migrar"] is False        # sin copia
+
+
+def test_aviso_migrar_en_app_js_gana_key_rechazada():
+    js = (SITE / "app.js").read_text(encoding="utf-8")
+    assert "if (!s.migrar || s.key_rechazada) return null;" in js
+    assert js.count("avisoMigrar(),") == 2 and "sitio.migrar.aviso" in js
+
+
+def test_sync_ui_migrar_app_apagada(ctx):
+    from web import sync_web
+    assert sync_web.sync_ui(ctx.settings, Usuario(correo="o@x.mx", repo="a/b", repo_id=7)) is None   # sin app no hay migrar

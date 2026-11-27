@@ -455,6 +455,8 @@
 "sitio.mej.ritmo": "Ritmo a {fc} lpm",
 "sitio.mej.titulo": "Cómo vas mejorando",
 "sitio.meses": "ene,feb,mar,abr,may,jun,jul,ago,sep,oct,nov,dic",
+"sitio.migrar.autorizar": "Autorizar",
+"sitio.migrar.aviso": "Actualiza tu conexión con Garmin: autoriza una vez y sincroniza desde aquí.",
 "sitio.min_n": "{n} min",
 "sitio.mr.carreras": "Carreras",
 "sitio.mr.titulo": "Marcas y carreras",

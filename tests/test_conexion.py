@@ -109,7 +109,7 @@ def test_ya_conectado_mismo_repo_y_destino_conexiones(ctx, gh):
     volver(cl, empezar(cl))
     gh.instalaciones = [56]
     r = volver(cl, empezar(cl, "conectado"), inst="56")
-    assert r.headers["location"] == "/conexiones?ok=conectado"
+    assert r.headers["location"] == "/"
     with ctx.sesiones() as db:
         assert db.get(Usuario, uid).gh_instalacion == 56
         assert db.query(Cambio).filter(Cambio.atleta_id == uid).count() == 1
@@ -212,3 +212,18 @@ def test_si_github_falla_el_historial_queda_en_error_y_la_subida_sigue(ctx, gh):
 def test_sin_app_no_dispara(ctx):
     assert _tras_comprobacion(ctx, Falsa()).status_code == 200
     assert len(_sincs(ctx)) == 1
+
+
+def test_migrar_vuelta_misma_copia_va_a_hoy_o_a_ajustes(ctx, gh):
+    cl, uid = sesion(ctx)
+    with ctx.sesiones() as db:   # conectado a la manera vieja: copia sin instalación
+        u = db.get(Usuario, uid)
+        u.repo, u.repo_id, u.gh_instalacion = "ana/ahilallevas-datos", 900, None
+        db.commit()
+    assert volver(cl, empezar(cl, "conectado")).headers["location"] == "/"
+    with ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert (u.repo_id, u.gh_instalacion) == (900, 55)
+        u.gh_instalacion = None
+        db.commit()
+    assert volver(cl, empezar(cl, "ajustes")).headers["location"] == "/ajustes"

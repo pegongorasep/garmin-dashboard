@@ -957,7 +957,7 @@ def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
         "nombre_intensa": nombre,
         "acciones_url": acciones,
         "sin_plan": bool(config.get("sin_plan", False)),
-        "sync": {"puede": False, "url_autorizar": None, "historial_pendiente": False, "key_rechazada": False},   # solo en la web (la pone web/sync_web.sync_ui): botón «Sincronizar»; sin ella el sitio pinta lo de siempre
+        "sync": {"puede": False, "url_autorizar": None, "historial_pendiente": False, "key_rechazada": False, "migrar": False},   # solo en la web (la pone web/sync_web.sync_ui): botón «Sincronizar»; sin ella el sitio pinta lo de siempre
         "plan_acciones": list(config.get("plan_acciones") or []),   # solo en la web: [{texto, url}] sobre el plan
         "repetir_url": "/plan/repetir" if config.get("plan_url") else None,   # solo en la web: POST del botón «Repetir esta semana» de Hoy
         "plan_url": config.get("plan_url") or None,   # solo en la web: url del plan (botón «Ajustar mi plan»; null = sin botón

@@ -666,6 +666,14 @@ function avisoKeyRechazada() {
     accion: { texto: T("sitio.key.cambiarla"), onclick: () => { location.href = "/garmin/key"; } } });
 }
 
+/** Aviso fijo: conectado a la manera vieja con la app encendida (`ui.sync.migrar`). Si hay key rechazada, gana ese aviso. */
+function avisoMigrar() {
+  const s = ui().sync || {};
+  if (!s.migrar || s.key_rechazada) return null;
+  return DS.aviso({ clase: "bad", simbolo: "✕", extra: "ancha", texto: T("sitio.migrar.aviso"),
+    accion: { texto: T("sitio.migrar.autorizar"), onclick: () => { location.href = s.url_autorizar || "/conectar/github?para=conectado"; } } });
+}
+
 function renderHoySinPlan(d) {
   const sl = d.semana_libre || {};
   const dif = (v, prom, unidad) => (prom ? [[T("sitio.sl.vs", { p: fmt(prom, 0), u: unidad }), "neutro"]] : [[T("sitio.sl.sin_prom"), "neutro"]]);
@@ -679,6 +687,7 @@ function renderHoySinPlan(d) {
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
     avisoKeyRechazada(),
+    avisoMigrar(),
     DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
       sl.actividades ? DS.tiles({ etiqueta: T("sitio.sl.titulo") },
         DS.tile({ k: T("sitio.sl.minutos"), valor: fmt(sl.minutos, 0), unidad: T("sitio.sl.min"), deltas: dif(sl.minutos, sl.promedio_minutos, T("sitio.sl.min")) }),
@@ -702,6 +711,7 @@ function renderHoy(d) {
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
     avisoKeyRechazada(),
+    avisoMigrar(),
     d.hoy.semaforo.repetir_semana
       ? avisoCerrable("repetir", { clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
       : null,

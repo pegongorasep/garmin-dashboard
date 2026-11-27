@@ -21,7 +21,7 @@ from .modelos import Cambio, Usuario, VinculoPendiente, ahora
 log = logging.getLogger("web.conexion")
 COOKIE = "gh_estado"
 SEGUNDOS = 900
-DESTINOS = {"guia": "/bienvenida?paso={paso}", "conectado": "/conexiones?"}
+DESTINOS = {"guia": "/bienvenida?paso={paso}", "conectado": "/conexiones?", "ajustes": "/conexiones?"}
 
 
 def app_de(app, settings) -> GitHubApp:
@@ -86,8 +86,10 @@ def _firma(secret: str, datos: str) -> str:
 
 def montar(app, get_db, actual, render, settings, formulario=None) -> None:
     def destino(para, codigo=None, ok=False):
-        if para == "conectado":
-            return "/conexiones?" + (f"error={codigo}" if codigo else "ok=conectado")
+        if para in ("conectado", "ajustes"):
+            if codigo:
+                return f"/conexiones?error={codigo}"
+            return "/ajustes" if para == "ajustes" else "/"   # C11b: quien viene del aviso de Hoy regresa a Hoy
         return "/bienvenida?paso=4" if ok else f"/bienvenida?paso=3&error={codigo}"
 
     def falla(para, codigo):

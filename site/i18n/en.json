@@ -455,6 +455,8 @@
 "sitio.mej.ritmo": "Pace at {fc} bpm",
 "sitio.mej.titulo": "How you're improving",
 "sitio.meses": "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
+"sitio.migrar.autorizar": "Authorize",
+"sitio.migrar.aviso": "Update your Garmin connection: authorize once and sync from here.",
 "sitio.min_n": "{n} min",
 "sitio.mr.carreras": "Races",
 "sitio.mr.titulo": "Records and races",
