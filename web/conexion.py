@@ -70,6 +70,10 @@ def estado_secreto(secretos: list[dict]) -> tuple[str, str | None]:
     return "falta", None
 
 
+def _gh_listo(usuario) -> bool:
+    return bool(usuario.gh_instalacion and usuario.repo)
+
+
 def sinc_json(s) -> dict | None:
     if s is None:
         return None
@@ -164,9 +168,6 @@ def montar(app, get_db, actual, render, settings, formulario=None) -> None:
         resp = RedirectResponse(destino(para, ok=True), 303)
         resp.delete_cookie(COOKIE, path="/conectar/github")
         return resp
-
-    def _gh_listo(usuario):
-        return bool(usuario.gh_instalacion and usuario.repo)
 
     @app.get("/api/conexion/estado")
     def api_estado(usuario=Depends(actual), db=Depends(get_db)):
