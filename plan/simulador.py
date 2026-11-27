@@ -20,6 +20,7 @@ Uso: python -m plan.simulador [--persona id] [--motor actual]
 """
 import argparse
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
@@ -29,6 +30,7 @@ for _p in (RAIZ / "dashboard", RAIZ / "plan"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 import gen_plan  # noqa: E402
+import nivel as nivel_mod  # noqa: E402
 from ajustes import _DIA_IDX, crudo_desde_respuestas, normalizar_config  # noqa: E402
 
 PERSONAS_YAML = Path(__file__).with_name("personas.yaml")
@@ -63,6 +65,32 @@ UMBRALES = {
 
 # --- personas ---
 
+def actividades_sinteticas(persona: dict, hoy: str = INICIO) -> list:
+    """El historial de la persona como actividades de Garmin inventadas (las 8 semanas anteriores a `hoy`, un lunes).
+    Cada sesión es una corrida; si el trote seguido (`continuo`) es menor que la sesión, trae tramos de trote y 1' de caminata.
+    Los días intensos de `intensos_semana` son una actividad HIIT de 45' cada semana (cuenta como día intenso, sea CrossFit, gym o clases)."""
+    lunes = datetime.fromisoformat(hoy)
+    out = []
+    hist = persona["historial"]
+    for i, h in enumerate(hist):
+        inicio = lunes - timedelta(days=7 * (len(hist) - i))
+        sesiones = h["sesiones"]
+        mayor = max(sesiones, default=0)
+        for j, minutos in enumerate(sesiones):
+            dia = inicio + timedelta(days=round(j * 7 / len(sesiones)), hours=7)
+            a = {"startTimeLocal": dia.isoformat(sep=" "), "duration": minutos * 60.0,
+                 "activityType": {"typeKey": "running"}}
+            if minutos == mayor and 0 < h["continuo"] < minutos:   # la sesión que trae el trote seguido de la semana
+                n = max(1, round(minutos / (h["continuo"] + 1)))
+                a["splitSummaries"] = [{"splitType": "RWD_RUN", "duration": n * h["continuo"] * 60, "noOfSplits": n},
+                                       {"splitType": "RWD_WALK", "duration": n * 60, "noOfSplits": n}]
+            out.append(a)
+        for d in persona["intensos_semana"]["dias"]:
+            out.append({"startTimeLocal": (inicio + timedelta(days=d, hours=18)).isoformat(sep=" "), "duration": 2700.0,
+                        "activityType": {"typeKey": "hiit"}})
+    return out
+
+
 def _normalizar_persona(p: dict) -> dict:
     """Rellena lo que falte con valores por defecto (para personas armadas a mano en pruebas) y arma `config_actual`."""
     p = dict(p)
@@ -78,6 +106,8 @@ def _normalizar_persona(p: dict) -> dict:
     ad = p.get("adherencia") or {}
     p["adherencia"] = {"base": float(ad.get("base", 1.0)), "huecos": [tuple(h) for h in ad.get("huecos") or []]}
     p.setdefault("meta", None)
+    p["actividades"] = actividades_sinteticas(p)
+    p["nivel"] = nivel_mod.nivel_desde_datos(p["actividades"], datetime.fromisoformat(INICIO))
     if "config_actual" not in p:
         crudo = crudo_desde_respuestas(INICIO, edad=p["edad"], **(p.get("formulario") or {}))
         p["config_actual"] = normalizar_config(crudo)
@@ -239,7 +269,7 @@ def analizar(persona: dict, plan: dict, motor_nombre: str = "?") -> dict:
     cuenta = {"ok": sum(r["ok"] is True for r in reglas), "fallan": sum(r["ok"] is False for r in reglas),
               "no_aplica": sum(r["ok"] is None for r in reglas)}
     return {"persona": {k: persona.get(k, "") for k in ("id", "nombre", "descripcion", "edad")},
-            "motor": motor_nombre, "sin_base": not desbloqueado(inicial), "semanas": filas, "reglas": reglas, "resumen": cuenta}
+            "nivel": persona["nivel"], "motor": motor_nombre, "sin_base": not desbloqueado(inicial), "semanas": filas, "reglas": reglas, "resumen": cuenta}
 
 
 def simular(persona: dict, motor: str = "actual") -> dict:  # noqa: A002
