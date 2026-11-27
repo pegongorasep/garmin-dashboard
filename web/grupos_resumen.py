@@ -131,8 +131,7 @@ def aplicar_privacidad(usuario: Usuario, t: dict, hitos: dict) -> tuple[dict, di
     t, hitos = dict(t), dict(hitos)
     if not usuario.compartir_actividades:
         t["dias"], t["ultima"] = [], None
-        if t.get("cal"):
-            t["cal"] = [{**d, "cats": []} for d in t["cal"]]   # solo días llenos o vacíos, sin categorías
+        t["cal"] = None   # ni qué días se llenaron: solo totales (la tarjeta pinta la ranura vacía)
         if t.get("semana"):
             t["semana"] = {**t["semana"], "otras": {}}
         if t.get("libre"):

@@ -92,6 +92,8 @@ def test_matriz_de_interruptores(web_ctx, monkeypatch):
         db.commit()
     p = get(b, ua).json()
     assert p["actividades"] is None and p["calendario"] is not None
+    assert not any(d["hecha"] for w in p["calendario"] for d in w["dias"])   # sin días llenos ni nombres de actividades
+    assert all(x["estado"] != "hecha" for w in p["calendario"] for x in w["sesiones"])
     assert b.get("/api/juntos/feed", params={"persona": ua}).json()["items"] == []   # el feed tampoco la muestra
 
 
@@ -189,5 +191,5 @@ def test_matriz_de_interruptores_en_la_tarjeta(web_ctx, monkeypatch, act_on, pla
         assert t["sem_plan"]["objetivo"] == 95 and t["sem_plan"]["faltan"]
     if act_on:
         assert t["cal"][0]["cats"] == ["run"]
-    else:   # actividades apagadas: días llenos/vacíos, sin categorías
-        assert [d["hecha"] for d in t["cal"][:3]] == [True, True, False] and all(d["cats"] == [] for d in t["cal"])
+    else:   # actividades apagadas: nada por día (solo totales)
+        assert t["cal"] is None and t["dias"] == [] and t["ultima"] is None

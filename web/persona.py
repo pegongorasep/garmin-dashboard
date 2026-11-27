@@ -48,15 +48,15 @@ def _nivel(db: Session, uid: int) -> str | None:
     return n if n in NIVELES else None
 
 
-def _semana_cal(s: dict, hoy: str) -> dict:
+def _semana_cal(s: dict, hoy: str, con_act: bool = True) -> dict:
     hechas = {x["fecha"]: x["name"] for x in s.get("sesiones") or [] if x.get("estado") == "hecha" and x.get("fecha")}
     dias = []
     for d in s.get("dias") or []:
         f = d["fecha"]
-        dias.append({"fecha": f, "dia": d.get("dia_semana"), "hoy": f == hoy, "hecha": f in hechas,
-                     "etiqueta": hechas.get(f) or d.get("plan_ses") or ""})
+        dias.append({"fecha": f, "dia": d.get("dia_semana"), "hoy": f == hoy, "hecha": f in hechas and con_act,
+                     "etiqueta": (hechas.get(f) if con_act else None) or d.get("plan_ses") or ""})
     return {"inicio": s["inicio"], "n": s.get("n"), "actual": s.get("estado") == "actual",
-            "sesiones": [{"nombre": x["name"], "tipo": x["tipo"], "estado": x["estado"]} for x in s.get("sesiones") or []],
+            "sesiones": [{"nombre": x["name"], "tipo": x["tipo"], "estado": x["estado"] if con_act else "pendiente"} for x in s.get("sesiones") or []],
             "dias": dias}
 
 
@@ -96,7 +96,7 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
                 out["semana"] = semana_plan.semana_vs_plan(actual, True)
                 total = len((data.get("plan") or {}).get("semanas") or []) or None
                 out["plan"] = {"n": actual.get("n"), "total": total}
-                out["calendario"] = [_semana_cal(s, hoy) for s in semanas[idx:idx + 2]]
+                out["calendario"] = [_semana_cal(s, hoy, ver_act) for s in semanas[idx:idx + 2]]
         elif libre:
             out["semana"] = {"minutos": round(libre.get("minutos") or 0), "objetivo": None, "faltan": []}
         prog = {"semanas": [{"inicio": s["inicio"], "minutos": round(s.get("minutos") or 0)}
