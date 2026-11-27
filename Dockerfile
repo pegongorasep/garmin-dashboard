@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt -r web/requirements.txt
 COPY dashboard/ dashboard/
 COPY i18n/ i18n/
 COPY aprende/ aprende/
-COPY plan/gen_plan.py plan/plan.example.json plan/
+COPY plan/*.py plan/*.yaml plan/plan.example.json plan/
 COPY site/ site/
 COPY web/ web/
 COPY scripts/ scripts/
