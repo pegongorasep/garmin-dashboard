@@ -117,3 +117,23 @@ def test_sin_plan_o_sin_ajustes_se_saltan_y_cli(web_ctx, capsys):
     assert cli.main(["convertir-v6", "--aplicar"], settings=web_ctx.settings, motor=web_ctx.motor) == 0
     with web_ctx.sesiones() as db:
         assert motor_v6.es_v6(db.get(Plan, uid).plan)
+
+
+def test_una_corrida_de_5_min_no_deja_la_semana_1_bajo_el_piso(web_ctx):
+    uid = sembrar_persona(web_ctx, "a@x.com", con_corridas=False)
+    with web_ctx.sesiones() as db:
+        db.add(DatoGarmin(usuario_id=uid, tipo="actividad", clave="1", contenido={
+            "id": 1, "startTimeLocal": "2026-11-10 07:00:00", "duration": 300.0, "activityType": {"typeKey": "running"}}))
+        db.commit()
+    errores, salida = correr(web_ctx, aplicar=True)
+    assert errores == 0
+    with web_ctx.sesiones() as db:
+        plan = db.get(Plan, uid).plan
+    assert motor_v6.minutos_semana(plan["weeks"][0]) >= motor_v6.UMBRALES["ajuste_piso"][plan["meta"]["nivel"]]
+
+
+def test_el_piso_es_una_sola_constante():
+    import nivel
+    assert motor_v6.UMBRALES["ajuste_piso"] is nivel.PISO_NIVEL
+    r = nivel.nivel_desde_datos([], date(2026, 11, 25))
+    assert r["inicio_minutos"] >= nivel.PISO_NIVEL[r["nivel"]]

@@ -82,8 +82,12 @@ def convertir(db, atleta: Usuario, plan_viejo: dict, ahora: datetime, aplicar: b
     corrida.update({"inicio": plan["start"], "semanas": len(plan["weeks"])})
     corrida.pop("semanas_repetidas", None)
     corrida["metas"] = [{**x, "en_plan": bool(carrera and x["id"] == carrera["id"])} for x in base["metas"]]
+    despues = motor_v6.minutos_semana(plan["weeks"][0])
+    piso = motor_v6.UMBRALES["ajuste_piso"][plan["meta"]["nivel"]]
+    if despues < piso:   # un plan que arranca debajo del piso del nivel no es una conversión: es un error (no se guarda)
+        raise ValueError(f"la semana 1 queda en {despues} min, debajo del piso de {piso} min del nivel")
     normalizar_config(nuevo)   # ConfigError si algo no cuadra
-    res = {"antes": _minutos_viejo(plan_viejo, lunes), "despues": motor_v6.minutos_semana(plan["weeks"][0]),
+    res = {"antes": _minutos_viejo(plan_viejo, lunes), "despues": despues,
            "carreras": len(base["metas"]), "en_plan": carrera is not None}
     if aplicar:
         cambios.aplicar_cambio(db, atleta, None, "sistema", "Plan convertido al motor v6 (misma fecha de carrera, inicio esta semana)",

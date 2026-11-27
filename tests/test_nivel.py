@@ -38,7 +38,7 @@ def test_trota_camina_es_empezando_y_arranca_cerca_de_lo_real():
     r = nv.nivel_desde_datos(semanas(8, [15, 15], continuo=2), HOY)
     assert r["nivel"] == "empezando"
     assert r["evidencia"]["trote_continuo_min"] == 2.0
-    assert 0 < r["inicio_minutos"] <= 30 * 1.10
+    assert r["inicio_minutos"] == nv.PISO_NIVEL["empezando"]   # 30' de promedio < piso (45'): arranca en el piso, nunca debajo
 
 
 def test_base_y_evidencia():

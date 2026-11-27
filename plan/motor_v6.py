@@ -22,6 +22,7 @@ for _p in (RAIZ / "dashboard", RAIZ / "plan"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 import gen_plan  # noqa: E402
+from nivel import PISO_NIVEL  # noqa: E402
 
 NIVELES = ("empezando", "base", "corredor")
 OBJETIVOS = ("base", "velocidad", "carrera")
@@ -90,7 +91,7 @@ UMBRALES = {
     "ajuste_repite_desde": 0.50,      # real entre 50 y 90 % → repite (el objetivo de la semana anterior, sin subir)
     "ajuste_baja_pct": 0.70,          # real < 50 % → da un paso atrás: máx(real × 1.10, 70 % del objetivo anterior)
     "ajuste_reinicio_semanas": 2,     # ≥ 2 semanas seguidas en ~0 → reinicia desde `inicio_minutos`
-    "ajuste_piso": {"empezando": 45, "base": 60, "corredor": 90},   # piso duro por nivel (3 × 15' para Empezando); nunca más que lo planeado
+    "ajuste_piso": PISO_NIVEL,   # piso duro por nivel (3 × 15' para Empezando); nunca más que lo planeado
     "ajuste_picos_semanas": 3,        # taper: el pico es el mayor de las últimas 3 semanas de carga (ya ajustadas) hasta 2 semanas antes de la carrera
 }
 
@@ -527,6 +528,7 @@ def generar_v6(entrada: dict) -> dict:
     prom = ev.get("minutos_sem_prom")
     inicio = int(e["inicio_minutos"] if e["inicio_minutos"] is not None else
                  (prom * (1 + u["sesion_pct"]) if prom else u["inicio_sin_historial"]))
+    inicio = max(inicio, u["ajuste_piso"][nivel])   # la semana 1 nunca baja del piso del nivel (promedio diminuto = sin datos)
     tope_vol = max(u["tope_semana_min"][nivel], inicio)
     tope_lg = tope_larga(nivel, carrera, base, ev)
     e0 = escalon_de_entrada(float(ev.get("trote_continuo_min", 0))) if nivel == "empezando" else None
@@ -542,6 +544,8 @@ def generar_v6(entrada: dict) -> dict:
             pico = max(totales[:max(n_semanas - 2, 1)], default=inicio)
             T = int(taper[n - (n_semanas - len(taper)) - 1] * pico)
         ts = tope_sesion(maximos, hist_max, n)
+        if ts and kind == "carga":
+            ts = max(ts, -(-min(T, u["ajuste_piso"][nivel]) // dias))   # el piso repartido en los días se puede cumplir (como `sesion_110`)
         if nivel == "empezando":
             ts = min(ts or u["tope_larga_min"]["empezando"], u["tope_larga_min"]["empezando"])
         d = max(1, min(dias - (kind == "carrera"), T // u["sesion_min"]))

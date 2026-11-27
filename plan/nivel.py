@@ -18,6 +18,9 @@ import metrics  # noqa: E402
 
 NIVELES = ("empezando", "base", "corredor")
 
+# Piso de minutos por semana de cada nivel: ni el arranque del plan ni el ajuste semanal (motor_v6 `ajuste_piso`) bajan de aquí.
+PISO_NIVEL = {"empezando": 45, "base": 60, "corredor": 90}   # 3 × 15' para Empezando
+
 UMBRALES = {
     # Ventanas (en semanas, hacia atrás desde hoy)
     "semanas_frecuencia": 6,        # F: corridas por semana, promedio de estas semanas
@@ -164,4 +167,7 @@ def nivel_desde_datos(actividades: list, hoy, config: dict | None = None, detall
     else:
         inicio = prom * (1 + u["inicio_pct"])
         inicio = int(inicio // u["inicio_redondeo"] * u["inicio_redondeo"]) if inicio > 10 else int(inicio)
+    # Regla: nunca se arranca debajo del piso del nivel. Un promedio diminuto o ruidoso (menos que el piso) no sirve de base:
+    # se arranca en el piso (Empezando: 3 × 15' de trote/caminata; sin ninguna corrida sigue valiendo el arranque de 60').
+    inicio = max(inicio, PISO_NIVEL[nivel])
     return {"nivel": nivel, "evidencia": ev, "inicio_minutos": inicio}

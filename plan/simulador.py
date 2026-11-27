@@ -477,7 +477,7 @@ def r_inicio_real(c):
     recientes = (semanas_h[:len(semanas_h) - ceros] if ceros >= 2 else semanas_h)[-u["inicio_semanas"]:]
     prom = sum(recientes) / u["inicio_semanas"] if recientes else 0
     if prom > 0:
-        lim = prom * (1 + u["inicio_pct"])
+        lim = max(prom * (1 + u["inicio_pct"]), _piso(c))   # excepción (solo v6): el piso del nivel
         if r["min"] <= lim + 1e-9:
             return True, [], f"Semana 1: {r['min']}' ≤ 110 % de su promedio reciente ({prom:g}')."
         return False, [1], f"Semana 1: {r['min']}' y su promedio reciente es {prom:g}' (tope {lim:g}')."
