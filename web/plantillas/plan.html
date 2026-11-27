@@ -135,29 +135,37 @@
   </div>
 {% endcall %}
 
-<h2 class="pag-h" id="rehacer">{{ t("plan.rehacer_t") }}</h2>
-<form class="pila" method="post" action="{{ pref }}/plan/rehacer">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
+{% call tarjeta(t("plan.rehacer_t")) %}
   <p class="pag-s">{{ t("plan.rehacer_a") }}</p>
-  {{ seleccion(t("aj.nivel"), "nivel", ns, valor=v.nivel, error=errores.get("nivel")) }}
-  {{ seleccion(t("aj.intensidad"), "intensidad", ints, valor=v.intensidad, error=errores.get("intensidad")) }}
-  {% call opciones(t("aj.tipos_cal"), t("aj.tipos_cal_n"), error=errores.get("calidad")) %}
-    {% for tq in tipos_calidad %}{{ opcion("calidad", tq, valor=tq, marcado=tq in v.calidad) }}{% endfor %}
-  {% endcall %}
-  {{ opcion("caminatas", t("aj.caminatas"), marcado=v.caminatas) }}
-  {{ opcion("variada", t("aj.variada"), marcado=v.variada) }}
-  {{ campo(t("aj.semanas"), "semanas", tipo="number", valor=v.semanas, extra={"min": 4, "max": 52}, requerido=True) }}
-  {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
-  {{ campo(t("aj.z2"), "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
-  {{ campo(t("aj.larga"), "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
-  {% if not atleta.sin_plan %}
-  <input type="hidden" name="pierna_form" value="1">
-  {% call opciones(t("aj.pierna"), t("aj.pierna_n")) %}
-    {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave, marcado=clave in v.pierna) }}{% endfor %}
-  {% endcall %}
-  {% endif %}
-  <div class="acciones">{{ boton(t("plan.rehacer_b"), tipo="submit") }}</div>
-</form>
+  <div class="acciones"><button class="boton sec grande" type="button" data-abre="rehacer">{{ t("plan.rehacer_t") }}</button></div>
+{% endcall %}
+<dialog class="dialogo" id="rehacer" aria-labelledby="rehacer-t"{% if rehacer_abierto %} data-abierto{% endif %}>
+  <div class="dl-cab"><h2 class="dl-t" id="rehacer-t">{{ t("plan.rehacer_t") }}</h2></div>
+  <div class="dl-cuerpo">
+  {% if error and rehacer_abierto %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
+  <form class="pila" method="post" action="{{ pref }}/plan/rehacer">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ seleccion(t("aj.nivel"), "nivel", ns, valor=v.nivel, error=errores.get("nivel")) }}
+    {{ seleccion(t("aj.intensidad"), "intensidad", ints, valor=v.intensidad, error=errores.get("intensidad")) }}
+    {% call opciones(t("aj.tipos_cal"), t("aj.tipos_cal_n"), error=errores.get("calidad")) %}
+      {% for tq in tipos_calidad %}{{ opcion("calidad", tq, valor=tq, marcado=tq in v.calidad) }}{% endfor %}
+    {% endcall %}
+    {{ opcion("caminatas", t("aj.caminatas"), marcado=v.caminatas) }}
+    {{ opcion("variada", t("aj.variada"), marcado=v.variada) }}
+    {{ campo(t("aj.semanas"), "semanas", tipo="number", valor=v.semanas, extra={"min": 4, "max": 52}, requerido=True) }}
+    {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, error=errores.get("inicio")) }}
+    {{ campo(t("aj.z2"), "z2", tipo="number", valor=v.z2, extra={"min": 5, "max": 120}, requerido=True) }}
+    {{ campo(t("aj.larga"), "larga", tipo="number", valor=v.larga, extra={"min": 5, "max": 240}, requerido=True) }}
+    {% if not atleta.sin_plan %}
+    <input type="hidden" name="pierna_form" value="1">
+    {% call opciones(t("aj.pierna"), t("aj.pierna_n")) %}
+      {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave, marcado=clave in v.pierna) }}{% endfor %}
+    {% endcall %}
+    {% endif %}
+    <div class="acciones">{{ boton(t("plan.rehacer_b"), tipo="submit") }} <button class="boton sec" type="button" data-cierra>{{ t("comun.cancelar") }}</button></div>
+  </form>
+  </div>
+</dialog>
 {% if not pref and not atleta.sin_plan %}
 <form class="pila" method="post" action="/ajustes/plan">
   <input type="hidden" name="csrf" value="{{ csrf }}">

@@ -85,7 +85,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             cfg_viejo, cfg_nuevo = normalizar_config(crudo), normalizar_config(nuevo)
             cambios_txt = aw.diferencias(crudo, nuevo)
             if not cambios_txt:
-                return RedirectResponse(f"{pref}/plan/acciones?ok=sin#rehacer", 303)
+                return RedirectResponse(f"{pref}/plan/acciones?ok=sin", 303)
             nuevo_plan, desde = None, None
             if plan_vivo.cambia_plan(cfg_viejo, cfg_nuevo):
                 nuevo_plan, desde = plan_vivo.construir_plan(nuevo, aw.plan_guardado(db, atleta), hoy)
@@ -93,7 +93,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             msg = texto(ex, request.state.t)
             campo = ex.campo if hasattr(ex, "clave") else aw.campo_del_error(str(ex))
             extra = {"errores": {campo: msg}} if campo else {"error": msg}
-            return pagina(request, usuario, db, atleta_id, status=400, v={**aw.valores_form(crudo, atleta), **valores}, **extra)
+            return pagina(request, usuario, db, atleta_id, status=400, rehacer_abierto=True, v={**aw.valores_form(crudo, atleta), **valores}, **extra)
         if nuevo_plan is not None and form.get("confirmo") != "1":
             tt = request.state.t
             frase = tt("conf.frase_1") if desde == 1 else tt("conf.frase_n", desde=desde)
@@ -105,7 +105,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         desc = "Ajustes: cambió " + ", ".join(cambios_txt) + (f"; plan rehecho desde la semana {desde}" if nuevo_plan else "")
         paquete = {"ajustes": nuevo, **({"plan": nuevo_plan} if nuevo_plan else {})}
         cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), desc, paquete)
-        return RedirectResponse(f"{pref}/plan/acciones?ok=rehecho#rehacer", 303)
+        return RedirectResponse(f"{pref}/plan/acciones?ok=rehecho", 303)
     doble("post", "/plan/rehacer", rehacer)
 
     def ver_acciones(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
