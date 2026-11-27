@@ -4,7 +4,7 @@
 **/.env
 data/
 config.yaml
-plan/plan.json
+# plan/plan.json SÍ entra a la imagen (privada) como plan/plan_viejo.json, solo para `web.cli cargar-plan-viejo`
 plan/inbody.json
 site/data.json
 .venv/

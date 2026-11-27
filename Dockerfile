@@ -1,4 +1,4 @@
-# Imagen de la web (Ahí la Llevas): motor + web + sitio. Sin data/, config.yaml, plan personal ni .env (ver .dockerignore).
+# Imagen de la web (Ahí la Llevas): motor + web + sitio. Sin data/, config.yaml ni .env (ver .dockerignore); el plan viejo de Pedro va como plan/plan_viejo.json (solo lo lee `web.cli cargar-plan-viejo`).
 FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
@@ -9,6 +9,7 @@ COPY dashboard/ dashboard/
 COPY i18n/ i18n/
 COPY aprende/ aprende/
 COPY plan/*.py plan/*.yaml plan/plan.example.json plan/
+COPY plan/plan.json plan/plan_viejo.json
 COPY site/ site/
 COPY web/ web/
 COPY scripts/ scripts/
