@@ -14,12 +14,11 @@
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="filas" value="{{ filas|length }}">
   <div class="tabla-scroll"><table class="tabla filas-pasos">
-    <thead><tr><th>#</th><th>{{ t("sesion.tipo") }}</th><th>{{ t("sesion.minutos") }}</th><th>{{ t("sesion.zona") }}</th><th>{{ t("sesion.grupo") }}</th><th>{{ t("sesion.nota") }}</th></tr></thead>
+    <thead><tr><th>#</th><th>{{ t("sesion.minutos") }}</th><th>{{ t("sesion.zona") }}</th><th>{{ t("sesion.grupo") }}</th><th>{{ t("sesion.nota") }}</th></tr></thead>
     <tbody>
     {% for f in filas %}{% set i = loop.index %}
     <tr>
-      <td class="c-n">{{ i }}<input type="hidden" name="opc_{{ i }}" value="{{ '1' if f.opcional else '' }}"></td>
-      <td class="c-tipo" data-l="{{ t('sesion.tipo') }}"><div class="campo"><select name="tipo_{{ i }}" aria-label="{{ t('sesion.a_tipo', i=i) }}"><option value="trote" {{ 'selected' if f.tipo == 'trote' }}>{{ t("sesion.trote") }}</option><option value="caminata" {{ 'selected' if f.tipo == 'caminata' }}>{{ t("sesion.caminata") }}</option></select></div></td>
+      <td class="c-n">{{ i }}<input type="hidden" name="opc_{{ i }}" value="{{ '1' if f.opcional else '' }}"><input type="hidden" name="tipo_{{ i }}" value="{{ f.tipo }}"></td>
       <td class="c-min" data-l="{{ t('sesion.minutos') }}"><div class="campo"><input type="number" name="min_{{ i }}" value="{{ f.min }}" min="1" max="240" aria-label="{{ t('sesion.a_min', i=i) }}"></div></td>
       <td class="c-zona" data-l="{{ t('sesion.zona') }}"><div class="campo"><select name="zona_{{ i }}" aria-label="{{ t('sesion.a_zona', i=i) }}">{% for z in zonas %}<option value="{{ z }}" {{ 'selected' if z == f.zona }}>{{ z }}</option>{% endfor %}</select></div></td>
       <td class="c-grupo" data-l="{{ t('sesion.grupo') }}"><div class="campo"><select name="grupo_{{ i }}" aria-label="{{ t('sesion.a_grupo', i=i) }}"><option value="0">—</option>{% for g in grupos %}<option value="{{ g }}" {{ 'selected' if f.grupo == g }}>{{ g }}</option>{% endfor %}</select></div></td>

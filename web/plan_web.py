@@ -288,7 +288,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         for i in range(1, int(form.get("filas", 0) or 0) + 1):
             if not str(form.get(f"min_{i}", "")).strip():
                 continue   # fila vacía
-            filas.append({"tipo": form.get(f"tipo_{i}", "trote"), "min": form.get(f"min_{i}"), "zona": form.get(f"zona_{i}", "Z2"),
+            filas.append({"tipo": form.get(f"tipo_{i}") or "trote", "min": form.get(f"min_{i}"), "zona": form.get(f"zona_{i}", "Z2"),
                           "grupo": int(form.get(f"grupo_{i}") or 0), "nota": form.get(f"nota_{i}", ""), "opcional": form.get(f"opc_{i}") == "1"})
         for g in range(1, plan_vivo.MAX_GRUPOS + 1):
             try:
