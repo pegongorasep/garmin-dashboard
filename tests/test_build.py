@@ -139,7 +139,7 @@ def test_ultima_corrida_fuera_del_plan_y_sin_corridas():
 
 def test_progreso(salida):
     p = salida["progreso"]
-    assert [c["sesion"] for c in p["corridas"]] == ["Z2 #1", "Z2 #1"]
+    assert [c["sesion"] for c in p["corridas"]] == ["Larga", "Z2 #1"]   # la larga cuenta en cualquier día: 30' ≥ 70 % de la larga de esa semana
     assert p["corridas"][0]["pct_trote"] == 66.7 and p["corridas"][0]["ritmo_trote_s"] == 400
     ultima = p["semanas"][-1]
     assert ultima["inicio"] == "2026-11-02" and ultima["minutos"] == 30 and ultima["min_trote"] == 20
@@ -249,7 +249,7 @@ def test_escenario_real_12_nov():
     cfg = {**CONFIG, "plan_start": "2026-11-09"}
     ahora = datetime(2026, 11, 14, 12, 0, tzinfo=ZoneInfo("America/Merida"))
     out = build.build(build.load_data(), build.load_plan(), cfg, ahora)
-    c = out["plan"]["estado_sesiones"][0]["corrida"]
+    c = next(e["corrida"] for e in out["plan"]["estado_sesiones"] if e["corrida"])   # la corrida del jueves (la larga cuenta en cualquier día)
     assert c["km"] == 4.36 and c["pct_trote"] == 71.4 and c["techo_ok"] is False
 
 
@@ -276,8 +276,8 @@ def test_semanas_hoy_escenario_real():
     assert len(semanas) == 12 + len(previas) and len(previas) <= 13 and semanas[:len(previas)] == previas
     s = semanas[out["semana_hoy_idx"]]
     assert s["n"] == 1 and s["estado"] == "actual" and s["stats"]["corridas"] == 1
-    assert s["sesiones"][0]["estado"] == "hecha" and s["extras"] == []
-    assert s["dias"][3]["corrida"]["sesion_nombre"] == "Z2 #1"
+    assert [e["estado"] for e in s["sesiones"]].count("hecha") == 1 and s["extras"] == []
+    assert s["dias"][3]["corrida"]["sesion_nombre"] in ("Z2 #1", "Larga")
     futura = semanas[out["semana_hoy_idx"] + 1]
     assert futura["estado"] == "futura" and futura["stats"]["corridas"] == 0
     assert {e["estado"] for e in futura["sesiones"]} == {"pendiente"}
@@ -847,12 +847,11 @@ def test_ayuda_en_el_json_y_en_la_lista_blanca(salida):
     assert validar.problemas(salida) == []
 
 
-def test_semana_actual_marca_dias_planeados_sin_hacer():
+def test_semana_actual_ya_no_marca_dias_y_dice_que_falta():
     data = {**fixture(), "activities": []}
     s = _semana(data, date(2026, 10, 28), date(2026, 10, 26))   # miércoles
-    marcados = [d["fecha"] for d in s["dias"] if d.get("planeado")]
-    assert len(marcados) == len(s["sesiones"]) and all(f >= "2026-10-28" for f in marcados)
-    assert date.fromisoformat(marcados[-1]).weekday() >= 5   # la Larga cae en fin de semana
+    assert not any(d.get("planeado") or "plan_ses" in d for d in s["dias"])
+    assert s["plan"]["faltan"] == "Te faltan: 2 fáciles y la larga"
 
 
 def test_semana_libre_solo_sin_plan_promedios_racha_y_sin_claves_prohibidas():

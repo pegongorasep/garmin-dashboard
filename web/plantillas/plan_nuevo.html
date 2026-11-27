@@ -52,7 +52,6 @@
     {{ seleccion(t("pn.km"), "km", opciones_km, v.km, error=errores.get("km")) }}
     {{ campo(t("pn.fecha"), "fecha", tipo="date", valor=v.fecha, error=errores.get("fecha")) }}
   {% endif %}
-  {% if "dia_larga" in campos %}{{ seleccion(t("pn.dia_larga"), "dia_larga", opciones_dia, v.dia_larga) }}{% endif %}
   {% if "tiempo" in campos %}{{ campo(t("pn.tiempo"), "tiempo", valor=v.tiempo, opcional=t("comun.opcional"), corto=True, ayuda=t("pn.tiempo_a"), error=errores.get("tiempo"), extra={"placeholder": "52:30"}) }}{% endif %}
   {{ campo(t("pn.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, ayuda=t("pn.inicio_a"), error=errores.get("inicio")) }}
   {{ campo(t("pn.edad"), "edad", tipo="number", valor=v.edad, corto=True, ayuda=t("pn.edad_a"), error=errores.get("edad"), extra={"min": "10", "max": "99"}) }}

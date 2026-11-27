@@ -68,9 +68,9 @@ def test_preguntas_segun_el_nivel(web_ctx):
     uid, cl = nueva(web_ctx)
     emp = preguntas(cl, "empezando").text
     assert 'name="dias"' in emp and 'name="pierna"' in emp and 'name="dolor"' in emp and 'name="inicio"' in emp
-    assert 'name="objetivo"' not in emp and 'name="km"' not in emp and 'name="tiempo"' not in emp and 'name="dia_larga"' not in emp
+    assert 'name="objetivo"' not in emp and 'name="km"' not in emp and 'name="tiempo"' not in emp
     base = preguntas(cl, "base").text
-    assert 'name="objetivo"' in base and 'value="mas_tiempo"' in base and 'name="km"' in base and 'name="dia_larga"' in base
+    assert 'name="objetivo"' in base and 'value="mas_tiempo"' in base and 'name="km"' in base
     assert 'value="velocidad"' not in base and 'name="tiempo"' not in base
     cor = preguntas(cl, "corredor").text
     assert 'value="velocidad"' in cor and 'name="tiempo"' in cor and 'value="mas_tiempo"' not in cor

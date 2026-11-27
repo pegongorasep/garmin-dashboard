@@ -331,6 +331,7 @@ function tarjetaEstaSemana(d, s) {
   const p = s.plan;
   if (p) {
     if (p.ajuste_texto) c.append(h("p", { class: "nota" }, p.ajuste_texto));
+    if (p.faltan) c.append(h("p", { class: "nota" }, p.faltan));
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, T("sitio.plan.futura", { t: p.total, m: fmt(p.plan_min, 0) })));
     else {
       const min = st.minutos || 0, pct = Math.round((min / p.plan_min) * 100);
@@ -348,7 +349,6 @@ function tarjetaEstaSemana(d, s) {
 const diaTexto = (x) => {
   const partes = [];
   if (x.corrida) partes.push(T("sitio.dia.de", { k: T(x.corrida.carrera ? "sitio.dia.carrera" : "sitio.dia.corrida"), m: fmt(x.corrida.minutos, 0), s: x.corrida.sesion_nombre, e: ["hecha", "incompleta", "extra"].includes(x.corrida.estado) ? T(`sitio.dia.${x.corrida.estado}`) : x.corrida.estado }));
-  if (x.planeado && !x.corrida) partes.push(T("sitio.dia.planeada"));
   if (x.corridas_n > 1) partes.push(T("sitio.dia.corridas", { n: x.corridas_n }));
   for (const cf of x.otras || []) {
     partes.push(`${categoria(cf.cat).nombre}${cf.minutos ? ` ${T("sitio.min_n", { n: fmt(cf.minutos, 0) })}` : ""}${cf.esfuerzo != null ? T("sitio.dia.esfuerzo", { v: fmt(cf.esfuerzo, 1) }) : ""}${cf.rpe != null ? T("sitio.dia.rpe", { v: fmt(cf.rpe, 0) }) : ""}`);
@@ -425,12 +425,9 @@ function guardarDetalleAbierto(v) {
   try { localStorage.setItem("detalle_dia_abierto", v ? "1" : "0"); } catch (e) { /* sin almacenamiento: queda en memoria */ }
 }
 
-/** Texto del día sin actividad: [título, línea]. Los textos vienen de Python (`plan_ses`: nombre de la sesión, "" = descanso, ausente = sin plan). */
-function vacioDia(x, hoyIso) {
-  const futuro = x.fecha >= hoyIso, ses = x.plan_ses;
-  if (ses === undefined || ses === null) return [T("sitio.dia.sin_act"), null];
-  if (ses) return futuro ? [T("sitio.dia.toca", { s: ses }), null] : [T("sitio.dia.sin_act"), T("sitio.dia.plan_era", { s: ses })];
-  return [T("sitio.dia.vacio_descanso"), futuro ? T("sitio.dia.toca_descanso") : null];   // días pasados: el plan no fija día, no se puede decir qué tocaba
+/** Día sin actividad: el plan es un orden de sesiones, no días fijos, así que el día solo dice que no hubo actividad (lo pendiente va en «Te faltan»). */
+function vacioDia() {
+  return [T("sitio.dia.sin_act"), null];
 }
 
 /** Tarjeta del día tocado, de alto fijo: cabecera (fecha + «+N más» a la derecha) y una sola ranura (`.dia-ranura`) para el caso normal:
@@ -441,7 +438,7 @@ function tarjetaDia(x, hoyIso) {
   const caja = h("div", { class: "dia-filas" });
   const cab = h("div", { class: "dia-cab" }, h("p", { class: "prog-t" }, fechaCorta(x.fecha)));
   if (!acts.length) {
-    const [t, sub] = vacioDia(x, hoyIso);
+    const [t, sub] = vacioDia();
     caja.append(ranura(h("div", { class: "act-fila" }, h("span", { class: "act-t" }, t), sub ? h("span", { class: "nota" }, sub) : null)));
   } else if (acts.length === 1) caja.append(ranura(filaActividad(acts[0])));
   else {

@@ -455,10 +455,6 @@ def en_pausa(day: date, config: dict) -> bool:
     return 0 <= i < len(sec) and sec[i] is None
 
 
-def es_fin_de_semana(fecha) -> bool:
-    return date.fromisoformat(fecha).weekday() >= 5
-
-
 def _ref_minutos(sesion: dict, luz) -> int:
     """Minutos de referencia: los de la versión suave si ese día fue amarillo/rojo."""
     return sesion["easy"]["minutes"] if luz in ("amarillo", "rojo") else sesion["minutes"]
@@ -477,10 +473,9 @@ def _estado_sesion(sesion: dict, corrida, config: dict) -> dict:
 def assign_sessions(week: dict, runs: list, config: dict) -> list:
     """Asigna las corridas de la semana a sus sesiones (sin mirar nombres).
 
-    runs: [{"fecha", "minutos", "luz"}] en orden cronológico. Una corrida en sáb/dom con
-    minutos + 0.5 ≥ done_ratio × larga → Larga (la más larga si hay varias); la prueba de la última semana se asigna
-    igual pero en cualquier día. Las demás, en
-    orden, llenan las Z2; las sobrantes son "extra" y no se asignan. `luz` "sin_datos" cuenta
+    runs: [{"fecha", "minutos", "luz"}] en orden cronológico. La semana es un orden de sesiones, no días fijos: la corrida
+    más larga con minutos + 0.5 ≥ done_ratio × larga (en CUALQUIER día) → Larga (la prueba de la última semana igual).
+    La calidad se reconoce por su Z3+; las demás, en orden, llenan las fáciles; las sobrantes son "extra" y no se asignan. `luz` "sin_datos" cuenta
     como verde. Devuelve un dict por sesión, en el orden de la semana.
     """
     sesiones = week["sessions"]
@@ -488,8 +483,7 @@ def assign_sessions(week: dict, runs: list, config: dict) -> list:
     calidad = next((s for s in sesiones if s.get("tipo") == "calidad"), None)
     elegida = None
     if larga:
-        candidatas = [r for r in runs if (es_fin_de_semana(r["fecha"]) or larga["tipo"] == "prueba")
-                      and r["minutos"] + 0.5 >= config["done_ratio"] * larga["minutes"]]
+        candidatas = [r for r in runs if r["minutos"] + 0.5 >= config["done_ratio"] * larga["minutes"]]
         elegida = max(candidatas, key=lambda r: r["minutos"], default=None)
     resto = [r for r in runs if r is not elegida]
     # La calidad es la primera corrida (no Larga) con >= 50 % de los minutos objetivo en Z3 o más.
@@ -519,27 +513,34 @@ def _unir_avisos(*avisos):
 
 
 def _elegir_pendiente(day: date, status: list):
-    """(sesión pendiente, aviso). Sáb/dom: la Larga primero; entre semana: una Z2, y la Larga solo si no hay."""
-    pendientes = [s for s in status if s["estado"] == "pendiente"]
-    larga = next((s for s in pendientes if s["tipo"] == "larga"), None)
-    z2 = next((s for s in pendientes if s["tipo"] != "larga"), None)
-    if day.weekday() >= 5:
-        return (larga or z2), None
-    if z2:
-        return z2, None
-    return larga, (tt("motor.aviso.larga") if larga else None)
+    """(sesión pendiente, aviso). La semana es un orden, no días fijos: toca la primera sesión pendiente del orden del plan."""
+    return next((s for s in status if s["estado"] == "pendiente"), None), None
 
 
-def aviso_pierna(day: date, sesion: dict, activities: list, config: dict):
-    """Si ayer fue día de pierna (y Garmin registró una actividad) y hoy toca la Larga o la calidad, avisa."""
-    ayer = day - timedelta(days=1)
-    if ayer.weekday() not in config.get("dias_pierna", []) or sesion.get("tipo") not in ("larga", "calidad"):
+def aviso_intenso_ayer(day: date, sesion: dict, activities: list, config: dict):
+    """Si ayer hubo una actividad intensa que no fue correr (HIIT, gym, pierna…), y hoy tocaría la larga o la calidad,
+    sugiere (solo texto) hacer hoy una fácil y dejarla para otro día. Sale de las categorías de actividad ya clasificadas."""
+    if sesion.get("tipo") not in ("larga", "calidad"):
         return None
-    ids = {c["id"] for c in config.get("categorias", [])}
-    if not any(classify(a, config) in ids for a in activities if day_of(a) == ayer):   # solo lo que Garmin registró
+    ayer = day - timedelta(days=1)
+    cats = {c["id"]: c for c in config.get("categorias", [])}
+    pierna = ayer.weekday() in config.get("dias_pierna", [])   # día de pierna: cualquier categoría registrada cuenta como intensa
+    if not any((c := classify(a, config)) in cats and (cats[c].get("intensa") or pierna) for a in activities if day_of(a) == ayer):
         return None
     resto = tt("motor.aviso.resto_larga") if sesion["tipo"] == "larga" else tt("motor.aviso.resto_calidad")
     return tt("motor.aviso.pierna", resto=resto)
+
+
+def faltan_texto(status: list) -> str:
+    """«Te faltan: 1 fácil y la larga» (en orden del plan). "" si no falta ninguna."""
+    pend = [s for s in status if s["estado"] == "pendiente"]
+    facil = sum(1 for s in pend if s["tipo"] not in ("larga", "calidad", "prueba"))
+    partes = ([tt("motor.faltan.facil_uno") if facil == 1 else tt("motor.faltan.facil_n", n=facil)] if facil else []) + [tt("motor.faltan.calidad")] * any(s["tipo"] == "calidad" for s in pend) \
+        + [tt("motor.faltan.larga")] * any(s["tipo"] in ("larga", "prueba") for s in pend)
+    if not partes:
+        return ""
+    lista = partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " " + tt("motor.faltan.y") + " " + partes[-1]
+    return tt("motor.faltan.frase", lista=lista)
 
 
 def today_card(day: date, light: dict, status: list, activities: list, config: dict) -> dict:
@@ -565,7 +566,7 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
         return {"tipo": "completa", "texto": tt("motor.hoy.completa"), **base}
     sin_datos = light["color"] == "sin_datos"
     version = "normal" if sin_datos else {"verde": "normal", "amarillo": "suave", "rojo": "descanso"}[light["color"]]
-    aviso = _unir_avisos(aviso, aviso_larga, aviso_pierna(day, sesion, activities, config),
+    aviso = _unir_avisos(aviso, aviso_larga, aviso_intenso_ayer(day, sesion, activities, config),
                          tt("motor.aviso.sin_datos") if sin_datos else None)
     return {"tipo": "sesion", "texto": tt("motor.hoy.siguiente", version=tt(f"motor.version.{version}")),
             "version": version, "sesion_id": sesion["id"], "aviso": aviso, "proxima_id": None}

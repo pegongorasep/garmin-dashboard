@@ -11,12 +11,10 @@ Qué NO hace: no calcula zonas de FC (los pasos dicen Z1/Z2/…; el sitio las tr
 cuánto hizo la persona (eso es `ajustar_semana`, que cada lunes topa la semana a lo que de verdad corrió).
 """
 import copy
-import itertools
 import math
 import re
 import sys
 from datetime import date, timedelta
-from functools import lru_cache
 from pathlib import Path
 
 RAIZ = Path(__file__).parent.parent
@@ -149,7 +147,7 @@ def normalizar_entrada(entrada: dict) -> dict:
         "nivel": nivel, "dias": int(e.get("dias") or u["dias_defecto"]), "dias_intensos": list(e.get("dias_intensos", ev.get("dias_intensos", []))),
         "meta": meta, "objetivo": objetivo, "inicio": inicio, "evidencia": ev, "permitir_mas": bool(e.get("permitir_mas", False)),
         "zonas": e.get("zonas"), "edad": int(e.get("edad") or 35), "semanas": int(e.get("semanas") or u["semanas_defecto"]),
-        "inicio_minutos": e.get("inicio_minutos"), "dia_larga": e.get("dia_larga"),
+        "inicio_minutos": e.get("inicio_minutos"),
     }
 
 
@@ -382,52 +380,6 @@ def sesion_aceleraciones(id_: str, nombre: str, minutos: int) -> dict:
     return gen_plan.sesion(id_, "z2", nombre, minutos, pasos, nota=NOTA_ACELERACIONES)
 
 
-# ───────────────────────────── días de la semana ─────────────────────────────
-
-@lru_cache(maxsize=None)
-def _asignar(roles: tuple, intensos: tuple, dia_larga, sin_seguidos: bool, excluir: tuple) -> tuple:
-    """Día (0 = lunes) de cada sesión (en el orden de `roles`: "larga", "calidad", "facil"). Se prueban todas las combinaciones y gana la de menor
-    costo: larga y calidad nunca el día después de un día intenso (§3.2), ni juntas; la larga de preferencia en fin de semana (o en `dia_larga`);
-    Empezando nunca dos días seguidos; las fáciles pueden caer en día intenso (separadas ≥ 6 h)."""
-    n = len(roles)
-    libres = [d for d in range(7) if d not in excluir]
-    mejor = None
-    for dias in itertools.combinations(libres, n):
-        especiales = [i for i, r in enumerate(roles) if r != "facil"]
-        for perm in itertools.permutations(dias, len(especiales)):
-            asig = {i: d for i, d in zip(especiales, perm)}
-            sobran = [d for d in dias if d not in perm]
-            for i, r in enumerate(roles):
-                if r == "facil":
-                    asig[i] = sobran.pop(0)
-            costo = 0.0
-            for i, r in enumerate(roles):
-                d = asig[i]
-                if r in ("larga", "calidad"):
-                    costo += 100 * ((d - 1) % 7 in intensos) + 30 * (d in intensos)
-                if r == "larga":
-                    costo += (-10 if d >= 5 else 0) + (20 if dia_larga is not None and d != dia_larga else 0)
-                if r == "facil":
-                    costo += 5 * (d in intensos)
-            dl = [asig[i] for i, r in enumerate(roles) if r == "larga"]
-            dq = [asig[i] for i, r in enumerate(roles) if r == "calidad"]
-            if dl and dq and (abs(dl[0] - dq[0]) == 1 or abs(dl[0] - dq[0]) == 6):
-                costo += 60
-            orden = sorted(dias)
-            for a, b in zip(orden, orden[1:] + [orden[0] + 7]):
-                if b - a == 1:
-                    costo += 80 if sin_seguidos else 10
-                costo += 0.5 * (b - a - 7 / n) ** 2
-            clave = (costo, tuple(asig[i] for i in range(n)))
-            if mejor is None or clave < mejor:
-                mejor = clave
-    return mejor[1] if mejor else tuple(range(n))
-
-
-def dias_de(roles: list, e: dict, excluir=()) -> list:
-    return list(_asignar(tuple(roles), tuple(e["dias_intensos"]), e["dia_larga"], e["nivel"] == "empezando", tuple(sorted(excluir))))
-
-
 # ───────────────────────────── foco de la semana y verificación ─────────────────────────────
 
 def _escalon_de_pasos(pasos: list):
@@ -477,7 +429,6 @@ def verificar(plan: dict) -> None:
         ses = w["sessions"]
         assert ses, (w["n"], "semana sin sesiones")
         assert len({s["id"] for s in ses}) == len(ses), (w["n"], "ids repetidos")
-        assert len({s["dia"] for s in ses}) == len(ses), (w["n"], "días repetidos")
         assert all(s["minutes"] >= 1 for s in ses), (w["n"], "sesión vacía")
         for s in ses:
             if empezando:
@@ -558,7 +509,7 @@ def porques_de(e: dict, inicio: int, ciclo: int, calidad: bool, carrera: dict | 
 def generar_v6(entrada: dict) -> dict:
     """Plan v6. `entrada`: nivel (empezando|base|corredor), dias (2–5), dias_intensos (lunes = 0), meta (None|"ninguna"|"base"|"velocidad"|
     {"km", "fecha" | "semanas_hasta"}), objetivo (base|velocidad|carrera; define la calidad), inicio (lunes ISO), evidencia (la de nivel.py),
-    inicio_minutos (semana 1), permitir_mas, zonas (no se usa: las zonas las pone el sitio con las de Garmin), edad, semanas (sin carrera), dia_larga."""
+    inicio_minutos (semana 1), permitir_mas, zonas (no se usa: las zonas las pone el sitio con las de Garmin), edad, semanas (sin carrera)."""
     e = normalizar_entrada(entrada)
     u, ev, nivel = UMBRALES, e["evidencia"], e["nivel"]
     hasta = _semanas_hasta_carrera(e)
@@ -652,9 +603,6 @@ def _armar_semana(n, kind, minutos, escalon, e, calidad, ciclo, intensos_altos, 
     if larga is not None:
         sesiones.append(_sesion("larga", "larga", "Larga", larga, pasos_facil(larga, escalon, True), escalon))
         roles.append("larga")
-    excluir = (carrera["dia"], (carrera["dia"] - 1) % 7) if racing and carrera and carrera["dia"] is not None else ()
-    for s, d in zip(sesiones, dias_de(roles, e, excluir)):
-        s["dia"] = d
     return sesiones
 
 
@@ -669,12 +617,12 @@ def _reescalar(s: dict, minutos: int, usados: set) -> dict:
     if s["tipo"] == "calidad":
         nueva = sesion_calidad(s["calidad_tipo"], minutos, s["objetivo"]["minutos"], s["id"])
         if nueva:
-            return {**nueva, "dia": s.get("dia")}
-        return {**_sesion(_id_libre(usados), "z2", "Z2", minutos, pasos_continuo(minutos, False)), "dia": s.get("dia")}
+            return nueva
+        return _sesion(_id_libre(usados), "z2", "Z2", minutos, pasos_continuo(minutos, False))
     esc = _escalon_de_pasos(s["steps"])
     if s.get("nota") == NOTA_ACELERACIONES and minutos >= 5:
-        return {**sesion_aceleraciones(s["id"], s["name"], minutos), "dia": s.get("dia")}
-    return {**_sesion(s["id"], s["tipo"], s["name"], minutos, pasos_facil(minutos, esc, s["tipo"] == "larga"), esc), "dia": s.get("dia")}
+        return sesion_aceleraciones(s["id"], s["name"], minutos)
+    return _sesion(s["id"], s["tipo"], s["name"], minutos, pasos_facil(minutos, esc, s["tipo"] == "larga"), esc)
 
 
 def pico_ajustado(semanas: list, n_carrera: int) -> int:

@@ -6,7 +6,7 @@ dónde falla un motor y comparar uno contra otro.
 
 Interfaz de motor: `motor(nombre) -> callable(persona) -> plan`. El plan es el de `gen_plan.generar`
 ({"start", "weeks": [{n, kind, focus, sessions: [{name, tipo, minutes, steps}]}]}); una sesión puede traer además
-`dia` (0 = lunes … 6 = domingo): sin él, la regla `post_intenso` no aplica. Hoy solo existe "actual" (gen_plan.generar).
+`dia` (0 = lunes … 6 = domingo): sin él, la regla `post_intenso` no aplica (los planes v6 ya no traen día: el plan es un orden de sesiones, y lo del día intenso de ayer es un texto en Hoy, no una regla del plan). Hoy solo existe "actual" (gen_plan.generar).
 
 Cómo se simula (simple a propósito):
 - Semana n: hecho = minutos planeados × adherencia de esa semana. Cada sesión se escala por igual (redondeo a minuto);
@@ -527,7 +527,7 @@ REGLAS = [
     ("inicio_real", "La semana 1 no pasa de 110 % de lo que ya corría (o de la escalera de inicio sin historial).", r_inicio_real),
     ("sin_espiral", "El objetivo semanal del plan v6 no baja del piso del nivel ni cae más de 30 % en una semana (salvo adherencia < 50 %).", r_sin_espiral),
     ("taper", "Con carrera, la semana de la carrera baja 30–50 % de minutos.", r_taper),
-    ("post_intenso", "Ni larga ni calidad el día después de un día intenso (solo si el plan pone días).", r_post_intenso),
+    ("post_intenso", "Ni larga ni calidad el día después de un día intenso (no aplica a planes v6: no fijan días).", r_post_intenso),
 ]
 CLAVES = [k for k, _, _ in REGLAS]
 

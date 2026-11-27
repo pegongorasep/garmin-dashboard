@@ -232,6 +232,11 @@ def test_assign_semana_completa():
     assert r[2]["fecha"] == DOM and r[2]["minutos"] == 41 and r[2]["name"] == "Larga"
 
 
+def test_assign_larga_cualquier_dia_de_la_semana():
+    r = estados([corr(MIE, 20), corr(VIE, 41)])      # el viernes largo es la Larga: no hace falta fin de semana
+    assert r == [("z2a", "hecha", MIE), ("z2b", "pendiente", None), ("larga", "hecha", VIE)]
+
+
 def test_assign_sabado_corto_no_es_larga():
     r = estados([corr(SAB, 25)])          # 25 + 0.5 < 28
     assert r[0] == ("z2a", "hecha", SAB) and r[2] == ("larga", "pendiente", None)
@@ -301,14 +306,13 @@ def test_today_card_ramas():
     assert m.today_card(mie, VERDE, [], [], CFG)["tipo"] == "sin_plan"
     rojo2 = {"color": "rojo", "repetir_semana": True}
     assert m.today_card(mie, rojo2, pend, [], CFG)["aviso"] == "Repetir la semana"
-    # fin de semana: la Larga primero; si ya no está pendiente, la primera Z2
-    assert m.today_card(dom, VERDE, hecha, [], CFG)["sesion_id"] == "larga"
+    # sin días fijos: toca la primera pendiente del orden, sea el día que sea (la larga también entre semana)
+    assert m.today_card(dom, VERDE, hecha, [], CFG)["sesion_id"] == "z2b"
     solo_z2 = [ses("z2a", "z2"), ses("z2b", "z2", "hecha"), ses("larga", "larga", "hecha")]
     assert m.today_card(dom, VERDE, solo_z2, [], CFG)["sesion_id"] == "z2a"
-    # entre semana, si solo falta la Larga: aviso
     solo_larga = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "incompleta"), ses("larga", "larga")]
     t = m.today_card(vie, VERDE, solo_larga, [], CFG)
-    assert t["tipo"] == "sesion" and t["sesion_id"] == "larga" and "sábado o domingo" in t["aviso"]
+    assert t["tipo"] == "sesion" and t["sesion_id"] == "larga" and t["aviso"] is None
     # incompleta no es pendiente
     inc = [ses("z2a", "z2", "incompleta"), ses("z2b", "z2", "hecha"), ses("larga", "larga", "hecha")]
     assert m.today_card(vie, VERDE, inc, [], CFG)["tipo"] == "completa"
@@ -571,19 +575,29 @@ def test_today_card_otra_con_nombre_de_categoria():
     assert t["tipo"] == "sesion"
 
 
-def test_aviso_dia_de_pierna():
-    mar = date(2026, 11, 17)   # ayer lunes = pierna
+def test_aviso_intenso_ayer_solo_texto():
+    mar = date(2026, 11, 17)
     solo_larga = [ses("z2a", "z2", "hecha"), ses("z2b", "z2", "hecha"), ses("larga", "larga")]
     ayer = [act(1, "2026-11-16", "strength_training")]
     t = m.today_card(mar, VERDE, solo_larga, ayer, CFG3)
-    assert t["sesion_id"] == "larga" and "Ayer pierna: hoy mejor la Z2 y deja la Larga para mañana" in t["aviso"]
+    assert t["sesion_id"] == "larga" and "hoy mejor una fácil; deja la larga para otro día" in t["aviso"]
     cal = [ses("z2a", "z2", "hecha"), ses("cal", "calidad")]
-    assert "deja la calidad para mañana" in m.today_card(mar, VERDE, cal, ayer, CFG3)["aviso"]
-    # Garmin no registró nada ayer: sin aviso (solo cuenta lo registrado)
-    assert "Ayer pierna" not in m.today_card(mar, VERDE, solo_larga, [], CFG3)["aviso"]
-    # una Z2 pendiente no lleva aviso, y otro día tampoco
-    assert m.today_card(mar, VERDE, [ses("z2a", "z2")], [], CFG3)["aviso"] is None
-    assert m.today_card(date(2026, 11, 19), VERDE, solo_larga, [], CFG3)["aviso"] == "La larga va el sábado o domingo"
+    assert "deja la calidad para otro día" in m.today_card(mar, VERDE, cal, ayer, CFG3)["aviso"]
+    # cualquier día de la semana, mientras Garmin haya registrado algo intenso (HIIT) ayer
+    assert "una fácil" in m.today_card(date(2026, 11, 19), VERDE, solo_larga, [act(1, "2026-11-18", "hiit")], CFG3)["aviso"]
+    # fuerza no intensa en un día que no es de pierna: sin aviso
+    assert m.today_card(date(2026, 11, 19), VERDE, solo_larga, [act(1, "2026-11-18", "strength_training")], CFG3)["aviso"] is None
+    # Garmin no registró nada ayer: sin aviso
+    assert m.today_card(mar, VERDE, solo_larga, [], CFG3)["aviso"] is None
+    # una fácil pendiente no lleva aviso
+    assert m.today_card(mar, VERDE, [ses("z2a", "z2")], ayer, CFG3)["aviso"] is None
+
+
+def test_faltan_texto():
+    assert m.faltan_texto([ses("a", "z2"), ses("l", "larga")]) == "Te faltan: 1 fácil y la larga"
+    assert m.faltan_texto([ses("a", "z2"), ses("b", "z2"), ses("c", "calidad"), ses("l", "larga")]) == "Te faltan: 2 fáciles, la calidad y la larga"
+    assert m.faltan_texto([ses("a", "z2", "hecha"), ses("l", "larga")]) == "Te faltan: la larga"
+    assert m.faltan_texto([ses("a", "z2", "hecha")]) == ""
 
 
 def test_max_hr_progress_sin_correa_configurada():

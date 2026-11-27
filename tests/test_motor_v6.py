@@ -81,14 +81,14 @@ def test_sin_ajuste_el_plan_v6_no_cumple_sube_real_con_adherencia_baja():
 
 # --- el plan: esquema y forma ---
 
-def test_esquema_como_gen_plan_mas_meta_y_dia():
+def test_esquema_como_gen_plan_mas_meta_sin_dia():
     plan = v6.generar_v6(entrada())
     assert set(plan) == {"start", "weeks", "meta"} and plan["meta"]["motor"] == "v6" and v6.es_v6(plan)
     assert not v6.es_v6({"start": LUNES, "weeks": []})
     for w in plan["weeks"]:
         assert {"n", "block", "kind", "focus", "sessions"} <= set(w)
         for s in w["sessions"]:
-            assert {"id", "tipo", "name", "minutes", "steps", "easy", "dia"} <= set(s)
+            assert {"id", "tipo", "name", "minutes", "steps", "easy"} <= set(s) and "dia" not in s
             assert gen_plan.suma(s["steps"]) == s["minutes"] and gen_plan.suma(s["easy"]["steps"]) == s["easy"]["minutes"]
     gen_plan.verificar(plan, {"intensidad": None})
     v6.verificar(plan)
@@ -116,10 +116,10 @@ def test_base_sin_calidad_max_4_dias():
     assert plan["meta"]["dias"] == 4 and not plan["meta"]["calidad"]
 
 
-def test_dias_unicos_y_ids_unicos():
+def test_ids_unicos_y_sin_dias_fijos():
     for dias in (2, 3, 4, 5):
         for w in v6.generar_v6(entrada(nivel="corredor", dias=dias, inicio_minutos=200))["weeks"]:
-            assert len({s["dia"] for s in w["sessions"]}) == len(w["sessions"]) and len({s["id"] for s in w["sessions"]}) == len(w["sessions"])
+            assert len({s["id"] for s in w["sessions"]}) == len(w["sessions"]) and all("dia" not in s for s in w["sessions"])
 
 
 # --- reglas sueltas ---
@@ -215,25 +215,11 @@ def test_tope_de_trabajo_en_z3_y_un_renglon_menos_con_intensos():
     assert len(tipos(muchos)) <= len(tipos(pocos))                                    # con 3 intensos la calidad llega después
 
 
-def test_sin_calidad_ni_larga_el_dia_despues_de_un_dia_intenso():
-    intensos = [0, 1, 3, 4]
-    plan = v6.generar_v6(entrada(dias_intensos=intensos, evidencia={**EV_BASE, "semanas_consistentes": 8}, edad=40))
+def test_la_semana_es_un_orden_la_larga_al_final():
+    plan = v6.generar_v6(entrada(dias_intensos=[0, 1, 3, 4], evidencia={**EV_BASE, "semanas_consistentes": 8}, edad=40))
     for w in plan["weeks"]:
-        for s in w["sessions"]:
-            if s["tipo"] in ("larga", "calidad"):
-                assert (s["dia"] - 1) % 7 not in intensos, (w["n"], s["id"], s["dia"])
-
-
-def test_empezando_nunca_dos_dias_seguidos():
-    plan = v6.generar_v6(entrada(nivel="empezando", inicio_minutos=60, evidencia={"trote_continuo_min": 0}))
-    for w in plan["weeks"]:
-        dias = sorted(s["dia"] for s in w["sessions"])
-        assert all(b - a > 1 for a, b in zip(dias, dias[1:])) and (dias[0] + 7 - dias[-1] > 1)
-
-
-def test_dia_preferido_de_la_larga():
-    plan = v6.generar_v6(entrada(dia_larga=5))
-    assert {s["dia"] for w in plan["weeks"] for s in w["sessions"] if s["tipo"] == "larga"} == {5}
+        tipos_ = [s["tipo"] for s in w["sessions"]]
+        assert all("dia" not in s for s in w["sessions"]) and ("larga" not in tipos_ or tipos_[-1] == "larga"), (w["n"], tipos_)
 
 
 # --- carreras ---
@@ -249,11 +235,9 @@ def test_carrera_10k_taper_y_semana_de_carrera():
     assert 0.40 * pico <= minutos(ult) <= 0.70 * pico
 
 
-def test_carrera_por_fecha_y_dia_libre():
+def test_carrera_por_fecha():
     plan = v6.generar_v6(entrada(meta={"km": 5, "fecha": "2027-01-10"}))      # domingo de la semana 6
-    assert len(plan["weeks"]) == 6
-    sem = plan["weeks"][-1]
-    assert all(s["dia"] not in (6, 5) for s in sem["sessions"])              # ni el día de la carrera ni el anterior
+    assert len(plan["weeks"]) == 6 and plan["weeks"][-1]["evento"] == "carrera"
 
 
 @pytest.mark.parametrize("km,esperado", [(5, 1), (10, 2), (21, 2), (42, 3)])

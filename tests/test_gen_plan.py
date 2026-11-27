@@ -153,7 +153,7 @@ def test_assign_calidad_primera_corrida_con_50_pct_en_z3_o_mas():
     est = {e["id"]: e for e in m.assign_sessions(semana, runs, BASE)}
     assert est["calidad"]["fecha"] == "2026-11-12" and est["z2a"]["fecha"] == "2026-11-10"
     assert est["larga"]["fecha"] == "2026-11-14"
-    sin = {e["id"]: e for e in m.assign_sessions(semana, runs[:1], BASE)}
+    sin = {e["id"]: e for e in m.assign_sessions(semana, [corrida("2026-11-10", 15, (5, 10, 0, 0, 0))], BASE)}
     assert sin["calidad"]["estado"] == "pendiente" and sin["z2a"]["fecha"] == "2026-11-10"
 
 

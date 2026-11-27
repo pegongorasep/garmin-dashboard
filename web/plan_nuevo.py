@@ -43,7 +43,7 @@ def campos_de(nivel: str, tiene_ajustes: bool) -> list[str]:
     """Qué preguntas se hacen (y se pintan) en el paso 2 de ese nivel. Lo que no está aquí no existe en la página."""
     campos = ["dias", "pierna", "dolor"]
     if nivel in ("base", "corredor"):
-        campos += ["objetivo", "carrera", "dia_larga"]
+        campos += ["objetivo", "carrera"]
     if nivel == "corredor":
         campos += ["tiempo"]
     campos += ["inicio", "edad"]
@@ -55,7 +55,7 @@ def campos_de(nivel: str, tiene_ajustes: bool) -> list[str]:
 def valores_iniciales(nivel: str, ev: dict, crudo: dict | None, hoy: date) -> dict:
     perfil = (crudo or {}).get("perfil") or {}
     return {"nivel": nivel, "dias": "3", "pierna": [DIAS[d][0] for d in ev.get("dias_intensos", [])], "dolor": "no",
-            "objetivo": OBJETIVOS[nivel][0] if OBJETIVOS[nivel] else "", "km": "10", "fecha": "", "dia_larga": "", "tiempo": "",
+            "objetivo": OBJETIVOS[nivel][0] if OBJETIVOS[nivel] else "", "km": "10", "fecha": "", "tiempo": "",
             "inicio": proximo_lunes(hoy).isoformat(), "edad": str(perfil.get("edad") or ""), "zona": perfil.get("zona_horaria") or "America/Merida",
             "fc_max": str(perfil.get("fc_max") or "")}
 
@@ -86,8 +86,6 @@ def leer_respuestas(form, nivel: str, campos: list[str], hoy: date) -> dict:
     objetivo = str(form.get("objetivo", "")).strip()
     v["objetivo"] = objetivo if objetivo in OBJETIVOS[nivel] else (OBJETIVOS[nivel][0] if OBJETIVOS[nivel] else "")
     v["km"], v["fecha"] = str(form.get("km", "10")), str(form.get("fecha", "")).strip()
-    dl = str(form.get("dia_larga", "")).strip()
-    v["dia_larga"] = dl if dl in {str(i) for i in range(7)} else ""
     v["tiempo"] = str(form.get("tiempo", "")).strip()
     v["inicio"] = str(form.get("inicio", "")).strip()
     v["edad"], v["zona"], v["fc_max"] = (str(form.get(k, "")).strip() for k in ("edad", "zona", "fc_max"))
@@ -126,8 +124,7 @@ def entrada_v6(v: dict, nivel: str, ev: dict, inicio_minutos: int) -> dict:
         meta = "base"
     return {"nivel": nivel, "dias": int(v["dias"]), "dias_intensos": [i for i, (k, _) in enumerate(DIAS) if k in v["pierna"]],
             "meta": meta, "inicio": lunes(date.fromisoformat(v["inicio"])).isoformat(), "evidencia": ev,
-            "inicio_minutos": inicio_minutos, "edad": int(v["edad"]) if v["edad"] else 35,
-            "dia_larga": int(v["dia_larga"]) if v.get("dia_larga") else None}
+            "inicio_minutos": inicio_minutos, "edad": int(v["edad"]) if v["edad"] else 35}
 
 
 def armar_plan(v: dict, nivel: str, calculado: dict) -> dict:
@@ -194,8 +191,8 @@ def vista_previa(plan: dict, t, idioma: str) -> dict:
     semanas = [{"n": w["n"], "min": motor_v6.minutos_semana(w), "kind": w["kind"], "evento": w.get("evento", "")} for w in plan["weeks"]]
     tope = max(s["min"] for s in semanas) or 1
     with i18n.usar(idioma):
-        detalle = [{"n": w["n"], "sesiones": [{"nombre": plan_i18n.nombre(s["name"]), "min": s["minutes"], "dia": DIAS[s["dia"]][0] if s.get("dia") is not None else None}
-                                               for s in sorted(w["sessions"], key=lambda s: s.get("dia", 9))]}
+        detalle = [{"n": w["n"], "sesiones": [{"nombre": plan_i18n.nombre(s["name"]), "min": s["minutes"]}
+                                               for s in w["sessions"]]}
                    for w in plan["weeks"][:2]]
     avisos = [t("pn.av." + a["clave"], **{k: val for k, val in a.items() if k not in ("clave", "texto")}) if a["clave"] in AVISOS_CON_TEXTO else a["texto"]
               for a in meta["avisos"]]
@@ -235,7 +232,6 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return atleta, {"atleta": atleta, "pref": aw.prefijo(usuario, atleta), "crudo": crudo, "hoy": hoy, "calculado": calculado,
                         "niveles": NIVELES_V6, "dias": DIAS, "zonas": sorted(set(ZONAS)), "evidencia": evidencia_en_palabras(calculado, request.state.t),
                         "opciones_km": [(str(d), request.state.t("pn.km_op", km=d)) for d in DISTANCIAS],
-                        "opciones_dia": [("", request.state.t("pn.dia_larga_cualquiera"))] + [(str(i), request.state.t("dia." + k)) for i, (k, _) in enumerate(DIAS)],
                         "error": None, "errores": {}}
 
     def elegido(form, calculado) -> str:
