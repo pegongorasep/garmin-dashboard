@@ -279,7 +279,11 @@ def montar(app, get_db, settings) -> None:
         try:
             sinc = sinc_del_run(db, u, request.state.claims)
             if sinc is not None:
+                era_comprobacion = sinc.tipo == "comprobacion"
                 sincronizar.terminar(db, sinc, ok=ok, error=None if ok else "otra", nuevas=nuevas)
+                if ok and era_comprobacion and settings.app_github and u.gh_instalacion:
+                    from . import conexion   # tras la comprobación se pide el historial; si falla, queda en error
+                    conexion.disparar(db, u, "historial", conexion.app_de(request.app, settings))
         except Exception:   # noqa: BLE001  cerrar la sincronización nunca tumba la subida
             db.rollback()
             log.warning("no se cerró la sincronización de %s", u.id, exc_info=True)

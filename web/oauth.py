@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .auth import hash_token, nuevo_token
+from .onboarding import ERRORES_CONEXION
 from .modelos import ClienteOAuth, CodigoOAuth, TokenOAuth, Usuario
 
 MIN_CODIGO = 10
@@ -282,7 +283,9 @@ def montar_conexiones(app, get_db, actual, render, formulario, settings) -> None
     @app.get("/conexiones")
     def conexiones(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
         return render(request, "conexiones.html", atleta=usuario, pref="", lista=conexiones_de(db, usuario.id),
-                      ok=request.query_params.get("ok"))
+                      ok=request.query_params.get("ok"),
+                      error=(request.state.t(f"conexion.err_{request.query_params['error']}")
+                             if request.query_params.get("error") in ERRORES_CONEXION else None))
 
     @app.post("/conexiones/{token_id}/revocar")
     async def revocar_conexion(request: Request, token_id: int, usuario=Depends(actual), db: Session = Depends(get_db)):

@@ -23,6 +23,14 @@ DIAS = [("lun", "Lunes"), ("mar", "Martes"), ("mié", "Miércoles"), ("jue", "Ju
         ("sáb", "Sábado"), ("dom", "Domingo")]
 
 
+ERRORES_CONEXION = ("estado", "cancelado", "instalacion", "repos", "otra_copia", "ajena", "publica", "github")
+
+
+def _error_conexion(request):
+    c = request.query_params.get("error", "")
+    return request.state.t(f"conexion.err_{c}") if c in ERRORES_CONEXION else None
+
+
 def estado(db: Session, u: Usuario) -> dict:
     return {"consentimiento": db.scalar(select(Consentimiento.id).where(
                 Consentimiento.usuario_id == u.id, Consentimiento.version_aviso == VERSION_AVISO).limit(1)) is not None,
@@ -100,7 +108,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if paso == 7:   # «Tu plan»: lo arma el asistente del motor v6 (con lo que vio tu Garmin)
             return RedirectResponse("/plan/nuevo", 303)
         return render(request, "bienvenida.html", paso=paso, pregunta_uso=pregunta, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
-                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=None)
+                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)),
+                      error=_error_conexion(request))
 
     @app.post("/bienvenida/consentimiento")
     async def consentimiento(request: Request, usuario=Depends(actual), db=Depends(get_db)):

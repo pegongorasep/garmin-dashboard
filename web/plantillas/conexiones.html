@@ -5,6 +5,7 @@
 {% block contenido %}
 {% include "_nav.html" %}
 <h1 class="pag-t">{{ t("conex.titulo") }}</h1>
+{% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% if ok == "revocada" %}{% call aviso("ok") %}{{ t("conex.revocada") }}{% endcall %}{% endif %}
 <p>{{ t("conex.intro")|safe }}</p>
 {% if lista %}
