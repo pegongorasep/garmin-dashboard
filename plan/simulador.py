@@ -4,9 +4,9 @@ Corre un motor de planes sobre personas inventadas (plan/personas.yaml), recorre
 revisa reglas de seguridad (las de docs/INVESTIGACION_PLANES.md, §3.9). Las reglas REPORTAN, no truenan: sirven para ver
 dónde falla un motor y comparar uno contra otro.
 
-Interfaz de motor: `motor(nombre) -> callable(persona) -> plan`. El plan es el de `gen_plan.generar`
-({"start", "weeks": [{n, kind, focus, sessions: [{name, tipo, minutes, steps}]}]}); una sesión puede traer además
-`dia` (0 = lunes … 6 = domingo): sin él, la regla `post_intenso` no aplica (los planes v6 ya no traen día: el plan es un orden de sesiones, y lo del día intenso de ayer es un texto en Hoy, no una regla del plan). Hoy solo existe "actual" (gen_plan.generar).
+El plan es el de `motor_v6.generar_v6` ({"start", "weeks": [{n, kind, focus, sessions: [{name, tipo, minutes, steps}]}]}); una sesión
+puede traer además `dia` (0 = lunes … 6 = domingo): sin él, la regla `post_intenso` no aplica (los planes v6 ya no traen día: el plan es
+un orden de sesiones, y lo del día intenso de ayer es un texto en Hoy, no una regla del plan).
 
 Cómo se simula (simple a propósito):
 - Semana n: hecho = minutos planeados × adherencia de esa semana. Cada sesión se escala por igual (redondeo a minuto);
@@ -16,7 +16,7 @@ Cómo se simula (simple a propósito):
 - La calidad (Z3+) se «desbloquea» cuando las últimas 6 semanas fueron consistentes, hubo ≥ 30' de trote seguido
   en las últimas 4 y el promedio de esas 4 es ≥ 90'/semana (docs/INVESTIGACION_PLANES.md §3.4, sin lesiones ni opt-in).
 
-Uso: python -m plan.simulador [--persona id] [--motor actual]
+Uso: python -m plan.simulador [--persona id]
 """
 import argparse
 import sys
@@ -29,10 +29,9 @@ RAIZ = Path(__file__).parent.parent
 for _p in (RAIZ / "dashboard", RAIZ / "plan"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-import gen_plan  # noqa: E402
 import motor_v6  # noqa: E402
 import nivel as nivel_mod  # noqa: E402
-from ajustes import _DIA_IDX, crudo_desde_respuestas, normalizar_config  # noqa: E402
+from ajustes import _DIA_IDX  # noqa: E402
 
 PERSONAS_YAML = Path(__file__).with_name("personas.yaml")
 INICIO = "2026-11-30"   # lunes fijo: la simulación es determinista
@@ -97,7 +96,7 @@ def actividades_sinteticas(persona: dict, hoy: str = INICIO) -> list:
 
 
 def _normalizar_persona(p: dict) -> dict:
-    """Rellena lo que falte con valores por defecto (para personas armadas a mano en pruebas) y arma `config_actual`."""
+    """Rellena lo que falte con valores por defecto (para personas armadas a mano en pruebas)."""
     p = dict(p)
     p["_normalizada"] = True
     p.setdefault("nombre", p.get("id", "persona"))
@@ -113,9 +112,6 @@ def _normalizar_persona(p: dict) -> dict:
     p.setdefault("meta", None)
     p["actividades"] = actividades_sinteticas(p)
     p["nivel"] = nivel_mod.nivel_desde_datos(p["actividades"], datetime.fromisoformat(INICIO))
-    if "config_actual" not in p:
-        crudo = crudo_desde_respuestas(INICIO, edad=p["edad"], **(p.get("formulario") or {}))
-        p["config_actual"] = normalizar_config(crudo)
     return p
 
 
@@ -125,7 +121,7 @@ def _completa(p: dict) -> dict:
 
 
 def cargar_personas(ruta=PERSONAS_YAML) -> list:
-    """Las personas del yaml, con `config_actual` armado por el mismo camino que el formulario de la web."""
+    """Las personas del yaml, normalizadas."""
     crudas = yaml.safe_load(Path(ruta).read_text(encoding="utf-8"))["personas"]
     return [_normalizar_persona(p) for p in crudas]
 
@@ -145,11 +141,7 @@ def fraccion(persona: dict, n: int) -> float:
     return ad["base"]
 
 
-# --- motores ---
-
-def _motor_actual(persona: dict) -> dict:
-    return gen_plan.generar(persona["config_actual"])
-
+# --- motor ---
 
 def entrada_v6(persona: dict) -> dict:
     """La entrada de `motor_v6.generar_v6` para una persona: nivel y evidencia de F2, sus días, intensos y meta. Todo viene de la persona (nada del formulario viejo)."""
@@ -161,24 +153,8 @@ def entrada_v6(persona: dict) -> dict:
             "objetivo": "velocidad" if (persona.get("formulario") or {}).get("intensidad") == "calidad" else None}
 
 
-def _motor_v6(persona: dict) -> dict:
+def generar(persona: dict) -> dict:
     return motor_v6.generar_v6(entrada_v6(persona))
-
-
-MOTORES = {"actual": _motor_actual, "v6": _motor_v6}
-# Motores que ajustan cada semana a lo que la persona de verdad hizo (motor_v6.ajustar_semana); el actual no ajusta nada.
-AJUSTAN = {"v6"}
-
-
-def obtener_motor(nombre: str):
-    """`motor(nombre) -> callable(persona) -> plan`."""
-    try:
-        return MOTORES[nombre]
-    except KeyError:
-        raise ValueError(f"motor '{nombre}' no existe; hay: {', '.join(MOTORES)}") from None
-
-
-motor = obtener_motor
 
 
 # --- medidas de una sesión ---
@@ -312,15 +288,14 @@ def aplicar_ajuste(persona: dict, plan: dict) -> dict:
     return {**plan, "weeks": semanas}
 
 
-def simular(persona: dict, motor: str = "actual") -> dict:  # noqa: A002
-    """Genera el plan de `persona` con el motor `motor` (con el ajuste semanal si ese motor lo hace) y lo analiza."""
+def simular(persona: dict) -> dict:
+    """Genera el plan de `persona` con el motor v6, le aplica el ajuste semanal y lo analiza."""
     p = _completa(persona)
-    plan = obtener_motor(motor)(p)
-    return analizar(p, aplicar_ajuste(p, plan) if motor in AJUSTAN else plan, motor)
+    return analizar(p, aplicar_ajuste(p, generar(p)), "v6")
 
 
-def simular_todas(motor_nombre: str = "actual") -> list:
-    return [simular(p, motor_nombre) for p in cargar_personas()]
+def simular_todas() -> list:
+    return [simular(p) for p in cargar_personas()]
 
 
 def matriz(resultados: list) -> list:
@@ -562,10 +537,9 @@ def _imprimir_matriz(resultados: list) -> None:
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Simula personas sintéticas sobre un motor de planes y revisa las reglas.")
     ap.add_argument("--persona", help="id de una persona (por defecto, todas)")
-    ap.add_argument("--motor", default="actual", help=f"motor: {', '.join(MOTORES)}")
     args = ap.parse_args(argv)
     personas = [persona_por_id(args.persona)] if args.persona else cargar_personas()
-    resultados = [simular(p, args.motor) for p in personas]
+    resultados = [simular(p) for p in personas]
     for r in resultados:
         _imprimir(r)
     _imprimir_matriz(resultados)

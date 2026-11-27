@@ -26,9 +26,6 @@ def main(argv=None, settings=None, motor=None) -> int:
     p.add_argument("correo")
     p.add_argument("repo", help="owner/nombre")
     p.add_argument("repo_id", type=int, help="id numérico del repo (GITHUB_REPOSITORY_ID)")
-    p = sub.add_parser("convertir-v6", help="convierte los planes que no son v6 al motor v6 (sin --aplicar solo ensaya e imprime)")
-    p.add_argument("--aplicar", action="store_true", help="escribe los cambios (con historial, se pueden deshacer)")
-    p.add_argument("--correo", default=None, help="solo esa cuenta")
     args = ap.parse_args(argv)
 
     settings = settings or desde_entorno()
@@ -46,11 +43,6 @@ def main(argv=None, settings=None, motor=None) -> int:
                 u.github_owner = args.github_owner
                 db.commit()
             print(f"Admin listo: {u.correo}")
-        elif args.cmd == "convertir-v6":
-            from datetime import datetime, timezone
-
-            from . import convertir_v6
-            return 1 if convertir_v6.correr(db, datetime.now(timezone.utc), args.aplicar, args.correo) else 0
         elif args.cmd == "vincular":
             u = auth.buscar_por_correo(db, args.correo)
             if u is None or args.repo.count("/") != 1:

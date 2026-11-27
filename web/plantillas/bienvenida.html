@@ -107,38 +107,6 @@
 <p class="pag-s">{{ t("bv.p6b_n")|safe }}</p>
 {% endif %}
 
-{% elif paso == 7 %}
-<h2 class="pag-h">{{ t("bv.p7_t") }}</h2>
-<p>{{ t("bv.p7_a") }}</p>
-<form class="pila" method="post" action="/bienvenida/plan">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo(t("bv.p7_titulo"), "titulo", valor=valores.get('titulo', t('bv.p7_titulo_def')), extra={"maxlength": "60"}) }}
-  {{ seleccion(t("bv.p7_nivel"), "nivel", [
-    ("novato", t("bv.n_novato")),
-    ("intermedio", t("bv.n_inter")),
-    ("corredor", t("bv.n_corredor"))], "intermedio") }}
-  {{ seleccion(t("aj.intensidad"), "intensidad", [
-    ("solo_z2", t("bv.i_solo")),
-    ("z2_poca_z3", t("aj.i_poca")),
-    ("calidad", t("bv.i_calidad"))], "z2_poca_z3") }}
-  {% call opciones(t("aj.tipos_cal"), t("bv.cal_n")) %}
-    {% for tq in tipos_calidad %}{{ opcion("calidad", tq, valor=tq) }}{% endfor %}
-  {% endcall %}
-  {{ opcion("caminatas", t("bv.caminatas")) }}
-  {{ campo(t("bv.z2"), "z2", tipo="number", valor=valores.get('z2', 20), requerido=True, corto=True, ayuda=t("bv.z2_ayuda"), extra={"min": "5", "max": "120"}) }}
-  {{ campo(t("bv.larga"), "larga", tipo="number", valor=valores.get('larga', 40), requerido=True, corto=True, extra={"min": "5", "max": "240"}) }}
-  {{ campo(t("aj.edad"), "edad", tipo="number", valor=valores.get('edad', ''), corto=True, extra={"min": "10", "max": "99"}) }}
-  {{ campo(t("aj.fcmax"), "fc_max", tipo="number", valor=valores.get('fc_max', ''), opcional=t("comun.opcional"), corto=True, ayuda=t("aj.fcmax_ayuda"), extra={"min": "120", "max": "230"}) }}
-  {% call opciones(t("aj.pierna"), t("bv.pierna_n")) %}
-    {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave) }}{% endfor %}
-  {% endcall %}
-  {{ campo(t("aj.inicio"), "inicio", tipo="date", valor=valores.get('inicio', proximo_lunes), requerido=True) }}
-  {{ seleccion(t("aj.sensor"), "sensor", [("banda", t("aj.banda")), ("muñeca", t("aj.muneca"))]) }}
-  {% set zonas_op = [] %}{% for z in zonas %}{% set _ = zonas_op.append((z, z)) %}{% endfor %}
-  {{ seleccion(t("aj.zona_h"), "zona", zonas_op, "America/Merida") }}
-  {{ opcion("inbody", t("bv.inbody")) }}
-  {{ boton(t("bv.crear"), tipo="submit") }}
-</form>
 {% endif %}
 {% endblock %}
 {% block scripts %}

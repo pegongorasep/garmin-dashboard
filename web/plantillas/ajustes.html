@@ -20,7 +20,7 @@
   <h2 class="pag-h">{{ t("aj.cuerpo") }}</h2>
   {{ opcion("inbody", t("aj.inbody", liga=pref ~ "/cuerpo"), marcado=v.inbody, html=True) }}
 
-  <p class="pag-s">{{ t("aj.rehace") }} {{ boton(t("aj.ir_plan"), "texto", chico=True, href=pref ~ "/plan/acciones#rehacer") }}</p>
+  <p class="pag-s">{{ t("aj.rehace") }} {{ boton(t("aj.ir_plan"), "texto", chico=True, href=pref ~ "/plan/acciones") }}</p>
   <div class="acciones">{{ boton(t("comun.guardar"), tipo="submit") }}</div>
 </form>
 {% if not pref %}

@@ -16,7 +16,6 @@ sys.path.insert(0, str(ROOT / "plan"))
 
 import ajustes  # noqa: E402
 import build  # noqa: E402
-import gen_plan as g  # noqa: E402
 import metrics as m  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures"
@@ -40,9 +39,14 @@ def test_normalizar_no_modifica_el_crudo():
 
 
 @pytest.mark.skipif(not (ROOT / "config.yaml").exists(), reason="no hay config.yaml de Pedro")
-def test_generar_desde_crudo_igual_al_plan_de_pedro():
+def test_el_plan_de_pedro_en_formato_anterior_se_sigue_pintando():
+    """Su plan.json no trae `meta` (lo hizo el motor anterior): build.build lo renderiza sin pedir nada nuevo."""
     cfg = ajustes.normalizar_config(ajustes.leer_config_yaml(ROOT / "config.yaml"))
-    assert g.generar(cfg) == json.loads((ROOT / "plan" / "plan.json").read_text())
+    plan = json.loads((ROOT / "plan" / "plan.json").read_text())
+    datos = {"daily_summaries": [], "sleep": [], "hrv": [], "activities": [], "details": {}, "hr_zones": [], "meta": {},
+             "historial": None, "inbody": None}
+    d = build.build(datos, plan, cfg, datetime(2026, 11, 25, 12, 0, tzinfo=ZoneInfo(cfg["timezone"])))
+    assert d["plan"]["semanas"] and "meta" not in plan
 
 
 def test_config_por_defecto_sirve_sin_config_yaml():

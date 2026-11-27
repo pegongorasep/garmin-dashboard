@@ -11,7 +11,7 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "dashboard"))
 sys.path.insert(0, str(ROOT / "plan"))
 import build  # noqa: E402
-import gen_plan  # noqa: E402
+import pasos  # noqa: E402
 import metrics as m  # noqa: E402
 import motor_v6 as v6  # noqa: E402
 import reloj_plan as rp  # noqa: E402
@@ -47,7 +47,7 @@ def z3(s):
 
 def test_v6_cumple_todas_las_reglas_en_las_8_personas():
     """Sin excepciones: ninguna regla falla (✓ o «no aplica») con el ajuste semanal."""
-    resultados = sim.simular_todas("v6")
+    resultados = sim.simular_todas()
     assert len(resultados) == 8
     for r in resultados:
         assert [x["clave"] for x in r["reglas"] if x["ok"] is False] == [], r["persona"]["id"]
@@ -61,27 +61,26 @@ def test_v6_reglas_con_2_a_5_dias_y_adherencias(dias, adherencia):
     no aplica: el plan se encoge solo con el ajuste y la «semana de carrera» ya no es un taper contra el pico)."""
     for p in sim.cargar_personas():
         q = {**p, "dias_semana": dias, "adherencia": {"base": adherencia, "huecos": p["adherencia"]["huecos"]}}
-        r = sim.simular(q, "v6")
+        r = sim.simular(q)
         mal = [x["clave"] for x in r["reglas"] if x["ok"] is False and not (x["clave"] == "taper" and adherencia < 1)]
         assert mal == [], (p["id"], dias, adherencia, mal)
 
 
 def test_v6_es_determinista_y_esta_registrado():
-    assert "v6" in sim.MOTORES and callable(sim.motor("v6"))
-    assert sim.simular_todas("v6") == sim.simular_todas("v6")
+    assert sim.simular_todas() == sim.simular_todas()
 
 
 def test_sin_ajuste_el_plan_v6_no_cumple_sube_real_con_adherencia_baja():
     """El ajuste es lo que hace cumplir `sube_real_10`: el plan crudo de una persona que cumple 60 % no la cumple."""
     p = sim.persona_por_id("cumple_60")
-    crudo = sim.analizar(p, sim._motor_v6(p), "v6")
+    crudo = sim.analizar(p, sim.generar(p), "v6")
     assert next(x for x in crudo["reglas"] if x["clave"] == "sube_real_10")["ok"] is False
-    assert next(x for x in sim.simular(p, "v6")["reglas"] if x["clave"] == "sube_real_10")["ok"] is True
+    assert next(x for x in sim.simular(p)["reglas"] if x["clave"] == "sube_real_10")["ok"] is True
 
 
 # --- el plan: esquema y forma ---
 
-def test_esquema_como_gen_plan_mas_meta_sin_dia():
+def test_esquema_del_plan_mas_meta_sin_dia():
     plan = v6.generar_v6(entrada())
     assert set(plan) == {"start", "weeks", "meta"} and plan["meta"]["motor"] == "v6" and v6.es_v6(plan)
     assert not v6.es_v6({"start": LUNES, "weeks": []})
@@ -89,14 +88,8 @@ def test_esquema_como_gen_plan_mas_meta_sin_dia():
         assert {"n", "block", "kind", "focus", "sessions"} <= set(w)
         for s in w["sessions"]:
             assert {"id", "tipo", "name", "minutes", "steps", "easy"} <= set(s) and "dia" not in s
-            assert gen_plan.suma(s["steps"]) == s["minutes"] and gen_plan.suma(s["easy"]["steps"]) == s["easy"]["minutes"]
-    gen_plan.verificar(plan, {"intensidad": None})
+            assert pasos.suma(s["steps"]) == s["minutes"] and pasos.suma(s["easy"]["steps"]) == s["easy"]["minutes"]
     v6.verificar(plan)
-
-
-def test_gen_plan_actual_sigue_igual_y_sin_meta():
-    plan = gen_plan.generar(cargar_config(ROOT / "tests" / "fixtures"))
-    assert "meta" not in plan and not v6.es_v6(plan)
 
 
 @pytest.mark.parametrize("nivel", ["empezando", "base", "corredor"])
@@ -302,7 +295,7 @@ def test_ajustar_sube_topa_a_110_de_lo_real():
     assert w["ajuste"]["razon"] == "sube" and w["ajuste"]["tope"] == 104 and minutos(w) <= 104 and w["ajuste"]["ajustada"] and w["ajuste"]["planeado"] == 110
     assert next(s for s in w["sessions"] if s["tipo"] == "larga")["minutes"] <= 0.4 * minutos(w) + 1
     for s in w["sessions"]:
-        assert gen_plan.suma(s["steps"]) == s["minutes"] == gen_plan.suma(s["easy"]["steps"]) or s["easy"]["minutes"] <= s["minutes"]
+        assert pasos.suma(s["steps"]) == s["minutes"] == pasos.suma(s["easy"]["steps"]) or s["easy"]["minutes"] <= s["minutes"]
 
 
 def test_ajustar_repite_y_baja_sin_perseguir_al_plan():
@@ -334,7 +327,7 @@ def test_ajustar_piso_duro_por_nivel(monkeypatch):
 def test_adherencia_constante_de_60_hace_meseta_no_colapso():
     """Con 60 % fijo el plan v6 llega al piso del nivel y se queda ahí (antes se encogía ~35 % por semana hasta 1')."""
     for p in sim.cargar_personas():
-        r = sim.simular({**p, "adherencia": {"base": 0.6, "huecos": []}}, "v6")
+        r = sim.simular({**p, "adherencia": {"base": 0.6, "huecos": []}})
         tot = [w["min"] for w in r["semanas"]]
         cargas = [w["min"] for w in r["semanas"][1:] if w["kind"] == "carga"]
         piso = v6.UMBRALES["ajuste_piso"][p["nivel"]["nivel"]]
@@ -345,7 +338,7 @@ def test_adherencia_constante_de_60_hace_meseta_no_colapso():
 
 def test_taper_con_adherencia_baja_se_mide_contra_el_pico_ajustado():
     p = {**sim.persona_por_id("pedro_like"), "adherencia": {"base": 0.6, "huecos": []}}
-    r = sim.simular(p, "v6")
+    r = sim.simular(p)
     assert next(x for x in r["reglas"] if x["clave"] == "taper")["ok"] is True
 
 
@@ -479,23 +472,6 @@ def test_build_convierte_y_asigna_sesiones(clave):
         assert len(estado) == len(w["sessions"]) and {e["id"] for e in estado} == {s["id"] for s in w["sessions"]}
         assert sum(e["estado"] == "hecha" for e in estado) >= len(w["sessions"]) - 1 or len(w["sessions"]) <= 1
         assert build.cumplimiento_semana(len(w["sessions"]), len(w["sessions"])) == "completa"
-
-
-def test_semana_de_carrera_y_descarga_previa_con_4_sesiones():
-    """plan_vivo conserva el número de sesiones y ids únicos (antes asumía 3: z2a, z2b, larga)."""
-    from web import plan_vivo
-    plan = v6.generar_v6(entrada(dias=4, nivel="corredor", inicio_minutos=150, evidencia={**EV_BASE, "semanas_consistentes": 8, "trote_continuo_min": 60},
-                                 objetivo="velocidad"))
-    cfg = {**cargar_config(ROOT / "tests" / "fixtures"), "plan_start": plan["start"], "plan_semanas": 12, "semanas_repetidas": [], "pausas": [],
-           "eventos": [], "metas": [{"id": "x", "tipo": "carrera", "fecha": "2027-02-14", "distancia_km": 10, "nombre": "10K"}]}
-    efectivo = plan_vivo.plan_efectivo(plan, cfg)
-    for w in efectivo["weeks"]:
-        ids = [s["id"] for s in w["sessions"]]
-        assert len(ids) == len(set(ids))
-    carrera = next(w for w in efectivo["weeks"] if w.get("evento") == "carrera")
-    assert len(carrera["sessions"]) == 3
-    previa = next(w for w in efectivo["weeks"] if w.get("evento") == "descarga_carrera")
-    assert len(previa["sessions"]) == 4
 
 
 def test_plan_i18n_entiende_el_foco_de_v6():

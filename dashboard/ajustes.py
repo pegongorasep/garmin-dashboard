@@ -196,21 +196,12 @@ def normalizar_config(crudo: dict) -> dict:
     if date.fromisoformat(inicio).weekday() != 0:
         raise ConfigError(f"corrida.inicio ({inicio}) debe ser lunes")
 
-    nivel = corrida.get("nivel", "intermedio")
-    if nivel not in NIVELES:
-        raise ConfigError(f"corrida.nivel '{nivel}' no válido; usa: {', '.join(NIVELES)}")
-    intensidad = corrida.get("intensidad", "z2_poca_z3")
-    if intensidad not in INTENSIDADES:
-        raise ConfigError(f"corrida.intensidad '{intensidad}' no válida; usa: {', '.join(INTENSIDADES)}")
-    tipos_cal = list(corrida.get("calidad_tipos") or [])
-    for t in tipos_cal:
-        if t not in CALIDAD_TIPOS:
-            raise ConfigError(f"corrida.calidad_tipos: '{t}' no válido; usa: {', '.join(CALIDAD_TIPOS)}")
+    # Claves del motor anterior (nivel, intensidad, calidad, variada, escalón): el plan v6 ya no las lee y solo dan textos de ayuda.
+    # Un valor viejo o raro se ignora (cae al de por defecto), nunca es un error.
+    nivel = corrida.get("nivel") if corrida.get("nivel") in NIVELES else "intermedio"
+    intensidad = corrida.get("intensidad") if corrida.get("intensidad") in INTENSIDADES else "z2_poca_z3"
+    tipos_cal = [t for t in corrida.get("calidad_tipos") or [] if t in CALIDAD_TIPOS]
     variada = bool(corrida.get("variada", False))
-    if intensidad == "calidad" and not tipos_cal and variada:
-        tipos_cal = list(CALIDAD_TIPOS)   # variada + calidad sin elegir: rotan los 5 avanzados
-    if intensidad == "calidad" and not tipos_cal:
-        raise ConfigError("corrida.intensidad es `calidad` pero `calidad_tipos` está vacío")
     base = {"z2": 20, "larga": 40, **(corrida.get("base_min") or {})}
     pruebas = _pruebas(corrida.get("pruebas") or [])
 
@@ -221,9 +212,7 @@ def normalizar_config(crudo: dict) -> dict:
     sensor = perfil.get("sensor") or "banda"
     if sensor not in SENSORES:
         raise ConfigError(f"perfil.sensor '{sensor}' no válido; usa: {', '.join(SENSORES)}")
-    escalon = corrida.get("escalon")
-    if escalon is not None and escalon not in ESCALERA:
-        raise ConfigError(f"corrida.escalon '{escalon}' no válido; usa: {', '.join(ESCALERA)}")
+    escalon = corrida.get("escalon") if corrida.get("escalon") in ESCALERA else None
     metas = _metas(corrida.get("metas") or [])
     eventos = _eventos(corrida.get("eventos") or [])
     caminatas = bool(corrida.get("caminatas", False)) if escalon is None else escalon != "continuo"
@@ -258,28 +247,16 @@ def normalizar_config(crudo: dict) -> dict:
     }
 
 
-# Lo que trae preseleccionado el formulario del paso 7 de la web (web/plantillas/bienvenida.html).
-RESPUESTAS_FORMULARIO = {"nivel": "intermedio", "intensidad": "z2_poca_z3", "calidad": [], "caminatas": False,
-                         "z2": 20, "larga": 40, "pierna": [], "zona": "America/Merida", "titulo": "Mi entreno",
-                         "inbody": False}
-
-
-def crudo_desde_respuestas(inicio: str, edad=None, fc_max=None, **resp) -> dict:
-    """`config.yaml` crudo a partir de las respuestas del formulario del plan (las que falten, las de RESPUESTAS_FORMULARIO).
-    Función pura: la usan la web (`onboarding.crudo_desde_formulario`) y el simulador de planes, para que ambos
-    reproduzcan lo mismo. Fuerza `variada: true`, como el formulario."""
-    r = {**RESPUESTAS_FORMULARIO, **resp}
-    perfil = {"titulo": (str(r["titulo"]).strip() or "Mi entreno")[:60], "zona_horaria": r["zona"]}
+def crudo_desde_respuestas(inicio: str, edad=None, fc_max=None, zona="America/Merida", pierna=(), titulo="Mi entreno", inbody=False) -> dict:
+    """`config.yaml` crudo de una persona nueva (lo usa el asistente del plan, `web/plan_nuevo.py`): perfil, inicio, 12 semanas de
+    arranque (el plan v6 las reemplaza al guardar), días de pierna e InBody."""
+    perfil = {"titulo": (str(titulo).strip() or "Mi entreno")[:60], "zona_horaria": zona}
     if edad:
         perfil["edad"] = edad
     if fc_max:
         perfil["fc_max"] = fc_max
-    calidad = [t for t in r["calidad"] if t in CALIDAD_TIPOS] if r["intensidad"] == "calidad" else []
-    corrida = {"nivel": r["nivel"], "intensidad": r["intensidad"], "calidad_tipos": calidad,
-               "variada": True, "caminatas": bool(r["caminatas"]), "inicio": str(inicio),
-               "semanas": 12, "base_min": {"z2": r["z2"], "larga": r["larga"]}}
-    return {"perfil": perfil, "corrida": corrida, "actividades": {"dias_pierna": list(r["pierna"])},
-            "inbody": bool(r["inbody"])}
+    return {"perfil": perfil, "corrida": {"inicio": str(inicio), "semanas": 12}, "actividades": {"dias_pierna": list(pierna)},
+            "inbody": bool(inbody)}
 
 
 def _idioma(v) -> str | None:

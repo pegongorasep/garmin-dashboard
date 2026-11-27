@@ -29,7 +29,7 @@ OBJETIVOS = {"empezando": (), "base": ("mas_tiempo", "carrera"), "corredor": ("b
 RE_TIEMPO = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 AVISOS_CON_TEXTO = ("dias_limitados", "carrera_no_recomendada", "carrera_poco_tiempo", "carrera_cerca", "pausa")
 PORQUES_CON_TEXTO = ("inicio", "sube", "descarga", "calidad_si", "calidad_no", "escalera", "carrera")
-# TODO(F4+): «1 o 2 sesiones de calidad» (2 solo con >= 4 días y < 3 días intensos). Hoy gen_plan.verificar permite a lo más una
+# TODO(F4+): «1 o 2 sesiones de calidad» (2 solo con >= 4 días y < 3 días intensos). Hoy motor_v6.verificar permite a lo más una
 # sesión con Z3+ por semana, así que por ahora solo se ofrece 1 y no se pregunta.
 
 

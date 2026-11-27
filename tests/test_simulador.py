@@ -1,6 +1,6 @@
 """Simulador de planes (plan/simulador.py): personas, simulación y reglas.
 Las reglas REPORTAN: aquí solo se prueba que detectan un plan malo hecho a mano y aceptan uno bueno, no que el motor
-actual las cumpla (no las cumple; para eso existe el simulador)."""
+v6 las cumpla (eso lo vigila tests/test_motor_v6.py)."""
 import sys
 from pathlib import Path
 
@@ -10,7 +10,6 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "dashboard"))
 sys.path.insert(0, str(ROOT / "plan"))
 import simulador as sim  # noqa: E402
-from ajustes import RESPUESTAS_FORMULARIO, crudo_desde_respuestas  # noqa: E402
 
 BASE = {"sesiones": [30, 30, 30], "continuo": 30}
 
@@ -52,26 +51,8 @@ def test_personas_cargan():
     ps = sim.cargar_personas()
     assert len(ps) == 8 and len({p["id"] for p in ps}) == 8
     for p in ps:
-        assert p["nombre"] and p["descripcion"] and p["config_actual"]["plan_semanas"] == 12
+        assert p["nombre"] and p["descripcion"]
         assert len(p["historial"]) in (0, 8)
-
-
-def test_novata_reproduce_el_formulario_de_hoy():
-    cfg = sim.persona_por_id("novata_sin_datos")["config_actual"]
-    assert (cfg["nivel"], cfg["intensidad"], cfg["variada"], cfg["caminatas"]) == ("novato", "z2_poca_z3", True, False)
-    assert cfg["base_min"] == {"z2": 20, "larga": 40}
-
-
-def test_formulario_web_y_simulador_comparten_valores():
-    """crudo_desde_formulario (web) y crudo_desde_respuestas (simulador) arman lo mismo con las respuestas por defecto."""
-    from web.onboarding import crudo_desde_formulario
-
-    class Form(dict):
-        def getlist(self, k):
-            return []
-    f = Form(zona="America/Merida", edad="30", titulo="", nivel=RESPUESTAS_FORMULARIO["nivel"],
-             intensidad=RESPUESTAS_FORMULARIO["intensidad"], z2="20", larga="40", inicio="2026-11-30")
-    assert crudo_desde_formulario(f) == crudo_desde_respuestas("2026-11-30", edad=30)
 
 
 def test_determinista():
@@ -80,14 +61,8 @@ def test_determinista():
 
 def test_todas_las_personas_simulan_con_todas_las_reglas():
     for r in sim.simular_todas():
-        assert [x["clave"] for x in r["reglas"]] == sim.CLAVES and len(r["semanas"]) == 12
+        assert [x["clave"] for x in r["reglas"]] == sim.CLAVES and len(r["semanas"]) >= 4
         assert {x["ok"] for x in r["reglas"]} <= {True, False, None}
-
-
-def test_motores():
-    assert callable(sim.motor("actual"))
-    with pytest.raises(ValueError):
-        sim.motor("no_existe")
 
 
 def test_adherencia_escala_y_huecos():
@@ -97,11 +72,10 @@ def test_adherencia_escala_y_huecos():
     assert r[3]["max30"] == 30   # la ventana mezcla historial y lo hecho (18'), no lo planeado
 
 
-def test_persona_1_falla_z3_en_semana_1():
+def test_novata_sin_datos_no_trae_z3_en_semana_1():
     r = sim.simular(sim.persona_por_id("novata_sin_datos"))
     z3 = next(x for x in r["reglas"] if x["clave"] == "sin_z3_novato")
-    assert z3["ok"] is False and 1 in z3["semanas_fallan"]
-    assert r["semanas"][0]["z3mas_min"] > 0 and r["sin_base"]
+    assert z3["ok"] is True and r["semanas"][0]["z3mas_min"] == 0 and r["sin_base"]
 
 
 # --- reglas: un plan malo hecho a mano falla, uno bueno pasa ---

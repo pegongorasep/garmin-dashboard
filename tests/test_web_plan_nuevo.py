@@ -170,8 +170,7 @@ def test_con_ajustes_los_conserva_y_cambia_el_plan(web_ctx):
         assert db.get(Ajustes, uid).config["perfil"]["titulo"] == titulo
         assert db.get(Plan, uid).plan["meta"]["motor"] == "v6" and db.get(Usuario, uid).sin_plan is False
     pagina = cl.get("/plan/acciones")
-    assert "Armar un plan nuevo" in pagina.text and "Opciones avanzadas (motor anterior)" in pagina.text
-    assert '<details class="desplegable"><summary>Opciones avanzadas' in pagina.text
+    assert "Armar un plan nuevo" in pagina.text and "motor anterior" not in pagina.text and "Opciones avanzadas" not in pagina.text
 
 
 def test_coach_edita_al_atleta_y_un_extrano_recibe_404(web_ctx):

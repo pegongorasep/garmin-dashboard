@@ -50,8 +50,6 @@ def test_rpe_heavy_de_configs_viejas_se_tolera_y_se_ignora(tmp_path):
     ("perfil: {zona_horaria: America/Merida}\ncorrida: {inicio: 2026-11-09}\n", "fc_max"),
     ("perfil: {zona_horaria: America/Merida, edad: 30}\ncorrida: {}\n", "inicio"),
     (MINIMA.replace("2026-11-09", "2026-11-10"), "lunes"),
-    (MINIMA + "corrida: {inicio: 2026-11-09, nivel: pro}\n", "nivel"),
-    ("perfil: {zona_horaria: America/Merida, edad: 30}\ncorrida: {inicio: 2026-11-09, intensidad: calidad}\n", "calidad_tipos"),
 ])
 def test_errores_claros(tmp_path, texto, frag):
     with pytest.raises(ajustes.ConfigError, match=frag):
@@ -94,13 +92,10 @@ def test_actividades_semana_vieja_se_tolera_y_se_ignora(tmp_path):
     assert "semana_tipica" not in c and c["categorias"]
 
 
-def test_variada_default_false_y_calidad_con_variada_rota_los_5(tmp_path):
-    assert cfg(tmp_path, MINIMA)["variada"] is False
-    c = cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {variada: true, intensidad: calidad, "))
-    assert c["variada"] is True and c["calidad_tipos"] == list(ajustes.CALIDAD_TIPOS) and len(c["calidad_tipos"]) == 5
-    with pytest.raises(ajustes.ConfigError):   # sin variada, calidad sigue pidiendo tipos
-        cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {intensidad: calidad, "))
-    assert cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {intensidad: calidad, calidad_tipos: [fartlek], "))["calidad_tipos"] == ["fartlek"]
+def test_claves_del_motor_anterior_se_ignoran_sin_error(tmp_path):
+    """Nivel, intensidad, calidad o escalón raros o viejos caen al valor por defecto: nunca rompen una config vieja."""
+    c = cfg(tmp_path, MINIMA.replace("corrida: {", "corrida: {nivel: pro, intensidad: calidad, calidad_tipos: [x], escalon: 9/9, "))
+    assert (c["nivel"], c["intensidad"], c["calidad_tipos"], c["escalon"], c["variada"]) == ("intermedio", "calidad", [], None, False)
 
 
 def test_iconos_por_tipo_de_garmin_y_de_config(tmp_path):

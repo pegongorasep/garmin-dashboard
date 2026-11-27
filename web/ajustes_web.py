@@ -9,24 +9,18 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from ajustes import (CALIDAD_TIPOS, ESCALERA, INTENSIDADES, NIVELES, SENSORES, ConfigError, normalizar_config)
+from ajustes import SENSORES, ConfigError, normalizar_config
 
-from . import cambios, plan_vivo
+from . import cambios
 from .modelos import Ajustes, Plan, Usuario
 from .errores import ErrorT, texto
-from .onboarding import DIAS, ZONAS
+from .onboarding import ZONAS
 from .permisos import puede_editar
 
 ETIQUETAS = {"titulo": "el título", "timezone": "la zona horaria", "edad": "la edad", "max_hr": "la FC máxima",
-             "sensor": "el sensor", "nivel": "el nivel", "intensidad": "la intensidad", "calidad_tipos": "los tipos de calidad",
-             "caminatas": "las caminatas", "variada": "la corrida variada", "plan_semanas": "las semanas del plan",
-             "plan_start": "la fecha de inicio", "base_min": "los minutos base", "semanas_repetidas": "las semanas repetidas",
-             "carreras": "las carreras", "dias_pierna": "los días de pierna",
-             "inbody": "InBody", "escalon": "el escalón de trote/caminata"}
+             "sensor": "el sensor", "inbody": "InBody"}
 # Dónde mostrar un error de `normalizar_config`: (fragmento del mensaje, campo del formulario)
-ERROR_CAMPO = [("corrida.inicio", "inicio"), ("lunes", "inicio"), ("zona", "zona"), ("fc_max", "fc_max"), ("edad", "edad"),
-               ("nivel", "nivel"), ("calidad", "calidad"), ("intensidad", "intensidad"), ("semanas_repetidas", "repetidas"),
-               ("corrida.carreras", "carreras"), ("sensor", "sensor"), ("escalon", "escalon")]
+ERROR_CAMPO = [("zona", "zona"), ("fc_max", "fc_max"), ("edad", "edad"), ("sensor", "sensor")]
 
 
 def resolver(db: Session, usuario: Usuario | None, atleta_id: int | None):
@@ -61,18 +55,10 @@ def plan_guardado(db: Session, atleta: Usuario) -> dict | None:
 # --- formulario de ajustes <-> crudo ---
 
 def valores_form(crudo: dict, atleta: Usuario) -> dict:
-    perfil, corrida = crudo.get("perfil") or {}, crudo.get("corrida") or {}
-    act = crudo.get("actividades") or {}
+    perfil = crudo.get("perfil") or {}
     cfg = normalizar_config({**crudo, "perfil": {**perfil, "sensor": perfil.get("sensor") or atleta.sensor or "banda"}})
     return {"titulo": perfil.get("titulo", "Mi entreno"), "zona": perfil.get("zona_horaria", "America/Merida"),
-            "edad": perfil.get("edad") or "", "fc_max": perfil.get("fc_max") or "", "sensor": cfg["sensor"],
-            "nivel": cfg["nivel"], "intensidad": cfg["intensidad"], "calidad": cfg["calidad_tipos"],
-            "caminatas": cfg["caminatas"], "variada": cfg["variada"], "semanas": cfg["plan_semanas"],
-            "inicio": cfg["plan_start"], "z2": cfg["base_min"]["z2"], "larga": cfg["base_min"]["larga"],
-            "repetidas": ", ".join(str(n) for n in cfg["semanas_repetidas"]), "escalon": cfg["escalon"] or "",
-            "carreras": ", ".join(corrida.get("carreras") or []),
-            "pierna": [clave for i, (clave, _) in enumerate(DIAS) if i in cfg["dias_pierna"]],
-            "inbody": cfg["inbody"]}
+            "edad": perfil.get("edad") or "", "fc_max": perfil.get("fc_max") or "", "sensor": cfg["sensor"], "inbody": cfg["inbody"]}
 
 
 def _entero(f, campo: str, nombre: str, vacio_ok: bool = False):
@@ -109,43 +95,6 @@ def crudo_general(crudo: dict, f) -> dict:
     return nuevo
 
 
-def crudo_plan(crudo: dict, f) -> dict:
-    """Parte «Rehacer mi plan»: nivel, intensidad, calidad, caminatas, variada, semanas, inicio, z2, larga. Escalón, repetidas
-    y carreras no están en ese formulario: conservan lo guardado (los cambia «Cambios en el camino»)."""
-    nuevo = copy.deepcopy(crudo)
-    corrida = nuevo.setdefault("corrida", {})
-    corrida["nivel"], corrida["intensidad"] = f.get("nivel", ""), f.get("intensidad", "")
-    corrida["calidad_tipos"] = [t for t in f.getlist("calidad") if t in CALIDAD_TIPOS] if corrida["intensidad"] == "calidad" else []
-    corrida["caminatas"], corrida["variada"] = f.get("caminatas") == "on", f.get("variada") == "on"
-    corrida["semanas"] = _entero(f, "semanas", "semanas")
-    if not 4 <= corrida["semanas"] <= 52:
-        raise ErrorT("err.semanas")
-    corrida["inicio"] = str(f.get("inicio", "")).strip()
-    corrida["base_min"] = {**(corrida.get("base_min") or {}), "z2": _entero(f, "z2", "z2"),
-                           "larga": _entero(f, "larga", "larga")}
-    if "pierna" in f or f.get("pierna_form"):   # el formulario manda el marcador porque sin marcas no manda nada
-        nuevo.setdefault("actividades", {})["dias_pierna"] = [d for d in f.getlist("pierna") if d in dict(DIAS)]
-    if "escalon" in f:   # solo clientes viejos (y el MCP) lo mandan
-        esc = str(f.get("escalon", "")).strip()
-        if esc:
-            corrida["escalon"] = esc
-        else:
-            corrida.pop("escalon", None)
-    if "repetidas" in f:
-        try:
-            corrida["semanas_repetidas"] = [int(x) for x in str(f.get("repetidas", "")).replace(",", " ").split()]
-        except ValueError:
-            raise ErrorT("err.repetidas", "repetidas") from None
-    if "carreras" in f:
-        corrida["carreras"] = [x for x in str(f.get("carreras", "")).replace(",", " ").split()]
-    return nuevo
-
-
-def crudo_desde_form(crudo: dict, f) -> dict:
-    """Todo junto (general + plan); lo usa el conector MCP. Lo que el formulario no maneja se conserva."""
-    return crudo_plan(crudo_general(crudo, f), f)
-
-
 def diferencias(viejo: dict, nuevo: dict) -> list[str]:  # etiquetas en español (para el historial y el MCP)
     a, b = normalizar_config(viejo), normalizar_config(nuevo)
     return [ETIQUETAS[k] for k in ETIQUETAS if a.get(k) != b.get(k)]
@@ -154,8 +103,7 @@ def diferencias(viejo: dict, nuevo: dict) -> list[str]:  # etiquetas en español
 def contexto_ajustes(db, atleta: Usuario, usuario: Usuario, crudo: dict, valores: dict | None = None, **extra) -> dict:
     return {"atleta": atleta, "pref": prefijo(usuario, atleta), "v": valores or valores_form(crudo, atleta), "zonas":
             sorted(set(ZONAS) | {(crudo.get("perfil") or {}).get("zona_horaria", "America/Merida")}),
-            "niveles": NIVELES, "intensidades": INTENSIDADES, "tipos_calidad": CALIDAD_TIPOS, "escalera": ESCALERA,
-            "dias": DIAS, "sensores": SENSORES, "errores": {}, "error": None, **extra}
+            "sensores": SENSORES, "errores": {}, "error": None, **extra}
 
 
 def campo_del_error(mensaje: str):
@@ -219,9 +167,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if crudo is None:
             return RedirectResponse("/bienvenida", 303)
         pref = prefijo(usuario, atleta)
-        if "nivel" in form:   # ruta vieja: el formulario de Ajustes traía la corrida; ahora vive en «Ajustar mi plan»
-            return RedirectResponse(f"{pref}/plan/rehacer", 307)
-        valores = {k: (form.getlist(k) if k in ("calidad", "pierna") else form.get(k, "")) for k in form.keys()}
+        valores = {k: form.get(k, "") for k in form.keys()}
         for k in ("inbody",):
             valores[k] = form.get(k) == "on"
         try:

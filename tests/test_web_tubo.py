@@ -17,6 +17,7 @@ import build
 import paquete
 import validar
 from test_web_cuentas import CONFIG, crear_usuario, csrf_de, entrar, post
+from test_web_plan_nuevo import confirmar, lunes_siguiente
 from web import calculo, importar, onboarding, tubo
 from web.modelos import Ajustes, Cambio, Consentimiento, DatoGarmin, Plan, Subida, Usuario, ahora
 
@@ -438,32 +439,21 @@ def test_onboarding_completo(ctx):
     assert subir(ctx.cliente(), tok, paquete_chico()).status_code == 200
     e = cl.get("/api/estado").json()
     assert e["vinculado"] and e["datos"] and e["repo"] == "Yo-Mismo/ahilallevas-datos" and e["ultima_subida"].endswith("Z")
-    p7 = cl.get("/bienvenida").text   # sin paso: salta al 7
-    assert "Crear mi plan" in p7
-    # preguntas
-    datos = {"titulo": "Mi plan", "nivel": "novato", "intensidad": "solo_z2", "caminatas": "on", "z2": "15", "larga": "30",
-             "edad": "35", "fc_max": "", "pierna": ["lun"], "inicio": "2030-01-07",
-             "sensor": "muñeca", "zona": "America/Merida"}
-    malos = [{**datos, "inicio": "2030-01-08"}, {**datos, "edad": "", "fc_max": ""}, {**datos, "zona": "Marte/Base"},
-             {**datos, "z2": "abc"}]
-    for m in malos:
-        r = cl.post("/bienvenida/plan", data={"csrf": csrf_de(cl.get("/bienvenida").text), **m})
-        assert r.status_code == 400 and 'role="alert"' in r.text
-    r = cl.post("/bienvenida/plan", data={"csrf": csrf_de(cl.get("/bienvenida").text), **datos})
-    assert r.status_code == 303 and r.headers["location"] == "/"
+    r7 = cl.get("/bienvenida", follow_redirects=False)   # sin paso: salta al 7, que es el asistente del plan v6
+    assert r7.status_code == 303 and r7.headers["location"] == "/plan/nuevo"
+    assert cl.get("/bienvenida?paso=7", follow_redirects=False).headers["location"] == "/plan/nuevo"
+    r = confirmar(cl, "empezando")
+    assert r.status_code == 303
     with ctx.sesiones() as db:
         a, p = db.get(Ajustes, uid), db.get(Plan, uid)
-        assert a.config["corrida"]["inicio"] == "2030-01-07" and a.config["perfil"]["titulo"] == "Mi plan"
-        assert "categorias" not in a.config["actividades"]   # ya no se pregunta: se usan todas
-        assert len(p.plan["weeks"]) == 12 and p.plan["start"] == "2030-01-07"
-        assert db.get(Usuario, uid).sensor == "muñeca"
+        assert a.config["corrida"]["inicio"] == lunes_siguiente().isoformat() and "categorias" not in a.config["actividades"]
+        assert p.plan["meta"]["motor"] == "v6" and p.plan["start"] == lunes_siguiente().isoformat()
     # ya con plan: el dashboard (con el pie y el aviso), y /bienvenida regresa a /
     inicio = cl.get("/")
     assert inicio.status_code == 200 and "Aviso de privacidad" in inicio.text and "no es consejo médico" in inicio.text
     assert cl.get("/bienvenida").headers["location"] == "/"
     r = cl.get("/data.json")
     assert r.status_code == 200 and validar.problemas(r.json()) == []
-    assert cl.post("/bienvenida/plan", data={"csrf": csrf_de(cl.get("/salir").text), **datos}).status_code in (403, 400)
 
 
 def test_onboarding_usuario_de_github_repetido(ctx):

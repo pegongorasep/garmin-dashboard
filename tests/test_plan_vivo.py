@@ -1,4 +1,4 @@
-"""F4: plan vivo (metas, eventos, escalera, sesiones flexibles, sensor, siguiente bloque)."""
+"""Plan vivo (metas, eventos, sesiones flexibles, sensor)."""
 import copy
 import json
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import build
-import gen_plan
+import planes_v6
 import metrics as m
 import reloj_plan as rp
 import tipos
@@ -29,7 +29,7 @@ def cfg_de(crudo_, hoy=HOY_D):
 
 
 def plan_base(crudo_=CONFIG):
-    return gen_plan.generar(normalizar_config(crudo_))
+    return planes_v6.generar(normalizar_config(crudo_))
 
 
 def con(corrida=None, **resto):
@@ -138,13 +138,6 @@ def test_config_vieja_con_correr_true_sigue_siendo_menos():
     assert [s["id"] for s in w["sessions"]] == ["z2a", "z2b"]
 
 
-def test_carrera_en_domingo_marca_la_semana_como_carrera():
-    from dashboard import build
-    c = plan_vivo.agregar_carrera(CONFIG, fecha_semana(6, 6), 10, "Mi 10K")
-    p = plan_vivo.plan_efectivo(plan_base(), cfg_de(c))
-    assert build.convert_week(p["weeks"][5], [])["etiqueta"] == "descarga"
-    assert build.marca_semana(p["weeks"][5], None, {}) == "carrera"
-
 def semanas_distintas(a, b):
     return [x["n"] for x, y in zip(a["weeks"], b["weeks"]) if x != y]
 
@@ -156,36 +149,9 @@ def test_viaje_con_correr_deja_dos_z2_cortas_solo_esa_semana():
     assert semanas_distintas(base, p) == [5] and cfg["pausas"] == []
     w = p["weeks"][4]
     assert w["evento"] == "viaje" and [s["id"] for s in w["sessions"]] == ["z2a", "z2b"] and len({s["minutes"] for s in w["sessions"]}) == 1
-    assert w["sessions"][0]["minutes"] == gen_plan.suave(base["weeks"][4]["sessions"][0]["minutes"])
-    gen_plan.verificar(p, cfg)
+    assert w["sessions"][0]["minutes"] == base["weeks"][4]["sessions"][0]["easy"]["minutes"]
+    planes_v6.verificar(p)
     assert [x["n"] for x in p["weeks"]] == list(range(1, 13))
-
-
-def test_carrera_semana_de_carrera_y_descarga_previa():
-    fecha = fecha_semana(6, 5)   # sábado de la semana 6
-    c = plan_vivo.agregar_carrera(CONFIG, fecha, 10, "10K de prueba")
-    cfg, base = cfg_de(c), plan_base()
-    assert fecha in cfg["carreras"]   # el dashboard la reconoce
-    p = plan_vivo.plan_efectivo(base, cfg)
-    assert semanas_distintas(base, p) == [6]
-    carrera, previa = p["weeks"][5], p["weeks"][4]
-    assert carrera["evento"] == "carrera" and "10K de prueba" in carrera["focus"] and carrera["kind"] == "descarga"
-    z2 = base["weeks"][5]["sessions"][0]["minutes"]
-    assert [s["minutes"] for s in carrera["sessions"]] == [max(10, gen_plan.redondea5(z2 * 0.6))] * 2
-    # la semana 4 ya es de descarga: la 5 queda normal (sin dos descargas seguidas)
-    assert base["weeks"][3]["kind"] == "descarga" and previa == base["weeks"][4]
-    gen_plan.verificar(p, cfg)
-
-
-def test_carrera_descarga_previa_si_la_semana_anterior_fue_de_carga():
-    fecha = fecha_semana(7, 5)   # carrera en la 7: la 6 es la previa y la 5 fue de carga
-    cfg, base = cfg_de(plan_vivo.agregar_carrera(CONFIG, fecha, 10, "10K")), plan_base()
-    p = plan_vivo.plan_efectivo(base, cfg)
-    assert semanas_distintas(base, p) == [6, 7]
-    previa = p["weeks"][5]
-    assert previa["evento"] == "descarga_carrera" and previa["kind"] == "descarga"
-    assert [s["minutes"] for s in previa["sessions"]] == [s["easy"]["minutes"] for s in base["weeks"][5]["sessions"]]
-    gen_plan.verificar(p, cfg)
 
 
 def test_carrera_despues_del_plan_solo_se_guarda_y_se_ve():
@@ -196,14 +162,6 @@ def test_carrera_despues_del_plan_solo_se_guarda_y_se_ve():
                                                    "nombre": "Carrera", "distancia_km": None}]
     (meta,) = cfg["metas"]
     assert normalizar_config(plan_vivo.quitar_meta(c, meta["id"]))["metas"] == []
-
-
-def test_carrera_en_semana_de_descarga_no_se_cambia_dos_veces():
-    base = plan_base()
-    n_desc = next(w["n"] for w in base["weeks"] if w["kind"] == "descarga")
-    c = plan_vivo.agregar_carrera(CONFIG, fecha_semana(n_desc + 1, 6), 5, "5K")
-    p = plan_vivo.plan_efectivo(base, cfg_de(c))
-    assert p["weeks"][n_desc - 1]["evento"] == "descarga_carrera" and p["weeks"][n_desc - 1]["sessions"] == base["weeks"][n_desc - 1]["sessions"]
 
 
 def test_metas_invalidas():
@@ -242,62 +200,6 @@ def trotes(p, n):
                 return st["steps"][0]["minutes"]
 
 
-def test_sin_escalon_el_plan_con_caminatas_queda_igual_que_hoy():
-    base = plan_base(CAMINATAS)
-    assert (trotes(base, 1), trotes(base, 5), trotes(base, 9)) == (3, 5, 8)
-    assert normalizar_config(CAMINATAS)["escalon"] is None
-
-
-def test_escalon_fijo_cambia_los_trotes_y_continuo_los_quita():
-    p = plan_base(con({"caminatas": True, "escalon": "12/1"}))
-    assert {trotes(p, n) for n in (1, 5, 9)} == {12}
-    cfg = normalizar_config(con({"caminatas": True, "escalon": "continuo"}))
-    assert cfg["caminatas"] is False
-    assert trotes(gen_plan.generar(cfg), 1) is None
-    with pytest.raises(ConfigError):
-        normalizar_config(con({"escalon": "20/1"}))
-
-
-def test_subir_escalon_rehace_desde_hoy_y_no_toca_pasadas():
-    base = plan_base(CAMINATAS)
-    cfg = cfg_de(CAMINATAS)
-    assert plan_vivo.escalon_actual(cfg, base, HOY_D) == "3/1" and plan_vivo.siguiente_escalon("3/1") == "5/1"
-    nuevo = plan_vivo.subir_escalon(CAMINATAS, cfg, base, HOY_D)
-    assert nuevo["corrida"]["escalon"] == "5/1"
-    p, desde = plan_vivo.construir_plan(nuevo, base, HOY_D)
-    assert desde == 3 and p["weeks"][:2] == base["weeks"][:2]
-    assert trotes(p, 1) == 3 and trotes(p, 3) == 5 and trotes(p, 12) == 5   # pasadas igual; desde la 3 en 5/1
-    assert plan_vivo.siguiente_escalon("continuo") is None
-    with pytest.raises(ConfigError):
-        plan_vivo.subir_escalon(con({"caminatas": True, "escalon": "continuo"}), cfg_de(con({"escalon": "continuo"})), base, HOY_D)
-
-
-def test_el_semaforo_solo_sugiere_con_dos_semanas_completas_sin_rojos():
-    base, cfg = plan_base(CAMINATAS), cfg_de(CAMINATAS)
-    sem = lambda hechas, luz="verde": {"estado": "pasada", "plan": {"total": 3, "hechas": hechas}, "dias": [{"luz": luz}] * 7}  # noqa: E731
-    assert plan_vivo.sugerir_subir_escalon({"semanas_hoy": [sem(3), sem(3)]}, cfg, base, HOY_D) == "5/1"
-    assert plan_vivo.sugerir_subir_escalon({"semanas_hoy": [sem(3), sem(2)]}, cfg, base, HOY_D) is None
-    assert plan_vivo.sugerir_subir_escalon({"semanas_hoy": [sem(3), sem(3, "rojo")]}, cfg, base, HOY_D) is None
-    assert plan_vivo.sugerir_subir_escalon({"semanas_hoy": [sem(3)]}, cfg, base, HOY_D) is None
-
-
-def test_subir_escalon_por_la_web(web_ctx):
-    uid, cl = listo(web_ctx)
-    with web_ctx.sesiones() as db:
-        db.get(Ajustes, uid).config = copy.deepcopy(CAMINATAS)
-        db.get(Plan, uid).plan = plan_base(CAMINATAS)
-        db.commit()
-    assert "Escalera de trote y caminata" in cl.get("/plan/acciones").text
-    assert cl.post("/plan/escalon/subir", data={"csrf": tok(cl)}).status_code == 303
-    assert crudo(web_ctx, uid)["corrida"]["escalon"] == "5/1"
-    p = plan_de(web_ctx, uid)
-    assert trotes(p, 1) == 3 and trotes(p, 4) == 5
-    with web_ctx.sesiones() as db:
-        c = db.query(Cambio).one()
-    cl.post(f"/historial/{c.id}/deshacer", data={"csrf": tok(cl)})
-    assert plan_de(web_ctx, uid) == plan_base(CAMINATAS) and crudo(web_ctx, uid) == CAMINATAS
-
-
 # --- sesiones flexibles ---
 
 LARGA_8_1 = [{"kind": "repeat", "times": 6, "steps": [{"kind": "run", "minutes": 8, "zone": "Z2", "note": ""},
@@ -310,7 +212,7 @@ def test_larga_8_1_por_6_mas_10_continuo_pasa_por_todo_el_motor():
     larga = next(s for s in plan["weeks"][3]["sessions"] if s["id"] == "larga")
     nuevo = plan_vivo.editar_sesion(plan, 4, "larga", copy.deepcopy(LARGA_8_1))
     s = next(x for x in nuevo["weeks"][3]["sessions"] if x["id"] == "larga")
-    assert s["minutes"] == 64 and gen_plan.suma(s["steps"]) == 64
+    assert s["minutes"] == 64 and planes_v6.suma(s["steps"]) == 64
     assert nuevo["weeks"][3]["sessions"][0] == plan["weeks"][3]["sessions"][0] and larga["minutes"] != 64
     assert plan["weeks"][3]["sessions"][2] == larga   # el plan original no se tocó
     # build: silueta, rachas, convert_steps
@@ -347,12 +249,11 @@ def test_filas_del_formulario_a_pasos_y_de_vuelta():
             plan_vivo.pasos_de_filas(filas_malas, veces)
 
 
-def test_no_se_editan_calidad_ni_prueba():
+def test_no_se_edita_la_calidad():
     p = plan_base(con({"intensidad": "calidad", "calidad_tipos": ["intervalos"]}))
+    n, cal = next((w["n"], x) for w in p["weeks"] for x in w["sessions"] if x["tipo"] == "calidad")
     with pytest.raises(ConfigError, match="no se edita"):
-        plan_vivo.editar_sesion(p, 1, "calidad", [{"kind": "run", "minutes": 20, "zone": "Z2", "note": ""}])
-    with pytest.raises(ConfigError, match="no se edita"):
-        plan_vivo.editar_sesion(p, 12, "prueba", [{"kind": "run", "minutes": 20, "zone": "Z2", "note": ""}])
+        plan_vivo.editar_sesion(p, n, cal["id"], [{"kind": "run", "minutes": 20, "zone": "Z2", "note": ""}])
     with pytest.raises(ConfigError, match="ya no existe"):
         plan_vivo.editar_sesion(p, 1, "nada", [])
 
@@ -416,38 +317,6 @@ def test_sensor_muneca_en_el_dashboard_dice_por_que(web_ctx):
 
 
 # --- siguiente bloque ---
-
-def test_siguiente_bloque_con_plan_terminado(web_ctx):
-    uid, cl = listo(web_ctx)
-    web_ctx.app.state.reloj = lambda: datetime(2027, 2, 3, 18, 0, tzinfo=timezone.utc)   # el plan terminó el 2027-01-31
-    d = cl.get("/data.json").json()
-    assert d["hoy"]["tarjeta"]["tipo"] == "plan_terminado" and d["hoy"]["tarjeta"]["siguiente_url"] == "/plan/acciones#siguiente"
-    assert "Armar siguiente bloque" in cl.get("/plan/acciones").text
-    assert cl.post("/plan/siguiente-bloque", data={"csrf": tok(cl)}).status_code == 303
-    cr = crudo(web_ctx, uid)
-    assert cr["corrida"]["inicio"] == "2027-02-01" and cr["corrida"]["semanas_repetidas"] == []
-    p = plan_de(web_ctx, uid)
-    assert p["start"] == "2027-02-01" and len(p["weeks"]) == 12
-    d = cl.get("/data.json").json()
-    assert d["plan"]["semana_actual"] == 1 and d["hoy"]["tarjeta"]["tipo"] != "plan_terminado"
-    with web_ctx.sesiones() as db:
-        assert db.query(Cambio).one().descripcion.startswith("Armó el siguiente bloque")
-    # con el plan nuevo en curso ya no se puede
-    assert cl.post("/plan/siguiente-bloque", data={"csrf": tok(cl)}).status_code == 400
-
-
-def test_no_se_arma_bloque_antes_de_terminar(web_ctx):
-    uid, cl = listo(web_ctx)
-    assert "Armar siguiente bloque" not in cl.get("/plan/acciones").text
-    assert cl.post("/plan/siguiente-bloque", data={"csrf": tok(cl)}).status_code == 400
-    assert crudo(web_ctx, uid) == CONFIG
-
-
-def test_siguiente_bloque_guarda_la_prueba_para_compararla():
-    cr = plan_vivo.siguiente_bloque(CONFIG, cfg_de(CONFIG), plan_base(), {"fecha": "2027-01-30", "tipo": "fc_fija", "valor": 400.0})
-    assert cr["corrida"]["pruebas"] == [{"fecha": "2027-01-30", "tipo": "fc_fija", "valor": 400.0}]
-    assert normalizar_config(cr)["pruebas"][0]["valor"] == 400.0
-
 
 # --- páginas del plan vivo (formularios) ---
 
@@ -538,7 +407,6 @@ def test_el_plan_de_pedro_sin_metas_ni_eventos_queda_identico():
     plan = json.loads((ROOT / "plan" / "plan.json").read_text())
     web = plan_vivo.con_pausas({**cfg, "modo": "web"}, HOY_D)
     assert web["pausas"] == [] and plan_vivo.plan_efectivo(plan, web) is plan
-    assert gen_plan.generar(cfg) == plan
 
 
 def test_plan_redirige_a_la_pestana_y_el_menu_no_trae_plan_vivo(web_ctx):
@@ -573,3 +441,20 @@ def test_solo_el_modo_menos_vuelve_descarga_la_semana_5_pegada_a_la_4():
             tipos_[modo] = (p["weeks"][3]["kind"], p["weeks"][4]["kind"])
         assert tipos_["igual"] == ("descarga", "carga") and tipos_["pausa"] == ("descarga", "carga")
         assert tipos_["menos"] == ("descarga", "descarga")
+
+
+def test_una_meta_ya_no_cambia_semanas_del_plan_v6():
+    """Las carreras entran al plan con `motor_v6.con_carrera`; `plan_efectivo` ya no las pinta encima."""
+    cfg, base = cfg_de(plan_vivo.agregar_carrera(CONFIG, fecha_semana(6, 5), 10, "10K")), plan_base()
+    assert plan_vivo.plan_efectivo(base, cfg) is base
+
+
+def test_una_segunda_carrera_en_un_plan_con_carrera_da_un_mensaje_claro():
+    import motor_v6
+    from web.errores import ErrorT
+    plan = motor_v6.generar_v6({"nivel": "base", "dias": 3, "inicio": "2026-11-09", "evidencia": planes_v6.EVIDENCIA["base"], "inicio_minutos": 100,
+                                "meta": {"tipo": "carrera", "km": 10, "semanas_hasta": 12}})
+    assert (plan["meta"].get("carrera") or {}).get("km") == 10
+    cfg = cfg_de(CONFIG)
+    with pytest.raises(ErrorT, match="otra carrera"):
+        plan_vivo.agregar_carrera_en_plan(CONFIG, plan, cfg, fecha_semana(8, 5), 5, "5K", HOY_D)

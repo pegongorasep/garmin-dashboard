@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "componentes.html" import boton, seleccion, tarjeta %}
+{% from "componentes.html" import tarjeta %}
 {% macro marca(ok) %}{% if ok is none %}–{% elif ok %}✓{% else %}✗{% endif %}{% endmacro %}
 {% block titulo %}{{ t("sim.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
@@ -7,11 +7,6 @@
 {% include "_nav.html" %}
 <h1 class="pag-t">{{ t("sim.titulo") }}</h1>
 <p class="pag-s">{{ t("sim.explica") }}</p>
-<form class="sim-motor" method="get" action="/admin/simulador">
-  {% set ops = [] %}{% for m in motores %}{% set _ = ops.append((m, t("sim.motor_" ~ m))) %}{% endfor %}
-  {{ seleccion(t("sim.motor"), "motor", ops, valor=motor) }}
-  {{ boton(t("sim.ver"), "texto", chico=True, tipo="submit") }}
-</form>
 
 {% call tarjeta(t("sim.matriz")) %}
 <p class="pag-s">{{ t("sim.matriz_nota") }}</p>

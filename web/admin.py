@@ -56,17 +56,15 @@ def revocar_invitacion(db: Session, token_hash: str) -> bool:
     return True
 
 
-def datos_simulador(motor: str) -> dict:
-    """Todo lo que pinta /admin/simulador: motores (de simulador.MOTORES), resultados, matriz y umbrales. Personas 100 % sintéticas."""
-    motores = list(simulador.MOTORES)
-    motor = motor if motor in simulador.MOTORES else motores[0]
-    resultados = simulador.simular_todas(motor)
+def datos_simulador() -> dict:
+    """Todo lo que pinta /admin/simulador: resultados, matriz y umbrales (motor v6). Personas 100 % sintéticas."""
+    resultados = simulador.simular_todas()
     for r in resultados:
         r["tope_max"] = max([w["min"] for w in r["semanas"]] + [1])
         r["fallan_claves"] = [x for x in r["reglas"] if x["ok"] is False]
-    return {"motores": motores, "motor": motor, "resultados": resultados, "claves": simulador.CLAVES,
+    return {"resultados": resultados, "claves": simulador.CLAVES,
             "textos_reglas": {x["clave"]: x["texto"] for x in resultados[0]["reglas"]} if resultados else {},
-            "umbrales": simulador.UMBRALES, "umbrales_motor": motor_v6.UMBRALES if motor == "v6" else None}
+            "umbrales": simulador.UMBRALES, "umbrales_motor": motor_v6.UMBRALES}
 
 
 def montar(app, get_db, actual, render, formulario, settings) -> None:
@@ -84,9 +82,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return pagina(request, db, admin_de(usuario))
 
     @app.get("/admin/simulador")
-    def simulador_pagina(request: Request, motor: str = "", usuario=Depends(actual)):
+    def simulador_pagina(request: Request, usuario=Depends(actual)):
         admin = admin_de(usuario)
-        return render(request, "simulador.html", atleta=admin, pref="", **datos_simulador(motor))
+        return render(request, "simulador.html", atleta=admin, pref="", **datos_simulador())
 
     @app.post("/admin/invitar")
     async def invitar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):

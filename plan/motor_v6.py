@@ -1,8 +1,8 @@
 """Motor v6 (F3): genera un plan con las reglas de docs/INVESTIGACION_PLANES.md (§3 y §5) y las decisiones de Pedro.
 
-`generar_v6(entrada) -> plan` con EXACTAMENTE el esquema de gen_plan ({"start", "weeks": [{n, block, kind, focus,
+`generar_v6(entrada) -> plan` con el esquema de plan (ver `pasos`) ({"start", "weeks": [{n, block, kind, focus,
 sessions: [{id, tipo, name, minutes, steps, easy, ...}]}]}) más `plan["meta"]` ({"motor": "v6", ...}) y, en cada sesión,
-`dia` (0 = lunes … 6 = domingo, el día sugerido). El plan viejo (`gen_plan.generar`) no se toca.
+`dia` (0 = lunes … 6 = domingo, el día sugerido).
 
 Cómo afinarlo: todos los umbrales están en `UMBRALES` (aquí arriba) y cada regla es una función chica con su docstring
 que dice de dónde sale. Orden de lectura: `generar_v6` -> `esqueleto` -> `volumen_*` -> `repartir` -> `pasos_*`.
@@ -21,9 +21,10 @@ RAIZ = Path(__file__).parent.parent
 for _p in (RAIZ / "dashboard", RAIZ / "plan"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-import gen_plan  # noqa: E402
+import pasos as ps  # noqa: E402
 from nivel import PISO_NIVEL  # noqa: E402
 
+ZONAS_ALTAS = {"Z3", "Z4", "Z5"}
 NIVELES = ("empezando", "base", "corredor")
 OBJETIVOS = ("base", "velocidad", "carrera")
 
@@ -95,7 +96,7 @@ UMBRALES = {
     "ajuste_picos_semanas": 3,        # taper: el pico es el mayor de las últimas 3 semanas de carga (ya ajustadas) hasta 2 semanas antes de la carrera
 }
 
-# Calidad: zona, tope de Z3+ como % de la semana, mínimos para que valga la pena, estructura. Las claves de tipo son las de gen_plan.
+# Calidad: zona, tope de Z3+ como % de la semana, mínimos para que valga la pena, estructura. Las claves de tipo las entiende el sitio.
 CALIDAD_TIPOS = {
     "fartlek": {"zona": "Z3", "tope_pct": 0.05, "min_trabajo": 3, "max_picos": 6, "pico_min": 1, "rec_min": 2},
     "tempo_z3": {"zona": "Z3", "tope_pct": 0.10, "min_trabajo": 10, "reps": 2, "bloque_max": 12, "bloque_min": 5, "rec_min": 3},
@@ -281,18 +282,18 @@ NOTA_FACIL = "Z2 o un ritmo en el que puedas platicar"   # las sesiones fáciles
 
 
 def pasos_continuo(minutos: int, larga: bool) -> list:
-    return [gen_plan.paso(minutos, "Z2", gen_plan.NOTA_LARGA if larga else NOTA_FACIL)]
+    return [ps.paso(minutos, "Z2", ps.NOTA_LARGA if larga else NOTA_FACIL)]
 
 
 def pasos_tc(minutos: int, trote: int, camina: int) -> list:
     """Trote/caminata (§3.6): `n` repeticiones de trote/caminata y el sobrante (trote primero). Suma exactamente `minutos`."""
     n, resto = divmod(minutos, trote + camina)
-    par = [gen_plan.paso(trote), gen_plan.paso(camina, "Z1", kind="walk")]
+    par = [ps.paso(trote), ps.paso(camina, "Z1", kind="walk")]
     pasos = par if n == 1 else ([{"kind": "repeat", "times": n, "steps": par}] if n else [])
     if resto:
-        pasos.append(gen_plan.paso(min(resto, trote)))
+        pasos.append(ps.paso(min(resto, trote)))
         if resto > trote:
-            pasos.append(gen_plan.paso(resto - trote, "Z1", kind="walk"))
+            pasos.append(ps.paso(resto - trote, "Z1", kind="walk"))
     return pasos
 
 
@@ -301,10 +302,10 @@ def pasos_facil(minutos: int, escalon: tuple | None, larga: bool) -> list:
 
 
 def _sesion(id_: str, tipo: str, nombre: str, minutos: int, pasos: list, escalon: tuple | None = None, **extra) -> dict:
-    """La sesión con el esquema de gen_plan; su versión suave repite el escalón con menos minutos."""
-    s = gen_plan.sesion(id_, tipo, nombre, minutos, pasos, **extra)
+    """La sesión con el esquema de plan; su versión suave repite el escalón con menos minutos."""
+    s = ps.sesion(id_, tipo, nombre, minutos, pasos, **extra)
     if escalon is not None:
-        sm = min(minutos, gen_plan.suave(minutos))
+        sm = min(minutos, ps.suave(minutos))
         s["easy"] = {"name": "Suave", "minutes": sm, "steps": pasos_tc(sm, *escalon)}
     return s
 
@@ -313,16 +314,16 @@ def pasos_calidad(tipo: str, minutos: int, trabajo: int):
     """(pasos, minutos de trabajo en Z3+) de una sesión de calidad de `minutos` con a lo más `trabajo` minutos de trabajo, o None si no cabe.
     Estructura §3.4: 10' Z2 · trabajo con recuperaciones · Z2 suave hasta completar. Sin calentar/enfriar aparte (el sitio los dibuja)."""
     c = CALIDAD_TIPOS[tipo]
-    calen = gen_plan.paso(CALENTAR_MIN, "Z2", "suave")
+    calen = ps.paso(CALENTAR_MIN, "Z2", "suave")
     if tipo == "fartlek":   # picos de 1' en Z3 con 2' fáciles; el último pico no lleva recuperación
         n = min(c["max_picos"], trabajo, (minutos - CALENTAR_MIN + c["rec_min"]) // (c["pico_min"] + c["rec_min"]))
         if n < c["min_trabajo"]:
             return None
         pasos = [calen]
         for i in range(n):
-            pasos.append(gen_plan.paso(c["pico_min"], c["zona"]))
+            pasos.append(ps.paso(c["pico_min"], c["zona"]))
             if i < n - 1:
-                pasos.append(gen_plan.paso(c["rec_min"], "Z2", "suave"))
+                pasos.append(ps.paso(c["rec_min"], "Z2", "suave"))
         usado, z3 = CALENTAR_MIN + n * c["pico_min"] + (n - 1) * c["rec_min"], n * c["pico_min"]
     else:
         reps = c.get("reps") or min(c["reps_max"], trabajo // c["bloque_min"])
@@ -335,22 +336,22 @@ def pasos_calidad(tipo: str, minutos: int, trabajo: int):
         if not reps or bloque < c["bloque_min"] or reps * bloque < c["min_trabajo"] or ("reps_max" in c and reps < c["reps_min"]):
             return None
         pasos = [calen, {"kind": "repeat", "times": reps,
-                         "steps": [gen_plan.paso(bloque, c["zona"]), gen_plan.paso(c["rec_min"], "Z2", "suave")]}]
+                         "steps": [ps.paso(bloque, c["zona"]), ps.paso(c["rec_min"], "Z2", "suave")]}]
         usado, z3 = CALENTAR_MIN + reps * (bloque + c["rec_min"]), reps * bloque
     if minutos > usado:
-        pasos.append(gen_plan.paso(minutos - usado, "Z2", NOTA_RELLENO))
+        pasos.append(ps.paso(minutos - usado, "Z2", NOTA_RELLENO))
     return pasos, z3
 
 
 def sesion_calidad(tipo: str, minutos: int, trabajo: int, id_: str = "calidad"):
-    """Sesión de calidad `tipo` o None si no cabe. Con `calidad_tipo` y `objetivo` como las de gen_plan (el sitio ya las entiende)."""
+    """Sesión de calidad `tipo` o None si no cabe. Con `calidad_tipo` y `objetivo`."""
     r = pasos_calidad(tipo, minutos, trabajo)
     if r is None:
         return None
     pasos, z3 = r
-    s = gen_plan.sesion(id_, "calidad", f"Calidad · {ETIQUETA_CALIDAD[tipo]}", minutos, pasos,
+    s = ps.sesion(id_, "calidad", f"Calidad · {ETIQUETA_CALIDAD[tipo]}", minutos, pasos,
                         calidad_tipo=tipo, objetivo={"zona": CALIDAD_TIPOS[tipo]["zona"], "minutos": z3})
-    s["easy"]["steps"] = [gen_plan.paso(s["easy"]["minutes"])]
+    s["easy"]["steps"] = [ps.paso(s["easy"]["minutes"])]
     return s
 
 
@@ -377,8 +378,8 @@ def calidad_de_la_semana(n: int, ciclo: int, e: dict, minutos: int, semana_total
 def sesion_aceleraciones(id_: str, nombre: str, minutos: int) -> dict:
     """Etapa 1 de la calidad (§3.4): Z2 con 4–6 aceleraciones de 15 s al final. No cuentan como Z3, por eso todo va en Z2."""
     cola = min(5, minutos)
-    pasos = ([gen_plan.paso(minutos - cola, "Z2", NOTA_FACIL)] if minutos > cola else []) + [gen_plan.paso(cola, "Z2", NOTA_ACELERACIONES)]
-    return gen_plan.sesion(id_, "z2", nombre, minutos, pasos, nota=NOTA_ACELERACIONES)
+    pasos = ([ps.paso(minutos - cola, "Z2", NOTA_FACIL)] if minutos > cola else []) + [ps.paso(cola, "Z2", NOTA_ACELERACIONES)]
+    return ps.sesion(id_, "z2", nombre, minutos, pasos, nota=NOTA_ACELERACIONES)
 
 
 # ───────────────────────────── foco de la semana y verificación ─────────────────────────────
@@ -397,7 +398,7 @@ def _escalon_de_pasos(pasos: list):
 
 
 def foco(kind: str, sesiones: list, evento: str = "", carrera: str = "") -> str:
-    """Resumen de la semana en el formato de gen_plan («Larga 40' · calidad: Fartlek · trote 3'/camina 1'»), para que el sitio lo traduzca."""
+    """Resumen de la semana en el formato del sitio («Larga 40' · calidad: Fartlek · trote 3'/camina 1'»), para que el sitio lo traduzca."""
     if evento == "carrera":
         return f"Semana de carrera · {carrera}"
     if evento == "descarga_carrera":
@@ -420,9 +421,8 @@ def minutos_semana(w: dict) -> int:
 
 
 def verificar(plan: dict) -> None:
-    """Lo de gen_plan.verificar (pasos que suman, suave sin Z3+, a lo más una sesión con Z3+…) más lo propio de v6: ids y días únicos por semana,
-    Empezando sin Z3+, calidad solo en semanas de carga y nunca en la semana 1, y la larga dentro de su tope."""
-    gen_plan.verificar(plan, {"intensidad": None})
+    """Pasos que suman, suave sin Z3+, la larga sin Z3+, a lo más una sesión con Z3+ por semana, ids únicos, Empezando sin Z3+,
+    calidad solo en semanas de carga y nunca en la semana 1, y la larga dentro de su tope."""
     assert plan.get("meta", {}).get("motor") == "v6", "falta meta.motor"
     u = UMBRALES
     empezando = plan["meta"]["nivel"] == "empezando"
@@ -431,11 +431,21 @@ def verificar(plan: dict) -> None:
         assert ses, (w["n"], "semana sin sesiones")
         assert len({s["id"] for s in ses}) == len(ses), (w["n"], "ids repetidos")
         assert all(s["minutes"] >= 1 for s in ses), (w["n"], "sesión vacía")
+        con_z3 = 0
         for s in ses:
+            assert ps.suma(s["steps"]) == s["minutes"], (w["n"], s["id"])
+            assert ps.suma(s["easy"]["steps"]) == s["easy"]["minutes"], (w["n"], s["id"], "suave")
+            assert not ps.zonas_de(s["easy"]["steps"]) & ZONAS_ALTAS, (w["n"], s["id"], "suave con Z3+")
+            if s["tipo"] == "larga":
+                assert not ps.zonas_de(s["steps"]) & ZONAS_ALTAS, (w["n"], "larga con Z3+")
             if empezando:
-                assert not gen_plan.zonas_de(s["steps"]) & {"Z3", "Z4", "Z5"}, (w["n"], s["id"], "Empezando con Z3+")
+                assert not ps.zonas_de(s["steps"]) & ZONAS_ALTAS, (w["n"], s["id"], "Empezando con Z3+")
             if s["tipo"] == "calidad":
                 assert w["kind"] == "carga" and w["n"] > 1, (w["n"], "calidad fuera de una semana de carga o en la semana 1")
+            con_z3 += bool(ps.zonas_de(s["steps"]) & ZONAS_ALTAS)
+        assert con_z3 <= 1, (w["n"], "más de una sesión con Z3+")
+        if w["kind"] == "descarga":
+            assert not any(s["tipo"] == "calidad" for s in ses), (w["n"], "descarga con calidad")
         if len(ses) > 1:
             larga = next((s for s in ses if s["tipo"] == "larga"), None)
             if larga:

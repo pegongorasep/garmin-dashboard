@@ -440,7 +440,7 @@ def test_acciones_url_desde_variable(monkeypatch):
 # --- v4 F3: calidad, mejora por ritmo, primer día, InBody opcional ---
 
 sys.path.insert(0, str(ROOT / "plan"))
-import gen_plan  # noqa: E402
+import planes_v6  # noqa: E402
 
 VACIO = {"daily_summaries": [], "sleep": [], "hrv": [], "activities": [], "details": {}, "hr_zones": [],
          "meta": {}, "inbody": None}
@@ -448,7 +448,7 @@ VACIO = {"daily_summaries": [], "sleep": [], "hrv": [], "activities": [], "detai
 
 def test_primer_dia_sin_datos_y_plan_futuro():
     cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07"}
-    plan = gen_plan.generar(cfg)
+    plan = planes_v6.generar(cfg)
     out = build.build(VACIO, plan, cfg, AHORA)
     revisar_privacidad(out)
     t = out["hoy"]["tarjeta"]
@@ -462,14 +462,14 @@ def test_primer_dia_sin_datos_y_plan_futuro():
 
 def test_primer_dia_con_plan_ya_empezado():
     cfg = {**CONFIG_CORREDOR, "plan_start": "2026-11-23"}
-    out = build.build(VACIO, gen_plan.generar(cfg), cfg, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
+    out = build.build(VACIO, planes_v6.generar(cfg), cfg, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
     assert out["hoy"]["tarjeta"]["texto"] == "Primera sincronización lista. Garmin tarda en mandar el historial; regresa en unas horas"
     assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1 and out["semanas_hoy"][out["semana_hoy_idx"]]["estado"] == "actual"
 
 
 def test_plan_futuro_con_datos_dice_cuando_empieza():
     cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07"}
-    out = build.build(fixture(), gen_plan.generar(cfg), cfg, AHORA)
+    out = build.build(fixture(), planes_v6.generar(cfg), cfg, AHORA)
     assert out["hoy"]["tarjeta"]["tipo"] == "sin_plan" and out["hoy"]["tarjeta"]["texto"] == "Tu plan empieza el lun 7 dic"
 
 
@@ -497,7 +497,7 @@ def test_mejora_por_ritmo_sin_caminatas():
     # hoy 24 nov (martes): últimas 4 semanas completas = 26 oct–22 nov; antes = 28 sep–25 oct
     data = {**VACIO, "activities": _corridas_sin_caminatas(
         ["2026-10-05", "2026-10-12", "2026-11-02", "2026-11-09"], [400, 400, 375, 375])}
-    plan = gen_plan.generar(CONFIG_CORREDOR)
+    plan = planes_v6.generar(CONFIG_CORREDOR)
     out = build.build(data, plan, {**CONFIG_CORREDOR, "plan_start": "2026-11-09"}, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
     mj = out["progreso"]["mejora"]
     assert mj["modo"] == "ritmo"
@@ -511,12 +511,11 @@ def test_mejora_con_caminatas_sigue_en_trote(salida):
 
 
 def test_sesion_de_calidad_en_el_json():
-    plan = gen_plan.generar({**CONFIG_CORREDOR, "calidad_tipos": ["threshold"]})
+    plan = planes_v6.generar({**CONFIG_CORREDOR, "intensidad": "calidad"})
     out = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)
-    s = next(x for x in out["plan"]["semanas"][0]["sessions"] if x["tipo"] == "calidad")
-    assert s["estructura"] == "10' Z2 · 4×5' threshold (2' suave)"
-    assert s["objetivo"]["zona"] == "Z4" and s["objetivo"]["minutos"] == 20 and len(s["objetivo"]["lpm"]) == 2
-    assert s["calidad_tipo"] == "threshold"
+    s = next(x for w in out["plan"]["semanas"] for x in w["sessions"] if x["tipo"] == "calidad")
+    assert s["estructura"] and s["objetivo"]["zona"] in ("Z3", "Z4") and s["objetivo"]["minutos"] > 0 and len(s["objetivo"]["lpm"]) == 2
+    assert s["calidad_tipo"] in ("tempo_z3", "threshold", "intervalos", "progresivo", "fartlek")
 
 
 def test_carreras_y_mejores_marcas_en_data_json():
@@ -581,14 +580,12 @@ def test_catalogo_de_tipos():
 
 def test_forma_derivada_y_silueta_sin_tocar_el_plan():
     import tipos
-    plan = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "z2_poca_z3", "variada": True, "caminatas": False})
+    plan = planes_v6.generar({**CONFIG_CORREDOR, "intensidad": "calidad"})
     s = plan["weeks"][1]["sessions"]
     assert all("forma" not in x for x in s)                       # el plan no lleva `forma`: se deriva
-    assert [tipos.forma_de(x) for x in s][0] == "continuo" and tipos.forma_de(s[1]) == s[1]["variada_tipo"]
-    cam = gen_plan.generar({**CONFIG_CORREDOR, "caminatas": True})["weeks"][0]["sessions"][0]
+    assert tipos.forma_de(s[0]) == "continuo" and tipos.forma_de(s[1]) == s[1]["calidad_tipo"]
+    cam = planes_v6.generar({**CONFIG_CORREDOR, "nivel": "novato"})["weeks"][0]["sessions"][0]
     assert tipos.forma_de(cam) == "trote_caminata"
-    cal = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "calidad", "calidad_tipos": ["threshold"]})["weeks"][0]["sessions"][1]
-    assert tipos.forma_de(cal) == "umbral"
 
 
 def test_silueta_despliega_repeat_caminata_en_su_zona_y_opcionales():
@@ -612,15 +609,14 @@ def test_planes_viejos_con_z1_z2_salen_en_una_sola_zona():
 
 
 def test_data_json_trae_forma_silueta_y_tipos():
-    plan = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "z2_poca_z3", "variada": True})
-    out = build.build(fixture(), plan, {**CONFIG_CORREDOR, "plan_start": "2026-10-26", "intensidad": "z2_poca_z3"}, AHORA)
+    plan = planes_v6.generar({**CONFIG_CORREDOR, "intensidad": "calidad"})
+    out = build.build(fixture(), plan, {**CONFIG_CORREDOR, "plan_start": "2026-10-26", "intensidad": "calidad"}, AHORA)
     revisar_privacidad(out)
     ses = out["plan"]["semanas"][1]["sessions"]
-    assert ses[1]["forma"] == ses[1]["variada_tipo"] and ses[0]["forma"] == "continuo"
+    assert ses[1]["forma"] == ses[1]["calidad_tipo"] and ses[0]["forma"] == "continuo"
     assert sum(m for m, *_ in ses[1]["silueta"]) == ses[1]["minutes"]
     assert sum(m for m, *_ in ses[1]["easy"]["silueta"]) == ses[1]["easy"]["minutes"]
-    assert ses[0]["titulo"] == "Continuo en Z2" and ses[1]["titulo"].endswith("en Z1–Z3")   # variada con pico corto de Z3
-    assert ses[1]["easy"]["titulo"].startswith(("Continuo en", "Trote y caminata en"))
+    assert ses[0]["titulo"] == "Continuo en Z2"
     # rachas: lo que va escrito encima de la silueta; suman lo mismo y llevan la zona del plan con sus lpm
     for x in (ses[0], ses[1], ses[1]["easy"]):
         assert sum(r["min"] for r in x["rachas"]) == x["minutes"]
@@ -629,14 +625,6 @@ def test_data_json_trae_forma_silueta_y_tipos():
     assert out["tipos"]["en_plan"][:1] == ["continuo"] and ses[1]["forma"] in out["tipos"]["en_plan"]
     assert len(out["tipos"]["catalogo"]) == 14 and [g["id"] for g in out["tipos"]["grupos"]] == ["continuos", "variados", "calidad"]
     assert "tipos" in validar.CLAVES
-
-
-def test_estructura_de_progresivo_y_fartlek():
-    for tipo, esperado in (("progresivo", "progresivo"), ("fartlek", "fartlek")):
-        plan = gen_plan.generar({**CONFIG_CORREDOR, "intensidad": "calidad", "calidad_tipos": [tipo]})
-        s = build.convert_session(plan["weeks"][0]["sessions"][1], [("Z1", 100, 110), ("Z2", 110, 120), ("Z3", 120, 130),
-                                                                   ("Z4", 130, 140), ("Z5", 140, 150)])
-        assert esperado in s["estructura"] and s["forma"] == tipo and s["objetivo"]["zona"] == "Z3"
 
 
 def test_iconos_en_data_json_y_validador():
@@ -762,7 +750,7 @@ def test_resumen_de_la_semana_pasada():
 
 def _plan_corto(**kw):
     cfg = {**CONFIG_FIXTURE, "plan_semanas": 4, **kw}
-    return gen_plan.generar(cfg), cfg
+    return planes_v6.generar(cfg), cfg
 
 
 def _datos_prueba(ritmo=400, minutos=35):
@@ -780,27 +768,6 @@ def _datos_prueba(ritmo=400, minutos=35):
 AHORA_FIN = datetime(2026, 11, 25, 12, 0, tzinfo=ZoneInfo("America/Merida"))
 
 
-def test_plan_terminado_con_prueba_contra_el_inicio():
-    plan, cfg = _plan_corto()
-    out = build.build(_datos_prueba(), plan, cfg, AHORA_FIN)
-    t = out["hoy"]["tarjeta"]
-    assert t["tipo"] == "plan_terminado" and t["texto"] == "Plan terminado" and "/ajustar" in t["siguiente"]
-    p = t["prueba"]
-    assert (p["tipo"], p["fecha"], p["estado"]) == ("fc_fija", "2026-11-18", "hecha")
-    assert p["valor"] == 400 and p["km"] == 4.5
-    assert p["base"]["fuente"] == "inicio" and p["dif"] == round(400 - p["base"]["valor"], 1)
-    revisar_privacidad(out)
-    assert validar.problemas(json.loads(json.dumps(out))) == []
-
-
-def test_plan_terminado_prueba_contra_la_prueba_anterior_de_la_config():
-    plan, cfg = _plan_corto(pruebas=[{"fecha": "2026-08-01", "tipo": "fc_fija", "valor": 430.0},
-                                     {"fecha": "2026-09-15", "tipo": "5k", "valor": 1500.0}])
-    p = build.build(_datos_prueba(), plan, cfg, AHORA_FIN)["hoy"]["tarjeta"]["prueba"]
-    assert p["base"] == {"fuente": "prueba", "fecha": "2026-08-01", "valor": 430.0}
-    assert p["dif"] == -30.0 and p["mejor"] is True
-
-
 def test_plan_terminado_sin_la_prueba_dice_que_falta():
     plan, cfg = _plan_corto()
     t = build.build(fixture(), plan, cfg, AHORA_FIN)["hoy"]["tarjeta"]
@@ -813,17 +780,6 @@ def test_plan_no_terminado_no_muestra_la_prueba():
     assert t["tipo"] != "plan_terminado"
     assert build.plan_terminado(date(2026, 11, 23), cfg, plan) and not build.plan_terminado(date(2026, 11, 22), cfg, plan)
     assert not build.plan_terminado(date(2027, 1, 1), cfg, {"weeks": []})
-
-
-def test_prueba_5k_usa_la_mejor_marca_antes_del_plan_y_no_pide_techo():
-    plan, cfg = _plan_corto(intensidad="calidad", calidad_tipos=["tempo_z3"])
-    data = _datos_prueba(ritmo=300, minutos=26)           # 5 km en 25:00
-    data["historial"] = [{"startTimeLocal": "2026-05-03 07:00:00", "activityType": {"typeKey": "running"}, "distance": 5100.0,
-                          "duration": 1600.0, "eventType": {"typeKey": "race"}, "fastestSplit_5000": 1560.0}]
-    out = build.build(data, plan, cfg, AHORA_FIN)
-    p = out["hoy"]["tarjeta"]["prueba"]
-    assert p["tipo"] == "5k" and p["valor"] == 1500 and p["base"] == {"fuente": "mejor_5k", "fecha": "2026-05-03", "valor": 1560}
-    assert p["dif"] == -60.0 and p["mejor"] is True
 
 
 def test_mejora_sin_corridas_da_motivos():
@@ -857,18 +813,18 @@ def test_semana_actual_ya_no_marca_dias_y_dice_que_falta():
 def test_semana_libre_solo_sin_plan_promedios_racha_y_sin_claves_prohibidas():
     import validar
     cfg = {**CONFIG_CORREDOR, "sin_plan": True}
-    out = build.build(fixture(), gen_plan.generar(cfg), cfg, AHORA)
+    out = build.build(fixture(), planes_v6.generar(cfg), cfg, AHORA)
     sl = out["semana_libre"]
     assert len(sl["dias"]) == 7 and sum(len(d["actividades"]) for d in sl["dias"]) == sl["actividades"]
     assert sl["minutos"] == round(sum(a["minutos"] for d in sl["dias"] for a in d["actividades"]), 0) or sl["minutos"] >= 0
     assert sl["promedio_minutos"] >= 0 and sl["racha_semanas"] >= 0
     assert all({"nombre", "icono", "minutos", "km", "fc_prom", "sesion"} <= set(a) for d in sl["dias"] for a in d["actividades"])
     assert validar.problemas(out) == []
-    assert "semana_libre" not in build.build(fixture(), gen_plan.generar(CONFIG_CORREDOR), CONFIG_CORREDOR, AHORA)
+    assert "semana_libre" not in build.build(fixture(), planes_v6.generar(CONFIG_CORREDOR), CONFIG_CORREDOR, AHORA)
 
 
 def test_plan_url_null_por_defecto_y_solo_con_la_clave():
-    plan = gen_plan.generar(CONFIG_CORREDOR)
+    plan = planes_v6.generar(CONFIG_CORREDOR)
     assert build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)["ui"]["plan_url"] is None
     cfg = {**CONFIG_CORREDOR, "plan_url": "/plan/acciones"}
     assert build.build(fixture(), plan, cfg, AHORA)["ui"]["plan_url"] == "/plan/acciones"
@@ -1021,7 +977,7 @@ def test_semanas_plan_estados_por_sesion(salida):
 
 
 def test_ui_cuerpo_nuevo_null_por_defecto_y_con_la_clave():
-    plan = gen_plan.generar(CONFIG_CORREDOR)
+    plan = planes_v6.generar(CONFIG_CORREDOR)
     assert build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)["ui"]["cuerpo_nuevo"] is None
     cfg = {**CONFIG_CORREDOR, "cuerpo_nuevo": "/cuerpo/nuevo"}
     out = build.build(fixture(), plan, cfg, AHORA)
@@ -1029,6 +985,6 @@ def test_ui_cuerpo_nuevo_null_por_defecto_y_con_la_clave():
 
 
 def test_ui_grupos_cero_por_defecto():
-    plan = gen_plan.generar(CONFIG_CORREDOR)
+    plan = planes_v6.generar(CONFIG_CORREDOR)
     out = build.build(fixture(), plan, CONFIG_CORREDOR, AHORA)
     assert out["ui"]["grupos"] == 0 and validar.problemas(out) == []

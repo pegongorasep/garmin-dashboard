@@ -1,4 +1,4 @@
-"""Páginas del plan vivo: /plan (metas, eventos, escalón, siguiente bloque) y /plan/sesion/<n>/<id> (editor de pasos).
+"""Páginas del plan vivo: /plan (metas, eventos) y /plan/sesion/<n>/<id> (editor de pasos).
 Todo cambio pasa por `aplicar_cambio`; las rutas valen para uno mismo y para el atleta de un coach (`/a/<id>/plan`)."""
 import json
 from datetime import date
@@ -7,18 +7,16 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 
 import build
-import gen_plan
+import pasos
 from ajustes import ConfigError, normalizar_config
 from .errores import ErrorT, texto
 
 from . import ajustes_web as aw
-from . import calculo, cambios, plan_vivo
+from . import cambios, plan_vivo
 from .modelos import Usuario
 from .permisos import puede_ver
 
 TIPOS_EVENTO = {"enfermedad": "Enfermedad", "lesion": "Lesión"}
-NOMBRE_ESCALON = {"3/1": "3' trote · 1' caminata", "5/1": "5' trote · 1' caminata", "8/1": "8' trote · 1' caminata",
-                  "12/1": "12' trote · 1' caminata", "continuo": "correr continuo"}
 
 
 def _fecha(valor, campo: str) -> str:
@@ -34,26 +32,14 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             getattr(app, metodo)(base + ruta)(fn)
 
     def contexto(db, atleta, crudo, hoy, idioma=None):
-        """Lo que muestra /plan: config con pausas, plan guardado, estado de hoy y sugerencias."""
+        """Lo que muestra /plan: config con pausas, plan guardado y estado de hoy."""
         cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
         plan = aw.plan_guardado(db, atleta) or {"start": cfg["plan_start"], "weeks": []}
-        data = None
-        try:
-            data = calculo.calcular(db, atleta, app.state.reloj().replace(tzinfo=None), idioma=idioma)
-        except Exception:   # sin datos o config rara: la página sigue sin sugerencias
-            data = None
         efectivo = plan_vivo.plan_efectivo(plan, cfg)
         n = build.m.semana_del_plan(hoy, cfg)
         terminado = bool(plan["weeks"]) and build.plan_terminado(hoy, cfg, efectivo)
-        tarjeta = (data or {}).get("hoy", {}).get("tarjeta") or {}
-        esc = plan_vivo.escalon_actual(cfg, plan, hoy)
-        return {"cfg": cfg, "plan": plan, "n": n, "terminado": terminado, "esc": esc, "esc_nombre": NOMBRE_ESCALON.get(esc),
-                "esc_siguiente": plan_vivo.siguiente_escalon(esc),
-                "sugerido": plan_vivo.sugerir_subir_escalon(data, cfg, plan, hoy) if data else None,
-                "prueba": tarjeta.get("prueba") if terminado else None,
-                "inicio_siguiente": plan_vivo.inicio_siguiente_bloque(cfg, efectivo).isoformat() if terminado else None,
-                "hoy": hoy.isoformat(), "editables": plan_vivo.TIPOS_EDITABLES, "nombre_escalon": NOMBRE_ESCALON,
-                "tipos_evento": TIPOS_EVENTO}
+        return {"cfg": cfg, "plan": plan, "n": n, "terminado": terminado, "hoy": hoy.isoformat(),
+                "editables": plan_vivo.TIPOS_EDITABLES, "tipos_evento": TIPOS_EVENTO}
 
     def pagina(request, usuario, db, atleta_id, status=200, **extra):
         atleta, redir = aw.resolver(db, usuario, atleta_id)
@@ -65,48 +51,6 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         hoy = aw.hoy_de(app.state.reloj, crudo)
         ctx = {**aw.contexto_ajustes(db, atleta, usuario, crudo), **contexto(db, atleta, crudo, hoy, request.state.idioma), **extra}
         return render(request, "plan.html", status=status, ok=request.query_params.get("ok"), **ctx)
-
-    async def rehacer(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        """«Rehacer mi plan»: los campos base del plan. Si el plan cambia, pasa por la pantalla de confirmación; nunca rehace a ciegas."""
-        form = await formulario(request)
-        atleta, redir = aw.resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        crudo = aw.crudo_de(db, atleta)
-        if crudo is None:
-            return RedirectResponse("/bienvenida", 303)
-        pref = aw.prefijo(usuario, atleta)
-        hoy = aw.hoy_de(app.state.reloj, crudo)
-        valores = {k: (form.getlist(k) if k in ("calidad", "pierna") else form.get(k, "")) for k in form.keys()}
-        for k in ("caminatas", "variada"):
-            valores[k] = form.get(k) == "on"
-        try:
-            nuevo = aw.crudo_plan(crudo, form)
-            cfg_viejo, cfg_nuevo = normalizar_config(crudo), normalizar_config(nuevo)
-            cambios_txt = aw.diferencias(crudo, nuevo)
-            if not cambios_txt:
-                return RedirectResponse(f"{pref}/plan/acciones?ok=sin", 303)
-            nuevo_plan, desde = None, None
-            if plan_vivo.cambia_plan(cfg_viejo, cfg_nuevo):
-                nuevo_plan, desde = plan_vivo.construir_plan(nuevo, aw.plan_guardado(db, atleta), hoy)
-        except (ConfigError, ValueError) as ex:
-            msg = texto(ex, request.state.t)
-            campo = ex.campo if hasattr(ex, "clave") else aw.campo_del_error(str(ex))
-            extra = {"errores": {campo: msg}} if campo else {"error": msg}
-            return pagina(request, usuario, db, atleta_id, status=400, rehacer_abierto=True, v={**aw.valores_form(crudo, atleta), **valores}, **extra)
-        if nuevo_plan is not None and form.get("confirmo") != "1":
-            tt = request.state.t
-            frase = tt("conf.frase_1") if desde == 1 else tt("conf.frase_n", desde=desde)
-            etiq = {v: k for k, v in aw.ETIQUETAS.items()}
-            return render(request, "ajustes_confirmar.html", atleta=atleta, pref=pref, frase=frase,
-                          accion=f"{pref}/plan/rehacer", volver=f"{pref}/plan/acciones#rehacer",
-                          cambios=[tt("et." + etiq[c]) for c in cambios_txt],
-                          pares=[(k, v) for k, v in form.multi_items() if k not in ("csrf", "confirmo")])
-        desc = "Ajustes: cambió " + ", ".join(cambios_txt) + (f"; plan rehecho desde la semana {desde}" if nuevo_plan else "")
-        paquete = {"ajustes": nuevo, **({"plan": nuevo_plan} if nuevo_plan else {})}
-        cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), desc, paquete)
-        return RedirectResponse(f"{pref}/plan/acciones?ok=rehecho", 303)
-    doble("post", "/plan/rehacer", rehacer)
 
     def ver_acciones(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         return pagina(request, usuario, db, atleta_id)
@@ -202,22 +146,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             raise ErrorT("err.sin_semana")
         return plan_vivo.repetir_semana(crudo, n), None, f"Repitió la semana {n}"
 
-    def subir(db, atleta, crudo, cfg, plan, f, hoy):
-        plan = plan or {"start": cfg["plan_start"], "weeks": []}
-        nuevo = plan_vivo.subir_escalon(crudo, cfg, plan, hoy)
-        nuevo_plan, desde = plan_vivo.construir_plan(nuevo, plan, hoy)
-        return nuevo, nuevo_plan, f"Subió el escalón de trote/caminata a {nuevo['corrida']['escalon']} (plan rehecho desde la semana {desde})"
-
-    def bloque(db, atleta, crudo, cfg, plan, f, hoy):
-        ctx = contexto(db, atleta, crudo, hoy)
-        if not ctx["terminado"]:
-            raise ErrorT("err.no_termina")
-        nuevo = plan_vivo.siguiente_bloque(crudo, cfg, plan, ctx["prueba"])
-        nuevo_plan, _ = plan_vivo.construir_plan(nuevo, None, hoy)
-        return nuevo, nuevo_plan, f"Armó el siguiente bloque: empieza el {lindo(nuevo['corrida']['inicio'])}"
-
-    for nombre, fn in (("viaje", viaje), ("enfermedad", enfermo), ("carrera", carrera), ("repetir", repetir),
-                       ("escalon/subir", subir), ("siguiente-bloque", bloque)):
+    for nombre, fn in (("viaje", viaje), ("enfermedad", enfermo), ("carrera", carrera), ("repetir", repetir)):
         doble("post", f"/plan/{nombre}", accion(nombre, fn))
 
     # rutas con id en la ruta: se registran aparte para leer el parámetro
@@ -277,7 +206,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         filas = filas + [{"tipo": "trote", "min": "", "zona": "Z2", "grupo": 0, "nota": "", "opcional": False}] * vacias
         return render(request, "sesion.html", status=status, atleta=atleta, pref=aw.prefijo(usuario, atleta), n=n, w=w, s=s,
                       filas=filas, veces=veces or {}, puede=puede, error=error, grupos=range(1, plan_vivo.MAX_GRUPOS + 1),
-                      zonas=plan_vivo.ZONAS, minutos=gen_plan.suma(s["steps"]))
+                      zonas=plan_vivo.ZONAS, minutos=pasos.suma(s["steps"]))
 
     def sesion_get(request: Request, n: int, sid: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         return editor(request, usuario, db, atleta_id, n, sid)

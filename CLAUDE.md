@@ -1,6 +1,6 @@
 # Garmin dashboard: el motor (repo de Pedro)
 
-Este repo es la **fuente de verdad del código** (`dashboard/`, `plan/gen_plan.py`, `garmin_connect.py`, `site/`,
+Este repo es la **fuente de verdad del código** (`dashboard/`, `plan/motor_v6.py`, `garmin_connect.py`, `site/`,
 workflows) y además guarda los archivos personales de Pedro (`config.yaml`, `plan/plan.json`, `plan/inbody.json`).
 Las demás personas usan la web (Ahí la Llevas); su repo (creado desde `plantilla_v5/`) es solo el tubo de datos y corre
 `motor.yml` con la etiqueta `stable`. Ya no existe GitHub Pages (retirado 2026-11-26).
@@ -16,7 +16,7 @@ Las demás personas usan la web (Ahí la Llevas); su repo (creado desde `plantil
 - Pruebas (el Python del sistema no tiene pytest): `.venv/bin/python -m pytest -q`
 - Construir el sitio: `.venv/bin/python dashboard/build.py` (opciones: `--day AAAA-MM-DD`, `--out ruta`).
   Con `GARMIN_USER_DIR=<carpeta>` usa los archivos personales de otra persona (config.yaml, plan/, data/).
-- Plan: `.venv/bin/python plan/gen_plan.py [--config …] [--out …]`. Validar privacidad: `.venv/bin/python dashboard/validar.py`.
+- Planes: solo el motor v6 (`plan/motor_v6.py`, piezas en `plan/pasos.py`; `.venv/bin/python -m plan.simulador` lo prueba con personas sintéticas). El `plan/plan.json` de Pedro es del motor anterior y se queda como está (el sitio lo sigue pintando). Validar privacidad: `.venv/bin/python dashboard/validar.py`.
 - Reloj (solo Pedro): `.venv/bin/python reloj.py semana` simula; `--si` manda la semana del plan al reloj. Login una vez en la Terminal (`reloj.py login`); en Claude, `/reloj`.
 - En local: `./run_local.sh` (baja datos, construye y sirve en http://localhost:8000).
 - Deploy de la web: push a `main` y `gh workflow run web.yml`; seguirlo con `gh run watch`. `deploy.yml` es el tubo de datos

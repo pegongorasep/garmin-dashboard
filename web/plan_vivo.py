@@ -3,7 +3,7 @@ flexibles. Lógica pura (sin base de datos): recibe y devuelve dicts; las rutas 
 
 Dónde vive cada cosa:
 - `ajustes.config` (crudo) guarda `corrida.metas`, `corrida.eventos`, `corrida.escalon` y `corrida.semanas_repetidas`.
-- `planes.plan` es el plan que sale de `gen_plan.generar` (más lo que la persona edite a mano). NO lleva los eventos:
+- `planes.plan` es el plan que sale de `motor_v6` (más lo que la persona edite a mano). NO lleva los eventos:
   `plan_efectivo` los aplica al calcular (así quitar un evento o deshacerlo no deja restos en el plan).
 - Una semana de **pausa** (viaje sin correr, enfermedad o lesión) no gasta semana del plan: el plan se reanuda donde iba
   (equivale a repetir la semana). Una semana **ligera** (viaje con correr) o de **carrera** sustituye a la semana n.
@@ -12,15 +12,12 @@ import copy
 import secrets
 from datetime import date, timedelta
 
-import gen_plan
 import motor_v6
-import build
+import pasos as ps
 import metrics as m
-from ajustes import ESCALERA, ConfigError, normalizar_config
+from ajustes import normalizar_config
 from .errores import ErrorT
 
-# Claves de la config normalizada que, si cambian, obligan a rehacer el plan desde la semana de hoy.
-CLAVES_PLAN = ("nivel", "intensidad", "calidad_tipos", "caminatas", "variada", "plan_semanas", "base_min", "plan_start", "escalon")
 TIPOS_EDITABLES = ("z2", "larga", "variada")
 ZONAS = ("Z1", "Z2", "Z3", "Z4", "Z5")
 MAX_GRUPOS = 4
@@ -44,24 +41,6 @@ def semana_tope(cfg: dict, hoy: date) -> int:
         if n is not None:
             return n
     return cfg["plan_semanas"] + 1
-
-
-def cambia_plan(viejo: dict, nuevo: dict) -> bool:
-    """¿Cambió algo de la config normalizada que afecta cómo se genera el plan?"""
-    return any(viejo.get(k) != nuevo.get(k) for k in CLAVES_PLAN)
-
-
-def construir_plan(crudo: dict, plan_previo: dict | None, hoy: date) -> tuple[dict, int]:
-    """(plan nuevo, primera semana que cambia). Genera con `gen_plan` y conserva las semanas ya pasadas del plan previo
-    si el inicio es el mismo; si el inicio cambió se rehace todo (semana 1)."""
-    cfg = normalizar_config(crudo)
-    nuevo = gen_plan.generar(cfg)
-    if not plan_previo or not plan_previo.get("weeks") or plan_previo.get("start") != nuevo["start"]:
-        return nuevo, 1
-    tope = semana_tope(con_pausas(cfg, hoy), hoy)
-    pasadas = [w for w in plan_previo["weeks"] if w["n"] < tope]
-    nuevo["weeks"] = pasadas + [w for w in nuevo["weeks"] if w["n"] >= tope]
-    return nuevo, tope
 
 
 # --- eventos -> pausas y semanas distintas ---
@@ -94,67 +73,21 @@ def con_pausas(cfg: dict, hoy: date) -> dict:
 LETRAS_Z2 = "abcdefgh"
 
 
-def _z2_cortas(w: dict, minutos: int, cfg: dict) -> list:
-    """Z2 continuas (o trote/caminata si la persona está en caminatas) de `minutos`: una menos que las sesiones de la semana (sin la larga);
-    con las 3 de siempre son 2 (ids z2a, z2b). Los planes de 2, 4 o 5 días (motor v6) quedan con 1, 3 o 4."""
-    def una(id_, nombre):
-        pasos = gen_plan.pasos_z2(minutos, False, cfg["caminatas"], w["block"], cfg.get("escalon"))
-        return gen_plan.con_suave_caminatas(gen_plan.sesion(id_, "z2", nombre, minutos, pasos),
-                                            cfg["caminatas"], w["block"], cfg.get("escalon"))
-    return [una(f"z2{LETRAS_Z2[i]}", f"Z2 #{i + 1}") for i in range(max(1, len(w["sessions"]) - 1))]
-
-
-def _minutos_z2(w: dict) -> int:
-    s = next((x for x in w["sessions"] if x.get("tipo") == "z2"), w["sessions"][0])
-    return s["minutes"]
-
-
-def _suavizada(w: dict) -> list:
-    """Cada sesión en su versión suave (descarga previa a una carrera). Calidad, variada y prueba pasan a Z2 / Larga; el id nuevo es uno libre
-    (con 4–5 sesiones por semana «z2b» ya puede estar ocupado)."""
-    usados = {s["id"] for s in w["sessions"] if s["tipo"] in ("z2", "larga")}
-    out, z2 = [], 0
-    for s in w["sessions"]:
-        e = s["easy"]
-        z2 += s["tipo"] != "larga" and s["tipo"] != "prueba"
-        if s["tipo"] in ("z2", "larga"):
-            tipo, id_, nombre = s["tipo"], s["id"], s["name"]
-        elif s["tipo"] == "prueba":
-            tipo, id_, nombre = "larga", "larga", "Larga"
-        else:
-            tipo, nombre = "z2", f"Z2 #{z2}"
-            id_ = next(f"z2{x}" for x in LETRAS_Z2 if f"z2{x}" not in usados)
-            usados.add(id_)
-        nuevo = {"id": id_, "tipo": tipo, "name": nombre, "minutes": e["minutes"], "steps": copy.deepcopy(e["steps"]),
-                 "easy": copy.deepcopy(e)}
-        if "nota" in s:
-            nuevo["nota"] = s["nota"]
-        if "dia" in s:
-            nuevo["dia"] = s["dia"]
-        out.append(nuevo)
-    return out
+def _z2_cortas(w: dict, cuantas: int) -> list:
+    """`cuantas` Z2 cortas: la versión suave de la sesión Z2 de la semana (con trote/camina si ya va por escalones)."""
+    base = next((x for x in w["sessions"] if x.get("tipo") == "z2"), w["sessions"][0])["easy"]
+    return [{"id": f"z2{LETRAS_Z2[i]}", "tipo": "z2", "name": f"Z2 #{i + 1}", "minutes": base["minutes"],
+             "steps": copy.deepcopy(base["steps"]), "easy": copy.deepcopy(base)} for i in range(cuantas)]
 
 
 def plan_efectivo(plan: dict, cfg: dict) -> dict:
-    """El plan guardado con las carreras y los viajes aplicados a sus semanas. `cfg` ya trae `pausas`. Sin metas ni
-    eventos devuelve el mismo plan (idéntico)."""
-    metas = [x for x in cfg["metas"] if not x.get("en_plan")]   # las `en_plan` ya están construidas dentro del plan v6
-    if not metas and not any(e["tipo"] == "viaje" and e["modo"] != "pausa" for e in cfg["eventos"]):
+    """El plan guardado con los viajes aplicados a sus semanas (las carreras ya vienen dentro del plan v6). `cfg` ya trae `pausas`.
+    Sin viajes que cambien semanas devuelve el mismo plan (idéntico)."""
+    if not any(e["tipo"] == "viaje" and e["modo"] != "pausa" for e in cfg["eventos"]):
         return plan
     inicio = date.fromisoformat(cfg["plan_start"])
     sec = m.secuencia_semanas(inicio, cfg["semanas_repetidas"], cfg["plan_semanas"], cfg.get("pausas", []))
-    carrera = {}       # n -> meta
-    previa = set()     # n de la semana anterior a una carrera
-    ligera = set()     # n de semanas de viaje con correr menos
-    igual = set()      # n de semanas de viaje «sigo igual»: solo se marcan, el plan no cambia
-    tipo = {w["n"]: w["kind"] for w in plan["weeks"]}
-    for meta in metas:
-        i = (lunes(date.fromisoformat(meta["fecha"])) - inicio).days // 7
-        if 0 <= i < len(sec) and sec[i] is not None:
-            carrera[sec[i]] = meta
-            # Sin dos descargas seguidas: si la de antes de la previa ya fue de descarga, la previa queda normal
-            if i > 0 and sec[i - 1] is not None and not (i > 1 and tipo.get(sec[i - 2]) == "descarga"):
-                previa.add(sec[i - 1])
+    ligera, igual = set(), set()   # n de semanas de viaje con correr menos / «sigo igual» (solo se marca)
     for e in cfg["eventos"]:
         if e["tipo"] == "viaje" and e["modo"] != "pausa":
             for d in semanas_de(e, date.fromisoformat(e["hasta"])):
@@ -163,23 +96,10 @@ def plan_efectivo(plan: dict, cfg: dict) -> dict:
                     (ligera if e["modo"] == "menos" else igual).add(sec[i])
     semanas = []
     for w in plan["weeks"]:
-        n = w["n"]
-        if n in carrera:
-            meta = carrera[n]
-            minutos = max(10, gen_plan.redondea5(_minutos_z2(w) * 0.6))
-            w = {**w, "kind": "descarga", "evento": "carrera", "focus": f"Semana de carrera · {meta['nombre']}",
-                 "sessions": _z2_cortas(w, minutos, cfg)}
-        elif n in ligera:
-            w = {**w, "kind": "descarga", "evento": "viaje", "focus": "Viaje · 2 Z2 cortas",
-                 "sessions": _z2_cortas(w, max(10, gen_plan.suave(_minutos_z2(w))), cfg)}
-        elif n in igual and n not in previa:
+        if w["n"] in ligera:
+            w = {**w, "kind": "descarga", "evento": "viaje", "focus": "Viaje · 2 Z2 cortas", "sessions": _z2_cortas(w, 2)}
+        elif w["n"] in igual:
             w = {**w, "evento": "viaje_igual"}
-        elif n in previa:
-            if w["kind"] == "descarga":
-                w = {**w, "evento": "descarga_carrera"}
-            else:
-                w = {**w, "kind": "descarga", "evento": "descarga_carrera", "focus": "Descarga previa a la carrera",
-                     "sessions": _suavizada(w)}
         semanas.append(w)
     return {**plan, "weeks": semanas}
 
@@ -210,10 +130,12 @@ def agregar_carrera(crudo: dict, fecha: str, distancia_km, nombre: str) -> dict:
 
 def agregar_carrera_en_plan(crudo: dict, plan: dict | None, cfg: dict, fecha: str, km, nombre: str, hoy: date) -> tuple[dict, dict | None]:
     """(ajustes, plan nuevo o None). En un plan v6 la carrera se construye dentro del plan (semanas de taper y de carrera con `motor_v6`)
-    desde la semana en curso y su meta queda con `en_plan: true`. Si no se puede (plan viejo, distancia que no es 5/10/21/42, el plan ya
-    tiene una carrera, la fecha cae en una pausa o antes de la semana en curso), queda la meta normal y `plan_efectivo` la aplica encima."""
+    desde la semana en curso y su meta queda con `en_plan: true`. Si el plan ya está armado para otra carrera, ErrorT (mensaje claro). Si no
+    se puede (distancia que no es 5/10/21/42, la fecha cae en una pausa o antes de la semana en curso), queda solo la meta (cuenta regresiva)."""
+    if plan and motor_v6.es_v6(plan) and (plan.get("meta") or {}).get("carrera"):
+        raise ErrorT("err.carrera_otra")
     nuevo = agregar_carrera(crudo, fecha, km, nombre)
-    if not plan or not motor_v6.es_v6(plan) or (plan.get("meta") or {}).get("carrera"):
+    if not plan or not motor_v6.es_v6(plan):
         return nuevo, None
     try:
         distancia = int(float(km))
@@ -300,69 +222,6 @@ def repetir_semana(crudo: dict, n: int) -> dict:
     return _validado(nuevo)
 
 
-# --- escalera trote/caminata ---
-
-def escalon_actual(cfg: dict, plan: dict, hoy: date) -> str | None:
-    """El escalón de la persona; sin escalón explícito, el que da el bloque de la semana de hoy (si hace caminatas)."""
-    if cfg.get("escalon"):
-        return cfg["escalon"]
-    if not cfg["caminatas"]:
-        return None
-    n = m.semana_del_plan(hoy, cfg) or semana_tope(cfg, hoy)
-    semana = next((w for w in plan["weeks"] if w["n"] == n), plan["weeks"][-1] if plan.get("weeks") else None)
-    bloque = semana["block"] if semana else 1
-    return f"{gen_plan.trote_de(bloque)}/1"
-
-
-def siguiente_escalon(actual: str | None) -> str | None:
-    if actual not in ESCALERA or actual == ESCALERA[-1]:
-        return None
-    return ESCALERA[ESCALERA.index(actual) + 1]
-
-
-def subir_escalon(crudo: dict, cfg: dict, plan: dict, hoy: date) -> dict:
-    sig = siguiente_escalon(escalon_actual(cfg, plan, hoy))
-    if sig is None:
-        raise ErrorT("err.ultimo_escalon")
-    nuevo, c = _corrida(crudo)
-    c["escalon"] = sig
-    return _validado(nuevo)
-
-
-def sugerir_subir_escalon(data: dict, cfg: dict, plan: dict, hoy: date) -> str | None:
-    """Solo sugiere (no cambia nada): las dos últimas semanas ya pasadas con todas las sesiones hechas y sin días rojos."""
-    actual = escalon_actual(cfg, plan, hoy)
-    sig = siguiente_escalon(actual)
-    if sig is None:
-        return None
-    pasadas = [s for s in data.get("semanas_hoy") or [] if s["estado"] == "pasada" and s.get("plan")]
-    if len(pasadas) < 2:
-        return None
-    for s in pasadas[-2:]:
-        if s["plan"]["total"] == 0 or s["plan"]["hechas"] < s["plan"]["total"]:
-            return None
-        if any(d.get("luz") == "rojo" for d in s["dias"]):
-            return None
-    return sig
-
-
-# --- siguiente bloque ---
-
-def inicio_siguiente_bloque(cfg: dict, plan: dict) -> date:
-    return build.ultima_semana(cfg, plan) + timedelta(days=7)
-
-
-def siguiente_bloque(crudo: dict, cfg: dict, plan: dict, prueba: dict | None) -> dict:
-    """Misma config, empieza el lunes siguiente al final del plan; la prueba de este bloque (si hubo) queda en
-    `corrida.pruebas` para que la próxima se compare contra ella; las semanas repetidas empiezan de cero."""
-    nuevo, c = _corrida(crudo)
-    c["inicio"] = inicio_siguiente_bloque(cfg, plan).isoformat()
-    c["semanas_repetidas"] = []
-    if prueba and prueba.get("valor") is not None:
-        c["pruebas"] = list(c.get("pruebas") or []) + [{"fecha": prueba["fecha"], "tipo": prueba["tipo"], "valor": prueba["valor"]}]
-    return _validado(nuevo)
-
-
 # --- sesiones flexibles (editor) ---
 
 def filas_de(pasos: list) -> tuple[list[dict], dict]:
@@ -434,6 +293,6 @@ def editar_sesion(plan: dict, n: int, sesion_id: str, pasos: list) -> dict:
         raise ErrorT("err.no_sesion")
     if s.get("tipo") not in TIPOS_EDITABLES:
         raise ErrorT("err.no_edita")
-    s["steps"], s["minutes"] = pasos, gen_plan.suma(pasos)
+    s["steps"], s["minutes"] = pasos, ps.suma(pasos)
     s.pop("variada_tipo", None)
     return nuevo

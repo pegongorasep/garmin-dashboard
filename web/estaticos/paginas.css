@@ -48,7 +48,6 @@ a.aprende-tarjeta .card:hover { box-shadow: var(--shadow-card), inset 0 0 0 1px 
 
 /* Simulador de planes (admin, Motor v6 F0b): matriz, barras en CSS y tabla de semanas. Todo dentro de contenedores con scroll propio. */
 .sim-scroll { overflow-x: auto; max-width: 100%; }
-.sim-motor { display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: end; }
 .sim-matriz { border-collapse: collapse; font-size: 13px; }
 .sim-matriz th, .sim-matriz td { padding: var(--space-4) var(--space-8); text-align: center; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 .sim-matriz th[scope="row"], .sim-matriz thead th:first-child { text-align: left; }

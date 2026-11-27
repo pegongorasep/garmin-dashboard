@@ -130,13 +130,6 @@ LECTURAS = [
 
 # ---------- escrituras (F6c): mismas funciones que los botones, vía "ia" ----------
 
-class _Form(dict):
-    """Lo mínimo de un formulario para reutilizar `crudo_desde_form`."""
-    def getlist(self, k):
-        v = self.get(k, [])
-        return list(v) if isinstance(v, (list, tuple)) else [v]
-
-
 def _editable(db, actor, atleta) -> tuple[Usuario, dict, dict | None, date]:
     a = resolver(db, actor, atleta)
     if not puede_editar(db, actor, a.id):
@@ -160,34 +153,6 @@ def _guardar(db, actor, a, desc, paquete) -> dict:
 
 def _hoy(ahora, crudo) -> date:
     return aw.hoy_de(lambda: ahora.replace(tzinfo=timezone.utc), crudo)
-
-
-def cambiar_ajustes(db, actor, ahora, atleta, *, nivel: str | None = None, intensidad: str | None = None,
-                    caminatas: bool | None = None, variada: bool | None = None, semanas: int | None = None,
-                    z2_min: int | None = None, larga_min: int | None = None, calidad_tipos: list[str] | None = None) -> dict:
-    """Cambia ajustes de la persona; solo lo que pases. Si cambia el plan, se rehace desde la semana en curso."""
-    a, crudo, plan, _ = _editable(db, actor, atleta)
-    hoy = _hoy(ahora, crudo)
-    v = _Form(aw.valores_form(crudo, a))
-    for k, val in (("nivel", nivel), ("intensidad", intensidad), ("semanas", semanas), ("z2", z2_min), ("larga", larga_min),
-                   ("caminatas", caminatas), ("variada", variada), ("calidad", calidad_tipos)):
-        if val is not None:
-            v[k] = val
-    for k in ("caminatas", "variada", "inbody"):
-        v[k] = "on" if v.get(k) else ""
-    v["z2"], v["larga"], v["semanas"] = str(v["z2"]), str(v["larga"]), str(v["semanas"])
-    try:
-        nuevo = aw.crudo_desde_form(crudo, v)
-        txt = aw.diferencias(crudo, nuevo)
-        if not txt:
-            return {"hecho": "Sin cambios: ya estaba así."}
-        nuevo_plan, desde = None, None
-        if plan_vivo.cambia_plan(normalizar_config(crudo), normalizar_config(nuevo)):
-            nuevo_plan, desde = plan_vivo.construir_plan(nuevo, plan, hoy)
-    except (ConfigError, ValueError, KeyError) as ex:
-        raise Rechazo(str(ex)) from None
-    desc = "Ajustes (IA): cambió " + ", ".join(txt) + (f"; plan rehecho desde la semana {desde}" if nuevo_plan else "")
-    return _guardar(db, actor, a, desc, {"ajustes": nuevo, **({"plan": nuevo_plan} if nuevo_plan is not None else {})})
 
 
 def agregar_carrera(db, actor, ahora, atleta, *, fecha: str, nombre: str = "Carrera", distancia_km: float | None = None) -> dict:
@@ -260,21 +225,6 @@ def repetir_semana(db, actor, ahora, atleta) -> dict:
     return _guardar(db, actor, a, f"Repitió la semana {n} (IA)", {"ajustes": nuevo})
 
 
-def subir_escalon(db, actor, ahora, atleta) -> dict:
-    """Sube al siguiente escalón de trote/caminata y rehace el plan. Hazlo solo si la persona lo pide o la semana salió fácil."""
-    a, crudo, plan, _ = _editable(db, actor, atleta)
-    hoy = _hoy(ahora, crudo)
-    try:
-        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
-        plan = plan or {"start": cfg["plan_start"], "weeks": []}
-        nuevo = plan_vivo.subir_escalon(crudo, cfg, plan, hoy)
-        nuevo_plan, desde = plan_vivo.construir_plan(nuevo, plan, hoy)
-    except (ConfigError, ValueError) as ex:
-        raise Rechazo(str(ex)) from None
-    return _guardar(db, actor, a, f"Subió el escalón a {nuevo['corrida']['escalon']} (plan rehecho desde la semana {desde}) (IA)",
-                    {"ajustes": nuevo, "plan": nuevo_plan})
-
-
 def registrar_inbody(db, actor, ahora, atleta, *, fecha: str, peso_kg: float, mme_kg: float | None = None,
                      pgc: float | None = None, grasa_kg: float | None = None) -> dict:
     """Agrega o reemplaza la medición InBody de un día (peso, masa muscular esquelética, % de grasa)."""
@@ -302,8 +252,8 @@ def deshacer(db, actor, ahora, atleta, *, cambio_id: int) -> dict:
     return {"hecho": "Deshizo el cambio.", "cambio_id": nuevo.id}
 
 
-ESCRITURAS = [("cambiar_ajustes", cambiar_ajustes), ("agregar_carrera", agregar_carrera), ("agregar_evento", agregar_evento),
-              ("editar_sesion", editar_sesion), ("repetir_semana", repetir_semana), ("subir_escalon", subir_escalon),
+ESCRITURAS = [("agregar_carrera", agregar_carrera), ("agregar_evento", agregar_evento),
+              ("editar_sesion", editar_sesion), ("repetir_semana", repetir_semana),
               ("registrar_inbody", registrar_inbody), ("deshacer", deshacer)]
 
 

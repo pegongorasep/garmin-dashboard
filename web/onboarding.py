@@ -1,20 +1,16 @@
 """Onboarding (/bienvenida): aviso y consentimiento -> usuario de GitHub -> copia, key y Actions -> espera de datos ->
-preguntas del plan. El avance sale de la base (se puede salir y volver al paso donde iba)."""
+el plan (asistente `/plan/nuevo`). El avance sale de la base (se puede salir y volver al paso donde iba)."""
 import hmac
 import re
 from datetime import date, timedelta
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-import gen_plan
-from ajustes import (CALIDAD_TIPOS, INTENSIDADES, NIVELES, ConfigError, crudo_desde_respuestas, normalizar_config)
-from .errores import ErrorT, texto
 
-from . import cambios, importar, tubo
+from . import importar, tubo
 from .modelos import Ajustes, Cambio, Consentimiento, Usuario
 from .privacidad import VERSION_AVISO
 
@@ -79,34 +75,6 @@ def liga_repo(u: Usuario, settings, pendiente=None) -> dict:
             "key": KEY_GARMIN_URL}
 
 
-def crudo_desde_formulario(f) -> dict:
-    """Arma el `config.yaml` crudo de las respuestas del paso 7 (ConfigError con mensaje en español si algo no vale)."""
-    def entero(campo, nombre, vacio_ok=False):
-        v = str(f.get(campo, "")).strip()
-        if not v and vacio_ok:
-            return None
-        try:
-            n = int(v)
-        except ValueError:
-            raise ErrorT("err.entero", nombre="@" + nombre) from None
-        if n <= 0:
-            raise ErrorT("err.mayor0", nombre="@" + nombre)
-        return n
-    zona = str(f.get("zona", "America/Merida")).strip()
-    try:
-        ZoneInfo(zona)
-    except (ZoneInfoNotFoundError, ValueError):
-        raise ErrorT("err.zona_ob", zona=zona) from None
-    edad, fc_max = entero("edad", "ob.edad", True), entero("fc_max", "ob.fc_max", True)
-    if edad is None and fc_max is None:
-        raise ErrorT("err.edad_o_fc")
-    return crudo_desde_respuestas(
-        str(f.get("inicio", "")), edad=edad, fc_max=fc_max, zona=zona, titulo=f.get("titulo", ""),
-        nivel=f.get("nivel", "intermedio"), intensidad=f.get("intensidad", "z2_poca_z3"), calidad=f.getlist("calidad"),
-        caminatas=f.get("caminatas") == "on", z2=entero("z2", "ob.z2"), larga=entero("larga", "ob.larga"),
-        pierna=[d for d in f.getlist("pierna") if d in dict(DIAS)], inbody=f.get("inbody") == "on")
-
-
 def montar(app, get_db, actual, render, formulario, settings) -> None:
     def requiere(usuario):
         if usuario is None:
@@ -129,10 +97,10 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         except ValueError:
             pedido = paso_inicial(e)
         paso = max(1, min(pedido, paso_maximo(e)))
+        if paso == 7:   # «Tu plan»: lo arma el asistente del motor v6 (con lo que vio tu Garmin)
+            return RedirectResponse("/plan/nuevo", 303)
         return render(request, "bienvenida.html", paso=paso, pregunta_uso=pregunta, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
-                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), proximo_lunes=proximo_lunes().isoformat(),
-                      zonas=ZONAS, dias=DIAS, niveles=NIVELES,
-                      intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS, error=None, valores={})
+                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=None)
 
     @app.post("/bienvenida/consentimiento")
     async def consentimiento(request: Request, usuario=Depends(actual), db=Depends(get_db)):
@@ -181,9 +149,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             error = request.state.t("err.gh_ligado")
         if error:
             return render(request, "bienvenida.html", status=400, paso=2, pasos=PASOS, e=e, u=usuario,
-                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error,
-                          proximo_lunes="", zonas=[], dias=[], niveles=[], intensidades=[],
-                          tipos_calidad=[], valores={})
+                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error)
         usuario.github_owner = owner
         db.commit()
         return RedirectResponse("/bienvenida?paso=3", 303)
@@ -216,33 +182,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             db.commit()
         e = estado(db, usuario)
         return render(request, "bienvenida.html", status=400, paso=6, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
-                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error,
-                      proximo_lunes="", zonas=[], dias=[], niveles=[], intensidades=[],
-                      tipos_calidad=[], valores={})
-
-    @app.post("/bienvenida/plan")
-    async def plan(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        e = estado(db, usuario)
-        if not (e["consentimiento"] and e["owner"] and e["datos"]) or e["ajustes"]:
-            raise HTTPException(403, request.state.t("err.no_plan"))
-        try:
-            crudo = crudo_desde_formulario(form)
-            cfg = normalizar_config(crudo)
-            nuevo_plan = gen_plan.generar(cfg)
-        except (ConfigError, ValueError) as ex:
-            return render(request, "bienvenida.html", status=400, paso=7, pasos=PASOS, e=e, u=usuario,
-                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=texto(ex, request.state.t),
-                          proximo_lunes=proximo_lunes().isoformat(), zonas=ZONAS,
-                          dias=DIAS, niveles=NIVELES, intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS,
-                          valores=dict(form.multi_items()) if hasattr(form, "multi_items") else dict(form))
-        usuario.sensor = "muñeca" if form.get("sensor") == "muñeca" else "banda"
-        crudo["perfil"]["sensor"] = usuario.sensor
-        cambios.aplicar_cambio(db, usuario, usuario, "sistema", "Plan creado en el onboarding",
-                               {"ajustes": crudo, "plan": nuevo_plan})
-        return RedirectResponse("/", 303)
+                      liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error)
 
     @app.get("/api/estado")
     def api_estado(usuario=Depends(actual), db=Depends(get_db)):

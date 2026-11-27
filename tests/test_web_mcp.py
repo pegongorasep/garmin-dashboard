@@ -54,9 +54,9 @@ def test_lecturas_propias_sin_serie_y_descripciones_en_espanol(web_ctx):
         assert rpc(cl, tok, "tools/list", ruta="/mcp/").status_code == 200   # con diagonal también
         tools = cuerpo(rpc(cl, tok, "tools/list"))["result"]["tools"]
         nombres = {t["name"] for t in tools}
-        assert nombres == {"resumen_hoy", "semana", "plan", "corridas_recientes", "progreso", "ver_ajustes", "historial", "mis_atletas"} | {"cambiar_ajustes", "agregar_carrera", "agregar_evento", "editar_sesion", "repetir_semana", "subir_escalon", "registrar_inbody", "deshacer"}
+        assert nombres == {"resumen_hoy", "semana", "plan", "corridas_recientes", "progreso", "ver_ajustes", "historial", "mis_atletas"} | {"agregar_carrera", "agregar_evento", "editar_sesion", "repetir_semana", "registrar_inbody", "deshacer"}
         assert all("dolor" in t["description"] and "médico" in t["description"] for t in tools)
-        for n in nombres - {"cambiar_ajustes", "agregar_carrera", "agregar_evento", "editar_sesion", "repetir_semana", "subir_escalon", "registrar_inbody", "deshacer"}:
+        for n in nombres - {"agregar_carrera", "agregar_evento", "editar_sesion", "repetir_semana", "registrar_inbody", "deshacer"}:
             err, txt = llamar(cl, tok, n)
             assert not err, (n, txt)
             assert '"serie"' not in txt
@@ -145,8 +145,6 @@ def test_escrituras_registran_via_ia_y_se_deshacen(web_ctx):
         assert not err, txt
         err, txt = llamar(cl, tok, "registrar_inbody", fecha="2026-11-20", peso_kg=80, mme_kg=35, pgc=20)
         assert not err, txt
-        err, txt = llamar(cl, tok, "cambiar_ajustes", intensidad="calidad", calidad_tipos=["tempo_z3"])
-        assert not err, txt
         err, txt = llamar(cl, tok, "repetir_semana")
         assert not err, txt
         err, txt = llamar(cl, tok, "agregar_evento", tipo="viaje", desde="2026-12-01", hasta=None)
@@ -208,7 +206,7 @@ def test_sin_plan_las_herramientas_de_plan_dan_rechazo_claro(web_ctx):
         db.commit()
     tok = token_para(web_ctx, uid)
     with web_ctx.cliente() as cl:
-        for herr, args in [("plan", {}), ("semana", {}), ("subir_escalon", {}), ("repetir_semana", {}),
+        for herr, args in [("plan", {}), ("semana", {}), ("repetir_semana", {}),
                            ("agregar_evento", {"tipo": "viaje", "desde": "2026-12-01"})]:
             err, txt = llamar(cl, tok, herr, **args)
             assert err and "no tiene plan de running" in txt, (herr, txt)
