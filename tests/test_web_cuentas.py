@@ -124,8 +124,8 @@ def test_liga_un_uso_y_sesion(web_ctx):
     assert r.status_code == 303 and r.headers["location"] == "/"
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "secure" in cookie and "samesite=lax" in cookie
-    r = cl.get("/")   # sin consentimiento ni plan: al onboarding
-    assert r.status_code == 303 and r.headers["location"] == "/bienvenida"
+    r = cl.get("/")   # sin aviso aceptado: a /perfil (E1)
+    assert r.status_code == 303 and r.headers["location"] == "/perfil"
     # la liga ya no vale
     assert "ya se usó o venció" in web_ctx.cliente().get(url).text
     assert cl.post(url, data={"csrf": csrf_de(cl.get("/salir").text)}).status_code == 400
@@ -237,7 +237,7 @@ def test_codigo_correcto_crea_sesion_y_solo_sirve_una_vez(web_ctx):
         assert cod not in db.query(CodigoLogin).one().codigo_hash
     r = con_codigo(cl, "SI@x.com", cod)
     assert r.status_code == 303 and "httponly" in r.headers["set-cookie"].lower()
-    assert cl.get("/").headers["location"] == "/bienvenida"
+    assert cl.get("/").headers["location"] == "/perfil"
     assert con_codigo(web_ctx.cliente(), "si@x.com", cod).status_code == 400
 
 

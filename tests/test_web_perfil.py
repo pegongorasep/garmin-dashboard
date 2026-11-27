@@ -28,10 +28,10 @@ def usuario_sin_nombre(ctx, correo="n@x.com"):
     return uid, entrar(ctx, ctx.cliente(), correo)
 
 
-def enviar(cl, nombre="Luis", apellido="Pérez", foto=None, **extra):
+def enviar(cl, nombre="Luis", apellido="Pérez", foto=None, acepto="on", **extra):
     tk = csrf_de(cl.get("/perfil").text)
     archivos = {"foto": ("f.jpg", foto, "image/jpeg")} if foto is not None else None
-    return cl.post("/perfil", data={"csrf": tk, "nombre": nombre, "apellido": apellido, **extra}, files=archivos)
+    return cl.post("/perfil", data={"csrf": tk, "nombre": nombre, "apellido": apellido, **({"acepto": acepto} if acepto else {}), **extra}, files=archivos)
 
 
 def test_cuenta_existente_va_a_perfil_una_sola_vez(web_ctx):
@@ -129,3 +129,41 @@ def test_el_avatar_sin_foto_muestra_iniciales_y_clase_de_color(web_ctx):
     assert f'avatar av-{uid % 6} g' in html and ">MR<" in html
     enviar(cl, foto=con_exif_gps())
     assert f'src="/perfil/foto/{uid}"' in cl.get("/perfil").text
+
+
+def test_invitacion_perfil_inicio_sin_pasar_por_bienvenida(web_ctx):
+    from web.modelos import Consentimiento
+    from web.privacidad import VERSION_AVISO
+    uid, cl = usuario_sin_nombre(web_ctx, "i@x.com")
+    assert cl.get("/").headers["location"] == "/perfil"
+    r = cl.get("/perfil")
+    assert "acepto expresamente" in r.text and 'name="acepto"' in r.text
+    assert enviar(cl, acepto=None).status_code == 400   # sin la casilla no avanza
+    with web_ctx.sesiones() as db:
+        assert db.query(Consentimiento).count() == 0 and db.get(Usuario, uid).nombre is None
+    r = enviar(cl)
+    assert r.status_code == 303 and r.headers["location"] == "/"
+    with web_ctx.sesiones() as db:
+        assert db.query(Consentimiento).one().version_aviso == VERSION_AVISO
+    assert cl.get("/").status_code == 200
+    assert 'name="acepto"' not in cl.get("/perfil").text   # ya completo: sin casilla
+
+
+def test_aviso_nuevo_pide_aceptar_otra_vez_con_los_datos_puestos(web_ctx, monkeypatch):
+    from web import onboarding, perfil as perfil_mod
+    from web.modelos import Consentimiento
+    uid, cl = usuario_sin_nombre(web_ctx, "v@x.com")
+    assert enviar(cl, nombre="Luis", apellido="Pérez").status_code == 303
+    assert cl.get("/").status_code == 200
+    monkeypatch.setattr(onboarding, "VERSION_AVISO", "2099-01.1")
+    monkeypatch.setattr(perfil_mod, "VERSION_AVISO", "2099-01.1")
+    assert cl.get("/").headers["location"] == "/perfil"
+    pagina = cl.get("/perfil").text
+    assert 'name="acepto"' in pagina and 'value="Luis"' in pagina and 'value="Pérez"' in pagina
+    assert enviar(cl, nombre="Luis", apellido="Pérez", acepto=None).status_code == 400
+    assert cl.get("/").headers["location"] == "/perfil"
+    r = enviar(cl, nombre="Luis", apellido="Pérez")
+    assert r.status_code == 303 and r.headers["location"] == "/"
+    with web_ctx.sesiones() as db:
+        assert sorted(c.version_aviso for c in db.query(Consentimiento)) == ["2026-12.2", "2099-01.1"]
+    assert cl.get("/").status_code == 200

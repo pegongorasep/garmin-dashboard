@@ -392,25 +392,25 @@ def test_onboarding_completo(ctx):
     uid = crear_usuario(ctx, "nuevo@x.com")
     cl = entrar(ctx, ctx.cliente(), "nuevo@x.com")
     r = cl.get("/")
-    assert r.status_code == 303 and r.headers["location"] == "/bienvenida"
-    assert "acepto expresamente" in cl.get("/bienvenida").text
-    # sin consentimiento no avanza (ni siquiera pidiendo el paso 4)
-    assert "acepto expresamente" in cl.get("/bienvenida?paso=4").text
-    assert cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "yo"}).status_code == 403
-    # consentimiento: debe estar marcada la casilla
-    cl.post("/bienvenida/consentimiento", data={"csrf": csrf_de(cl.get("/bienvenida").text)})
+    assert r.status_code == 303 and r.headers["location"] == "/perfil"
+    assert cl.get("/bienvenida").headers["location"] == "/perfil"   # la guía no se abre sin nombre y aviso
+    assert "acepto expresamente" in cl.get("/perfil").text
+    # sin consentimiento no avanza
+    assert cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/perfil").text), "usuario": "yo"}).status_code == 403
+    # el aviso es obligatorio: sin la casilla, 400 y no se guarda nada
+    r = cl.post("/perfil", data={"csrf": csrf_de(cl.get("/perfil").text), "nombre": "Ana", "apellido": "Prueba"})
+    assert r.status_code == 400
     with ctx.sesiones() as db:
         assert db.query(Consentimiento).count() == 0
-    cl.post("/bienvenida/consentimiento", data={"csrf": csrf_de(cl.get("/bienvenida").text), "acepto": "on"})
+    r = cl.post("/perfil", data={"csrf": csrf_de(cl.get("/perfil").text), "nombre": "Ana", "apellido": "Prueba", "acepto": "on"})
+    assert r.status_code == 303 and r.headers["location"] == "/"
     with ctx.sesiones() as db:
         c = db.query(Consentimiento).one()
         assert c.version_aviso == VERSION_AVISO and c.fecha
-    assert "¿Qué quieres usar?" in cl.get("/bienvenida").text
-    cl.post("/bienvenida/uso", data={"csrf": csrf_de(cl.get("/bienvenida").text), "uso": "completo"})
-    with ctx.sesiones() as db:   # cuenta de antes de F4 (el onboarding aún preguntaba el plan): conserva su cuestionario del paso 7
         assert db.get(Usuario, uid).sin_plan is True   # las cuentas nuevas ya empiezan sin plan
-        db.get(Usuario, uid).sin_plan = False
+        db.get(Usuario, uid).sin_plan = False   # cuenta de antes de F4: conserva su cuestionario del paso 7
         db.commit()
+    assert cl.get("/", follow_redirects=False).status_code == 200
     assert "usuario de GitHub" in cl.get("/bienvenida").text
     # usuario inválido
     r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "no válido!"})
@@ -449,10 +449,10 @@ def test_onboarding_completo(ctx):
         a, p = db.get(Ajustes, uid), db.get(Plan, uid)
         assert a.config["corrida"]["inicio"] == lunes_siguiente().isoformat() and "categorias" not in a.config["actividades"]
         assert p.plan["meta"]["motor"] == "v6" and p.plan["start"] == lunes_siguiente().isoformat()
-    # ya con plan: el dashboard (con el pie y el aviso), y /bienvenida regresa a /
+    # ya con plan: el dashboard (con el pie y el aviso)
     inicio = cl.get("/")
     assert inicio.status_code == 200 and "Aviso de privacidad" in inicio.text and "no es consejo médico" in inicio.text
-    assert cl.get("/bienvenida").headers["location"] == "/"
+    assert cl.get("/bienvenida").status_code == 200   # la guía se puede abrir aunque ya tenga plan
     r = cl.get("/data.json")
     assert r.status_code == 200 and validar.problemas(r.json()) == []
 

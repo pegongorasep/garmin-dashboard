@@ -9,25 +9,13 @@
 {% set nombres = [t('bv.g0_n'), t('bv.g1_n'), t('bv.g2_n'), t('bv.g3_n'), t('bv.g4_n')] %}
 {{ barra_pasos(nombres, paso + 1, t("bv.paso", n=paso + 1, total=nombres|length), t("bv.avance")) }}
 {% else %}
-{% set nombres = [t('bv.s1'), t('bv.s2'), t('bv.s3'), t('bv.s4'), t('bv.s5'), t('bv.s6'), t('bv.s7')] %}
-{% if e.sin_plan %}{% set nombres = nombres[:6] %}{% endif %}
-{{ barra_pasos(nombres, paso, t("bv.paso", n=paso, total=nombres|length), t("bv.avance")) }}
+{% set nombres = [t('bv.s2'), t('bv.s3'), t('bv.s4'), t('bv.s5'), t('bv.s6'), t('bv.s7')] %}
+{% if e.sin_plan %}{% set nombres = nombres[:5] %}{% endif %}
+{{ barra_pasos(nombres, paso - 1, t("bv.paso", n=paso - 1, total=nombres|length), t("bv.avance")) }}
 {% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 
-{% if pregunta_uso %}
-<h2 class="pag-h">{{ t("bv.uso_t") }}</h2>
-<form class="pila" method="post" action="/bienvenida/uso">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  <p>{{ t("bv.uso_a") }}</p>
-  <div class="acciones">
-    <button class="boton" type="submit" name="uso" value="completo">{{ t("bv.uso_completo") }}</button>
-    <button class="boton sec" type="submit" name="uso" value="cuerpo">{{ t("bv.uso_cuerpo") }}</button>
-  </div>
-  <p class="pag-s">{{ t("bv.uso_n") }}</p>
-</form>
-
-{% elif guia %}
+{% if guia %}
 <div class="guia-celular" id="guia-celular" hidden>
   {% call aviso("warn") %}<strong>{{ t("bv.g_cel_t") }}</strong> {{ t("bv.g_cel_a") }}{% endcall %}
 </div>
@@ -86,26 +74,6 @@
   {{ boton(t("bv.g4_ya"), "sec", tipo="submit") }}
 </form>
 {% endif %}
-
-{% elif paso == 1 %}
-<h2 class="pag-h">{{ t("bv.p1_t") }}</h2>
-{% call tarjeta() %}
-  <div class="texto">
-  <p>{{ t("bv.p1_a")|safe }}</p>
-  <ul>
-    <li>{{ t("bv.p1_l1") }}</li>
-    <li>{{ t("bv.p1_l2") }}</li>
-    <li>{{ t("bv.p1_l3")|safe }}</li>
-    <li>{{ t("bv.p1_l4") }}</li>
-  </ul>
-  <p>{{ t("bv.p1_leer", v=version)|safe }}</p>
-  </div>
-{% endcall %}
-<form class="pila" method="post" action="/bienvenida/consentimiento">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ opcion("acepto", t("bv.acepto"), requerido=True, html=True) }}
-  {{ boton(t("bv.continuar"), tipo="submit") }}
-</form>
 
 {% elif paso == 2 %}
 <h2 class="pag-h">{{ t("bv.p2_t") }}</h2>

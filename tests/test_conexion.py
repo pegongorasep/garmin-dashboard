@@ -82,7 +82,7 @@ def test_exige_sesion_y_consentimiento(ctx, gh):
         db.commit()
     cl = ctx.cliente()
     entrar(ctx, cl, "s@x.com")
-    assert cl.get("/conectar/github").headers["location"] == "/bienvenida"
+    assert cl.get("/conectar/github").headers["location"] == "/perfil"
 
 
 def test_exito_vincula_guarda_instalacion_y_no_filtra_token(ctx, gh):

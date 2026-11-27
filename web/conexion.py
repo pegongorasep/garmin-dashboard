@@ -121,8 +121,8 @@ def montar(app, get_db, actual, render, settings, formulario=None) -> None:
             return render(request, "mensaje.html", status=404, titulo="404", texto="")
         if usuario is None:
             return RedirectResponse("/entrar", 303)
-        if not onboarding.estado(db, usuario)["consentimiento"]:
-            return RedirectResponse("/bienvenida", 303)
+        if not onboarding.completo(db, usuario):
+            return RedirectResponse("/perfil", 303)
         para = para if para in DESTINOS else "guia"
         estado = secrets.token_urlsafe(24)
         cuerpo = base64.urlsafe_b64encode(json.dumps({"s": estado, "u": usuario.id, "p": para}).encode()).decode()

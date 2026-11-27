@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "componentes.html" import boton, campo, aviso, avatar %}
+{% from "componentes.html" import boton, campo, aviso, avatar, opcion, tarjeta %}
 {% block titulo %}{{ t("perfil.titulo_pagina") }}{% endblock %}
 {% block contenido %}
 {% if not primera_vez %}{% include "_nav.html" %}{% endif %}
@@ -20,8 +20,24 @@
   {% if foto %}
   <label class="opcion"><input type="checkbox" name="quitar_foto"><span>{{ t("perfil.quitar_foto") }}</span></label>
   {% endif %}
+  {% if falta_aviso %}
+  <h2 class="pag-h">{{ t("bv.p1_t") }}</h2>
+  {% call tarjeta() %}
+    <div class="texto">
+    <p>{{ t("bv.p1_a")|safe }}</p>
+    <ul>
+      <li>{{ t("bv.p1_l1") }}</li>
+      <li>{{ t("bv.p1_l2") }}</li>
+      <li>{{ t("bv.p1_l3")|safe }}</li>
+      <li>{{ t("bv.p1_l4") }}</li>
+    </ul>
+    <p>{{ t("bv.p1_leer", v=version)|safe }}</p>
+    </div>
+  {% endcall %}
+  {{ opcion("acepto", t("bv.acepto"), requerido=True, html=True) }}
+  {% endif %}
   <div class="acciones">
-    {{ boton(t("comun.guardar"), tipo="submit") }}
+    {{ boton(t("comun.guardar") if not primera_vez else t("bv.continuar"), tipo="submit") }}
   </div>
 </form>
 {% endblock %}

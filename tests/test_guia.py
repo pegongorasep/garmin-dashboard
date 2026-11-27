@@ -157,13 +157,14 @@ def test_cada_pantalla_rinde_con_sus_botones(ctx, gh):
     assert r.text.index("secrets/actions/new") < r.text.index("personalApiToken")   # nombre en GitHub antes que la key
 
 
-def test_sin_subida_buena_no_esta_completo(ctx, gh):
+def test_sin_subida_buena_ya_esta_completo(ctx, gh):
+    """E1: completo = nombre + apellido + aviso vigente; la conexión a medias ya no impide entrar a «/»."""
     from web import onboarding
     cl, uid = conectada(ctx, gh)
     with ctx.sesiones() as db:
         u = db.get(Usuario, uid)
-        assert not onboarding.completo(db, u)
-        assert cl.get("/", follow_redirects=False).status_code in (302, 303, 307)
+        assert onboarding.completo(db, u)
+    assert cl.get("/", follow_redirects=False).status_code == 200
 
 
 def test_dibujos_de_github_en_pantallas_2_3_4(ctx, gh):

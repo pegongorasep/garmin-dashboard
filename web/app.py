@@ -274,11 +274,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     def inicio(request: Request, usuario=Depends(actual), db=Depends(get_db)):
         if usuario is None:
             return render(request, "inicio.html")
-        if not (usuario.nombre and usuario.apellido):
-            return RedirectResponse("/perfil", 303)   # G1: una vez, antes de todo
-        e = onboarding.estado(db, usuario)
         if not onboarding.completo(db, usuario):
-            return RedirectResponse("/bienvenida", 303)
+            return RedirectResponse("/perfil", 303)   # nombre y aviso de privacidad, una vez (E1)
         cookie = request.cookies.get(auth.COOKIE_CSRF)
         nueva = cookie is None
         cookie = cookie or secrets.token_urlsafe(24)

@@ -1,5 +1,5 @@
-"""Onboarding (/bienvenida): aviso y consentimiento -> usuario de GitHub -> copia, key y Actions -> espera de datos ->
-el plan (asistente `/plan/nuevo`). El avance sale de la base (se puede salir y volver al paso donde iba)."""
+"""Guía de Garmin (/bienvenida): usuario de GitHub -> copia, key y Actions -> espera de datos -> el plan (asistente
+`/plan/nuevo`). El aviso y el nombre se piden en /perfil (E1). El avance sale de la base (se puede salir y volver)."""
 import hmac
 import re
 from datetime import date, timedelta
@@ -14,7 +14,7 @@ from . import importar, tubo
 from .modelos import Ajustes, Cambio, Consentimiento, Usuario
 from .privacidad import VERSION_AVISO
 
-PASOS = ["Aviso", "GitHub", "Tu copia", "Tu key", "Actívalo", "Tus datos", "Tu plan"]
+PASOS = ["GitHub", "Tu copia", "Tu key", "Actívalo", "Tus datos", "Tu plan"]
 RE_OWNER = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$")
 KEY_GARMIN_URL = "https://connect.garmin.com/app/settings/personalApiToken"
 ZONAS = ["America/Merida", "America/Mexico_City", "America/Monterrey", "America/Cancun", "America/Tijuana",
@@ -31,9 +31,14 @@ def _error_conexion(request):
     return request.state.t(f"conexion.err_{c}") if c in ERRORES_CONEXION else None
 
 
+def tiene_aviso(db: Session, u: Usuario) -> bool:
+    """Aceptó la versión vigente del aviso de privacidad."""
+    return db.scalar(select(Consentimiento.id).where(
+        Consentimiento.usuario_id == u.id, Consentimiento.version_aviso == VERSION_AVISO).limit(1)) is not None
+
+
 def estado(db: Session, u: Usuario) -> dict:
-    return {"consentimiento": db.scalar(select(Consentimiento.id).where(
-                Consentimiento.usuario_id == u.id, Consentimiento.version_aviso == VERSION_AVISO).limit(1)) is not None,
+    return {"consentimiento": tiene_aviso(db, u),
             "owner": bool(u.github_owner), "vinculado": bool(u.repo_id),
             "datos": tubo.tuvo_subida_ok(db, u.id), "ajustes": db.get(Ajustes, u.id) is not None,
             "pendiente": tubo.pendiente_vigente(db, u.id) is not None, "uso": u.uso or "completo",
@@ -41,29 +46,21 @@ def estado(db: Session, u: Usuario) -> dict:
 
 
 def completo(db: Session, u: Usuario) -> bool:
-    e = estado(db, u)
-    if u.gh_instalacion and not e["datos"] and not e["ajustes"] and e["uso"] != "cuerpo":
-        return False   # va por la guía nueva: falta la primera subida buena (no entra a «/» a medias)
-    # sin plan: basta con tener el repo conectado (no hay cuestionario del plan)
-    return bool(e["consentimiento"] and (e["ajustes"] or e["uso"] == "cuerpo" or (e["sin_plan"] and e["vinculado"])))
+    """Nombre + apellido + aviso vigente. Nada más: Garmin, plan y datos se piden después, desde la app."""
+    return bool(u.nombre and u.apellido and tiene_aviso(db, u))
 
 
 def paso_maximo(e: dict) -> int:
-    if not e["consentimiento"]:
-        return 1
-    if e["ajustes"] or e["uso"] == "cuerpo":
-        return 1   # ya tiene plan: no hay nada más que hacer aquí
+    """Último paso de la guía vieja (2 a 7) al que se puede entrar. El 7 es el asistente del plan."""
     if not e["owner"]:
         return 2
-    return 7 if (e["datos"] and not e["sin_plan"]) else 6
+    return 7 if (e["datos"] and not e["sin_plan"] and not e["ajustes"]) else 6
 
 
 def paso_inicial(e: dict) -> int:
-    if not e["consentimiento"]:
-        return 1
     if not e["owner"]:
         return 2
-    if e["datos"] and not e["sin_plan"]:
+    if e["datos"] and not e["sin_plan"] and not e["ajustes"]:
         return 7
     return 6 if (e["vinculado"] or e["pendiente"]) else 3
 
@@ -121,18 +118,12 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def bienvenida(request: Request, usuario=Depends(actual), db=Depends(get_db)):
         if usuario is None:
             return RedirectResponse("/entrar", 303)
-        if not (usuario.nombre and usuario.apellido):
-            return RedirectResponse("/perfil", 303)
+        if not completo(db, usuario):
+            return RedirectResponse("/perfil", 303)   # nombre y aviso primero (E1)
         e = estado(db, usuario)
-        guia = guia_activa(settings, usuario, e)
-        if completo(db, usuario) and not guia:
-            return RedirectResponse("/", 303)
-        # recién aceptado el aviso y sin elegir: primero «¿Qué quieres usar?»
-        pregunta = (e["consentimiento"] and not e["uso_elegido"] and not e["owner"] and not e["vinculado"]
-                    and not e["pendiente"] and not request.query_params.get("paso"))
-        if guia and not pregunta:
+        if guia_activa(settings, usuario, e):
             n = guia_paso(usuario, request.query_params.get("paso"), request.cookies.get(COOKIE_GUIA))
-            resp = render(request, "bienvenida.html", guia=True, paso=n, pregunta_uso=False, pasos=PASOS, e=e, u=usuario,
+            resp = render(request, "bienvenida.html", guia=True, paso=n, pasos=PASOS, e=e, u=usuario,
                           version=VERSION_AVISO, liga=liga_repo(usuario, settings, None), error=_error_conexion(request),
                           liga_enviada=request.query_params.get("liga", ""))
             resp.set_cookie(COOKIE_GUIA, str(n), max_age=30 * 86400, httponly=True, secure=settings.cookie_segura,
@@ -142,40 +133,12 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             pedido = int(request.query_params.get("paso", ""))
         except ValueError:
             pedido = paso_inicial(e)
-        paso = max(1, min(pedido, paso_maximo(e)))
+        paso = max(2, min(pedido, paso_maximo(e)))
         if paso == 7:   # «Tu plan»: lo arma el asistente del motor v6 (con lo que vio tu Garmin)
             return RedirectResponse("/plan/nuevo", 303)
-        return render(request, "bienvenida.html", paso=paso, pregunta_uso=pregunta, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
+        return render(request, "bienvenida.html", paso=paso, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
                       liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)),
                       error=_error_conexion(request))
-
-    @app.post("/bienvenida/consentimiento")
-    async def consentimiento(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        if form.get("acepto") != "on":
-            return RedirectResponse("/bienvenida?paso=1", 303)
-        db.add(Consentimiento(usuario_id=usuario.id, version_aviso=VERSION_AVISO))
-        db.commit()
-        return RedirectResponse("/bienvenida", 303)
-
-    @app.post("/bienvenida/uso")
-    async def uso(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        """«¿Qué quieres usar?»: completo (Garmin + cuerpo) sigue el paso a paso; cuerpo termina aquí, sin repo ni plan."""
-        form = await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        if not estado(db, usuario)["consentimiento"]:
-            raise HTTPException(403, request.state.t("err.primero_aviso"))
-        if form.get("uso") == "cuerpo":
-            usuario.uso = "cuerpo"
-            db.commit()
-            return RedirectResponse("/", 303)
-        usuario.uso = "completo"
-        usuario.sin_plan = True   # todos empiezan sin plan; lo arman desde la app (/plan/nuevo, Motor v6 F4)
-        db.commit()
-        return RedirectResponse("/bienvenida", 303)
 
     @app.post("/bienvenida/github")
     async def github(request: Request, usuario=Depends(actual), db=Depends(get_db)):

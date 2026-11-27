@@ -10,8 +10,9 @@ from fastapi.responses import RedirectResponse, Response
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
-from . import permisos
-from .modelos import FotoPerfil, Usuario, ahora
+from . import onboarding, permisos
+from .modelos import Ajustes, Consentimiento, FotoPerfil, Usuario, ahora
+from .privacidad import VERSION_AVISO
 
 MAX_BYTES = 5 * 1024 * 1024
 LADO = 256
@@ -83,7 +84,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def pantalla(request, usuario, db, status=200, error=None, valores=None):
         return render(request, "perfil.html", status=status, atleta=usuario, pref="", error=error,
                       v=valores or {"nombre": usuario.nombre or "", "apellido": usuario.apellido or ""},
-                      foto=tiene_foto(db, usuario.id), primera_vez=not (usuario.nombre and usuario.apellido))
+                      foto=tiene_foto(db, usuario.id), primera_vez=not onboarding.completo(db, usuario),
+                      falta_aviso=not onboarding.tiene_aviso(db, usuario), version=VERSION_AVISO)
 
     @app.get("/perfil")
     def perfil_get(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
@@ -101,6 +103,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         t = request.state.t
         if not nombre or not apellido:
             return pantalla(request, usuario, db, 400, t("perfil.err_nombre"), valores)
+        falta_aviso = not onboarding.tiene_aviso(db, usuario)
+        if falta_aviso and form.get("acepto") != "on":
+            return pantalla(request, usuario, db, 400, t("perfil.err_aviso"), valores)
         archivo = form.get("foto")
         nueva = None
         if archivo is not None and getattr(archivo, "filename", ""):
@@ -110,8 +115,12 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                     nueva = procesar_foto(crudo)
                 except FotoInvalida as e:
                     return pantalla(request, usuario, db, 400, t(e.args[0]), valores)
-        era_primera = not (usuario.nombre and usuario.apellido)
+        era_primera = not onboarding.completo(db, usuario)
         usuario.nombre, usuario.apellido = nombre, apellido
+        if falta_aviso:
+            db.add(Consentimiento(usuario_id=usuario.id, version_aviso=VERSION_AVISO))
+            if usuario.uso is None and db.get(Ajustes, usuario.id) is None:
+                usuario.sin_plan = True   # todos empiezan sin plan; lo arman desde la app (antes lo fijaba «¿Qué quieres usar?»)
         if nueva is not None:
             guardar_foto(db, usuario.id, nueva)
         elif form.get("quitar_foto") == "on":
