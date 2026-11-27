@@ -1123,3 +1123,16 @@ def test_perfil_sin_actividades_km_del_nivel_y_el_js_pinta_km_est():
     from pathlib import Path
     js = (Path(__file__).resolve().parent.parent / "site" / "vistas.js").read_text()
     assert "km_est" in js and "pintarSesiones();" in js and "tarjetaPlan(p.plan" in js   # el perfil usa la tarjeta compartida y la pinta al nacer
+
+
+def test_build_con_datos_vacios_no_truena():
+    """Persona nueva: sin Garmin, sin InBody, sin plan. El data.json sale válido con listas vacías."""
+    data = {k: [] for k in fixture()}
+    for k, v in fixture().items():
+        if not isinstance(v, list):
+            data[k] = v
+    cfg = {**CONFIG_FIXTURE, "sin_plan": True}
+    out = build.build(data, {"start": cfg["plan_start"], "weeks": []}, cfg, AHORA)
+    assert validar.problemas(out) == []
+    assert out["plan"]["semanas"] == [] and out["progreso"]["corridas"] == []
+    assert out["composicion"] is None

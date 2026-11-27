@@ -693,13 +693,14 @@ function renderHoySinPlan(d) {
         DS.tile({ k: T("sitio.sl.minutos"), valor: fmt(sl.minutos, 0), unidad: T("sitio.sl.min"), deltas: dif(sl.minutos, sl.promedio_minutos, T("sitio.sl.min")) }),
         DS.tile({ k: T("sitio.sl.km"), valor: fmt(sl.km, 1), unidad: "km", deltas: dif(sl.km, sl.promedio_km, "km") }),
         DS.tile({ k: T("sitio.sl.racha"), valor: String(racha), unidad: T(racha === 1 ? "sitio.sl.semana_1" : "sitio.sl.semana_n") }))
-        : DS.estadoVacio({ icono: null, titulo: T("sitio.sl.vacia") }),
+        : DS.estadoVacio({ icono: null, titulo: T("sitio.sl.vacia"), texto: T("sitio.sl.vacia_x") }),
       h("div", { class: "cal-caja" }, ...dias)),
     sl.intensidad ? zonaBar(sl.intensidad) : null,
     rec ? DS.tarjeta({ titulo: T("sitio.sl.recup") },
       rec.hrv_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.hrv")), h("span", {}, `${fmt(rec.hrv_7d, 0)} ms`)) : null,
       rec.rhr_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.rhr")), h("span", {}, `${fmt(rec.rhr_7d, 0)} ${T("sitio.lpm")}`)) : null,
-      rec["sueño_7d"] != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.sueno")), h("span", {}, T("sitio.sl.horas", { n: fmt(rec["sueño_7d"], 1) }))) : null) : null,
+      rec["sueño_7d"] != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.sueno")), h("span", {}, T("sitio.sl.horas", { n: fmt(rec["sueño_7d"], 1) }))) : null)
+      : DS.tarjeta({ titulo: T("sitio.sl.recup") }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.recup_vacia"), texto: T("sitio.sl.recup_vacia_x") })),
     d.aviso_zonas ? avisoCerrable("zonas", { clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
 }
 

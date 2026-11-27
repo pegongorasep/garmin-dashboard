@@ -151,13 +151,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if redir:
             return redir
         crudo = crudo_de(db, atleta)
-        if crudo is None and atleta.uso == "cuerpo":
-            return render(request, "ajustes_cuerpo.html", atleta=atleta, pref=prefijo(usuario, atleta))
-        if crudo is None and atleta.sin_plan and atleta.repo_id:
+        if crudo is None:
             return render(request, "ajustes_sin_plan.html", atleta=atleta, pref=prefijo(usuario, atleta),
                           **garmin_extra(request, db, usuario, atleta))
-        if crudo is None:
-            return RedirectResponse("/bienvenida", 303)
         return render(request, "ajustes.html", **contexto_ajustes(db, atleta, usuario, crudo, ok=request.query_params.get("ok"),
                       **garmin_extra(request, db, usuario, atleta), **extra))
 
@@ -174,17 +170,6 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     @app.get("/a/{atleta_id}/ajustes")
     def ajustes_get_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
         return pantalla_ajustes(request, usuario, db, atleta_id)
-
-    @app.post("/ajustes/uso")
-    async def ajustes_uso(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        """«Activar entrenamiento con Garmin»: pasa de cuerpo a completo y vuelve a los pasos del onboarding. Las mediciones se quedan."""
-        await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        if usuario.uso == "cuerpo":
-            usuario.uso = "completo"
-            db.commit()
-        return RedirectResponse("/bienvenida", 303)
 
     @app.post("/ajustes/garmin/desconectar")
     async def ajustes_garmin_desconectar(request: Request, usuario=Depends(actual), db=Depends(get_db)):

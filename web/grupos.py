@@ -162,7 +162,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         grupo = db.get(Grupo, inv.grupo_id)
         if permisos.es_miembro(db, usuario, grupo.id):
             return RedirectResponse(f"/grupos/{grupo.id}", 303)
-        estado = "cuerpo" if usuario.uso == "cuerpo" else "ok"
+        estado = "ok"
         return render(request, "grupo_unirse.html", atleta=usuario, pref="", estado=estado, grupo=grupo, token=token)
 
     @app.post("/grupos/unirse/{token}")
@@ -179,8 +179,6 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
 
         def rechazo(estado):
             return render(request, "grupo_unirse.html", status=403, atleta=usuario, pref="", estado=estado, grupo=grupo, token=token)
-        if usuario.uso == "cuerpo":
-            return rechazo("cuerpo")                    # Solo cuerpo no tiene plan que compartir
         if not (usuario.nombre and usuario.apellido):
             return RedirectResponse("/perfil", 303)
         if len(miembros_de(db, grupo.id)) >= MAX_MIEMBROS:

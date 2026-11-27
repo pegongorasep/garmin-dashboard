@@ -35,7 +35,6 @@ def plan_acciones(idioma: str = "es") -> list[dict]:
 
 
 PLAN_URL = "/plan"   # la página del plan (ajustes en el camino, eventos, rehacer): botón «Ajustar mi plan»
-MENU_CUERPO = ("/ajustes", "/cuerpo", "/privacidad", "/salir")   # lo que tiene sentido sin entreno: sin historial ni coach
 MENU = menu_de("es")
 PLAN_ACCIONES = plan_acciones("es")
 
@@ -54,13 +53,8 @@ def acciones_url(usuario: Usuario) -> str | None:
 
 def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: str | None = None) -> dict:
     aj = db.get(Ajustes, usuario.id)
-    cuerpo = aj is None and usuario.uso == "cuerpo"   # «solo cuerpo»: sin ajustes de entreno, el motor usa los de fábrica
-    sin_plan = aj is None and not cuerpo and bool(usuario.sin_plan) and bool(usuario.repo_id)   # sin plan: también los de fábrica
-    if aj is None and not cuerpo and not sin_plan:
-        raise SinConfig()
     idioma = idioma or usuario.idioma or "es"
-    if menu is None and cuerpo:
-        menu = [m for m in menu_de(idioma) if m["url"] in MENU_CUERPO]
+    # sin ajustes (nadie los tiene al registrarse): el motor usa los de fábrica y la persona queda sin plan, con o sin copia
     base = aj.config if aj else {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}   # los de fábrica (config_por_defecto)
     crudo = {**base, "modo": "web", "menu": menu_de(idioma) if menu is None else menu,
              "plan_acciones": plan_acciones(idioma), "idioma": idioma}
@@ -72,21 +66,8 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: s
         crudo["perfil"] = {**(crudo.get("perfil") or {}), "sensor": usuario.sensor or "banda"}
     if acciones_url(usuario):
         crudo["acciones_url"] = acciones_url(usuario)
-    crudo["sin_plan"] = bool(usuario.sin_plan)
+    crudo["sin_plan"] = bool(usuario.sin_plan) or aj is None
     return normalizar_config(crudo)
-
-
-def cuerpo_sin_ajustes(usuario: Usuario) -> bool:
-    return usuario.uso == "cuerpo"
-
-
-def solo_cuerpo(salida: dict) -> dict:
-    """data.json mínimo de quien usa solo mediciones de cuerpo: la composición y el encabezado; lo demás, vacío
-    (las claves obligatorias siguen existiendo para la lista blanca). `ui.solo_cuerpo` hace que el sitio muestre solo Cuerpo."""
-    ui = {k: v for k, v in salida["ui"].items() if k in ("titulo", "menu", "usuario", "repo_estado", "textos", "categorias")}
-    return {"generado": salida["generado"], "datos_al": salida.get("datos_al"), "zonas": [], "hoy": {}, "plan": {},
-            "progreso": {}, "detalles": {}, "semanas_hoy": [], "composicion": salida.get("composicion"),
-            "idioma": salida.get("idioma"), "ui": {**ui, "solo_cuerpo": True, "cuerpo_nuevo": "/cuerpo/nuevo"}}
 
 
 def editar_urls(plan: dict) -> dict:
@@ -230,8 +211,6 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
         plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
     cfg = {**cfg, "editar_urls": editar_urls(plan) if aj else {}}
     salida = build.build(datos_de(db, usuario, crudo), plan, cfg, local)
-    if aj is None and cuerpo_sin_ajustes(usuario):   # solo cuerpo (config_de ya descartó a quien no lo es)
-        salida = solo_cuerpo(salida)
     problemas = validar.problemas(salida)
     if problemas:
         log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)

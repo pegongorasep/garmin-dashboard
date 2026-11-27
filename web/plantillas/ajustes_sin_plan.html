@@ -10,6 +10,7 @@
   <h2 class="pag-h">{{ t("aj.sp_t") }}</h2>
   <p>{{ t("aj.sp_a") }}</p>
   <div class="acciones">{% if atleta.historial_pendiente %}{{ boton(t("sitio.sync.espera"), deshabilitado=True) }}{% else %}{{ boton(t("aj.sp_quiero"), href="/plan/nuevo") }}{% endif %}</div>
+  <p class="pag-s">{{ t("aj.sp_vacio") }}</p>
   </div>
 {% endcall %}
 {% include "_garmin.html" %}

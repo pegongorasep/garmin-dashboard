@@ -110,14 +110,10 @@ function renderProgreso(d) {
   PINTAR.cuerpo = [];
   const raiz = $("vista-progreso");
   const prog = d.progreso || {};
-  if (ui().solo_cuerpo) {   // «solo cuerpo»: sin Corridas ni selector; sin mediciones, un estado vacío con el botón
-    const comp = tarjetaComposicion(d.composicion);
-    raiz.replaceChildren(h("div", { class: "sub", id: "prog-cuerpo" }, comp ? [cabCuerpo(), comp] : DS.estadoVacio({ icono: null, titulo: T("sitio.ib.vacio_t"), texto: T("sitio.ib.vacio_x"),
-      accion: { href: ui().cuerpo_nuevo || "/cuerpo/nuevo", texto: T("sitio.ib.agregar") } })));
-    return;
-  }
+  const hayCorridas = (prog.corridas || []).length || (prog.semanas || []).some((x) => (x.minutos || 0) > 0);
   raiz.replaceChildren(selectorProgreso(),
-    h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...[
+    h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...(!hayCorridas ? [   // sin una sola corrida: un estado vacío que dice cómo llenarlo
+      DS.tarjeta({ titulo: T("sitio.cp.titulo"), clase: "ancha" }, DS.estadoVacio({ icono: null, titulo: T("sitio.cp.vacio_t"), texto: T("sitio.cp.vacio_x") }))] : [
       DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodoTodo ? "todo" : periodo, opciones: opcionesPeriodo(d).map((p) => ({ id: p.todo ? "todo" : p.n, texto: p.todo ? T("sitio.prog.todo") : T("sitio.prog.n_sem", { n: p.n }) })),
         onCambio: (n) => { periodoTodo = n === "todo"; periodo = periodoTodo ? periodo : Number(n); renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }),
       filaNumeros(d),
@@ -125,7 +121,7 @@ function renderProgreso(d) {
       tarjetaCorridasProgreso(d),
       tarjetaIntensidadSemanas(d),
       tarjetaMarcasYCarreras(d),
-      d.detalles && d.detalles.carga ? tarjetaCarga(d.detalles) : null].filter(Boolean)),
+      d.detalles && d.detalles.carga ? tarjetaCarga(d.detalles) : null]).filter(Boolean)),
     h("div", { class: "sub", id: "prog-cuerpo", hidden: subProgreso !== "cuerpo" },
       ...[cabCuerpo(), tarjetaRecuperacion(d), tarjetaComposicion(d.composicion)].filter(Boolean)));
 }
@@ -133,7 +129,6 @@ function renderProgreso(d) {
 /** Muestra Corridas o Cuerpo según `subProgreso` y marca el botón elegido. */
 function mostrarSubvista() {
   const corr = $("prog-corridas"), cue = $("prog-cuerpo");
-  if (ui().solo_cuerpo) { if (cue) cue.hidden = false; return; }
   if (!corr || !cue) return;
   corr.hidden = subProgreso !== "corridas";
   cue.hidden = subProgreso !== "cuerpo";
@@ -637,7 +632,7 @@ function hojaCompleta(c) {
 
 /** Tarjeta única «Composición corporal · fecha» en el orden de la hoja InBody. Sin InBody no hay tarjeta. */
 function tarjetaComposicion(c) {
-  if (!c || !(c.mediciones || []).length) return null;
+  if (!c || !(c.mediciones || []).length) return DS.tarjeta({ titulo: T("sitio.ib.titulo_vacio"), clase: "ancha" }, DS.estadoVacio({ icono: null, titulo: T("sitio.ib.vacio_t"), texto: T("sitio.ib.vacio_x") }));   // el botón «Agregar medición» ya está arriba
   const hoja = c.hoja || {};
   return DS.tarjeta({ titulo: T("sitio.ib.comp", { f: fechaMes(hoja.fecha || c.ultima.fecha) }), clase: "ancha ib" },
     grupoInbody(T("sitio.ib.mg"), hoja.musculo_grasa), grupoInbody(T("sitio.ib.ob"), hoja.obesidad),
@@ -1189,7 +1184,7 @@ const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
 // Cuántos grupos hay: con data.json, el suyo; antes, el que la web puso en <main data-grupos> (sin atributo: 0).
 const nGrupos = () => datos && ui().grupos != null ? ui().grupos : parseInt(($("app") && $("app").dataset.grupos) || "0", 10) || 0;
-const tabsDef = () => ui().solo_cuerpo ? [] : [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
+const tabsDef = () => [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
   ...(ui().sin_plan ? [] : [{ id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" }]),   // sin plan: no hay pestaña Plan (L2 la reemplaza por una tarjeta)
   { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" },
   ...(nGrupos() > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#juntos", punto: true, nuevo: juntosNuevo }] : [])];   // solo en la web y con al menos un grupo
@@ -1298,9 +1293,8 @@ function mostrarVista() {
   const [nombre0, sub, sub2] = (ALIAS_RUTA[ruta] || ruta.replace(/^grupo(?=\/|$)/, "juntos")).split("/");   // #grupo y #grupo/<id> (viejos) valen como #juntos
   const nombre = nombre0 === "juntos" ? "grupo" : nombre0;
   if (/^grupo(\/|$)/.test(ruta)) history.replaceState(null, "", `#${ruta.replace(/^grupo/, "juntos")}`);
-  const solo = !!ui().solo_cuerpo;   // solo cuerpo: todo cae en Progreso > Cuerpo (la ayuda sigue)
-  const v = solo && nombre !== "ayuda" ? "progreso" : nombre === "grupo" && !(nGrupos() > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
-  subProgreso = solo || (v === "progreso" && sub === "cuerpo") ? "cuerpo" : "corridas";
+  const v = nombre === "grupo" && !(nGrupos() > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
+  subProgreso = v === "progreso" && sub === "cuerpo" ? "cuerpo" : "corridas";
   if (v === "grupo" && sub === "persona" && !/^#juntos\/persona\//.test(rutaPrevia)) personaVolver = /^#juntos(\/\d+)?$/.test(rutaPrevia) ? rutaPrevia : "#juntos";   // el «volver» del perfil; sin historial, a Juntos
   if (v !== "ayuda") rutaPrevia = `#${ruta.replace(/^grupo(?=\/|$)/, "juntos") || "hoy"}`;
   vistaActual = v;
@@ -1385,7 +1379,7 @@ window.addEventListener("franja:estado", (ev) => { const b = $("sync-btn"); if (
 
 /** Pinta todas las vistas con `datos` (al arrancar y cuando cambia algo local, como dar un aviso por «Entendido»). */
 function repintarVistas() {
-  const vistas = ui().solo_cuerpo ? { progreso: renderProgreso } : { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
+  const vistas = { hoy: renderHoy, plan: renderPlan, progreso: renderProgreso, ayuda: renderAyuda };
   for (const [id, fn] of Object.entries(vistas)) {
     try { fn(datos); } catch (e) { console.error(`Vista ${id}:`, e); aviso(id, T("sitio.err.vista")); }
   }

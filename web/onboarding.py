@@ -41,8 +41,7 @@ def estado(db: Session, u: Usuario) -> dict:
     return {"consentimiento": tiene_aviso(db, u),
             "owner": bool(u.github_owner), "vinculado": bool(u.repo_id),
             "datos": tubo.tuvo_subida_ok(db, u.id), "ajustes": db.get(Ajustes, u.id) is not None,
-            "pendiente": tubo.pendiente_vigente(db, u.id) is not None, "uso": u.uso or "completo",
-            "uso_elegido": u.uso is not None, "sin_plan": bool(u.sin_plan)}
+            "pendiente": tubo.pendiente_vigente(db, u.id) is not None, "sin_plan": bool(u.sin_plan)}
 
 
 def completo(db: Session, u: Usuario) -> bool:
@@ -70,9 +69,9 @@ COOKIE_GUIA = "guia_paso"
 
 
 def guia_activa(settings, u: Usuario, e: dict) -> bool:
-    """La guía nueva (GitHub App) aplica con la app encendida, aviso aceptado, uso completo y sin datos ni plan aún.
+    """La guía nueva (GitHub App) aplica con la app encendida, aviso aceptado y sin datos ni plan aún.
     Quien ya vinculó su copia por el camino viejo (sin instalación) sigue con la guía de siempre."""
-    return bool(settings.app_github and e["consentimiento"] and e["uso"] != "cuerpo" and not e["ajustes"]
+    return bool(settings.app_github and e["consentimiento"] and not e["ajustes"]
                 and not e["datos"] and (not e["vinculado"] or u.gh_instalacion))
 
 

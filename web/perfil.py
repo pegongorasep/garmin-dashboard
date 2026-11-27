@@ -119,8 +119,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         usuario.nombre, usuario.apellido = nombre, apellido
         if falta_aviso:
             db.add(Consentimiento(usuario_id=usuario.id, version_aviso=VERSION_AVISO))
-            if usuario.uso is None and db.get(Ajustes, usuario.id) is None:
-                usuario.sin_plan = True   # todos empiezan sin plan; lo arman desde la app (antes lo fijaba «¿Qué quieres usar?»)
+            if db.get(Ajustes, usuario.id) is None:
+                usuario.sin_plan = True   # todos empiezan sin plan; lo arman desde la app
         if nueva is not None:
             guardar_foto(db, usuario.id, nueva)
         elif form.get("quitar_foto") == "on":

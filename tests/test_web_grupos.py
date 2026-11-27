@@ -55,18 +55,6 @@ def test_unirse_requiere_sesion_y_liga_valida(web_ctx):
     assert post(b, "/grupos/unirse/malo").status_code == 404
 
 
-def test_solo_cuerpo_no_puede_unirse(web_ctx):
-    a, b = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "b@x.com")
-    with web_ctx.sesiones() as db:
-        db.query(Usuario).filter_by(correo="b@x.com").one().uso = "cuerpo"
-        db.commit()
-    gid = crear(a)
-    tk = liga(a, gid)
-    assert post(b, f"/grupos/unirse/{tk}").status_code == 403
-    with web_ctx.sesiones() as db:
-        assert db.query(MiembroGrupo).filter_by(grupo_id=gid).count() == 1
-
-
 def test_no_miembro_recibe_404_en_todo(web_ctx):
     a, c = sesion(web_ctx, "a@x.com"), sesion(web_ctx, "c@x.com")
     gid = crear(a)
@@ -373,7 +361,6 @@ def test_ajustes_compartir_guarda_y_pide_csrf(web_ctx):
     with web_ctx.sesiones() as db:
         u = db.query(Usuario).one()
         assert u.compartir_actividades is True and u.compartir_plan is True   # por defecto
-        u.uso = "cuerpo"   # /ajustes sin plan ni config renderiza la variante «solo cuerpo» (que también trae los interruptores)
         db.commit()
     assert a.post("/ajustes/compartir", data={"compartir_plan": "1"}).status_code == 403     # sin CSRF
     pag = a.get("/ajustes").text.replace("\n", " ")

@@ -12,8 +12,7 @@
 {% else %}
 <p>{{ t("grupos.unirse_texto", nombre=grupo.nombre) }}</p>
 <p class="pag-s">{{ t("grupos.unirse_priv") }} <a href="/ajustes">{{ t("grupos.unirse_priv_liga") }}</a></p>
-{% if estado == "cuerpo" %}{% call aviso("warn") %}{{ t("grupos.err_cuerpo") }}{% endcall %}
-{% elif estado == "lleno" %}{% call aviso("bad", rol="alert") %}{{ t("grupos.err_lleno") }}{% endcall %}
+{% if estado == "lleno" %}{% call aviso("bad", rol="alert") %}{{ t("grupos.err_lleno") }}{% endcall %}
 {% elif estado == "muchos" %}{% call aviso("bad", rol="alert") %}{{ t("grupos.err_muchos", n=5) }}{% endcall %}{% endif %}
 {% if estado == "ok" %}
 <p class="pag-s">{{ t("grupos.unirse_aviso") }}</p>

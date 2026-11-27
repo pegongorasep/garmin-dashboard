@@ -144,7 +144,7 @@ def test_liga_vencida(web_ctx):
 def test_salir_borra_la_sesion(web_ctx):
     crear_usuario(web_ctx, "si@x.com")
     cl = entrar(web_ctx, web_ctx.cliente(), "si@x.com")
-    assert cl.get("/data.json").status_code == 404   # sesión válida, sin ajustes
+    assert cl.get("/data.json").status_code == 200   # sesión válida (sin ajustes: config de fábrica)
     r = post(cl, "/salir")
     assert r.status_code == 303
     with web_ctx.sesiones() as db:
