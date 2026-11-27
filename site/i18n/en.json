@@ -281,6 +281,7 @@
 "sitio.gr.p.asi_a": "This is what anyone who shares a group with you sees, based on your switches.",
 "sitio.gr.p.asi_ajustes": "Change what you share (Settings)",
 "sitio.gr.p.asi_t": "How your groups see you",
+"sitio.gr.p.cargando": "Loading profile…",
 "sitio.gr.p.carrera": "{km} km race · {fecha}",
 "sitio.gr.p.carrera_sola": "Race · {fecha}",
 "sitio.gr.p.en_comun": "Groups in common: {grupos}",

@@ -281,6 +281,7 @@
 "sitio.gr.p.asi_a": "Esto es lo que ve quien comparte un grupo contigo, según tus interruptores.",
 "sitio.gr.p.asi_ajustes": "Cambiar lo que compartes (Ajustes)",
 "sitio.gr.p.asi_t": "Así te ven en tus grupos",
+"sitio.gr.p.cargando": "Cargando perfil…",
 "sitio.gr.p.carrera": "Carrera de {km} km · {fecha}",
 "sitio.gr.p.carrera_sola": "Carrera · {fecha}",
 "sitio.gr.p.en_comun": "Grupos en común: {grupos}",

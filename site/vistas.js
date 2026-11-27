@@ -1036,7 +1036,7 @@ async function cargarGrupo(id) {
   const antes = pintado ? JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null]) : "";
   try {
     if (!pintado) {
-      raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando")));
+      raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando"), { pagina: true }));   // al centro de la pantalla: en la vista de 2 columnas caería solo a la izquierda
       if (grupoCache.vuelo) { await grupoCache.vuelo; if (turno !== grupoTurno) return; if (grupoPintarCache(id)) pintado = true; }
       if (!pintado) {
         const r = await grupoBajar(id);
@@ -1136,7 +1136,7 @@ function pintarPersona(p) {
 async function cargarPersona(id) {
   const turno = ++personaTurno; ++grupoTurno;
   const raiz = $("vista-grupo");
-  raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando")));
+  raiz.replaceChildren(DS.cargando(T("sitio.gr.p.cargando"), { pagina: true }));
   try {
     const p = await grupoGet(`/api/juntos/persona/${id}`);
     if (turno === personaTurno) pintarPersona(p);
