@@ -502,7 +502,7 @@ def test_el_coach_agrega_un_viaje_y_el_atleta_se_entera(web_ctx):
         db.commit()
     r = cl_c.post(f"/a/{uid_a}/plan/viaje", data={"csrf": tok(cl_c), "desde": "2026-12-01", "hasta": "2026-12-06", "correr": "si"})
     assert r.status_code == 303 and r.headers["location"] == f"/a/{uid_a}/plan/acciones?ok=1"
-    assert "Estás editando a" in cl_c.get(f"/a/{uid_a}/plan/acciones").text
+    assert "Modo coach · Viendo a" in cl_c.get(f"/a/{uid_a}/plan/acciones").text
     assert crudo(web_ctx, uid_a)["corrida"]["eventos"][0]["modo"] == "menos"
     d = cl_a.get("/data.json").json()
     assert "Agregó un viaje" in d["avisos"][0]["texto"]

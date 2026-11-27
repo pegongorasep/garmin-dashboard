@@ -887,6 +887,10 @@ function pintarEncabezado() {
   $("encabezado").replaceChildren(enc);
   if (!items.length) ponerMenu(false, false);
   actualizarEncabezado();
+  // Barra de «Modo coach» (la decide Python: ui.coach = {nombre, volver} solo cuando un coach ve a su atleta).
+  const bc = $("barra-coach");
+  bc.hidden = !u.coach;
+  bc.replaceChildren(...(u.coach ? [DS.avisoCoach(u.coach)] : []));
   // Aviso de repo atrasado (lo decide Python: ui.repo_estado = {texto, ligas}).
   const re = $("repo-estado"), est = u.repo_estado;
   re.hidden = !est;

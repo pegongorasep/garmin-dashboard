@@ -78,7 +78,7 @@ const DS = (() => {
         h("button", { type: "button", class: "boton", onclick: () => { d.close(); alActualizar(); } }, T("sitio.version_actualizar"))));
     return d;
   };
-  const avisoCoach = (nombre) => h("p", { class: "coach-aviso" }, insignia("warn", "!"), h("span", {}, T("sitio.ds.viendo"), h("b", {}, nombre), T("sitio.ds.como_coach")));
+  const avisoCoach = ({ nombre, volver = "/coach" } = {}) => h("div", { class: "barra-coach", role: "status" }, h("span", {}, T("sitio.coach.barra", { nombre })), h("a", { href: volver }, T("sitio.coach.volver")));
 
   /** Confirmación antes de borrar o perder datos. Recibe { titulo, texto, lista:[], nota, confirmar, cancelar, onConfirmar, onCancelar }. */
   const confirmacion = ({ titulo, texto, lista = [], nota, confirmar = T("sitio.ds.si"), cancelar = T("sitio.ds.cancelar"), onConfirmar, onCancelar } = {}) => {

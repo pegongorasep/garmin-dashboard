@@ -248,7 +248,8 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .encabezado .marca .nombre { font-size: 17px; }
 .encabezado .act { font-size: 12.5px; color: var(--muted); padding-left: 34px; }
 .encabezado .act a { color: var(--accent); }
-.coach-aviso { display: flex; gap: var(--space-8); align-items: center; padding: 8px 12px; border-radius: var(--radius-inner); background: var(--warn-bg); font-size: 13px; }
+.barra-coach { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: var(--space-12); row-gap: var(--space-2); box-sizing: border-box; width: 100%; margin: 0; border-radius: 0; padding: calc(8px + env(safe-area-inset-top, 0px)) 16px 8px; background: var(--warn); color: var(--on-warn); font-size: 13px; font-weight: 600; }
+.barra-coach a { color: var(--on-warn); text-decoration: underline; }
 
 /* Menú del ☰ */
 .menu { background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card), 0 12px 32px rgba(0, 0, 0, .28); padding: var(--space-6); display: grid; min-width: 220px; max-width: 300px; }

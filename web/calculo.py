@@ -187,8 +187,10 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     ahora_naive = ahora_utc or ahora()
     # `grupos` también va fuera de la caché: la huella no cuenta las membresías. Al coach que ve a su atleta no se le muestra.
     n_grupos = 0 if pref else db.scalar(select(func.count()).select_from(MiembroGrupo).where(MiembroGrupo.usuario_id == usuario.id)) or 0
+    # `coach`: solo cuando un coach ve a su atleta, con el mismo nombre que le muestra su página de atletas (nada más).
+    coach = {"nombre": usuario.apodo or usuario.correo, "volver": "/coach"} if pref else None
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
-                             "grupos": n_grupos}}
+                             "grupos": n_grupos, "coach": coach}}
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)
     if avisos:

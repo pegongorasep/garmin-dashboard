@@ -1,5 +1,6 @@
 /* Estilos de la app: solo layout y lo propio de la app que el sistema (componentes.css) no cubre.
    Los colores, espacios, radios y letra salen de tokens.css; los componentes, de componentes.css. */
+#barra-coach { margin-inline: -16px; }
 body { display: flex; flex-direction: column; min-height: 100dvh; padding-inline: 16px; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 .top, #carga, #app, body > .pie { width: 100%; max-width: 720px; margin-inline: auto; box-sizing: border-box; }
 body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el contenido es corto */

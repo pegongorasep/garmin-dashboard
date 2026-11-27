@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="/estaticos/paginas.css">
 </head>
 <body class="pagina">
+{% if pref and atleta %}<div class="barra-coach" role="status"><span>{{ t("sitio.coach.barra", nombre=atleta.apodo or atleta.correo) }}</span><a href="/coach">{{ t("sitio.coach.volver") }}</a></div>{% endif %}
 {% from "componentes.html" import pie %}
 <main class="caja {% block clase %}{% endblock %}">
 {% block contenido %}{% endblock %}

@@ -162,10 +162,10 @@ def("Controles", "Estado", "DS.estado() · DS.insignia()", "Insignia redonda con
 // Navegación
 def("Navegación", "Diálogo de versión nueva", "DS.dialogoVersion()", "Diálogo modal cuando hay una versión nueva de la app: «Actualizar» recarga una vez; «Ahora no» (o Esc) lo cierra hasta la próxima apertura.",
   (() => { const d = DS.dialogoVersion(); return [DS.boton("Ver diálogo", { onclick: () => d.showModal() }), d]; })());
-def("Navegación", "Encabezado", "DS.encabezado()", "Logo, actualizado hace…, ayuda, tema y menú; con aviso de coach.",
+def("Navegación", "Encabezado", "DS.encabezado()", "Logo, actualizado hace…, ayuda, tema y menú; y, para el coach, la barra amarilla de «Modo coach» (`DS.avisoCoach`, pegada arriba a todo el ancho).",
   DS.encabezado({ actualizado: "Actualizado hace 2 h", conMenu: true }),
   DS.encabezado({ actualizado: h("span", {}, "Actualizado hace 3 días · ", h("a", { href: "#" }, "Jalar datos de Garmin")), tema: "claro" }),
-  DS.avisoCoach("Ana"));
+  DS.avisoCoach({ nombre: "Ana" }));
 def("Navegación", "Menú", "DS.menu()", "El desplegable del ☰: secciones, coach, admin y salir.",
   DS.menu({ quien: "pedro@ejemplo.com", items: [
     { texto: "Ajustes", icono: "editar", href: "#" }, { texto: "Historial", icono: "deshacer", href: "#", actual: true },

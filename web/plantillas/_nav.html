@@ -1,4 +1,4 @@
-{% from "componentes.html" import boton, aviso %}
+{% from "componentes.html" import boton %}
 <nav class="acciones" aria-label="{{ t('nav.secciones') }}">
   {{ boton(t("nav.dashboard"), "texto", chico=True, href="/") }}
   {{ boton(t("nav.ajustes"), "texto", chico=True, href=pref ~ "/ajustes") }}
@@ -12,4 +12,3 @@
   {% if not pref %}{{ boton(t("nav.mis_datos"), "texto", chico=True, href="/privacidad/mis-datos") }}{% endif %}
   {% if not pref and atleta and (atleta.es_admin or (settings.admin_correo and atleta.correo|lower == settings.admin_correo|lower)) %}{{ boton(t("nav.admin"), "texto", chico=True, href="/admin") }}{{ boton(t("nav.diseno"), "texto", chico=True, href="/diseno") }}{% endif %}
 </nav>
-{% if pref %}{% call aviso("warn") %}{{ t("nav.editando", nombre=(atleta.apodo or atleta.correo)|e)|safe }}{% endcall %}{% endif %}

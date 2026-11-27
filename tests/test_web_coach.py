@@ -65,6 +65,11 @@ def test_f5b_coach_ve_y_edita_a_su_atleta_con_via_coach_y_aviso(web_ctx):
     assert all(v.startswith(f"/a/{uid_a}/plan/sesion/") for v in ui["editar_urls"].values())
     assert not any(m["url"] == "/coach" for m in ui["menu"])
     assert atleta.get("/data.json").json()["ui"]["plan_acciones"][0]["url"].startswith("/plan")
+    # Barra de modo coach: solo en la vista del coach (nombre de la página de atletas, sin correo extra) y en sus páginas con /a/<id>.
+    assert atleta.get("/data.json").json()["ui"]["coach"] is None and ui["coach"] == {"nombre": "atleta@x.com", "volver": "/coach"}
+    assert 'class="barra-coach"' not in atleta.get("/ajustes").text and 'class="barra-coach"' not in coach.get("/coach").text
+    for ruta in ("ajustes", "plan", "cuerpo", "historial"):
+        assert 'class="barra-coach"' in coach.get(f"/a/{uid_a}/{ruta}", follow_redirects=True).text, ruta
     r = coach.get(f"/a/{uid_a}/plan/acciones")
     assert r.status_code == 200
     r = coach.post(f"/a/{uid_a}/plan/viaje", data={"csrf": csrf_de(r.text), "desde": "2027-03-01", "hasta": "2027-03-05"})
