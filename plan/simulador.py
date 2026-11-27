@@ -111,7 +111,12 @@ def _normalizar_persona(p: dict) -> dict:
     p["adherencia"] = {"base": float(ad.get("base", 1.0)), "huecos": [tuple(h) for h in ad.get("huecos") or []]}
     p.setdefault("meta", None)
     p["actividades"] = actividades_sinteticas(p)
+    if p.get("sin_reloj"):
+        for actividad in p["actividades"]:
+            actividad["manual"] = True
     p["nivel"] = nivel_mod.nivel_desde_datos(p["actividades"], datetime.fromisoformat(INICIO))
+    if p.get("sin_reloj"):
+        p["nivel"] = nivel_mod.nivel_sin_reloj(p["nivel"], p["sin_reloj"]["dias"], p["sin_reloj"]["larga"])
     return p
 
 

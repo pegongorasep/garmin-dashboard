@@ -38,8 +38,8 @@ Las propuso Opus y Pedro las aprobó todas; lo demás viene de los requisitos.
    «base»**; la persona puede elegir otro, con el aviso que ya existe (`pn.nivel_alto`).
 9. **[acordado] «Un poco por debajo»** = 80 % de (días por semana × corrida más larga), redondeado hacia abajo a 5', con
    el piso de su nivel.
-10. **[acordado] «¿Corriste? Anótalo»** sale a quien no tiene Garmin conectado, en la sesión de corrida de hoy (después
-    de su hora) o de ayer que no tenga actividad, con liga al formulario con Correr y esa fecha.
+10. **[acordado] «¿Corriste? Anótalo»** aparece siempre para quien no tiene Garmin conectado, con liga al formulario
+    de Correr y la fecha local de hoy. Se mantiene visible después de registrar una actividad.
 11. **[acordado]** Quien está en «solo cuerpo» pasa a todos-tienen-todo con `sin_plan = True`. La columna `uso` se queda
     en la tabla (nadie la lee) para no romper respaldos; se borra en otra ocasión.
 
@@ -91,6 +91,15 @@ Las propuso Opus y Pedro las aprobó todas; lo demás viene de los requisitos.
   de un grupo con una persona con Garmin y otra sin.
 
 ## Tanda D: plan sin reloj
+
+### Guía de ejecución para Terra
+
+1. **Hoy al estrenar la cuenta.** En el cálculo web, distinguir copia conectada, permiso para sincronizar, última subida exitosa e historial pendiente. La ausencia de actividades por sí sola no demuestra una sincronización. En Hoy comprobar cuatro casos con el reloj de la prueba fijo: cuenta vacía, primera actividad manual, primera comprobación real e historial listo. La cuenta vacía ofrece registrar y conectar. La actividad manual aparece en el calendario y resumen. Mostrar instrucciones de FC de Garmin solo cuando corresponda y usar la fecha de la última subida para el encabezado. Conservar la acción de autorizar para copias antiguas.
+2. **Interacción de conexión.** Junto al envío por correo explicar «¿Estás en celular? Necesitas una computadora para conectar Garmin» y etiquetar la acción «Enviarme la guía por correo». Al pulsar Sincronizar, bloquear inmediatamente otro envío y anunciar la solicitud en la misma ranura. Transferir el estado al progreso real. Recuperar el botón ante rechazo, pérdida de red o fin de la corrida. Probar doble clic con una respuesta demorada y reintento tras error.
+3. **E8.** Combinar actividades guardadas y manuales para medir volumen. Detectar corridas de Garmin dentro de la ventana del motor y respetar la espera de historial. Sin ellas, preguntar frecuencia actual (1–7) y minutos de la corrida más larga. Aplicar las decisiones 8 y 9 en Python, mantener las respuestas al avanzar, volver y confirmar, también para coach. Probar que 3 días × 31 minutos dan 70 minutos iniciales, el piso del nivel y la elección de un nivel superior con aviso. Agregar una persona sin reloj al simulador.
+4. **E9.** Compartir la descripción de esfuerzo por zona entre los pasos de sesión de Hoy y Plan en español e inglés. Incluir el rango solo con zonas reales de Garmin. Comparar una misma sesión con y sin zonas, revisar el cambio esperado en los datos golden y comprobar que una cuenta con reloj conserva sus rangos.
+5. **E10.** Si puede editar y no tiene Garmin, enlazar siempre desde Hoy y Plan al formulario con Correr y la fecha local de hoy. Comprobar también cuentas sin plan, coach sin permiso y atleta conectado. Verificar que el lunes el ajuste responda al volumen manual real.
+6. **Revisión.** Ejecutar las pruebas de cada fase, el simulador, pytest completo y el validador de privacidad. Revisar el diff y recorrer el alta hasta registrar la primera corrida. Documentar cualquier comprobación que el entorno impida. La entrega de esta tanda es local para revisión de Pedro.
 
 - **E8. Preguntas sin historial.** `/plan/nuevo` paso 1: si no hay corridas de Garmin en las semanas que mira
   `nivel.py`, en lugar de «Lo que vimos en tu Garmin» pregunta días por semana (1–7) y corrida más larga (minutos).

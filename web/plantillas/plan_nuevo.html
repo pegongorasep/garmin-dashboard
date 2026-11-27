@@ -14,26 +14,36 @@
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 
 {% if paso == 1 %}
-{% call tarjeta(t("pn.ev_t")) %}
+{% if not sin_garmin %}{% call tarjeta(t("pn.ev_t")) %}
   <ul class="texto pn-lista">{% for l in evidencia %}<li>{{ l }}</li>{% endfor %}</ul>
-{% endcall %}
+{% endcall %}{% endif %}
+{% if espera_historial %}{% call aviso("warn") %}{{ t("pn.espera_historial") }}{% endcall %}{% else %}
 <form class="pila" method="post" action="{{ pref }}/plan/nuevo/preguntas">
   <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% if nivel_previo is defined %}{% for k, val in v.items() if k not in ("nivel", "frecuencia_actual", "corrida_larga") %}{% if val is string %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% else %}{% for x in val %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% endif %}{% endfor %}{% endif %}
+  {% if sin_garmin %}
+    {{ campo(t("pn.frecuencia_actual"), "frecuencia_actual", tipo="number", valor=v.frecuencia_actual, requerido=True, extra={"min": "1", "max": "7"}) }}
+    {{ campo(t("pn.corrida_larga"), "corrida_larga", tipo="number", valor=v.corrida_larga, requerido=True, extra={"min": "1", "max": "1440"}) }}
+  {% endif %}
   <h2 class="pag-h">{{ t("pn.nivel_t") }}</h2>
   <p class="pag-s">{{ t("pn.nivel_a") }}</p>
   {% call opciones(t("pn.nivel_t")) %}
-    {% for n in niveles %}{{ opcion("nivel", t("pn.nivel." ~ n), valor=n, nota=t("pn.nivel_x." ~ n), tipo="radio", marcado=(n == nivel)) }}{% endfor %}
+    {% if sin_garmin %}{{ opcion("nivel", t("pn.automatico"), valor="automatico", tipo="radio", marcado=(nivel_previo is not defined)) }}{% endif %}
+    {% for n in niveles %}{{ opcion("nivel", t("pn.nivel." ~ n), valor=n, nota=t("pn.nivel_x." ~ n), tipo="radio", marcado=((not sin_garmin or nivel_previo is defined) and n == nivel)) }}{% endfor %}
   {% endcall %}
-  <p class="pag-s pn-reserva">{{ t("pn.nivel_calculado", nivel=t("pn.nivel." ~ calculado.nivel)) }}</p>
+  {% if not sin_garmin %}<p class="pag-s pn-reserva">{{ t("pn.nivel_calculado", nivel=t("pn.nivel." ~ calculado.nivel)) }}</p>{% endif %}
   <div class="acciones">{{ boton(t("pn.continuar"), tipo="submit") }}</div>
 </form>
+{% endif %}
 
 {% elif paso == 2 %}
 <form class="pila" method="post" action="{{ pref }}/plan/nuevo/vista">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="nivel" value="{{ nivel }}">
+  <input type="hidden" name="frecuencia_actual" value="{{ v.frecuencia_actual }}">
+  <input type="hidden" name="corrida_larga" value="{{ v.corrida_larga }}">
   <h2 class="pag-h">{{ t("pn.q_t") }}</h2>
-  <p class="pag-s">{{ t("pn.q_nivel", nivel=t("pn.nivel." ~ nivel)) }} {{ boton(t("pn.cambiar_nivel"), "texto", chico=True, href=pref ~ "/plan/nuevo") }}</p>
+  <p class="pag-s">{{ t("pn.q_nivel", nivel=t("pn.nivel." ~ nivel)) }} <button class="boton texto chico" type="submit" formaction="{{ pref }}/plan/nuevo/nivel" formnovalidate>{{ t("pn.cambiar_nivel") }}</button></p>
   {% for a in avisos_nivel %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
   {% if "dias" in campos %}{{ seleccion(t("pn.dias"), "dias", [("2", "2"), ("3", "3"), ("4", "4"), ("5", "5")], v.dias, ayuda=t("pn.dias_a"), error=errores.get("dias")) }}{% endif %}
   {% if "pierna" in campos %}{% call opciones(t("pn.pierna"), t("pn.pierna_n")) %}

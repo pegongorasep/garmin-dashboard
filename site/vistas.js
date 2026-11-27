@@ -181,6 +181,7 @@ function renderPlan(d) {
     return;
   }
   $("vista-plan").replaceChildren(...[
+    recordatorioCorrida(),
     guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: T("sitio.plan.listo"), texto: T("sitio.plan.guardado") }) : null,
     acciones.length ? h("div", { class: "botones ancha" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
     ui().plan_url ? h("div", { class: "botones ancha" }, DS.boton(T("sitio.plan.ajustar"), { variante: "sec", href: ui().plan_url })) : null,
@@ -1282,7 +1283,7 @@ function pintarEncabezado() {
 }
 
 function actualizarEncabezado() {
-  const iso = datos && (datos.datos_al || datos.generado);
+  const iso = datos && datos.datos_al;
   const hace = haceCuanto(iso);
   const act = $("actualizado");
   if (act) act.textContent = hace ? T("sitio.enc.actualizado", { h: hace }) : "";

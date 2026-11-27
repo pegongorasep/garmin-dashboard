@@ -21,6 +21,23 @@ def pi(cl, url="/data.json"):
     return d["ui"]["primer_inicio"]
 
 
+def test_cuenta_nueva_registra_primera_corrida_desde_hoy(web_ctx):
+    from test_web_actividad import datos, enviar
+
+    _, cl = nuevo(web_ctx)
+    antes = cl.get("/data.json").json()
+    assert antes["datos_al"] is None
+    assert antes["hoy"]["tarjeta"]["tipo"] != "primera_sync"
+    assert antes["semana_libre"]["actividades"] == 0
+    registrar = antes["ui"]["primer_inicio"]["registrar"]
+    respuesta = enviar(cl, registrar, datos(fecha=antes["generado"][:10]))
+    assert respuesta.status_code == 303 and respuesta.headers["location"] == "/#hoy"
+    despues = cl.get("/data.json").json()
+    assert despues["datos_al"] is None
+    assert despues["semana_libre"]["actividades"] == 1
+    assert despues["semana_libre"]["minutos"] == 30
+
+
 def test_tarjeta_garmin_sin_copia_conectado_y_oculta(web_ctx):
     uid, cl = nuevo(web_ctx)
     assert pi(cl)["garmin"] == {"conectar": "/bienvenida", "liga": "/bienvenida/liga", "ocultar": "/avisos/ocultar"}

@@ -56,7 +56,7 @@ function pasoLi(p) {
     h("span", { class: "min" }, `${p.minutes} min`),
     h("span", { class: "zchip" }, h("i", { style: `background:${color}`, "aria-hidden": "true" }), z),
     p.lpm ? h("span", { class: "lpm" }, `${p.lpm[0]}–${p.lpm[1]} ${T("sitio.lpm")}`) : null,
-    h("span", { class: "nota" }, etiquetaPaso(p.kind), p.optional ? ` ${T("sitio.paso.opcional")}` : "", nota));
+    h("span", { class: "nota" }, T(`sitio.sensacion.${z}`), " · ", etiquetaPaso(p.kind), p.optional ? ` ${T("sitio.paso.opcional")}` : "", nota));
 }
 
 const mmss = (seg) => {
@@ -127,7 +127,8 @@ function detallePasos(ses) {
       const tipo = etiquetaPaso(p.kind);
       return h("p", { class: "nota" }, `${tipo[0].toUpperCase()}${tipo.slice(1)}${p.optional ? ` ${T("sitio.paso.opcional")}` : ""}: ${p.note}`);
     });
-    return notas.length ? h("div", { class: "notas-paso" }, ...notas) : null;
+    const zonas = [...new Set(pasos.map((p) => p.zone).filter(Boolean))];
+    return h("div", { class: "notas-paso" }, ...zonas.map((z) => h("p", { class: "nota" }, `${z} · ${T(`sitio.sensacion.${z}`)}`)), ...notas);
   }
   return DS.desplegable({ titulo: T("sitio.ver_pasos"), liga: true }, h("ul", { class: "pasos-ses" }, pasos.map(pasoLi)));
 }
@@ -707,6 +708,7 @@ function primerInicio() {
     };
     ranura.append(h("div", { class: "pi-colapsa" }, DS.tarjeta({ titulo: T("sitio.pi.garmin_t"), clase: "pi-garmin" },
       h("p", {}, T("sitio.pi.garmin_x")),
+      h("p", { class: "nota" }, T("sitio.pi.celular")),
       h("div", { class: "pi-acciones" },
         DS.boton(T("sitio.pi.conectar"), { href: g.conectar }),
         csrf ? DS.boton(T("sitio.pi.liga"), { variante: "sec", onclick: mandar }) : null,
@@ -722,6 +724,11 @@ function primerInicio() {
   return out;
 }
 
+function recordatorioCorrida() {
+  const r = ui().recordatorio_corrida;
+  return h("div", { class: "ancha" }, r ? DS.boton(T("sitio.recordatorio_corrida"), { variante: "sec", href: r.url }) : null);
+}
+
 function renderHoySinPlan(d) {
   const sl = d.semana_libre || {};
   const dif = (v, prom, unidad) => (prom ? [[T("sitio.sl.vs", { p: fmt(prom, 0), u: unidad }), "neutro"]] : [[T("sitio.sl.sin_prom"), "neutro"]]);
@@ -735,6 +742,7 @@ function renderHoySinPlan(d) {
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
     ...primerInicio(),
+    recordatorioCorrida(),
     avisoKeyRechazada(),
     avisoMigrar(),
     DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
@@ -761,6 +769,7 @@ function renderHoy(d) {
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
     ...primerInicio(),
+    recordatorioCorrida(),
     avisoKeyRechazada(),
     avisoMigrar(),
     d.hoy.semaforo.repetir_semana

@@ -10,6 +10,26 @@
 #             (ajustes.RESPUESTAS_FORMULARIO). `dias_semana` y `variada` no existen hoy: el motor siempre da 3 corridas.
 # dias_semana: cuántos días quiere correr (para los motores nuevos; el actual lo ignora).
 personas:
+  - id: sin_reloj
+    nombre: Corredora sin reloj
+    descripcion: Registra a mano tres corridas de 31 minutos cada semana.
+    edad: 30
+    dias_semana: 3
+    sin_reloj: {dias: 3, larga: 31}
+    historial:
+      - {sesiones: [31, 31, 31], continuo: 31}
+      - {sesiones: [31, 31, 31], continuo: 31}
+      - {sesiones: [31, 31, 31], continuo: 31}
+      - {sesiones: [31, 31, 31], continuo: 31}
+      - {sesiones: [31, 31, 31], continuo: 31}
+      - {sesiones: [31, 31, 31], continuo: 31}
+      - {sesiones: [31, 31, 31], continuo: 31}
+      - {sesiones: [31, 31, 31], continuo: 31}
+    intensos_semana: {dias: [], tipo: ""}
+    adherencia: {base: 1.0}
+    meta: null
+    formulario: {nivel: intermedio}
+
   - id: novata_sin_datos
     nombre: Novata sin datos
     descripcion: Nunca ha corrido y deja el formulario como viene (nivel novato, intensidad z2_poca_z3, 20' y 40').

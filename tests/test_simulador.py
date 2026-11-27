@@ -49,7 +49,7 @@ def carga(*totales):
 
 def test_personas_cargan():
     ps = sim.cargar_personas()
-    assert len(ps) == 8 and len({p["id"] for p in ps}) == 8
+    assert len(ps) == 9 and len({p["id"] for p in ps}) == 9
     for p in ps:
         assert p["nombre"] and p["descripcion"]
         assert len(p["historial"]) in (0, 8)

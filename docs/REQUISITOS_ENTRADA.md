@@ -29,6 +29,16 @@ puede usarla.
 
 ## Primer inicio
 
+### Ajustes acordados tras probar una cuenta nueva
+
+- **[acordado]** Sin Garmin conectado, no mostrar «Primera sincronización lista», «Actualizado hace…» de Garmin ni el botón «Sincronizar». La pantalla no debe sugerir que ya llegaron datos de Garmin.
+- **[acordado]** Sin actividades, Hoy indica que todavía no hay actividades y ofrece conectar Garmin o registrar una a mano. Al registrar la primera actividad a mano, mostrar las actividades y el resumen de la semana en lugar del mensaje vacío.
+- **[acordado]** Durante la conexión y la descarga, mostrar el estado real; «Primera sincronización lista» solo después de una sincronización exitosa. Con Garmin conectado, mostrar «Sincronizar» y la fecha de la última sincronización exitosa cuando exista.
+- **[acordado]** Al tocar «Sincronizar», dar respuesta visual inmediata, antes de que responda el servidor, y evitar clics repetidos mientras se procesa. Mostrar el progreso o el error según la respuesta real.
+- **[acordado]** En la tarjeta de Garmin, explicar junto a la opción de correo: «¿Estás en celular? Necesitas una computadora para conectar Garmin» y ofrecer «Enviarme la guía por correo». El correo contiene la liga a la guía para continuar en la computadora.
+- **[acordado]** No pedir configurar la FC máxima en Garmin Connect a quien no tiene Garmin conectado. Junto con E9, ofrecer descripciones de zonas por sensación para quien no tiene reloj.
+- Estos ajustes se planearán y trabajarán junto con E8–E10; esta sección documenta requisitos, no autoriza implementación o publicación por sí sola.
+
 - **[acordado]** De arriba a abajo: tarjeta de Garmin, «+ Registrar actividad», y luego armar plan, unirse a un grupo y
   agregar InBody.
 - **[acordado]** Tarjeta: «¿Tienes un Garmin? Conéctalo. Es el paso más importante: tus corridas y tu sueño llegan

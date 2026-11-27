@@ -60,6 +60,13 @@ def problemas(datos: dict) -> list:
     for k, v in ((datos.get("ui") or {}).get("editar_manual") or {}).items():   # liga de editar lo registrado a mano: solo rutas propias
         if not re.fullmatch(r"m\d+", str(k)) or not re.fullmatch(r"(/a/\d+)?/actividad/\d+", str(v)):
             out.append(f"editar_manual no vale: {k}")
+    recordatorio = (datos.get("ui") or {}).get("recordatorio_corrida")
+    if recordatorio is not None:
+        if not isinstance(recordatorio, dict) or set(recordatorio) != {"fecha", "url"}:
+            out.append("recordatorio_corrida no vale")
+        elif not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(recordatorio["fecha"])) or not re.fullmatch(
+                rf"(/a/\d+)?/actividad/nueva\?tipo=correr&fecha={re.escape(str(recordatorio['fecha']))}", str(recordatorio["url"])):
+            out.append("recordatorio_corrida no vale")
     for w in (datos.get("plan") or {}).get("semanas") or []:   # km estimados del plan: número o nulo, nunca texto ni ritmo
         for ruta, v in [("plan_km", w.get("plan_km"))] + [("km_est", x.get("km_est")) for x in w.get("sessions") or []]:
             if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):

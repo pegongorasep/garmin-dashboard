@@ -28,7 +28,7 @@
 </main>
 <div class="caja {% block clase_pie %}{% endblock %}">{{ pie(t, idioma, csrf, request.url.path) }}</div>
 <script src="/actualizar.js" data-texto="{{ t('sitio.version_nueva') }}" data-accion="{{ t('sitio.version_actualizar') }}" data-cuerpo="{{ t('sitio.version_cuerpo') }}" data-luego="{{ t('sitio.version_luego') }}" data-actualizando="{{ t('sitio.version_actualizando') }}"></script>
-<script src="/franja.js" data-campo="{{ csrf }}"></script>
+<script src="/franja.js" data-campo="{{ csrf }}" data-solicitando="{{ t('sync.solicitando') }}" data-fallo="{{ t('sync.solicitud_error') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

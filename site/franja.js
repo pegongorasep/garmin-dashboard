@@ -8,7 +8,7 @@
   const OK_MS = 4000, ERROR_MS = 10000;   // un error se ve 10 s (salvo «Falta tu historial», que sigue hasta reintentar)
   // Dos modos, un solo componente: en la página del sitio (con `.encabezado .act`) el texto ocupa la ranura de «Actualizado hace…»
   // y una barra de 3 px absoluta pega al borde de abajo del encabezado; en las demás páginas, una franja fija que flota sin empujar nada.
-  let flota = null, enc = null, pend = null, temporizador = null, ocultar = null, vistaViva = false, viva = false, ultimo = null, visible = false;
+  let flota = null, enc = null, pend = null, temporizador = null, ocultar = null, vistaViva = false, viva = false, ultimo = null, visible = false, enviando = false, generacion = 0;
 
   // Avance fluido: Python manda `porcentaje` (donde va) y `tope` (donde empieza el paso siguiente). Entre avisos la barra gatea de forma
   // asintótica hacia el tope sin llegar; con un aviso nuevo corre a él en ~300 ms. Nunca retrocede; sin animación con la pestaña oculta.
@@ -131,14 +131,23 @@
   }
 
   async function sondear() {
+    const version = generacion;
     try {
       const r = await fetch("/api/sync", { cache: "no-store", credentials: "same-origin" });
-      if (!r.ok) { if (viva) temporizador = setTimeout(sondear, 5000); return; }
-      pintar((await r.json()).sinc);
-    } catch (e) { if (viva) temporizador = setTimeout(sondear, 5000); }
+      if (!r.ok) throw new Error("sync");
+      const j = await r.json();
+      if (version === generacion && !enviando) pintar(j.sinc);
+    } catch (e) {
+      if (version === generacion && viva && !enviando) pintar({ estado: "error", texto: script.dataset.fallo, porcentaje: 0 });
+    }
   }
 
   async function empezar(tipo) {
+    if (enviando || viva) return;
+    enviando = true;
+    generacion++;
+    pintar({ estado: "esperando", texto: script.dataset.solicitando, porcentaje: 0, tope: 5 });
+    clearTimeout(temporizador);
     try {
       const r = await fetch("/api/sync", { method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ csrf: CSRF, tipo: tipo || "normal" }) });
@@ -149,8 +158,11 @@
         return;
       }
       if (r.status === 429) { pintar({ estado: "error", texto: j.texto || "", porcentaje: 0, accion: null }); return; }
-      if (j.sinc) { vistaViva = true; pintar(j.sinc); }
-    } catch (e) { /* sin red: no pasa nada, se vuelve a intentar al tocar */ }
+      if (r.ok && j.sinc) { vistaViva = true; pintar(j.sinc); return; }
+      throw new Error("sync");
+    } catch (e) {
+      pintar({ estado: "error", texto: script.dataset.fallo, porcentaje: 0, terminada_hace_s: 0 });
+    } finally { enviando = false; }
   }
 
   window.Franja = { empezar, viva: () => viva, reponer, _pintar: pintar };

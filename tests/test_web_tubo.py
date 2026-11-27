@@ -246,13 +246,16 @@ def test_regla_de_oro_por_el_tubo(ctx):
     ahora_utc = datetime(2026, 11, 25, 18, 0)
     with ctx.sesiones() as db:
         web = calculo.calcular(db, db.get(Usuario, uid), ahora_utc)
+        ultima_subida = tubo.ultima_subida(db, uid)
     cfg = ajustes.cargar_config(ROOT)
     from zoneinfo import ZoneInfo
     local = ahora_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
     esp = build.build(build.load_data(ROOT), build.load_plan(ROOT), {**cfg, "modo": "web", "menu": calculo.MENU, "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT)), "idioma": "es", "plan_url": calculo.PLAN_URL, "cuerpo_nuevo": "/cuerpo/nuevo",
-                      "acciones_url": "https://github.com/amigo/garmin-prueba/actions/workflows/deploy.yml"}, local)
+                      "acciones_url": "https://github.com/amigo/garmin-prueba/actions/workflows/deploy.yml", "garmin_conectado": True,
+                      "garmin_ultima_subida": ultima_subida}, local)
     web["ui"].pop("repo_estado")   # depende de la hora de la última subida; se prueba aparte
     web["ui"].pop("primer_inicio")   # solo la web (E3); se prueba en test_web_primer_inicio
+    web["ui"].pop("recordatorio_corrida")
     assert json.dumps(web, sort_keys=True) == json.dumps(esp, sort_keys=True)
     assert validar.problemas(web) == []
 

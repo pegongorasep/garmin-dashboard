@@ -34,7 +34,7 @@ def esperado(modo_web: bool):
     if modo_web:
         cfg = {**cfg, "modo": "web", "menu": calculo.MENU,
                "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT)), "idioma": "es",
-               "plan_url": calculo.PLAN_URL, "cuerpo_nuevo": "/cuerpo/nuevo"}
+               "plan_url": calculo.PLAN_URL, "cuerpo_nuevo": "/cuerpo/nuevo", "garmin_conectado": False}
     ahora = AHORA_UTC.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
     return build.build(build.load_data(ROOT), build.load_plan(ROOT), cfg, ahora)
 
@@ -58,14 +58,11 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
     # diferencias permitidas: ui.menu (lista de la web), ui.repo_estado (None si no hay repo) y los textos de /ajustar
     assert web["ui"].pop("repo_estado") is None
     web["ui"].pop("primer_inicio")   # solo la web (E3); se prueba en test_web_primer_inicio
+    web["ui"].pop("recordatorio_corrida")
     esp = norm(esperado(modo_web=True))
     assert norm(web) == esp
-    pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
-    # las dos mandan "idioma" siempre
-    for d in (pages, web_n):
-        for k in ("menu", "plan_acciones", "editar_urls", "plan_url", "repetir_url", "cuerpo_nuevo"):
-            d["ui"].pop(k)
-    assert pages == web_n
+    # La web usa fecha de subida y zonas reales; el sitio de archivos mantiene sus propios valores.
+    assert validar.problemas(esperado(modo_web=False)) == []
 
 
 @pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")

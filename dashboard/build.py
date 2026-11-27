@@ -1076,8 +1076,9 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     zonas_g = m.zonas_garmin(data["hr_zones"])
     zonas = zonas_g or m.zones(config["max_hr"], rhr, config["zone_pcts"])
     zonas_origen = "garmin" if zonas_g else "calculadas"
+    zonas_plan = (zonas_g or []) if config.get("modo") == "web" else zonas
     # El aviso «configura tus zonas en Garmin» sale con zonas calculadas o con las de fábrica de Garmin.
-    sugerir_zonas = zonas_origen == "calculadas" or m.zonas_de_fabrica(data["hr_zones"])
+    sugerir_zonas = (zonas_origen == "calculadas" or m.zonas_de_fabrica(data["hr_zones"])) and config.get("garmin_conectado", True)
     config = {**config, "zonas": zonas}   # derivadas de este día: esfuerzo, ritmo a FC ref y plan vs real las leen de aquí
 
     sigs = m.signals(hoy, data, config)
@@ -1091,10 +1092,10 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     tarjeta = m.today_card(hoy, luz, estado, data["activities"], config)
     if tarjeta["sesion_id"] and semana_plan:
         ses = next(s for s in semana_plan["sessions"] if s["id"] == tarjeta["sesion_id"])
-        tarjeta["sesion"] = convert_session(ses, zonas)
+        tarjeta["sesion"] = convert_session(ses, zonas_plan)
     sin_datos = not any(data[k] for k in ("activities", "daily_summaries", "sleep", "hrv"))
     inicio_plan = date.fromisoformat(config["plan_start"])
-    if sin_datos:   # primera sincronización: Garmin tarda en mandar el historial
+    if sin_datos and (config.get("modo") != "web" or (config.get("garmin_ultima_subida") and config.get("garmin_historial_pendiente"))):
         texto = tt("motor.build.primera")
         if hoy < inicio_plan:
             texto += f". {texto_inicio_plan(inicio_plan)}"
@@ -1122,6 +1123,9 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     datos_al = None
     if pulled:
         datos_al = datetime.fromisoformat(pulled).astimezone(ahora.tzinfo).isoformat(timespec="minutes")
+    if config.get("modo") == "web":
+        ultima = config.get("garmin_ultima_subida")
+        datos_al = ultima.replace(tzinfo=ZoneInfo("UTC")).astimezone(ahora.tzinfo).isoformat(timespec="minutes") if ultima else None
     filas = m.run_rows(data["activities"], data["details"], config)
     semanas_hoy, semana_hoy_idx = build_semanas(hoy, data, config, plan)
     semanas_12 = build_weeks(hoy, data, config, plan)
@@ -1149,7 +1153,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                  "bloques": sorted({w["block"] for w in plan["weeks"] if w.get("block") is not None}),
                  **({"faltan": m.faltan_texto(estado)} if m.faltan_texto(estado) else {}),
                  **eventos_plan(config),
-                 "semanas": semanas_plan(plan, zonas, hoy, semanas_hoy, config, semanal.ritmo_facil(filas, hoy)),
+                 "semanas": semanas_plan(plan, zonas_plan, hoy, semanas_hoy, config, semanal.ritmo_facil(filas, hoy)),
                  "estado_sesiones": [{**e, "minutos": r1(e["minutos"]),
                                          "corrida": corrida_de_sesion(e, semana_plan, data, config)} for e in estado]},
         "carreras": build_carreras(hoy, data, config),

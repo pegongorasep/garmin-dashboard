@@ -21,8 +21,6 @@ def ajustar_plan(plan: dict, data: dict, config: dict, hoy: date) -> dict:
         return plan
     import motor_v6
     corridas = [(m.day_of(a), a["duration"] / 60) for a in data["activities"] if m.classify(a, config) == "run"]
-    if not corridas:
-        return plan
     inicio = _lunes(date.fromisoformat(config["plan_start"]))
     sec = m.secuencia_semanas(inicio, config.get("semanas_repetidas", []), len(plan["weeks"]), config.get("pausas", []))
     actual = (hoy - inicio).days // 7

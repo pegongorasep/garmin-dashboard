@@ -628,15 +628,17 @@ def _id_libre(usados: set) -> str:
 
 def _reescalar(s: dict, minutos: int, usados: set) -> dict:
     """La sesión `s` con `minutos`, de la misma forma (trote/caminata o continua; calidad con su trabajo). Una calidad que ya no cabe pasa a Z2 fácil."""
+    def horario(nueva):
+        return {**nueva, **{k: s[k] for k in ("dia", "hora") if k in s}}
     if s["tipo"] == "calidad":
         nueva = sesion_calidad(s["calidad_tipo"], minutos, s["objetivo"]["minutos"], s["id"])
         if nueva:
-            return nueva
-        return _sesion(_id_libre(usados), "z2", "Z2", minutos, pasos_continuo(minutos, False))
+            return horario(nueva)
+        return horario(_sesion(_id_libre(usados), "z2", "Z2", minutos, pasos_continuo(minutos, False)))
     esc = _escalon_de_pasos(s["steps"])
     if s.get("nota") == NOTA_ACELERACIONES and minutos >= 5:
-        return sesion_aceleraciones(s["id"], s["name"], minutos)
-    return _sesion(s["id"], s["tipo"], s["name"], minutos, pasos_facil(minutos, esc, s["tipo"] == "larga"), esc)
+        return horario(sesion_aceleraciones(s["id"], s["name"], minutos))
+    return horario(_sesion(s["id"], s["tipo"], s["name"], minutos, pasos_facil(minutos, esc, s["tipo"] == "larga"), esc))
 
 
 def pico_ajustado(semanas: list, n_carrera: int) -> int:

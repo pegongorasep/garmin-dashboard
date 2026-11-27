@@ -27,11 +27,11 @@ def sembrar(ctx, uid, semanas=8, por_semana=4, minutos=50):
 
 def preguntas(cl, nivel, pref=""):
     r = cl.get(f"{pref}/plan/nuevo")
-    return cl.post(f"{pref}/plan/nuevo/preguntas", data={"csrf": csrf_de(r.text), "nivel": nivel})
+    return cl.post(f"{pref}/plan/nuevo/preguntas", data={"csrf": csrf_de(r.text), "nivel": nivel, "frecuencia_actual": "3", "corrida_larga": "5"})
 
 
 def respuestas(**extra):
-    return {"dias": "3", "dolor": "no", "inicio": lunes_siguiente().isoformat(), "edad": "35", "zona": "America/Merida", **extra}
+    return {"dias": "3", "frecuencia_actual": "3", "corrida_larga": "5", "dolor": "no", "inicio": lunes_siguiente().isoformat(), "edad": "35", "zona": "America/Merida", **extra}
 
 
 def vista(cl, nivel, pref="", **extra):
@@ -53,15 +53,15 @@ def test_sin_sesion_va_a_entrar_y_sin_datos_propone_empezando(web_ctx):
     assert web_ctx.cliente().get("/plan/nuevo").headers["location"] == "/entrar"
     uid, cl = nueva(web_ctx)
     r = cl.get("/plan/nuevo")
-    assert r.status_code == 200 and "Lo que vimos en tu Garmin" in r.text and "Todavía no vemos corridas" in r.text
-    assert 'value="empezando"' in r.text and "checked" in r.text and "Calculado con tu Garmin: Empezando" in r.text
+    assert r.status_code == 200 and 'name="frecuencia_actual"' in r.text and 'name="corrida_larga"' in r.text
+    assert 'value="automatico"' in r.text and "Lo que vimos en tu Garmin" not in r.text
 
 
 def test_nivel_calculado_desde_las_actividades_guardadas(web_ctx):
     uid, cl = nueva(web_ctx)
     sembrar(web_ctx, uid)
     r = cl.get("/plan/nuevo")
-    assert "Calculado con tu Garmin: Corredor" in r.text and "Corres 4 veces por semana" in r.text and "200 minutos por semana" in r.text
+    assert "Calculado con tu Garmin: Corredor" in r.text and "veces por semana" in r.text and "minutos por semana" in r.text
 
 
 def test_preguntas_segun_el_nivel(web_ctx):

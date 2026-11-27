@@ -154,7 +154,7 @@ def test_cuenta_en_ajustar_semana_real_prev():
     con = semanal.ajustar_plan(plan, {"activities": a_mano}, cfg, hoy)
     ref = semanal.ajustar_plan(plan, {"activities": garmin}, cfg, hoy)
     assert con["weeks"][1]["ajuste"]["real_prev"] == ref["weeks"][1]["ajuste"]["real_prev"] == 60
-    assert semanal.ajustar_plan(plan, {"activities": []}, cfg, hoy) is plan
+    assert semanal.ajustar_plan(plan, {"activities": []}, cfg, hoy)["weeks"][1]["ajuste"]["real_prev"] == 0
 
 
 def test_tarjeta_del_grupo_cuenta_la_manual(web_ctx, monkeypatch):

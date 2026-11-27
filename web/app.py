@@ -53,7 +53,7 @@ def pie_sitio(idioma: str, csrf: str = "", ruta: str = "/") -> str:
             f'<script src="/actualizar.js" data-texto="{i18n.t("sitio.version_nueva", idioma)}" data-accion="{i18n.t("sitio.version_actualizar", idioma)}" '
             f'data-cuerpo="{i18n.t("sitio.version_cuerpo", idioma)}" data-luego="{i18n.t("sitio.version_luego", idioma)}" '
             f'data-actualizando="{i18n.t("sitio.version_actualizando", idioma)}"></script>'
-            f'<script src="/franja.js" data-campo="{escape(csrf, quote=True)}"></script>')
+            f'<script src="/franja.js" data-campo="{escape(csrf, quote=True)}" data-solicitando="{escape(i18n.t("sync.solicitando", idioma), quote=True)}" data-fallo="{escape(i18n.t("sync.solicitud_error", idioma), quote=True)}"></script>')
 
 
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "

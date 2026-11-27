@@ -2884,6 +2884,7 @@
         "km": 4.5,
         "pulso": "banda",
         "ritmo_s": null,
+        "ritmo_unidad": "km",
         "ritmos_km": null,
         "te_aerobico": null,
         "te_anaerobico": null,
@@ -2935,6 +2936,7 @@
         "km": 4.5,
         "pulso": "banda",
         "ritmo_s": 400,
+        "ritmo_unidad": "km",
         "ritmos_km": null,
         "te_aerobico": null,
         "te_anaerobico": null,
@@ -2982,6 +2984,7 @@
         "km": 4.5,
         "pulso": "banda",
         "ritmo_s": null,
+        "ritmo_unidad": "km",
         "ritmos_km": null,
         "te_aerobico": null,
         "te_anaerobico": null,
@@ -3033,6 +3036,7 @@
         "km": 3.9,
         "pulso": "banda",
         "ritmo_s": 431,
+        "ritmo_unidad": "km",
         "ritmos_km": null,
         "te_aerobico": null,
         "te_anaerobico": null,
@@ -3164,6 +3168,7 @@
          "km": 3.0,
          "pulso": "banda",
          "ritmo_s": 500,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3232,6 +3237,7 @@
          "km": 5.5,
          "pulso": "banda",
          "ritmo_s": 436,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3291,6 +3297,7 @@
          "km": 7.0,
          "pulso": "banda",
          "ritmo_s": 429,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3467,6 +3474,7 @@
          "km": 4.0,
          "pulso": "banda",
          "ritmo_s": 450,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3529,6 +3537,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3590,6 +3599,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3665,6 +3675,7 @@
          "km": 4.8,
          "pulso": "banda",
          "ritmo_s": 438,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3711,6 +3722,7 @@
          "km": 2.5,
          "pulso": "banda",
          "ritmo_s": 480,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -3978,6 +3990,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -4039,6 +4052,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -4089,6 +4103,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -4156,6 +4171,7 @@
          "km": 3.9,
          "pulso": "banda",
          "ritmo_s": 431,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8005,6 +8021,7 @@
          "km": 3.0,
          "pulso": "banda",
          "ritmo_s": 500,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8073,6 +8090,7 @@
          "km": 5.5,
          "pulso": "banda",
          "ritmo_s": 436,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8132,6 +8150,7 @@
          "km": 7.0,
          "pulso": "banda",
          "ritmo_s": 429,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8308,6 +8327,7 @@
          "km": 4.0,
          "pulso": "banda",
          "ritmo_s": 450,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8370,6 +8390,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8431,6 +8452,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8506,6 +8528,7 @@
          "km": 4.8,
          "pulso": "banda",
          "ritmo_s": 438,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8552,6 +8575,7 @@
          "km": 2.5,
          "pulso": "banda",
          "ritmo_s": 480,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8819,6 +8843,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8880,6 +8905,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8927,6 +8953,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -8994,6 +9021,7 @@
          "km": 3.9,
          "pulso": "banda",
          "ritmo_s": 431,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13015,6 +13043,7 @@
          "km": 3.0,
          "pulso": "banda",
          "ritmo_s": 500,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13083,6 +13112,7 @@
          "km": 5.5,
          "pulso": "banda",
          "ritmo_s": 436,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13142,6 +13172,7 @@
          "km": 7.0,
          "pulso": "banda",
          "ritmo_s": 429,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13318,6 +13349,7 @@
          "km": 4.0,
          "pulso": "banda",
          "ritmo_s": 450,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13380,6 +13412,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13441,6 +13474,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13516,6 +13550,7 @@
          "km": 4.8,
          "pulso": "banda",
          "ritmo_s": 438,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13562,6 +13597,7 @@
          "km": 2.5,
          "pulso": "banda",
          "ritmo_s": 480,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13829,6 +13865,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13890,6 +13927,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -13940,6 +13978,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -14007,6 +14046,7 @@
          "km": 3.9,
          "pulso": "banda",
          "ritmo_s": 431,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -17657,6 +17697,7 @@
          "km": 3.0,
          "pulso": "banda",
          "ritmo_s": 500,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -17725,6 +17766,7 @@
          "km": 5.5,
          "pulso": "banda",
          "ritmo_s": 436,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -17784,6 +17826,7 @@
          "km": 7.0,
          "pulso": "banda",
          "ritmo_s": 429,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -17960,6 +18003,7 @@
          "km": 4.0,
          "pulso": "banda",
          "ritmo_s": 450,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18022,6 +18066,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18083,6 +18128,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18158,6 +18204,7 @@
          "km": 4.8,
          "pulso": "banda",
          "ritmo_s": 438,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18204,6 +18251,7 @@
          "km": 2.5,
          "pulso": "banda",
          "ritmo_s": 480,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18471,6 +18519,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18532,6 +18581,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18582,6 +18632,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -18649,6 +18700,7 @@
          "km": 3.9,
          "pulso": "banda",
          "ritmo_s": 431,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -22483,6 +22535,7 @@
          "km": 3.0,
          "pulso": "banda",
          "ritmo_s": 500,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -22551,6 +22604,7 @@
          "km": 5.5,
          "pulso": "banda",
          "ritmo_s": 436,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -22610,6 +22664,7 @@
          "km": 7.0,
          "pulso": "banda",
          "ritmo_s": 429,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -22786,6 +22841,7 @@
          "km": 4.0,
          "pulso": "banda",
          "ritmo_s": 450,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -22848,6 +22904,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -22909,6 +22966,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -22984,6 +23042,7 @@
          "km": 4.8,
          "pulso": "banda",
          "ritmo_s": 438,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -23030,6 +23089,7 @@
          "km": 2.5,
          "pulso": "banda",
          "ritmo_s": 480,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -23297,6 +23357,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -23358,6 +23419,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -23408,6 +23470,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -23475,6 +23538,7 @@
          "km": 3.9,
          "pulso": "banda",
          "ritmo_s": 431,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -26899,6 +26963,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -27107,6 +27172,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -27168,6 +27234,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": 400,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -27218,6 +27285,7 @@
          "km": 4.5,
          "pulso": "banda",
          "ritmo_s": null,
+         "ritmo_unidad": "km",
          "ritmos_km": null,
          "te_aerobico": null,
          "te_anaerobico": null,
@@ -27511,6 +27579,3802 @@
      "min_trote": 0,
      "minutos": 0,
      "pct_trote": null
+    }
+   }
+  ],
+  "tipos": {
+   "catalogo": [
+    {
+     "descripcion": "Un ritmo cómodo y parejo todo el tiempo. La Larga es un continuo más largo.",
+     "forma": [
+      [
+       1,
+       0.15,
+       0.45
+      ],
+      [
+       8,
+       0.45
+      ],
+      [
+       1,
+       0.45,
+       0.15
+      ]
+     ],
+     "grupo": "continuos",
+     "id": "continuo",
+     "nombre": "Continuo"
+    },
+    {
+     "descripcion": "Trotas un rato, caminas un poco y repites: el cuerpo se acostumbra sin pasarte.",
+     "forma": [
+      [
+       2,
+       0.5
+      ],
+      [
+       1,
+       0.12
+      ],
+      [
+       2,
+       0.5
+      ],
+      [
+       1,
+       0.12
+      ],
+      [
+       2,
+       0.5
+      ],
+      [
+       1,
+       0.12
+      ],
+      [
+       2,
+       0.5
+      ],
+      [
+       1,
+       0.12
+      ],
+      [
+       2,
+       0.5
+      ],
+      [
+       1,
+       0.12
+      ]
+     ],
+     "grupo": "continuos",
+     "id": "trote_caminata",
+     "nombre": "Trote y caminata"
+    },
+    {
+     "descripcion": "Subes por escalones hasta un pico corto y bajas igual.",
+     "forma": [
+      [
+       2,
+       0.25
+      ],
+      [
+       2,
+       0.4
+      ],
+      [
+       2,
+       0.55
+      ],
+      [
+       2,
+       0.7
+      ],
+      [
+       1,
+       0.95
+      ],
+      [
+       2,
+       0.7
+      ],
+      [
+       2,
+       0.55
+      ],
+      [
+       2,
+       0.4
+      ],
+      [
+       2,
+       0.25
+      ]
+     ],
+     "grupo": "variados",
+     "id": "espiga",
+     "nombre": "Espiga"
+    },
+    {
+     "descripcion": "Bloques de esfuerzo cada vez más largos y luego más cortos (1-2-3-2-1), con pausas suaves.",
+     "forma": [
+      [
+       1,
+       0.7
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       2,
+       0.7
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       3,
+       0.7
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       2,
+       0.7
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       1,
+       0.7
+      ]
+     ],
+     "grupo": "variados",
+     "id": "piramide",
+     "nombre": "Pirámide"
+    },
+    {
+     "descripcion": "Una escalera que sube: cada tramo es un poco más intenso que el anterior.",
+     "forma": [
+      [
+       2,
+       0.25
+      ],
+      [
+       2,
+       0.4
+      ],
+      [
+       2,
+       0.55
+      ],
+      [
+       2,
+       0.7
+      ],
+      [
+       2,
+       0.85
+      ]
+     ],
+     "grupo": "variados",
+     "id": "ascendente",
+     "nombre": "Ascendente"
+    },
+    {
+     "descripcion": "Una escalera que baja: empiezas más fuerte y cada tramo es más suave.",
+     "forma": [
+      [
+       2,
+       0.85
+      ],
+      [
+       2,
+       0.7
+      ],
+      [
+       2,
+       0.55
+      ],
+      [
+       2,
+       0.4
+      ],
+      [
+       2,
+       0.25
+      ]
+     ],
+     "grupo": "variados",
+     "id": "descendente",
+     "nombre": "Descendente"
+    },
+    {
+     "descripcion": "Picos iguales con descansos de la misma duración y luego del doble.",
+     "forma": [
+      [
+       1,
+       0.85
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       1,
+       0.85
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       1,
+       0.85
+      ],
+      [
+       2,
+       0.2
+      ],
+      [
+       1,
+       0.85
+      ],
+      [
+       2,
+       0.2
+      ],
+      [
+       1,
+       0.85
+      ]
+     ],
+     "grupo": "variados",
+     "id": "densidad",
+     "nombre": "Densidad"
+    },
+    {
+     "descripcion": "Un ciclo bajo, medio y alto que se repite varias veces.",
+     "forma": [
+      [
+       1,
+       0.2
+      ],
+      [
+       1,
+       0.5
+      ],
+      [
+       1,
+       0.8
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       1,
+       0.5
+      ],
+      [
+       1,
+       0.8
+      ],
+      [
+       1,
+       0.2
+      ],
+      [
+       1,
+       0.5
+      ],
+      [
+       1,
+       0.8
+      ]
+     ],
+     "grupo": "variados",
+     "id": "rotativo",
+     "nombre": "Rotativo"
+    },
+    {
+     "descripcion": "Empiezas suave y aceleras poco a poco hasta terminar en lo más fuerte.",
+     "forma": [
+      [
+       1,
+       0.2,
+       0.9
+      ]
+     ],
+     "grupo": "calidad",
+     "id": "progresivo",
+     "nombre": "Progresivo"
+    },
+    {
+     "descripcion": "Subes a un ritmo fuerte pero sostenible y lo aguantas un buen rato.",
+     "forma": [
+      [
+       1,
+       0.2,
+       0.75
+      ],
+      [
+       6,
+       0.75
+      ],
+      [
+       1,
+       0.75,
+       0.2
+      ]
+     ],
+     "grupo": "calidad",
+     "id": "tempo",
+     "nombre": "Tempo"
+    },
+    {
+     "descripcion": "Dos o tres bloques largos y fuertes con descansos cortos entre ellos.",
+     "forma": [
+      [
+       1,
+       0.2,
+       0.4
+      ],
+      [
+       3,
+       0.8
+      ],
+      [
+       1,
+       0.3
+      ],
+      [
+       3,
+       0.8
+      ],
+      [
+       1,
+       0.3
+      ],
+      [
+       3,
+       0.8
+      ],
+      [
+       1,
+       0.4,
+       0.2
+      ]
+     ],
+     "grupo": "calidad",
+     "id": "umbral",
+     "nombre": "Umbral"
+    },
+    {
+     "descripcion": "Picos muy fuertes y cortos con pausas para recuperar.",
+     "forma": [
+      [
+       1,
+       0.2,
+       0.4
+      ],
+      [
+       1,
+       0.97
+      ],
+      [
+       1,
+       0.25
+      ],
+      [
+       1,
+       0.97
+      ],
+      [
+       1,
+       0.25
+      ],
+      [
+       1,
+       0.97
+      ],
+      [
+       1,
+       0.25
+      ],
+      [
+       1,
+       0.97
+      ],
+      [
+       1,
+       0.25
+      ],
+      [
+       1,
+       0.97
+      ],
+      [
+       1,
+       0.4,
+       0.2
+      ]
+     ],
+     "grupo": "calidad",
+     "id": "vo2",
+     "nombre": "Intervalos VO2"
+    },
+    {
+     "descripcion": "Cambios de ritmo a tu gusto, largos y cortos, sin un orden fijo.",
+     "forma": [
+      [
+       2,
+       0.35
+      ],
+      [
+       1,
+       0.8
+      ],
+      [
+       2,
+       0.35
+      ],
+      [
+       3,
+       0.7
+      ],
+      [
+       1,
+       0.3
+      ],
+      [
+       1,
+       0.9
+      ],
+      [
+       2,
+       0.4
+      ],
+      [
+       2,
+       0.75
+      ],
+      [
+       2,
+       0.3
+      ]
+     ],
+     "grupo": "calidad",
+     "id": "fartlek",
+     "nombre": "Fartlek"
+    },
+    {
+     "descripcion": "Sostienes el ritmo de tu carrera y remata con un empujón al final.",
+     "forma": [
+      [
+       1,
+       0.2,
+       0.7
+      ],
+      [
+       7,
+       0.75
+      ],
+      [
+       1,
+       0.97
+      ]
+     ],
+     "grupo": "calidad",
+     "id": "carrera",
+     "nombre": "Ritmo de carrera"
+    }
+   ],
+   "en_plan": [
+    "continuo"
+   ],
+   "grupos": [
+    {
+     "id": "continuos",
+     "nombre": "Continuos"
+    },
+    {
+     "id": "variados",
+     "nombre": "Variados"
+    },
+    {
+     "id": "calidad",
+     "nombre": "De calidad"
+    }
+   ]
+  },
+  "ultima_corrida": {
+   "caminadora": false,
+   "carrera": false,
+   "deriva_ok": null,
+   "deriva_pct": null,
+   "esfuerzo": 3.8,
+   "fc_prom": 140.0,
+   "fecha": "2026-11-03",
+   "km": 4.5,
+   "min_sobre_techo": 5.0,
+   "minutos": 30.0,
+   "plan_vs_real": [
+    {
+     "hecho_min": 20.0,
+     "ok": true,
+     "pct": 87,
+     "plan_min": 23,
+     "zona": "Z2"
+    }
+   ],
+   "ritmo_ref_s": 403,
+   "rpe": 4.0,
+   "sesion": {
+    "id": "z2a",
+    "minutes_plan": 25,
+    "name": "Z2 #1",
+    "version": "normal"
+   },
+   "techo_ok": false,
+   "tolerancia_min": 4,
+   "trote": {
+    "camina_min": 10.0,
+    "caminatas": 3,
+    "fc_trote": 145.0,
+    "km_trote": 3.0,
+    "patron_camina_min": 3.33,
+    "patron_trote_min": 6.67,
+    "pct_trote": 66.7,
+    "ritmo_trote_s": 400,
+    "trote_min": 20.0
+   }
+  },
+  "zonas": [
+   {
+    "piso": 125,
+    "techo": 138,
+    "zona": "Z1"
+   },
+   {
+    "piso": 138,
+    "techo": 151,
+    "zona": "Z2"
+   },
+   {
+    "piso": 151,
+    "techo": 164,
+    "zona": "Z3"
+   },
+   {
+    "piso": 164,
+    "techo": 177,
+    "zona": "Z4"
+   },
+   {
+    "piso": 177,
+    "techo": 190,
+    "zona": "Z5"
+   }
+  ]
+ },
+ "web_sin_zonas": {
+  "aviso_zonas": null,
+  "ayuda": [
+   {
+    "lista": [
+     {
+      "t": "HRV",
+      "x": "fuera si anoche quedó por debajo de tu rango base. Si el reloj la marca “baja”, el semáforo va directo a rojo."
+     },
+     {
+      "t": "FC en reposo",
+      "x": "fuera si supera el promedio de 7 días + 4 lpm."
+     },
+     {
+      "t": "Sueño",
+      "x": "fuera si dormiste menos de 6.5 h."
+     },
+     {
+      "t": "Esfuerzo de ayer",
+      "x": "no mueve el semáforo, se muestra como dato. Si hay una señal fuera después de un día con esfuerzo de 8 o más, el motivo lo dice."
+     },
+     {
+      "t": "Verde",
+      "x": "ninguna señal fuera: sesión normal."
+     },
+     {
+      "t": "Amarillo",
+      "x": "una señal fuera: versión suave de la sesión."
+     },
+     {
+      "t": "Rojo",
+      "x": "dos o más señales fuera, o HRV baja: descanso o caminata ligera. Dos días rojos seguidos: repite la semana."
+     },
+     {
+      "t": "Sin datos",
+      "x": "HRV, FC en reposo y sueño sin dato de anoche: sesión normal; decide cómo te sientes."
+     }
+    ],
+    "parrafos": [
+     "Cada mañana se revisan 3 señales de recuperación; según cuántas estén fuera, el semáforo decide la sesión de hoy. Una señal sin dato no cuenta como fuera."
+    ],
+    "titulo": "El semáforo de cada mañana"
+   },
+   {
+    "lista": [
+     {
+      "t": "Z2 #1 y Z2 #2",
+      "x": "corridas suaves en Z2 (138–151 lpm): puedes platicar mientras corres. Si te pasas del techo, camina hasta bajar."
+     },
+     {
+      "t": "Larga",
+      "x": "la más larga de la semana, a ritmo cómodo; va sábado o domingo."
+     },
+     {
+      "t": "Picos de Z3",
+      "x": "en algunas semanas, 1' en Z3 es opcional dentro de la sesión. Si los haces cuentan como lo hecho; si no, no pasa nada."
+     },
+     {
+      "t": "Asignación automática",
+      "x": "una corrida de sábado o domingo que dure al menos el 70 % de la Larga cuenta como Larga; las demás llenan Z2 #1 y Z2 #2 en orden. Si haces más, las sobrantes no se asignan."
+     },
+     {
+      "t": "Hecha o incompleta",
+      "x": "hecha si duró al menos el 70 % de lo planeado (o de la versión suave si ese día era amarillo o rojo); si duró menos, incompleta."
+     },
+     {
+      "t": "¿Lo hice bien?",
+      "x": "los minutos sobre el techo de Z2 (zonas 3 a 5) deben ser 2' o menos; las sesiones con picos de Z3 permiten 2' más. Además, plan vs real por zona: los minutos que hiciste en cada zona del plan contra los planeados; con el 70 % se cumple (la FC tarda en subir)."
+     },
+     {
+      "t": "Tiempo",
+      "x": "es tiempo de reloj."
+     }
+    ],
+    "parrafos": [
+     "Tu plan tiene 3 sesiones por semana: Z2 #1, Z2 #2 y Larga."
+    ],
+    "titulo": "Tus sesiones"
+   },
+   {
+    "lista": [
+     {
+      "t": "Ritmo a 144 lpm",
+      "x": "llevamos el ritmo de cada corrida al aire libre a 144 lpm (la mitad de tu Z2): ritmo × FC que llevaste ÷ 144. Es tu eficiencia aeróbica: si mejoras, a la misma FC vas más rápido. Solo cuentan corridas cuyo trote cayó en Z2; no carreras ni caminadora. El calor y el cansancio suben la FC: mira la tendencia, no una corrida suelta. En Progreso ves el promedio de tus últimas 4 corridas válidas contra tus semanas 1–2."
+     },
+     {
+      "t": "Deriva cardiaca",
+      "x": "en corridas de 40 min o más, casi sin caminar, a ritmo parejo y con al menos 80 % del trote en Z2, comparamos velocidad ÷ FC de la primera mitad contra la segunda (sin los primeros 10 min). Menos de 5 % de caída es buena base aeróbica; más, aún te falta base."
+     },
+     {
+      "t": "Esfuerzo",
+      "x": "calculado con tu FC, de 1 a 10 (Z2 = 3, Z3 = 5.5, Z4 = 7.5, Z5 = 9.5): el promedio de la mitad más dura de la sesión. Carga = esfuerzo × minutos; la fuerza con la FC baja da poca carga. El RPE que pones en el reloj se guarda aparte."
+     }
+    ],
+    "parrafos": [],
+    "titulo": "Cómo medimos tu mejora"
+   },
+   {
+    "lista": [
+     {
+      "t": "Z1",
+      "x": "125–138 lpm · recuperación y calentar"
+     },
+     {
+      "t": "Z2",
+      "x": "138–151 lpm · tu base aeróbica: el grueso de tus corridas"
+     },
+     {
+      "t": "Z3",
+      "x": "151–164 lpm · medio, “el limbo”"
+     },
+     {
+      "t": "Z4",
+      "x": "164–177 lpm · fuerte"
+     },
+     {
+      "t": "Z5",
+      "x": "177–190 lpm · máximo"
+     }
+    ],
+    "parrafos": [
+     "Las zonas usan Karvonen (% de tu reserva de FC) con tu FC máx de 190 lpm. Se ajustan solas con tu FC en reposo.",
+     "El 80/20: lo ideal es que al menos 80 % de tu tiempo en zonas sea suave (Z1–Z2), lo menos posible en Z3 y el resto fuerte (Z4–Z5). Incluye CrossFit, Cardio, Movilidad, Caminar, Otra y corridas. Es solo referencia: no cambia tu plan."
+    ],
+    "titulo": "Tus zonas y el 80/20"
+   }
+  ],
+  "carreras": [],
+  "composicion": null,
+  "datos_al": null,
+  "detalles": {
+   "carga": {
+    "caminar": 0.0,
+    "cardio": 0.0,
+    "crossfit": 228.0,
+    "movilidad": 0.0,
+    "otra": 0.0,
+    "run": 114.0,
+    "total": 342.0
+   },
+   "carga_anterior": {
+    "caminar": 0.0,
+    "cardio": 0.0,
+    "crossfit": 0.0,
+    "movilidad": 0.0,
+    "otra": 0.0,
+    "run": 114.0,
+    "total": 114.0
+   },
+   "carga_semanas": [
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-08-17"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-08-24"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-08-31"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-09-07"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-09-14"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-09-21"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-09-28"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-10-05"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-10-12"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 0.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-10-19"
+    },
+    {
+     "actual": false,
+     "carga_corrida": 114.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 0.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-10-26"
+    },
+    {
+     "actual": true,
+     "carga_corrida": 114.0,
+     "cargas": {
+      "caminar": 0.0,
+      "cardio": 0.0,
+      "crossfit": 228.0,
+      "movilidad": 0.0,
+      "otra": 0.0
+     },
+     "inicio": "2026-11-02"
+    }
+   ],
+   "distribucion": {
+    "alto": 0.0,
+    "bajo": 80.0,
+    "limbo": 20.0,
+    "minutos": {
+     "Z1": 15.0,
+     "Z2": 45.0,
+     "Z3": 15.0,
+     "Z4": 0.0,
+     "Z5": 0.0
+    }
+   },
+   "fc_max": {
+    "config": 190,
+    "configurada": true,
+    "estimacion": 183.0,
+    "fuente": "reloj",
+    "listo": false,
+    "pico": 180.0,
+    "pulso_pico": "banda",
+    "revisar": false,
+    "semanas_medidas": 1,
+    "sesiones": [
+     {
+      "fecha": "2026-11-02",
+      "max_hr": 180.0
+     },
+     {
+      "fecha": "2026-11-03",
+      "max_hr": 180.0
+     }
+    ]
+   },
+   "umbrales": {
+    "ceiling_tolerance_min": 2,
+    "done_ratio": 0.7,
+    "esfuerzo_duro": 8,
+    "max_hr": 190,
+    "max_hr_floor": 183,
+    "max_hr_review_above": 200,
+    "rhr_tolerance_bpm": 4,
+    "sleep_min_hours": 6.5,
+    "zone_pcts": [
+     50,
+     60,
+     70,
+     80,
+     90
+    ]
+   }
+  },
+  "generado": "2026-11-04T12:00-06:00",
+  "hoy": {
+   "ayer": {
+    "categoria": "CrossFit",
+    "esfuerzo": 3.8,
+    "rpe": null
+   },
+   "semaforo": {
+    "color": "verde",
+    "fuera": 0,
+    "repetir_semana": false
+   },
+   "semana_pasada": {
+    "fin": "2026-11-01",
+    "inicio": "2026-10-26",
+    "intensidad": {
+     "alto": 0.0,
+     "bajo": 80.0,
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 5.0,
+      "Z2": 15.0,
+      "Z3": 5.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    "n": 1,
+    "pct": 33,
+    "sesiones_hechas": 1,
+    "sesiones_total": 3,
+    "stats": {
+     "corridas": 1,
+     "km": 4.5,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 30.0,
+     "pct_trote": 66.7
+    },
+    "sugerencia": {
+     "texto": "Considera repetir la semana (desde Ajustes)",
+     "tipo": "repetir",
+     "titulo": "Repite la semana"
+    }
+   },
+   "señales": [
+    {
+     "estado": "ok",
+     "id": "hrv",
+     "referencia": "30–38",
+     "texto": "HRV 34 ms, rango base 30–38",
+     "valor": 34
+    },
+    {
+     "estado": "ok",
+     "id": "rhr",
+     "referencia": 60.0,
+     "texto": "FC reposo 60 lpm, promedio 7 días 60",
+     "valor": 60
+    },
+    {
+     "estado": "ok",
+     "id": "sueno",
+     "referencia": 6.5,
+     "texto": "Sueño 6 h 56 min, mínimo 6 h 30 min",
+     "valor": 6.94
+    }
+   ],
+   "tarjeta": {
+    "aviso": null,
+    "motivo": null,
+    "opciones": [
+     "suave",
+     "normal"
+    ],
+    "proxima_id": null,
+    "recomendada": "normal",
+    "repetir": false,
+    "sesion": {
+     "con_calentamiento": false,
+     "con_enfriamiento": false,
+     "easy": {
+      "con_calentamiento": false,
+      "con_enfriamiento": false,
+      "minutes": 20,
+      "name": "Suave",
+      "rachas": [
+       {
+        "lpm": null,
+        "min": 20,
+        "opcional": false,
+        "zona": "Z2"
+       }
+      ],
+      "silueta": [
+       [
+        20,
+        "Z2"
+       ]
+      ],
+      "steps": [
+       {
+        "kind": "run",
+        "lpm": null,
+        "minutes": 20,
+        "note": "",
+        "optional": false,
+        "zone": "Z2"
+       }
+      ],
+      "titulo": "Continuo en Z2"
+     },
+     "forma": "continuo",
+     "id": "z2b",
+     "minutes": 25,
+     "name": "Z2 #2",
+     "rachas": [
+      {
+       "lpm": null,
+       "min": 25,
+       "opcional": false,
+       "zona": "Z2"
+      }
+     ],
+     "silueta": [
+      [
+       25,
+       "Z2"
+      ]
+     ],
+     "steps": [
+      {
+       "kind": "run",
+       "lpm": null,
+       "minutes": 25,
+       "nota_id": "z2",
+       "note": "arranca suave; camina si pasas el techo",
+       "optional": false,
+       "zone": "Z2"
+      }
+     ],
+     "tipo": "z2",
+     "titulo": "Continuo en Z2"
+    },
+    "sesion_id": "z2b",
+    "texto": "Siguiente sesión: versión normal",
+    "tipo": "sesion",
+    "version": "normal"
+   },
+   "titular": "Hoy toca: Z2 #2 · 25 min"
+  },
+  "idioma": "es",
+  "mejores_marcas": [
+   {
+    "clave": "larga",
+    "distancia_km": 4.5,
+    "fecha": "2026-11-03",
+    "icono": null,
+    "nombre": "Corrida más larga",
+    "nuevo": true,
+    "ritmo_s": 400,
+    "tiempo_s": 1800
+   }
+  ],
+  "plan": {
+   "bloques": [
+    1,
+    2
+   ],
+   "estado_sesiones": [
+    {
+     "ajustada": false,
+     "corrida": {
+      "camina_min": 10.0,
+      "caminadora": false,
+      "caminatas": 3,
+      "carrera": false,
+      "deriva_ok": null,
+      "deriva_pct": null,
+      "esfuerzo": 3.8,
+      "fc_trote": 145.0,
+      "km": 4.5,
+      "min_sobre_techo": 5.0,
+      "minutos": 30.0,
+      "patron_camina_min": 3.33,
+      "patron_trote_min": 6.67,
+      "pct_trote": 66.7,
+      "plan_vs_real": [
+       {
+        "hecho_min": 20.0,
+        "ok": true,
+        "pct": 87,
+        "plan_min": 23,
+        "zona": "Z2"
+       }
+      ],
+      "ritmo_ref_s": 403,
+      "ritmo_trote_s": 400,
+      "rpe": 4.0,
+      "techo_ok": false,
+      "tolerancia_min": 4,
+      "trote_min": 20.0
+     },
+     "estado": "hecha",
+     "fecha": "2026-11-03",
+     "id": "z2a",
+     "minutos": 30.0,
+     "name": "Z2 #1",
+     "tipo": "z2"
+    },
+    {
+     "ajustada": false,
+     "corrida": null,
+     "estado": "pendiente",
+     "fecha": null,
+     "id": "z2b",
+     "minutos": null,
+     "name": "Z2 #2",
+     "tipo": "z2"
+    },
+    {
+     "ajustada": false,
+     "corrida": null,
+     "estado": "pendiente",
+     "fecha": null,
+     "id": "larga",
+     "minutos": null,
+     "name": "Larga",
+     "tipo": "larga"
+    }
+   ],
+   "faltan": "Te faltan: 1 fácil y la larga",
+   "inicio": "2026-10-26",
+   "largo": 2,
+   "nivel": null,
+   "semana_actual": 2,
+   "semanas": [
+    {
+     "block": 1,
+     "cumplimiento": "baja",
+     "estados": [
+      {
+       "ajustada": false,
+       "estado": "no_hecha",
+       "id": "z2a"
+      },
+      {
+       "ajustada": false,
+       "estado": "no_hecha",
+       "id": "z2b"
+      },
+      {
+       "ajustada": false,
+       "estado": "hecha",
+       "id": "larga"
+      }
+     ],
+     "etiqueta": "carga",
+     "focus": "Larga 40'",
+     "kind": "carga",
+     "km": 4.5,
+     "minutos": 30.0,
+     "n": 1,
+     "plan_min": 80,
+     "progreso": {
+      "hechas": 1,
+      "pct": 33,
+      "total": 3
+     },
+     "sessions": [
+      {
+       "con_calentamiento": false,
+       "con_enfriamiento": false,
+       "easy": {
+        "con_calentamiento": false,
+        "con_enfriamiento": false,
+        "minutes": 15,
+        "name": "Suave",
+        "rachas": [
+         {
+          "lpm": null,
+          "min": 15,
+          "opcional": false,
+          "zona": "Z2"
+         }
+        ],
+        "silueta": [
+         [
+          15,
+          "Z2"
+         ]
+        ],
+        "steps": [
+         {
+          "kind": "run",
+          "lpm": null,
+          "minutes": 15,
+          "note": "",
+          "optional": false,
+          "zone": "Z2"
+         }
+        ],
+        "titulo": "Continuo en Z2"
+       },
+       "forma": "continuo",
+       "id": "z2a",
+       "minutes": 20,
+       "name": "Z2 #1",
+       "rachas": [
+        {
+         "lpm": null,
+         "min": 20,
+         "opcional": false,
+         "zona": "Z2"
+        }
+       ],
+       "silueta": [
+        [
+         20,
+         "Z2"
+        ]
+       ],
+       "steps": [
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 20,
+         "nota_id": "z2",
+         "note": "arranca suave; camina si pasas el techo",
+         "optional": false,
+         "zone": "Z2"
+        }
+       ],
+       "tipo": "z2",
+       "titulo": "Continuo en Z2"
+      },
+      {
+       "con_calentamiento": false,
+       "con_enfriamiento": false,
+       "easy": {
+        "con_calentamiento": false,
+        "con_enfriamiento": false,
+        "minutes": 15,
+        "name": "Suave",
+        "rachas": [
+         {
+          "lpm": null,
+          "min": 15,
+          "opcional": false,
+          "zona": "Z2"
+         }
+        ],
+        "silueta": [
+         [
+          15,
+          "Z2"
+         ]
+        ],
+        "steps": [
+         {
+          "kind": "run",
+          "lpm": null,
+          "minutes": 15,
+          "note": "",
+          "optional": false,
+          "zone": "Z2"
+         }
+        ],
+        "titulo": "Continuo en Z2"
+       },
+       "forma": "continuo",
+       "id": "z2b",
+       "minutes": 20,
+       "name": "Z2 #2",
+       "rachas": [
+        {
+         "lpm": null,
+         "min": 20,
+         "opcional": false,
+         "zona": "Z2"
+        }
+       ],
+       "silueta": [
+        [
+         20,
+         "Z2"
+        ]
+       ],
+       "steps": [
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 20,
+         "nota_id": "z2",
+         "note": "arranca suave; camina si pasas el techo",
+         "optional": false,
+         "zone": "Z2"
+        }
+       ],
+       "tipo": "z2",
+       "titulo": "Continuo en Z2"
+      },
+      {
+       "con_calentamiento": false,
+       "con_enfriamiento": false,
+       "easy": {
+        "con_calentamiento": false,
+        "con_enfriamiento": false,
+        "minutes": 30,
+        "name": "Suave",
+        "rachas": [
+         {
+          "lpm": null,
+          "min": 30,
+          "opcional": false,
+          "zona": "Z2"
+         }
+        ],
+        "silueta": [
+         [
+          30,
+          "Z2"
+         ]
+        ],
+        "steps": [
+         {
+          "kind": "run",
+          "lpm": null,
+          "minutes": 30,
+          "note": "",
+          "optional": false,
+          "zone": "Z2"
+         }
+        ],
+        "titulo": "Continuo en Z2"
+       },
+       "forma": "continuo",
+       "id": "larga",
+       "minutes": 40,
+       "name": "Larga",
+       "rachas": [
+        {
+         "lpm": null,
+         "min": 40,
+         "opcional": false,
+         "zona": "Z2"
+        }
+       ],
+       "silueta": [
+        [
+         40,
+         "Z2"
+        ]
+       ],
+       "steps": [
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 40,
+         "nota_id": "larga",
+         "note": "ritmo cómodo; si pasas el techo, camina hasta bajar",
+         "optional": false,
+         "zone": "Z2"
+        }
+       ],
+       "tipo": "larga",
+       "titulo": "Continuo en Z2"
+      }
+     ]
+    },
+    {
+     "block": 2,
+     "etiqueta": "carga",
+     "focus": "Larga 50' · picos Z3 opcionales",
+     "kind": "carga",
+     "km": 4.5,
+     "minutos": 30.0,
+     "n": 2,
+     "plan_km": null,
+     "plan_min": 100,
+     "progreso": {
+      "hechas": 1,
+      "pct": 33,
+      "total": 3
+     },
+     "sessions": [
+      {
+       "con_calentamiento": false,
+       "con_enfriamiento": false,
+       "easy": {
+        "con_calentamiento": false,
+        "con_enfriamiento": false,
+        "minutes": 20,
+        "name": "Suave",
+        "rachas": [
+         {
+          "lpm": null,
+          "min": 20,
+          "opcional": false,
+          "zona": "Z2"
+         }
+        ],
+        "silueta": [
+         [
+          20,
+          "Z2"
+         ]
+        ],
+        "steps": [
+         {
+          "kind": "run",
+          "lpm": null,
+          "minutes": 20,
+          "note": "",
+          "optional": false,
+          "zone": "Z2"
+         }
+        ],
+        "titulo": "Continuo en Z2"
+       },
+       "forma": "continuo",
+       "id": "z2a",
+       "km_est": 3.5,
+       "minutes": 25,
+       "name": "Z2 #1",
+       "rachas": [
+        {
+         "lpm": null,
+         "min": 10,
+         "opcional": false,
+         "zona": "Z2"
+        },
+        {
+         "lpm": null,
+         "min": 1,
+         "opcional": true,
+         "zona": "Z3"
+        },
+        {
+         "lpm": null,
+         "min": 3,
+         "opcional": false,
+         "zona": "Z2"
+        },
+        {
+         "lpm": null,
+         "min": 1,
+         "opcional": true,
+         "zona": "Z3"
+        },
+        {
+         "lpm": null,
+         "min": 10,
+         "opcional": false,
+         "zona": "Z2"
+        }
+       ],
+       "silueta": [
+        [
+         10,
+         "Z2"
+        ],
+        [
+         1,
+         "Z3",
+         true
+        ],
+        [
+         3,
+         "Z2"
+        ],
+        [
+         1,
+         "Z3",
+         true
+        ],
+        [
+         10,
+         "Z2"
+        ]
+       ],
+       "steps": [
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 10,
+         "nota_id": "z2",
+         "note": "arranca suave; camina si pasas el techo",
+         "optional": false,
+         "zone": "Z2"
+        },
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 1,
+         "nota_id": "opcional",
+         "note": "opcional",
+         "optional": true,
+         "zone": "Z3"
+        },
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 3,
+         "note": "",
+         "optional": false,
+         "zone": "Z2"
+        },
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 1,
+         "nota_id": "opcional",
+         "note": "opcional",
+         "optional": true,
+         "zone": "Z3"
+        },
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 10,
+         "note": "",
+         "optional": false,
+         "zone": "Z2"
+        }
+       ],
+       "tipo": "z2",
+       "titulo": "Continuo en Z2–Z3"
+      },
+      {
+       "con_calentamiento": false,
+       "con_enfriamiento": false,
+       "easy": {
+        "con_calentamiento": false,
+        "con_enfriamiento": false,
+        "minutes": 20,
+        "name": "Suave",
+        "rachas": [
+         {
+          "lpm": null,
+          "min": 20,
+          "opcional": false,
+          "zona": "Z2"
+         }
+        ],
+        "silueta": [
+         [
+          20,
+          "Z2"
+         ]
+        ],
+        "steps": [
+         {
+          "kind": "run",
+          "lpm": null,
+          "minutes": 20,
+          "note": "",
+          "optional": false,
+          "zone": "Z2"
+         }
+        ],
+        "titulo": "Continuo en Z2"
+       },
+       "forma": "continuo",
+       "id": "z2b",
+       "km_est": 3.5,
+       "minutes": 25,
+       "name": "Z2 #2",
+       "rachas": [
+        {
+         "lpm": null,
+         "min": 25,
+         "opcional": false,
+         "zona": "Z2"
+        }
+       ],
+       "silueta": [
+        [
+         25,
+         "Z2"
+        ]
+       ],
+       "steps": [
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 25,
+         "nota_id": "z2",
+         "note": "arranca suave; camina si pasas el techo",
+         "optional": false,
+         "zone": "Z2"
+        }
+       ],
+       "tipo": "z2",
+       "titulo": "Continuo en Z2"
+      },
+      {
+       "con_calentamiento": false,
+       "con_enfriamiento": false,
+       "easy": {
+        "con_calentamiento": false,
+        "con_enfriamiento": false,
+        "minutes": 35,
+        "name": "Suave",
+        "rachas": [
+         {
+          "lpm": null,
+          "min": 35,
+          "opcional": false,
+          "zona": "Z2"
+         }
+        ],
+        "silueta": [
+         [
+          35,
+          "Z2"
+         ]
+        ],
+        "steps": [
+         {
+          "kind": "run",
+          "lpm": null,
+          "minutes": 35,
+          "note": "",
+          "optional": false,
+          "zone": "Z2"
+         }
+        ],
+        "titulo": "Continuo en Z2"
+       },
+       "forma": "continuo",
+       "id": "larga",
+       "km_est": 6.5,
+       "minutes": 50,
+       "name": "Larga",
+       "rachas": [
+        {
+         "lpm": null,
+         "min": 50,
+         "opcional": false,
+         "zona": "Z2"
+        }
+       ],
+       "silueta": [
+        [
+         50,
+         "Z2"
+        ]
+       ],
+       "steps": [
+        {
+         "kind": "run",
+         "lpm": null,
+         "minutes": 50,
+         "nota_id": "larga",
+         "note": "ritmo cómodo; si pasas el techo, camina hasta bajar",
+         "optional": false,
+         "zone": "Z2"
+        }
+       ],
+       "tipo": "larga",
+       "titulo": "Continuo en Z2"
+      }
+     ]
+    }
+   ],
+   "semanas_repetidas": []
+  },
+  "progreso": {
+   "corridas": [
+    {
+     "camina_min": 10.0,
+     "caminadora": false,
+     "caminatas": 3,
+     "carrera": false,
+     "deriva_ok": null,
+     "deriva_pct": null,
+     "esfuerzo": 3.8,
+     "fc_prom": 140.0,
+     "fc_trote": null,
+     "fecha": "2026-10-28",
+     "icono": "correr",
+     "km": 4.5,
+     "km_trote": 3.0,
+     "minutos": 30.0,
+     "patron_camina_min": 3.33,
+     "patron_trote_min": 6.67,
+     "pct_trote": 66.7,
+     "pct_z1z2": 80.0,
+     "ritmo_ref_prom_s": null,
+     "ritmo_ref_s": null,
+     "ritmo_trote_s": 400,
+     "rpe": null,
+     "sesion": "Larga",
+     "trote_min": 20.0
+    },
+    {
+     "camina_min": 10.0,
+     "caminadora": false,
+     "caminatas": 3,
+     "carrera": false,
+     "deriva_ok": null,
+     "deriva_pct": null,
+     "esfuerzo": 3.8,
+     "fc_prom": 140.0,
+     "fc_trote": 145.0,
+     "fecha": "2026-11-03",
+     "icono": "correr",
+     "km": 4.5,
+     "km_trote": 3.0,
+     "minutos": 30.0,
+     "patron_camina_min": 3.33,
+     "patron_trote_min": 6.67,
+     "pct_trote": 66.7,
+     "pct_z1z2": 80.0,
+     "ritmo_ref_prom_s": null,
+     "ritmo_ref_s": 403,
+     "ritmo_trote_s": 400,
+     "rpe": 4.0,
+     "sesion": "Z2 #1",
+     "trote_min": 20.0
+    }
+   ],
+   "dias": [
+    {
+     "fecha": "2026-08-13",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-14",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-15",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-16",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-17",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-18",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-19",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-20",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-21",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-22",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-23",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-24",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-25",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-26",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-27",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-28",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-29",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-30",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-08-31",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-01",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-02",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-03",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-04",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-05",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-06",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-07",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-08",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-09",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-10",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-11",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-12",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-13",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-14",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-15",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-16",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-17",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-18",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-19",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-20",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-21",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-22",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-23",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-24",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-25",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-26",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-27",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-28",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-29",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-09-30",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-01",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-02",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-03",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-04",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-05",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-06",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-07",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-08",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-09",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-10",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-11",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-12",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-13",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-14",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-15",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-16",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-17",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-18",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-19",
+     "hrv": null,
+     "hrv_7d": null,
+     "hrv_base_alta": null,
+     "hrv_base_baja": null,
+     "rhr": null,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": null
+    },
+    {
+     "fecha": "2026-10-20",
+     "hrv": 34,
+     "hrv_7d": null,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-21",
+     "hrv": 34,
+     "hrv_7d": null,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": null,
+     "sueño_7d": null,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-22",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-23",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-24",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-25",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-26",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-27",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-28",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-29",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-30",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-10-31",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-11-01",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-11-02",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-11-03",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    },
+    {
+     "fecha": "2026-11-04",
+     "hrv": 34,
+     "hrv_7d": 34.0,
+     "hrv_base_alta": 38,
+     "hrv_base_baja": 30,
+     "rhr": 60,
+     "rhr_7d": 60.0,
+     "sueño_7d": 6.94,
+     "sueño_h": 6.94
+    }
+   ],
+   "fc_ref": 144,
+   "intensidad_semanas": [
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-17",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-24",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-08-31",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-07",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-14",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-21",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-09-28",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-05",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-12",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 0.0,
+     "inicio": "2026-10-19",
+     "limbo": 0.0,
+     "minutos": {
+      "Z1": 0.0,
+      "Z2": 0.0,
+      "Z3": 0.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": false,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-10-26",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 5.0,
+      "Z2": 15.0,
+      "Z3": 5.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    {
+     "actual": true,
+     "alto": 0.0,
+     "bajo": 80.0,
+     "inicio": "2026-11-02",
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 15.0,
+      "Z2": 45.0,
+      "Z3": 15.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    }
+   ],
+   "mejora": {
+    "deriva": {
+     "fecha": null,
+     "motivo": "Aún no hay una corrida que cumpla (40' o más, casi toda en Z2)",
+     "ok": null,
+     "valor": null
+    },
+    "modo": "trote",
+    "prueba": null,
+    "ritmo": {
+     "actual_s": 403,
+     "cambio": "= igual que al inicio",
+     "dif_s": 0,
+     "fc_ref": 144,
+     "inicio_s": 403,
+     "mejora": null,
+     "motivo": "Tu última corrida válida",
+     "n": 1,
+     "valor": "6:43 /km"
+    }
+   },
+   "numeros": {
+    "caminatas": {
+     "12": true,
+     "2": true,
+     "4": true,
+     "8": true
+    },
+    "modo": "trote",
+    "periodos": {
+     "12": [
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "corridas",
+       "valor": 0.2
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "minutos",
+       "valor": 5.0
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "km",
+       "valor": 0.8
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ],
+     "2": [
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "corridas",
+       "valor": 1.0
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "minutos",
+       "valor": 30.0
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "km",
+       "valor": 4.5
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ],
+     "4": [
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "corridas",
+       "valor": 0.5
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "minutos",
+       "valor": 15.0
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "km",
+       "valor": 2.2
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ],
+     "8": [
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "corridas",
+       "valor": 0.2
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "minutos",
+       "valor": 7.5
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "km",
+       "valor": 1.1
+      },
+      {
+       "anterior": null,
+       "bueno": null,
+       "delta": null,
+       "id": "pct_trote",
+       "valor": 66.7
+      }
+     ]
+    }
+   },
+   "periodos": [
+    {
+     "n": 4,
+     "todo": false
+    },
+    {
+     "n": 8,
+     "todo": false
+    },
+    {
+     "n": 12,
+     "todo": false
+    },
+    {
+     "desde": "2026-10-26",
+     "hasta": "2026-11-02",
+     "n": 2,
+     "todo": true
+    }
+   ],
+   "resumen": {
+    "12": "Sin corridas en Z2 en las 12 semanas anteriores para comparar el ritmo",
+    "4": "Sin corridas en Z2 en las 4 semanas anteriores para comparar el ritmo",
+    "8": "Sin corridas en Z2 en las 8 semanas anteriores para comparar el ritmo"
+   },
+   "semanas": [
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-17",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-24",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-08-31",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-07",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-14",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-21",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-09-28",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-05",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-12",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [],
+     "inicio": "2026-10-19",
+     "km": 0,
+     "min_camina": 0,
+     "min_trote": 0,
+     "minutos": 0,
+     "plan_min": null
+    },
+    {
+     "actual": false,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 1,
+       "nombre": "Corrida"
+      }
+     ],
+     "inicio": "2026-10-26",
+     "km": 4.5,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 30.0,
+     "plan_min": 80
+    },
+    {
+     "actual": true,
+     "entrenos": [
+      {
+       "icono": "correr",
+       "n": 1,
+       "nombre": "Corrida"
+      },
+      {
+       "icono": "rayo",
+       "n": 2,
+       "nombre": "CrossFit"
+      }
+     ],
+     "inicio": "2026-11-02",
+     "km": 4.5,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 30.0,
+     "plan_min": 100
+    }
+   ]
+  },
+  "racha": {
+   "modo": "plan",
+   "semanas": 0
+  },
+  "rhr_promedio_7d": 60.0,
+  "semana": {
+   "anterior": {
+    "km": 4.5,
+    "min_trote": 20.0,
+    "minutos": 30.0
+   },
+   "dias": [
+    {
+     "dia_semana": "lun",
+     "fecha": "2026-11-02",
+     "luz": "verde",
+     "tipo": "crossfit"
+    },
+    {
+     "dia_semana": "mar",
+     "fecha": "2026-11-03",
+     "luz": "verde",
+     "tipo": "crossfit"
+    },
+    {
+     "dia_semana": "mié",
+     "fecha": "2026-11-04",
+     "luz": "verde",
+     "tipo": "hoy"
+    },
+    {
+     "dia_semana": "jue",
+     "fecha": "2026-11-05",
+     "luz": null,
+     "tipo": "futuro"
+    },
+    {
+     "dia_semana": "vie",
+     "fecha": "2026-11-06",
+     "luz": null,
+     "tipo": "futuro"
+    },
+    {
+     "dia_semana": "sáb",
+     "fecha": "2026-11-07",
+     "luz": null,
+     "tipo": "futuro"
+    },
+    {
+     "dia_semana": "dom",
+     "fecha": "2026-11-08",
+     "luz": null,
+     "tipo": "futuro"
+    }
+   ],
+   "hechas": 1,
+   "incompletas": 0,
+   "km": 4.5,
+   "min_camina": 10.0,
+   "min_trote": 20.0,
+   "minutos": 30.0,
+   "pct_trote": 66.7,
+   "plan_min": 100,
+   "sesiones_total": 3
+  },
+  "semana_hoy_idx": 1,
+  "semanas_hoy": [
+   {
+    "anterior": {
+     "km": 0,
+     "min_trote": 0,
+     "minutos": 0
+    },
+    "block": 1,
+    "dias": [
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "lun",
+      "fecha": "2026-10-26",
+      "luz": "verde",
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "mar",
+      "fecha": "2026-10-27",
+      "luz": "verde",
+      "otras": []
+     },
+     {
+      "actividades": [
+       {
+        "carrera": false,
+        "cat": "run",
+        "detalle": {
+         "cadencia": null,
+         "curva_fc": null,
+         "desnivel_m": null,
+         "duracion_min": 30.0,
+         "fc_max": 180,
+         "fc_prom": 140,
+         "kcal": null,
+         "km": 4.5,
+         "pulso": "banda",
+         "ritmo_s": 400,
+         "ritmo_unidad": "km",
+         "ritmos_km": null,
+         "te_aerobico": null,
+         "te_anaerobico": null,
+         "te_etiqueta": null,
+         "vel_kmh": null,
+         "zonas": {
+          "alto": 0.0,
+          "bajo": 80.0,
+          "limbo": 20.0,
+          "minutos": {
+           "Z1": 5.0,
+           "Z2": 15.0,
+           "Z3": 5.0,
+           "Z4": 0.0,
+           "Z5": 0.0
+          }
+         }
+        },
+        "esfuerzo": 3.8,
+        "fc_prom": 140,
+        "icono": "correr",
+        "km": 4.5,
+        "minutos": 30,
+        "nombre": "Corrida",
+        "partes": [],
+        "rpe": null,
+        "sesion": {
+         "estado": "hecha",
+         "nombre": "Larga"
+        },
+        "trote": {
+         "camina_min": 10.0,
+         "pct_trote": 66.7,
+         "trote_min": 20.0
+        }
+       }
+      ],
+      "corrida": {
+       "carrera": false,
+       "estado": "hecha",
+       "icono": "correr",
+       "minutos": 30.0,
+       "sesion_nombre": "Larga"
+      },
+      "corridas_n": 1,
+      "dia_semana": "mié",
+      "fecha": "2026-10-28",
+      "luz": "verde",
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "jue",
+      "fecha": "2026-10-29",
+      "luz": "verde",
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "vie",
+      "fecha": "2026-10-30",
+      "luz": "verde",
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "sáb",
+      "fecha": "2026-10-31",
+      "luz": "verde",
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "dom",
+      "fecha": "2026-11-01",
+      "luz": "verde",
+      "otras": []
+     }
+    ],
+    "estado": "pasada",
+    "extras": [],
+    "fin": "2026-11-01",
+    "inicio": "2026-10-26",
+    "intensidad": {
+     "alto": 0.0,
+     "bajo": 80.0,
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 5.0,
+      "Z2": 15.0,
+      "Z3": 5.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    "kind": "carga",
+    "n": 1,
+    "plan": {
+     "hechas": 1,
+     "incompletas": 0,
+     "min_pct": 38,
+     "pct": 33,
+     "plan_min": 80,
+     "total": 3
+    },
+    "sesiones": [
+     {
+      "ajustada": false,
+      "corrida": null,
+      "estado": "no_hecha",
+      "fecha": null,
+      "id": "z2a",
+      "minutos": null,
+      "name": "Z2 #1",
+      "tipo": "z2"
+     },
+     {
+      "ajustada": false,
+      "corrida": null,
+      "estado": "no_hecha",
+      "fecha": null,
+      "id": "z2b",
+      "minutos": null,
+      "name": "Z2 #2",
+      "tipo": "z2"
+     },
+     {
+      "ajustada": false,
+      "corrida": {
+       "camina_min": 10.0,
+       "caminadora": false,
+       "caminatas": 3,
+       "carrera": false,
+       "deriva_ok": null,
+       "deriva_pct": null,
+       "esfuerzo": 3.8,
+       "fc_trote": null,
+       "km": 4.5,
+       "min_sobre_techo": 5.0,
+       "minutos": 30.0,
+       "patron_camina_min": 3.33,
+       "patron_trote_min": 6.67,
+       "pct_trote": 66.7,
+       "plan_vs_real": [
+        {
+         "hecho_min": 20.0,
+         "ok": false,
+         "pct": 50,
+         "plan_min": 40,
+         "zona": "Z2"
+        }
+       ],
+       "ritmo_ref_s": null,
+       "ritmo_trote_s": 400,
+       "rpe": null,
+       "techo_ok": false,
+       "tolerancia_min": 2,
+       "trote_min": 20.0
+      },
+      "estado": "hecha",
+      "fecha": "2026-10-28",
+      "id": "larga",
+      "minutos": 30.0,
+      "name": "Larga",
+      "tipo": "larga"
+     }
+    ],
+    "stats": {
+     "corridas": 1,
+     "km": 4.5,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 30.0,
+     "pct_trote": 66.7
+    }
+   },
+   {
+    "anterior": {
+     "km": 4.5,
+     "min_trote": 20.0,
+     "minutos": 30.0
+    },
+    "block": 2,
+    "dias": [
+     {
+      "actividades": [
+       {
+        "carrera": false,
+        "cat": "crossfit",
+        "detalle": {
+         "cadencia": null,
+         "curva_fc": null,
+         "desnivel_m": null,
+         "duracion_min": 30.0,
+         "fc_max": 180,
+         "fc_prom": 140,
+         "kcal": null,
+         "km": 4.5,
+         "pulso": "banda",
+         "ritmo_s": null,
+         "ritmo_unidad": "km",
+         "ritmos_km": null,
+         "te_aerobico": null,
+         "te_anaerobico": null,
+         "te_etiqueta": null,
+         "vel_kmh": 9.0,
+         "zonas": {
+          "alto": 0.0,
+          "bajo": 80.0,
+          "limbo": 20.0,
+          "minutos": {
+           "Z1": 5.0,
+           "Z2": 15.0,
+           "Z3": 5.0,
+           "Z4": 0.0,
+           "Z5": 0.0
+          }
+         }
+        },
+        "esfuerzo": 3.8,
+        "fc_prom": 140,
+        "icono": "rayo",
+        "km": 4.5,
+        "minutos": 30,
+        "nombre": "CrossFit",
+        "partes": [],
+        "rpe": 6.0,
+        "sesion": null,
+        "trote": null
+       }
+      ],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "lun",
+      "fecha": "2026-11-02",
+      "luz": "verde",
+      "otras": [
+       {
+        "cat": "crossfit",
+        "esfuerzo": 3.8,
+        "icono": "rayo",
+        "minutos": 30.0,
+        "rpe": 6.0
+       }
+      ]
+     },
+     {
+      "actividades": [
+       {
+        "carrera": false,
+        "cat": "run",
+        "detalle": {
+         "cadencia": null,
+         "curva_fc": null,
+         "desnivel_m": null,
+         "duracion_min": 30.0,
+         "fc_max": 180,
+         "fc_prom": 140,
+         "kcal": null,
+         "km": 4.5,
+         "pulso": "banda",
+         "ritmo_s": 400,
+         "ritmo_unidad": "km",
+         "ritmos_km": null,
+         "te_aerobico": null,
+         "te_anaerobico": null,
+         "te_etiqueta": null,
+         "vel_kmh": null,
+         "zonas": {
+          "alto": 0.0,
+          "bajo": 80.0,
+          "limbo": 20.0,
+          "minutos": {
+           "Z1": 5.0,
+           "Z2": 15.0,
+           "Z3": 5.0,
+           "Z4": 0.0,
+           "Z5": 0.0
+          }
+         }
+        },
+        "esfuerzo": 3.8,
+        "fc_prom": 140,
+        "icono": "correr",
+        "km": 4.5,
+        "minutos": 30,
+        "nombre": "Corrida",
+        "partes": [],
+        "rpe": 4.0,
+        "sesion": {
+         "estado": "hecha",
+         "nombre": "Z2 #1"
+        },
+        "trote": {
+         "camina_min": 10.0,
+         "pct_trote": 66.7,
+         "trote_min": 20.0
+        }
+       },
+       {
+        "carrera": false,
+        "cat": "crossfit",
+        "detalle": {
+         "cadencia": null,
+         "curva_fc": null,
+         "desnivel_m": null,
+         "duracion_min": 30.0,
+         "fc_max": 180,
+         "fc_prom": 140,
+         "kcal": null,
+         "km": 4.5,
+         "pulso": "banda",
+         "ritmo_s": null,
+         "ritmo_unidad": "km",
+         "ritmos_km": null,
+         "te_aerobico": null,
+         "te_anaerobico": null,
+         "te_etiqueta": null,
+         "vel_kmh": 9.0,
+         "zonas": {
+          "alto": 0.0,
+          "bajo": 80.0,
+          "limbo": 20.0,
+          "minutos": {
+           "Z1": 5.0,
+           "Z2": 15.0,
+           "Z3": 5.0,
+           "Z4": 0.0,
+           "Z5": 0.0
+          }
+         }
+        },
+        "esfuerzo": 3.8,
+        "fc_prom": 140,
+        "icono": "rayo",
+        "km": 4.5,
+        "minutos": 30,
+        "nombre": "CrossFit",
+        "partes": [],
+        "rpe": null,
+        "sesion": null,
+        "trote": null
+       }
+      ],
+      "corrida": {
+       "carrera": false,
+       "estado": "hecha",
+       "icono": "correr",
+       "minutos": 30.0,
+       "sesion_nombre": "Z2 #1"
+      },
+      "corridas_n": 1,
+      "dia_semana": "mar",
+      "fecha": "2026-11-03",
+      "luz": "verde",
+      "otras": [
+       {
+        "cat": "crossfit",
+        "esfuerzo": 3.8,
+        "icono": "rayo",
+        "minutos": 30.0,
+        "rpe": null
+       }
+      ]
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "mié",
+      "fecha": "2026-11-04",
+      "luz": "verde",
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "jue",
+      "fecha": "2026-11-05",
+      "luz": null,
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "vie",
+      "fecha": "2026-11-06",
+      "luz": null,
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "sáb",
+      "fecha": "2026-11-07",
+      "luz": null,
+      "otras": []
+     },
+     {
+      "actividades": [],
+      "corrida": null,
+      "corridas_n": 0,
+      "dia_semana": "dom",
+      "fecha": "2026-11-08",
+      "luz": null,
+      "otras": []
+     }
+    ],
+    "estado": "actual",
+    "extras": [],
+    "fin": "2026-11-08",
+    "inicio": "2026-11-02",
+    "intensidad": {
+     "alto": 0.0,
+     "bajo": 80.0,
+     "limbo": 20.0,
+     "minutos": {
+      "Z1": 15.0,
+      "Z2": 45.0,
+      "Z3": 15.0,
+      "Z4": 0.0,
+      "Z5": 0.0
+     }
+    },
+    "kind": "carga",
+    "n": 2,
+    "plan": {
+     "faltan": "Te faltan: 1 fácil y la larga",
+     "hechas": 1,
+     "incompletas": 0,
+     "min_pct": 30,
+     "pct": 33,
+     "plan_min": 100,
+     "total": 3
+    },
+    "sesiones": [
+     {
+      "ajustada": false,
+      "corrida": {
+       "camina_min": 10.0,
+       "caminadora": false,
+       "caminatas": 3,
+       "carrera": false,
+       "deriva_ok": null,
+       "deriva_pct": null,
+       "esfuerzo": 3.8,
+       "fc_trote": 145.0,
+       "km": 4.5,
+       "min_sobre_techo": 5.0,
+       "minutos": 30.0,
+       "patron_camina_min": 3.33,
+       "patron_trote_min": 6.67,
+       "pct_trote": 66.7,
+       "plan_vs_real": [
+        {
+         "hecho_min": 20.0,
+         "ok": true,
+         "pct": 87,
+         "plan_min": 23,
+         "zona": "Z2"
+        }
+       ],
+       "ritmo_ref_s": 403,
+       "ritmo_trote_s": 400,
+       "rpe": 4.0,
+       "techo_ok": false,
+       "tolerancia_min": 4,
+       "trote_min": 20.0
+      },
+      "estado": "hecha",
+      "fecha": "2026-11-03",
+      "id": "z2a",
+      "minutos": 30.0,
+      "name": "Z2 #1",
+      "tipo": "z2"
+     },
+     {
+      "ajustada": false,
+      "corrida": null,
+      "estado": "pendiente",
+      "fecha": null,
+      "id": "z2b",
+      "minutos": null,
+      "name": "Z2 #2",
+      "tipo": "z2"
+     },
+     {
+      "ajustada": false,
+      "corrida": null,
+      "estado": "pendiente",
+      "fecha": null,
+      "id": "larga",
+      "minutos": null,
+      "name": "Larga",
+      "tipo": "larga"
+     }
+    ],
+    "stats": {
+     "corridas": 1,
+     "km": 4.5,
+     "min_camina": 10.0,
+     "min_trote": 20.0,
+     "minutos": 30.0,
+     "pct_trote": 66.7
     }
    }
   ],

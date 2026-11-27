@@ -6,7 +6,7 @@ Cada ruta pasa por `ajustes_web.resolver` (`puede_editar`; 404 si no hay acceso)
 import copy
 import re
 import secrets
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 from fastapi import Depends, Request
 from fastapi.responses import RedirectResponse
@@ -15,10 +15,10 @@ import i18n
 import motor_v6
 import plan_i18n
 from ajustes import ConfigError, crudo_desde_respuestas, normalizar_config
-from nivel import NIVELES as NIVELES_V6, nivel_desde_datos
+from nivel import NIVELES as NIVELES_V6, PISO_NIVEL, hay_corrida_garmin, nivel_desde_datos, nivel_sin_reloj
 
 from . import ajustes_web as aw
-from . import cambios, datos
+from . import calculo, cambios
 from .errores import ErrorT, texto
 from .onboarding import DIAS, ZONAS, proximo_lunes
 
@@ -54,7 +54,7 @@ def campos_de(nivel: str, tiene_ajustes: bool) -> list[str]:
 
 def valores_iniciales(nivel: str, ev: dict, crudo: dict | None, hoy: date) -> dict:
     perfil = (crudo or {}).get("perfil") or {}
-    return {"nivel": nivel, "dias": "3", "pierna": [DIAS[d][0] for d in ev.get("dias_intensos", [])], "dolor": "no",
+    return {"nivel": nivel, "frecuencia_actual": "", "corrida_larga": "", "dias": "3", "pierna": [DIAS[d][0] for d in ev.get("dias_intensos", [])], "dolor": "no",
             "objetivo": OBJETIVOS[nivel][0] if OBJETIVOS[nivel] else "", "km": "10", "fecha": "", "tiempo": "",
             "inicio": proximo_lunes(hoy).isoformat(), "edad": str(perfil.get("edad") or ""), "zona": perfil.get("zona_horaria") or "America/Merida",
             "fc_max": str(perfil.get("fc_max") or "")}
@@ -79,7 +79,7 @@ def _fecha(v, campo: str) -> date:
 
 def leer_respuestas(form, nivel: str, campos: list[str], hoy: date) -> dict:
     """Respuestas validadas (ErrorT con el campo si algo no vale). Solo se leen los `campos` del nivel."""
-    v = {"nivel": nivel}
+    v = {"nivel": nivel, "frecuencia_actual": str(form.get("frecuencia_actual", "")), "corrida_larga": str(form.get("corrida_larga", ""))}
     v["dias"] = str(_entero(form.get("dias", "3"), "dias", 2, 5))
     v["pierna"] = [d for d in form.getlist("pierna") if d in dict(DIAS)]
     v["dolor"] = "si" if form.get("dolor") == "si" else "no"
@@ -113,8 +113,7 @@ def leer_respuestas(form, nivel: str, campos: list[str], hoy: date) -> dict:
 
 
 def entrada_v6(v: dict, nivel: str, ev: dict, inicio_minutos: int) -> dict:
-    """La entrada de `motor_v6.generar_v6`. El nivel elegido cambia la estructura y la calidad, nunca el volumen inicial
-    (`inicio_minutos` sale siempre de los datos)."""
+    """La entrada de `motor_v6.generar_v6`; el inicio respeta el piso del nivel elegido."""
     quiere_carrera = v.get("objetivo") == "carrera" and nivel in ("base", "corredor")
     if quiere_carrera:
         meta = {"km": int(v["km"]), "fecha": v["fecha"]}
@@ -227,9 +226,13 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         crudo = aw.crudo_de(db, atleta)
         hoy = aw.hoy_de(app.state.reloj, crudo or {})
         base = crudo or {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}
-        d = datos.leer_archivos(db, atleta.id)
-        calculado = nivel_desde_datos(d["activities"], hoy, normalizar_config({**base, "modo": "web"}), d["details"])
+        d = calculo.datos_de(db, atleta, base)
+        cfg = normalizar_config({**base, "modo": "web"})
+        fin_hoy = datetime.combine(hoy, time.max)  # las actividades manuales se guardan a mediodía, incluso si se anotan antes
+        calculado = nivel_desde_datos(d["activities"], fin_hoy, cfg, d["details"])
+        sin_garmin = not hay_corrida_garmin(d["activities"], fin_hoy, cfg)
         return atleta, {"atleta": atleta, "pref": aw.prefijo(usuario, atleta), "crudo": crudo, "hoy": hoy, "calculado": calculado,
+                        "sin_garmin": sin_garmin, "espera_historial": bool(atleta.repo_id and atleta.historial_pendiente),
                         "niveles": NIVELES_V6, "dias": DIAS, "zonas": sorted(set(ZONAS)), "evidencia": evidencia_en_palabras(calculado, request.state.t),
                         "opciones_km": [(str(d), request.state.t("pn.km_op", km=d)) for d in DISTANCIAS],
                         "error": None, "errores": {}}
@@ -237,6 +240,14 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def elegido(form, calculado) -> str:
         n = form.get("nivel")
         return n if n in NIVELES_V6 else calculado["nivel"]
+
+    def aplicar_respuestas(ctx, form):
+        if ctx["espera_historial"]:
+            raise ErrorT("err.pn_historial", None)
+        if ctx["sin_garmin"]:
+            frecuencia = _entero(form.get("frecuencia_actual", ""), "frecuencia_actual", 1, 7)
+            larga = _entero(form.get("corrida_larga", ""), "corrida_larga", 1, 1440)
+            ctx["calculado"] = nivel_sin_reloj(ctx["calculado"], frecuencia, larga)
 
     def avisos_nivel(nivel, calculado, t) -> list[str]:
         out = []
@@ -259,14 +270,33 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return pantalla(request, ctx, 1)
     doble("get", "/plan/nuevo", paso1)
 
-    async def paso2(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        """Paso 2: las preguntas del nivel elegido. Llega desde el paso 1 (solo trae el nivel) o desde «Cambiar respuestas» (trae todo)."""
+    async def volver_nivel(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         form = await formulario(request)
         atleta, ctx = contexto(request, db, usuario, atleta_id)
         if atleta is None:
             return ctx
         nivel = elegido(form, ctx["calculado"])
         v = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+        v.update({k: (form.getlist(k) if k == "pierna" else str(form.get(k, "")))
+                  for k in v if k != "nivel" and (k in form or k == "pierna")})
+        return pantalla(request, ctx, 1, nivel, v, nivel_previo=nivel)
+    doble("post", "/plan/nuevo/nivel", volver_nivel)
+
+    async def paso2(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+        """Paso 2: las preguntas del nivel elegido. Llega desde el paso 1 (solo trae el nivel) o desde «Cambiar respuestas» (trae todo)."""
+        form = await formulario(request)
+        atleta, ctx = contexto(request, db, usuario, atleta_id)
+        if atleta is None:
+            return ctx
+        try:
+            aplicar_respuestas(ctx, form)
+        except ConfigError as ex:
+            v = valores_iniciales(ctx["calculado"]["nivel"], ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+            v.update({k: str(form.get(k, "")) for k in ("frecuencia_actual", "corrida_larga")})
+            return pantalla(request, ctx, 1, valores=v, status=400, error=texto(ex, request.state.t))
+        nivel = elegido(form, ctx["calculado"])
+        v = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+        v.update({k: str(form.get(k, "")) for k in ("frecuencia_actual", "corrida_larga")})
         if "dias" in form:   # vuelve de la vista previa: se conservan sus respuestas
             v.update({k: (form.getlist(k) if k == "pierna" else str(form.get(k, ""))) for k in v if k != "nivel" and (k in form or k == "pierna")})
         return pantalla(request, ctx, 2, nivel, v)
@@ -274,7 +304,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
 
     def generar_o_error(request, ctx, form):
         """(nivel, respuestas, plan) o lanza ErrorT/ConfigError."""
+        aplicar_respuestas(ctx, form)
         nivel = elegido(form, ctx["calculado"])
+        ctx["calculado"] = {**ctx["calculado"], "inicio_minutos": max(ctx["calculado"]["inicio_minutos"], PISO_NIVEL[nivel])}
         v = leer_respuestas(form, nivel, campos_de(nivel, ctx["crudo"] is not None), ctx["hoy"])
         return nivel, v, armar_plan(v, nivel, ctx["calculado"])
 

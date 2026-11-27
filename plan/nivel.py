@@ -80,10 +80,30 @@ def _config(config: dict | None) -> dict:
 
 def trote_continuo_min(a: dict, detalles: dict | None = None) -> float:
     """Trote seguido de una corrida, en minutos: el tramo típico de trote si hay trote/caminata; si no, toda la corrida."""
+    if a.get("manual"):
+        return 0.0
     rw = metrics.run_walk(a, detalles or {})
     if rw is None:
         return (a.get("duration") or 0) / 60
     return rw["patron_trote_min"] or 0.0
+
+
+def hay_corrida_garmin(actividades: list, hoy, config: dict | None = None) -> bool:
+    """Misma ventana que el trote continuo del cálculo de nivel."""
+    hoy, cfg = _hoy(hoy), _config(config)
+    return any(not a.get("manual") and _fecha(a) <= hoy
+               and 0 <= (hoy - _fecha(a)).days < UMBRALES["dias_continuo"]
+               and metrics.classify(a, cfg) == "run" for a in actividades)
+
+
+def nivel_sin_reloj(calculado: dict, dias: int, larga: int) -> dict:
+    """Usa el relato para continuidad e inicio; conserva el volumen medido de actividades reales."""
+    if not 1 <= dias <= 7 or not 1 <= larga <= 1440:
+        raise ValueError("frecuencia o duración fuera de rango")
+    nivel = "base" if larga >= UMBRALES["empezando_continuo_min"] else "empezando"
+    evidencia = {**calculado["evidencia"], "trote_continuo_min": larga, "nivel_sin_pausa": nivel}
+    inicio = max(PISO_NIVEL[nivel], (dias * larga * 4 // 5) // 5 * 5)
+    return {"nivel": nivel, "evidencia": evidencia, "inicio_minutos": inicio}
 
 
 def _bajar(nivel: str) -> str:

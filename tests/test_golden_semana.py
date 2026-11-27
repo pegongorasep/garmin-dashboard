@@ -34,6 +34,7 @@ CASOS = {
     "plan_sin_corridas": (fixture, {}, datetime(2026, 11, 18, 9, 0, tzinfo=TZ)),
     "libre": (datos_ricos, {"sin_plan": True}, AHORA),
     "pausa_repetida": (datos_ricos, {"semanas_repetidas": [2], "pausas": ["2026-11-02"]}, datetime(2026, 11, 11, 9, 0, tzinfo=TZ)),
+    "web_sin_zonas": (fixture, {"modo": "web", "garmin_conectado": False}, AHORA),
 }
 
 

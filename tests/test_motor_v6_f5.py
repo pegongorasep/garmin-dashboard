@@ -102,7 +102,7 @@ def test_ajuste_semanal_baja_la_semana_en_curso_y_solo_esa():
     # plan viejo (sin meta v6) y sin actividades: sin cambios
     viejo = {k: v for k, v in plan.items() if k != "meta"}
     assert semanal.ajustar_plan(viejo, {"activities": _acts({0: 20})}, cfg, hoy) is viejo
-    assert semanal.ajustar_plan(plan, {"activities": []}, cfg, hoy) is plan
+    assert semanal.ajustar_plan(plan, {"activities": []}, cfg, hoy)["weeks"][1]["ajuste"]["real_prev"] == 0
 
 
 def test_sesiones_faciles_dicen_z2_o_platicar():

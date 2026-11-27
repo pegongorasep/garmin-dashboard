@@ -46,10 +46,10 @@ def z3(s):
 
 # --- el simulador con v6: la matriz de reglas ---
 
-def test_v6_cumple_todas_las_reglas_en_las_8_personas():
+def test_v6_cumple_todas_las_reglas_en_las_personas():
     """Sin excepciones: ninguna regla falla (✓ o «no aplica») con el ajuste semanal."""
     resultados = sim.simular_todas()
-    assert len(resultados) == 8
+    assert len(resultados) == 9
     for r in resultados:
         assert [x["clave"] for x in r["reglas"] if x["ok"] is False] == [], r["persona"]["id"]
         assert r["motor"] == "v6"

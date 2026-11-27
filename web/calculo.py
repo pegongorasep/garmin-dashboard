@@ -126,7 +126,7 @@ def huella(db: Session, usuario: Usuario, hoy_local: str, idioma: str = "es") ->
     ib = db.execute(select(func.count(InBody.id), func.max(InBody.actualizado)).where(InBody.usuario_id == usuario.id)).one()
     partes = [hoy_local, idioma, json.dumps([menu_de(idioma), plan_acciones(idioma), PLAN_URL]), n, str(ultimo), aj.version if aj else 0, str(aj.actualizado) if aj else "",
               pl.version if pl else 0, str(pl.actualizado) if pl else "", tuple(map(str, ib)),
-              usuario.repo, usuario.sensor, bool(usuario.sin_plan), CODIGO, tuple(map(str, man))]
+              usuario.repo, usuario.repo_id, usuario.historial_pendiente, str(tubo.ultima_subida(db, usuario.id)), usuario.sensor, bool(usuario.sin_plan), CODIGO, tuple(map(str, man))]
     return hashlib.sha256(json.dumps(partes, default=str).encode()).hexdigest()
 
 
@@ -195,6 +195,12 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
                              "grupos": n_grupos, "coach": coach, "editar_manual": editar_manual(db, usuario, pref, editable), "primer_inicio": primer_inicio.de(db, usuario, pref, editable),
                              **({"sync": sync} if sync is not None and not pref else {})}}
+    recordatorio = None
+    if editable and not usuario.repo_id:
+        cfg = config_de(db, usuario, idioma=idioma)
+        fecha = ahora_naive.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"])).date().isoformat()
+        recordatorio = {"fecha": fecha, "url": f"{pref}/actividad/nueva?tipo=correr&fecha={fecha}"}
+    salida["ui"]["recordatorio_corrida"] = recordatorio
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)
     if avisos:
@@ -223,7 +229,10 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
         plan = {"start": cfg["plan_start"], "weeks": []}
     else:
         plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
-    cfg = {**cfg, "editar_urls": editar_urls(plan) if aj else {}}
+    ultima = tubo.ultima_subida(db, usuario.id)
+    cfg = {**cfg, "editar_urls": editar_urls(plan) if aj else {},
+           "garmin_conectado": bool(usuario.repo_id), "garmin_ultima_subida": ultima if usuario.repo_id else None,
+           "garmin_historial_pendiente": bool(usuario.historial_pendiente)}
     salida = build.build(datos_de(db, usuario, crudo), plan, cfg, local)
     problemas = validar.problemas(salida)
     if problemas:
