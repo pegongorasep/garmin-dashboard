@@ -25,6 +25,11 @@ class Settings:
     nombre_repo_sugerido: str = "ahilallevas-datos"   # nombre que se propone para la copia de cada persona
     google_client_id: str = ""       # GOOGLE_CLIENT_ID; vacío = sin botón de Google
     google_client_secret: str = ""
+    github_app_id: str = ""          # GITHUB_APP_*; vacíos = sin GitHub App (guía vieja)
+    github_app_slug: str = ""
+    github_app_client_id: str = ""
+    github_app_client_secret: str = ""
+    github_app_private_key: str = ""
     extra: dict = field(default_factory=dict)
 
     def __post_init__(self):
@@ -40,6 +45,12 @@ class Settings:
                 raise RuntimeError("Falta SECRET_KEY (obligatoria fuera de localhost)")
             self.secret_key = "solo-para-desarrollo-local"
         self.oidc_audience = self.oidc_audience or self.base_url
+
+    @property
+    def app_github(self) -> bool:
+        """True si están los cinco datos de la GitHub App."""
+        return all((self.github_app_id, self.github_app_slug, self.github_app_client_id,
+                    self.github_app_client_secret, self.github_app_private_key))
 
     @property
     def cookie_segura(self) -> bool:
@@ -59,4 +70,8 @@ def desde_entorno() -> Settings:
                     base_url=e.get("BASE_URL", "http://localhost:8000"), resend_api_key=e.get("RESEND_API_KEY", ""),
                     correo_de=e.get("CORREO_DE", "Ahí la Llevas <entrar@ahilallevas.com>"),
                     oidc_audience=e.get("OIDC_AUDIENCE", ""), plantilla_repo=e.get("PLANTILLA_REPO", "garmin-dashboard-template"), admin_correo=e.get("ADMIN_CORREO", ""),
-                    google_client_id=e.get("GOOGLE_CLIENT_ID", ""), google_client_secret=e.get("GOOGLE_CLIENT_SECRET", ""))
+                    google_client_id=e.get("GOOGLE_CLIENT_ID", ""), google_client_secret=e.get("GOOGLE_CLIENT_SECRET", ""),
+                    github_app_id=e.get("GITHUB_APP_ID", ""), github_app_slug=e.get("GITHUB_APP_SLUG", ""),
+                    github_app_client_id=e.get("GITHUB_APP_CLIENT_ID", ""),
+                    github_app_client_secret=e.get("GITHUB_APP_CLIENT_SECRET", ""),
+                    github_app_private_key=e.get("GITHUB_APP_PRIVATE_KEY", "").replace("\\n", "\n"))
