@@ -57,6 +57,8 @@ jobs:
           # Entrar con Google: solo si existe la variable del repo GOOGLE_CLIENT_ID (el secreto vive en Secret Manager)
           SECRETOS="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,RESEND_API_KEY=RESEND_API_KEY:latest"
           VARS="BASE_URL=https://ahilallevas.com,ADMIN_CORREO=${{ vars.ADMIN_CORREO }}"
+          # GitHub App (conexión con Garmin y botón Sincronizar): sus 5 valores viven en Secret Manager
+          for s in ID SLUG CLIENT_ID CLIENT_SECRET PRIVATE_KEY; do SECRETOS="${SECRETOS},GITHUB_APP_${s}=GITHUB_APP_${s}:latest"; done
           if [ -n "${{ vars.GOOGLE_CLIENT_ID }}" ]; then
             SECRETOS="${SECRETOS},GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest"
             VARS="${VARS},GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}"
