@@ -19,10 +19,10 @@ def dia(i):
     return (date.today() - timedelta(days=i)).isoformat()
 
 
-def act(cat="run", minutos=40, km=5.0, sesion=None):
+def act(cat="run", minutos=40, km=5.0, sesion=None, manual=False):
     return {"cat": cat, "nombre": "Corrida" if cat == "run" else "Fuerza", "icono": "correr" if cat == "run" else "mancuerna",
             "minutos": minutos, "km": km, "fc_prom": 140, "carrera": False, "sesion": sesion, "partes": [], "esfuerzo": 3, "rpe": None,
-            "trote": None, "detalle": {"fc_max": 160, "zonas": None, "kcal": 300}}
+            "trote": None, "manual": manual, "detalle": {"fc_max": 160, "zonas": None, "kcal": 300}}
 
 
 def falso_calcular(por_usuario):
@@ -116,6 +116,19 @@ def test_feed_sesion_del_plan_solo_si_comparte_el_plan(web_ctx, monkeypatch):
         db.commit()
     assert ids_feed(b)["items"][0]["sesion"] is None
     assert ids_feed(a)["items"][0]["sesion"] == {"nombre": "Fácil 1", "n": 3}   # ella sí ve lo suyo
+
+
+def test_e7_actividad_manual_lleva_marca_y_conserva_reacciones_sin_nota(web_ctx, monkeypatch):
+    a, b, _, _ = tres(web_ctx)
+    ua = uid_de(web_ctx, "a@x.com")
+    secreta = "NOTA-PRIVADA-E7"
+    actividad = {**act(manual=True), "nota": secreta}
+    monkeypatch.setattr(feed.calculo, "calcular", falso_calcular({ua: [(1, actividad)]}))
+    item = ids_feed(b)["items"][0]
+    assert item["manual"] is True and secreta not in json.dumps(item)
+    assert reaccionar(b, ua, item["clave"]).status_code == 200
+    js = (ROOT / "site" / "vistas.js").read_text(encoding="utf-8")
+    assert 'it.manual ? T("sitio.dia.a_mano")' in js
 
 
 def test_feed_real_no_filtra_nombres_ni_ids_ni_gps(web_ctx):

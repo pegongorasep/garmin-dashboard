@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from . import onboarding, sincronizar, tubo
 from .github_app import GitHubApp, GitHubError, InstalacionPerdida
-from .modelos import Cambio, Usuario, VinculoPendiente, ahora
+from .modelos import Cambio, Usuario, ahora
 
 log = logging.getLogger("web.conexion")
 COOKIE = "gh_estado"
@@ -180,9 +180,6 @@ def montar(app, get_db, actual, render, settings, formulario=None) -> None:
                           f"Repo vinculado con la app de GitHub: {repo['full_name']}")
             if not usuario.github_owner:
                 usuario.github_owner = repo["full_name"].split("/")[0]
-            pend = db.get(VinculoPendiente, usuario.id)
-            if pend is not None:
-                db.delete(pend)
         usuario.gh_instalacion = inst
         db.commit()
         resp = RedirectResponse(destino(para, ok=True), 303)

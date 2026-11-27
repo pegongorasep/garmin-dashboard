@@ -118,114 +118,12 @@ def test_token_sin_alg_none(ctx):
 
 # --- vinculación ---
 
-def codigo_de_respuesta(r):
-    assert r.status_code == 403 and r.json()["error"] == "repo no vinculado"
-    return r.json().get("codigo")
-
-
-def escribir_codigo(cl, codigo):
-    return cl.post("/bienvenida/codigo", data={"csrf": csrf_de(cl.get("/bienvenida?paso=6").text), "codigo": codigo})
-
-
-def test_coincidir_el_owner_no_vincula_hay_que_probar_el_codigo(ctx):
-    uid = usuario_amigo(ctx, owner="AMIGO")   # sin distinguir mayúsculas
-    cl = ctx.cliente()
-    r = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx)))
-    codigo = codigo_de_respuesta(r)
-    assert re.fullmatch(r"[0-9]{6}", codigo)
-    with ctx.sesiones() as db:
-        u = db.get(Usuario, uid)
-        assert u.repo_id is None and db.query(Cambio).count() == 0   # todavía nada vinculado
-        p = db.query(tubo.VinculoPendiente).one()
-        assert (p.repo, p.repo_id, p.owner_id) == ("amigo/garmin-prueba", 777, 5)
-        assert p.codigo_hash == tubo.hash_codigo(codigo) and codigo not in str(p.__dict__)   # solo el hash
-    # la subida que genera el código no se guarda; reutiliza el mismo pendiente y el mismo código
-    r = subir(cl, token(ctx), paquete_chico())
-    assert codigo_de_respuesta(r) == codigo
-    with ctx.sesiones() as db:
-        assert db.query(DatoGarmin).count() == 0 and db.query(Subida).count() == 0 and db.query(tubo.VinculoPendiente).count() == 1
-    # la persona entra a la web y escribe el código
-    crear_sesion = entrar(ctx, ctx.cliente(), "amigo@x.com")
-    assert escribir_codigo(crear_sesion, codigo).status_code == 303
-    with ctx.sesiones() as db:
-        u = db.get(Usuario, uid)
-        assert (u.repo, u.repo_id, u.github_owner_id) == ("amigo/garmin-prueba", 777, 5)
-        c = db.query(Cambio).filter_by(atleta_id=uid).one()
-        assert c.via == "sistema" and "amigo/garmin-prueba" in c.descripcion
-        assert db.query(tubo.VinculoPendiente).count() == 0
-    # ya vinculado, la siguiente subida sí se guarda, y el paso 6 ofrece "Run workflow"
-    assert subir(cl, token(ctx), paquete_chico()).status_code == 200
-    assert "Run workflow en mi repo" in crear_sesion.get("/bienvenida?paso=6").text
-
-
-def test_un_invitado_que_reclama_el_owner_de_otro_no_vincula_sin_el_codigo(ctx):
-    victima = usuario_amigo(ctx, owner="pegongorasep")   # el invitado escribió el owner de la víctima
-    cl = ctx.cliente()
-    codigo = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(
-        ctx, repository_owner="pegongorasep", repository="pegongorasep/su-repo"))))
-    # el código solo está en el resumen del repo de la víctima: el invitado no lo tiene y adivina
-    cl2 = entrar(ctx, ctx.cliente(), "amigo@x.com")
-    malo = "000000" if codigo != "000000" else "111111"
-    r = escribir_codigo(cl2, malo)
-    assert r.status_code == 400 and "no coincide" in r.text
-    with ctx.sesiones() as db:
-        assert db.get(Usuario, victima).repo_id is None
-    assert subir(cl, token(ctx, repository_owner="pegongorasep"), paquete_chico()).status_code == 403
-    with ctx.sesiones() as db:
-        assert db.query(DatoGarmin).count() == 0
-
-
-def test_repo_publico_o_sin_dato_de_visibilidad_nunca_se_vincula_solo(ctx):
-    uid = usuario_amigo(ctx)
-    cl = ctx.cliente()
-    for vis in ("public", "internal", None):
-        r = cl.post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_visibility=vis)))
-        assert r.status_code == 403 and "codigo" not in r.json()
-    with ctx.sesiones() as db:
-        assert db.get(Usuario, uid).repo_id is None and db.query(tubo.VinculoPendiente).count() == 0
-
-
-def test_codigo_vencido_equivocado_y_limite_de_intentos(ctx):
-    uid = usuario_amigo(ctx)
-    cl = ctx.cliente()
-    web = entrar(ctx, ctx.cliente(), "amigo@x.com")
-    codigo = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))))
-    malo = "000000" if codigo != "000000" else "111111"
-    # equivocado, 4 veces: sigue vigente; con el correcto vincula (comparación sin espacios)
-    for restantes in (4, 3, 2, 1):
-        r = escribir_codigo(web, malo)
-        assert r.status_code == 400 and f"({restantes} intentos más)" in r.text
-    # el quinto intento equivocado invalida el pendiente
-    r = escribir_codigo(web, malo)
-    assert r.status_code == 400 and "Demasiados intentos" in r.text
-    with ctx.sesiones() as db:
-        assert db.query(tubo.VinculoPendiente).count() == 0
-    assert "No hay un código vigente" in escribir_codigo(web, codigo).text   # ni el correcto sirve ya
-    # la siguiente corrida genera otro (distinto, con otro nonce)
-    nuevo = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))))
-    with ctx.sesiones() as db:
-        assert db.query(tubo.VinculoPendiente).one().intentos == 0
-    # vencido: no vincula y la siguiente corrida genera otro
-    with ctx.sesiones() as db:
-        db.query(tubo.VinculoPendiente).one().expira = ahora() - timedelta(seconds=1)
-        db.commit()
-    assert "No hay un código vigente" in escribir_codigo(web, nuevo).text
+def test_un_repo_no_vinculado_no_se_asigna_por_el_owner(ctx):
+    uid = usuario_amigo(ctx, owner="amigo")
+    r = ctx.cliente().post("/api/tubo/instrucciones", headers=auth(token(ctx)))
+    assert r.status_code == 403 and r.json() == {"error": "repo no vinculado"}
     with ctx.sesiones() as db:
         assert db.get(Usuario, uid).repo_id is None
-    otro = codigo_de_respuesta(cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))))
-    assert re.fullmatch(r"[0-9]{6}", otro)
-    assert escribir_codigo(web, " " + otro[:3] + " " + otro[3:]).status_code == 303   # con espacios también
-
-
-def test_sin_consentimiento_o_owner_equivocado_no_hay_ni_codigo(ctx):
-    usuario_amigo(ctx, consentimiento=False)
-    cl = ctx.cliente()
-    assert "codigo" not in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
-    with ctx.sesiones() as db:
-        db.add(Consentimiento(usuario_id=1, version_aviso=VERSION_AVISO))
-        db.commit()
-    assert "codigo" not in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx, repository_owner="otro"))).json()
-    assert "codigo" in cl.post("/api/tubo/instrucciones", headers=auth(token(ctx))).json()
 
 
 def test_cli_vincular(ctx, capsys):
@@ -388,75 +286,6 @@ def test_validar_no_deja_pasar_otras_urls_en_repo_estado():
 
 
 # --- onboarding ---
-
-def test_onboarding_completo(ctx):
-    uid = crear_usuario(ctx, "nuevo@x.com")
-    cl = entrar(ctx, ctx.cliente(), "nuevo@x.com")
-    r = cl.get("/")
-    assert r.status_code == 303 and r.headers["location"] == "/perfil"
-    assert cl.get("/bienvenida").headers["location"] == "/perfil"   # la guía no se abre sin nombre y aviso
-    assert "acepto expresamente" in cl.get("/perfil").text
-    # sin consentimiento no avanza
-    assert cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/perfil").text), "usuario": "yo"}).status_code == 403
-    # el aviso es obligatorio: sin la casilla, 400 y no se guarda nada
-    r = cl.post("/perfil", data={"csrf": csrf_de(cl.get("/perfil").text), "nombre": "Ana", "apellido": "Prueba"})
-    assert r.status_code == 400
-    with ctx.sesiones() as db:
-        assert db.query(Consentimiento).count() == 0
-    r = cl.post("/perfil", data={"csrf": csrf_de(cl.get("/perfil").text), "nombre": "Ana", "apellido": "Prueba", "acepto": "on"})
-    assert r.status_code == 303 and r.headers["location"] == "/"
-    with ctx.sesiones() as db:
-        c = db.query(Consentimiento).one()
-        assert c.version_aviso == VERSION_AVISO and c.fecha
-        assert db.get(Usuario, uid).sin_plan is True   # las cuentas nuevas ya empiezan sin plan
-        db.get(Usuario, uid).sin_plan = False   # cuenta de antes de F4: conserva su cuestionario del paso 7
-        db.commit()
-    assert cl.get("/", follow_redirects=False).status_code == 200
-    assert "usuario de GitHub" in cl.get("/bienvenida").text
-    # usuario inválido
-    r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "no válido!"})
-    assert r.status_code == 400 and "Escribe tu usuario" in r.text
-    r = cl.post("/bienvenida/github", data={"csrf": csrf_de(cl.get("/bienvenida").text), "usuario": "@Yo-Mismo"})
-    assert r.status_code == 303
-    p3 = cl.get("/bienvenida?paso=3").text
-    assert "template_owner=pegongorasep" in p3 and "template_name=garmin-dashboard-template" in p3 and "visibility=private" in p3
-    assert "&amp;name=ahilallevas-datos" in p3 and "Si le pusiste otro nombre, abre tu repo en GitHub y sigue igual" in p3
-    p4 = cl.get("/bienvenida?paso=4").text
-    assert "https://github.com/Yo-Mismo/ahilallevas-datos/settings/secrets/actions/new" in p4 and "PERSONAL_API_KEY" in p4
-    assert "no la pedimos nunca" in p4 and 'type="password"' not in p4 and not re.search(r'<input(?![^>]*type="hidden")', p4)   # ningún campo para la key
-    assert "https://github.com/Yo-Mismo/ahilallevas-datos/actions" in cl.get("/bienvenida?paso=5").text
-    # todavía no hay datos: el paso 7 no se abre
-    assert "Comprueba que ese repo es tuyo" in cl.get("/bienvenida?paso=7").text
-    assert cl.get("/api/estado").json() == {"vinculado": False, "repo": None, "datos": False, "ultima_subida": None,
-                                            "consentimiento": True, "plan": False}
-    # el repo sube su primer paquete (esto vincula)
-    tok = token(ctx, repository_owner="yo-mismo", repository="Yo-Mismo/ahilallevas-datos")
-    r = subir(ctx.cliente(), tok, paquete_chico())
-    codigo = codigo_de_respuesta(r)   # primera corrida: no guarda, da el código
-    assert cl.get("/api/estado").json()["vinculado"] is False
-    p6 = cl.get("/bienvenida").text   # con código pendiente cae en el paso 6
-    assert "Comprueba que ese repo es tuyo" in p6 and "https://github.com/Yo-Mismo/ahilallevas-datos/actions" in p6
-    assert escribir_codigo(cl, codigo).status_code == 303
-    assert "Run workflow en mi repo" in cl.get("/bienvenida?paso=6").text
-    assert subir(ctx.cliente(), tok, paquete_chico()).status_code == 200
-    e = cl.get("/api/estado").json()
-    assert e["vinculado"] and e["datos"] and e["repo"] == "Yo-Mismo/ahilallevas-datos" and e["ultima_subida"].endswith("Z")
-    r7 = cl.get("/bienvenida", follow_redirects=False)   # sin paso: salta al 7, que es el asistente del plan v6
-    assert r7.status_code == 303 and r7.headers["location"] == "/plan/nuevo"
-    assert cl.get("/bienvenida?paso=7", follow_redirects=False).headers["location"] == "/plan/nuevo"
-    r = confirmar(cl, "empezando")
-    assert r.status_code == 303
-    with ctx.sesiones() as db:
-        a, p = db.get(Ajustes, uid), db.get(Plan, uid)
-        assert a.config["corrida"]["inicio"] == lunes_siguiente().isoformat() and "categorias" not in a.config["actividades"]
-        assert p.plan["meta"]["motor"] == "v6" and p.plan["start"] == lunes_siguiente().isoformat()
-    # ya con plan: el dashboard (con el pie y el aviso)
-    inicio = cl.get("/")
-    assert inicio.status_code == 200 and "Aviso de privacidad" in inicio.text and "no es consejo médico" in inicio.text
-    assert cl.get("/bienvenida").status_code == 200   # la guía se puede abrir aunque ya tenga plan
-    r = cl.get("/data.json")
-    assert r.status_code == 200 and validar.problemas(r.json()) == []
-
 
 def test_onboarding_usuario_de_github_repetido(ctx):
     usuario_amigo(ctx, owner="ocupado")
@@ -624,25 +453,6 @@ def test_imagen_no_contiene_archivos_personales():
     assert r.stdout.split() == [], r.stdout
 
 
-def test_subir_py_escribe_el_codigo_en_el_resumen_y_no_en_el_log(tmp_path, monkeypatch, capsys):
-    resumen = tmp_path / "resumen.md"
-    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(resumen))
-    sub._codigo_escrito.clear()
-    (tmp_path / "meta.json").write_text('{"pulled_at": "2026-11-01"}')
-    http = HttpFalso(lambda url, **kw: RespuestaFalsa(403, {"error": "repo no vinculado", "codigo": "123456"}),
-                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
-    assert sub.subir(tmp_path, ENTORNO, http, lambda s: None) == sub.NO_VINCULADO
-    assert sub.instrucciones(http, lambda s: None) == ""
-    t = resumen.read_text()
-    assert "Tu código para Ahí la Llevas: 123456" in t and "vence en 1 h" in t and t.count("123456") == 1
-    assert "123456" not in capsys.readouterr().err
-    # un "código" con otra forma no se escribe
-    sub._codigo_escrito.clear()
-    resumen.write_text("")
-    http = HttpFalso(lambda url, **kw: RespuestaFalsa(403, {"codigo": "abc<script>"}),
-                     lambda url, **kw: RespuestaFalsa(200, {"value": "jwt"}))
-    sub.subir(tmp_path, ENTORNO, http, lambda s: None)
-    assert resumen.read_text() == ""
 
 
 # --- primera subida: config/plan/InBody del repo ---

@@ -88,7 +88,7 @@ def actividades_de(db: Session, dueno: Usuario, secret: str, con_plan: bool) -> 
                     "clave": clave_actividad(secret, dueno.id, dia["fecha"], a["cat"], a["minutos"], vistas[k]),
                     "usuario_id": dueno.id, "fecha": dia["fecha"], "orden": idx, "cat": a["cat"], "tipo": a["nombre"],
                     "icono": a["icono"], "emoji": _emoji(a["cat"], a.get("carrera", False)), "carrera": bool(a.get("carrera")),
-                    "minutos": a["minutos"], "km": a.get("km"), "fc_prom": a.get("fc_prom"),
+                    "minutos": a["minutos"], "km": a.get("km"), "fc_prom": a.get("fc_prom"), "manual": bool(a.get("manual")),
                     "esfuerzo": a.get("esfuerzo"), "rpe": a.get("rpe"), "trote": a.get("trote"),
                     "partes": [p["minutos"] for p in a.get("partes") or []],
                     "sesion": {"nombre": ses["nombre"], "n": semana.get("n")} if ses and semana.get("n") else None,

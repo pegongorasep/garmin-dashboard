@@ -1,14 +1,12 @@
 """El tubo de datos: cada repo manda su paquete con un token OIDC de GitHub Actions (sin tokens extra).
 
 Verificación: firma RS256 con el JWKS de GitHub (caché 1 h), `iss`, `aud` (= OIDC_AUDIENCE), `exp` y que el workflow
-llamado sea `motor.yml` del repo de Pedro en `stable` o `main`. El usuario es el dueño del `repository_id`; si ninguno,
-se vincula un usuario sin repo con ese `repository_owner` que ya aceptó el aviso."""
+llamado sea `motor.yml` del repo de Pedro en `stable` o `main`. El repositorio debe estar vinculado antes mediante
+la GitHub App."""
 import gzip
 import hashlib
-import hmac
 import json
 import logging
-import secrets
 import time
 import zlib
 from datetime import timedelta
@@ -23,7 +21,7 @@ from sqlalchemy.orm import Session
 import paquete as paquete_mod
 
 from . import cambios, datos, importar
-from .modelos import Ajustes, Cambio, Consentimiento, Sincronizacion, Subida, Usuario, VinculoPendiente, ahora
+from .modelos import Ajustes, Cambio, Sincronizacion, Subida, Usuario, ahora
 
 log = logging.getLogger("web.tubo")
 ISSUER = "https://token.actions.githubusercontent.com"
@@ -75,20 +73,6 @@ def verificar_token(token: str, settings, jwks: dict) -> dict:
     return claims
 
 
-MINUTOS_CODIGO = 60
-MAX_INTENTOS = 5
-
-
-def codigo_de(secret_key: str, nonce: str) -> str:
-    """Código de 6 dígitos derivado del nonce (así se puede mostrar otra vez sin guardarlo)."""
-    d = hmac.new(secret_key.encode(), f"codigo:{nonce}".encode(), hashlib.sha256).digest()
-    return f"{int.from_bytes(d[:8], 'big') % 1_000_000:06d}"
-
-
-def hash_codigo(codigo: str) -> str:
-    return hashlib.sha256(codigo.encode()).hexdigest()
-
-
 def vincular(db: Session, u: Usuario, repo: str, repo_id: int, owner_id, descripcion: str) -> None:
     """Deja al usuario ligado a ese repo y registra el cambio de sistema. No hace commit."""
     u.repo, u.repo_id = repo, repo_id
@@ -100,50 +84,16 @@ def vincular(db: Session, u: Usuario, repo: str, repo_id: int, owner_id, descrip
                   antes=None, despues={"repo": repo, "repo_id": repo_id}))
 
 
-def pendiente_vigente(db: Session, usuario_id: int) -> VinculoPendiente | None:
-    p = db.get(VinculoPendiente, usuario_id)
-    if p and (p.expira < ahora() or p.intentos >= MAX_INTENTOS):
-        db.delete(p)
-        db.commit()
-        return None
-    return p
-
-
-def usuario_del_token(db: Session, claims: dict, secret_key: str = "") -> Usuario:
-    """Dueño del repo del token. Un repo nuevo NO se vincula por coincidir el owner (cualquiera podría escribir el
-    usuario de otra persona): se genera un código de 6 dígitos que solo se ve en el resumen de la corrida del repo
-    privado, y la persona lo escribe en la web (ver `onboarding`). Repos no privados no se vinculan solos
-    (`web.cli vincular`). TuboError 403 si no hay usuario; trae `codigo` cuando hay uno pendiente."""
+def usuario_del_token(db: Session, claims: dict) -> Usuario:
+    """Busca al dueño de un repo ya vinculado. La autorización de repos nuevos ocurre mediante GitHub App."""
     try:
         repo_id = int(claims["repository_id"])
     except (TypeError, ValueError):
         raise TuboError(401, "token sin repositorio") from None
     u = db.scalar(select(Usuario).where(Usuario.repo_id == repo_id, Usuario.borrado.is_(None)))
-    if u:
-        return u
-    if claims.get("repository_visibility") != "private":
-        raise TuboError(403, "repo no vinculado")   # público o sin dato: solo con `web.cli vincular`
-    owner = str(claims["repository_owner"]).lower()
-    candidatos = [c for c in db.scalars(select(Usuario).where(Usuario.repo_id.is_(None), Usuario.borrado.is_(None)))
-                  if (c.github_owner or "").lower() == owner]
-    if len(candidatos) != 1:
+    if u is None:
         raise TuboError(403, "repo no vinculado")
-    u = candidatos[0]
-    if db.scalar(select(Consentimiento.id).where(Consentimiento.usuario_id == u.id)) is None:
-        raise TuboError(403, "repo no vinculado")   # sin consentimiento expreso no se vincula nada
-    p = pendiente_vigente(db, u.id)
-    if p is None or p.repo_id != repo_id:
-        nonce = secrets.token_hex(16)
-        codigo = codigo_de(secret_key, nonce)
-        if p:
-            db.delete(p)
-            db.flush()
-        p = VinculoPendiente(usuario_id=u.id, repo=str(claims.get("repository") or ""), repo_id=repo_id,
-                             owner_id=_entero(claims.get("repository_owner_id")), nonce=nonce,
-                             codigo_hash=hash_codigo(codigo), expira=ahora() + timedelta(minutes=MINUTOS_CODIGO))
-        db.add(p)
-        db.commit()
-    raise TuboError(403, "repo no vinculado", {"codigo": codigo_de(secret_key, p.nonce), "vence_en_min": MINUTOS_CODIGO})
+    return u
 
 
 def _entero(v):
@@ -280,7 +230,7 @@ def montar(app, get_db, settings) -> None:
             log.exception("no se pudo verificar el token")
             raise TuboError(503, "no se pudo verificar el token") from None
         request.state.claims = claims
-        return usuario_del_token(db, claims, settings.secret_key)
+        return usuario_del_token(db, claims)
 
     def error(e: TuboError):
         return JSONResponse({"error": e.mensaje, **e.extra}, status_code=e.status)

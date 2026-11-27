@@ -42,27 +42,6 @@ def _avisa(texto: str) -> None:
     print(f"[ahi-la-llevas] {texto}", file=sys.stderr)
 
 
-_codigo_escrito = set()
-
-
-def _resumen_codigo(r) -> None:
-    """Si la web respondió 403 con un código de vinculación, lo escribe en el resumen de la corrida
-    ($GITHUB_STEP_SUMMARY): solo lo ven quienes tienen acceso al repo privado. No va al log común."""
-    try:
-        codigo = str(r.json().get("codigo") or "")
-    except Exception:   # noqa: BLE001
-        return
-    ruta = os.environ.get("GITHUB_STEP_SUMMARY")
-    if not (re.fullmatch(r"[0-9]{6}", codigo) and ruta) or codigo in _codigo_escrito:
-        return
-    _codigo_escrito.add(codigo)
-    with open(ruta, "a") as f:
-        f.write(f"## Ahí la Llevas\n\n**Tu código para Ahí la Llevas: {codigo}** (vence en 1 h)\n\n"
-                "Escríbelo en la página de bienvenida de Ahí la Llevas para vincular este repo. "
-                "Esta corrida no guardó datos: después de vincular, corre «Run workflow» otra vez.\n")
-    _avisa("la web pidió vincular este repo: el código está en el resumen de la corrida (Summary)")
-
-
 def token_oidc(entorno=os.environ, http=requests) -> str:
     """Token OIDC de GitHub Actions con `audience` = la web."""
     url, token = entorno.get("ACTIONS_ID_TOKEN_REQUEST_URL"), entorno.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
@@ -96,7 +75,6 @@ def instrucciones(http=requests, dormir=time.sleep) -> str:
                    {"Authorization": f"Bearer {token_oidc(http=http)}", "Content-Type": "application/json",
                     "X-Motor-Version": str(VERSION_MOTOR)}, http, dormir)
         if r.status_code != 200:
-            _resumen_codigo(r)
             _avisa(f"la web no vinculó este repo (HTTP {r.status_code}); todo sigue como siempre")
             return ""
         d = r.json()
@@ -133,10 +111,8 @@ def subir(data_dir: Path, entorno=os.environ, http=requests, dormir=time.sleep) 
         if r.status_code == 200:
             print(f"[ahi-la-llevas] datos subidos ({len(cuerpo) / 1024:.0f} KB)")
             return SUBIDO
-        _resumen_codigo(r)
         if r.status_code == 403 and _error_de(r) == "repo no vinculado":
-            _avisa("este repo aún no está vinculado a una cuenta de Ahí la Llevas: no se subió nada "
-                   "(vincúlalo con el código del resumen de la corrida y vuelve a correr el workflow)")
+            _avisa("este repo aún no está vinculado a una cuenta de Ahí la Llevas: autoriza la GitHub App desde la web")
             return NO_VINCULADO
         _avisa(f"la web no aceptó el paquete (HTTP {r.status_code})")
     except Exception as e:   # noqa: BLE001

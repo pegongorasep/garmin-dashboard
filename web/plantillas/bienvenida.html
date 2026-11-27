@@ -115,31 +115,6 @@
 {% call aviso("warn") %}{{ t("bv.otro_nombre") }}{% endcall %}
 <div class="acciones">{{ boton(t("comun.atras"), "sec", href="/bienvenida?paso=4") }} {{ boton(t("bv.p5_ya"), href="/bienvenida?paso=6") }}</div>
 
-{% elif paso == 6 %}
-{% if not u.repo_id %}
-<h2 class="pag-h">{{ t("bv.p6_t") }}</h2>
-<ol class="pasos-lista">
-  <li>{{ t("bv.p6_l1", liga=liga.actions)|safe }}</li>
-  <li>{{ t("bv.p6_l2")|safe }}</li>
-  <li>{{ t("bv.p6_l3") }}</li>
-</ol>
-<form class="pila" method="post" action="/bienvenida/codigo">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  {{ campo(t("bv.p6_codigo"), "codigo", requerido=True, extra={"inputmode": "numeric", "pattern": "[0-9 ]{6,7}", "maxlength": "7", "autocomplete": "one-time-code"}) }}
-  {{ boton(t("bv.p6_vincular"), tipo="submit") }}
-</form>
-<p class="pag-s">{{ t("bv.p6_n") }}</p>
-<div class="acciones">{{ boton(t("comun.atras"), "sec", href="/bienvenida?paso=5") }}</div>
-{% else %}
-<h2 class="pag-h">{{ t("bv.p6b_t") }}</h2>
-<p>{{ t("bv.p6b_a") }}</p>
-<div class="acciones"><a class="boton" href="{{ liga.actions }}" target="_blank" rel="noopener">{{ t("bv.p6b_boton") }}</a></div>
-<div id="espera">{% call aviso("warn") %}{{ t("bv.p6b_espera") }}{% endcall %}</div>
-<div id="listo" hidden>{% call aviso("ok") %}{{ t("bv.p6b_listo") }}{% endcall %}</div>
-<div class="acciones"><a class="boton" id="siguiente" href="/bienvenida?paso=7" hidden>{{ t("bv.p6b_armar") }}</a></div>
-<p class="pag-s">{{ t("bv.p6b_n")|safe }}</p>
-{% endif %}
-
 {% endif %}
 {% endblock %}
 {% block scripts %}
@@ -239,21 +214,6 @@
   var lugar = document.getElementById("copiar-nombre");
   if (!lugar || typeof DS === "undefined" || !DS.copiar) return;
   lugar.replaceChildren(DS.copiar({ texto: "PERSONAL_API_KEY", aviso: {{ t("bv.copiar")|tojson }} }));
-})();
-</script>
-{% elif paso == 6 and u.repo_id %}
-<script>
-(function () {
-  function revisar() {
-    fetch("/api/estado", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (e) {
-      if (e.vinculado && e.datos) {
-        document.getElementById("espera").hidden = true;
-        document.getElementById("listo").hidden = false;
-        document.getElementById("siguiente").hidden = false;
-      } else setTimeout(revisar, 10000);
-    }).catch(function () { setTimeout(revisar, 10000); });
-  }
-  revisar();
 })();
 </script>
 {% endif %}

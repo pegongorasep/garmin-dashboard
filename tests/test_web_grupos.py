@@ -179,7 +179,7 @@ def test_tarjeta_sin_plan_usa_semana_libre(web_ctx, monkeypatch):
     monkeypatch.setattr(grupos_resumen.calculo, "calcular", lambda db, u: {"semana_libre": sl})
     with web_ctx.sesiones() as db:
         u = db.query(Usuario).filter_by(correo="a@x.com").one()
-        u.sin_plan, u.repo_id = True, 1
+        u.sin_plan = True
         db.commit()
         m = db.query(MiembroGrupo).filter_by(grupo_id=gid).one()
         c = grupos_resumen.tarjeta_de(db, u, m)

@@ -7,7 +7,7 @@ from test_sincronizar import V2, _instr, _sincs
 from test_web_cuentas import crear_usuario, entrar
 from test_web_tubo import ctx, paquete_chico, subir, token, usuario_amigo   # noqa: F401
 from web.github_app import GitHubError
-from web.modelos import Cambio, Sincronizacion, Usuario, VinculoPendiente, ahora
+from web.modelos import Cambio, Sincronizacion, Usuario, ahora
 
 
 class Falsa:
@@ -87,17 +87,12 @@ def test_exige_sesion_y_consentimiento(ctx, gh):
 
 def test_exito_vincula_guarda_instalacion_y_no_filtra_token(ctx, gh):
     cl, uid = sesion(ctx)
-    with ctx.sesiones() as db:
-        db.add(VinculoPendiente(usuario_id=uid, repo="ana/x", repo_id=900, nonce="n", codigo_hash="h",
-                                expira=ahora().replace(year=2099)))
-        db.commit()
     r = volver(cl, empezar(cl))
     assert r.headers["location"] == "/bienvenida?paso=4"
     assert "TOKEN-SECRETO" not in r.text and "TOKEN-SECRETO" not in str(r.headers)
     with ctx.sesiones() as db:
         u = db.get(Usuario, uid)
         assert (u.repo, u.repo_id, u.gh_instalacion) == ("ana/ahilallevas-datos", 900, 55)
-        assert db.get(VinculoPendiente, uid) is None
         c = db.query(Cambio).filter(Cambio.atleta_id == uid).one()
         assert c.descripcion.startswith("Repo vinculado con la app de GitHub")
         for t in db.query(Usuario).all():

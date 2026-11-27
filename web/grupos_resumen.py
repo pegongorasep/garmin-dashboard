@@ -36,7 +36,7 @@ def _tarjeta_cruda(db: Session, usuario: Usuario, miembro: MiembroGrupo) -> tupl
     if miembro.pausado:
         return {**base, "estado": "pausa"}, {}
     sin_plan = {**base, "estado": "sin_plan"}
-    if usuario.sin_plan and usuario.repo_id:   # modo sin plan: su tarjeta sale de `semana_libre` (solo conteos, nada de nombres)
+    if usuario.sin_plan:   # modo sin plan: su tarjeta sale de `semana_libre` (solo conteos, nada de nombres)
         try:
             sl = calculo.calcular(db, usuario).get("semana_libre")
         except Exception:

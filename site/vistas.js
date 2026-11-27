@@ -937,7 +937,7 @@ function feedFila(it, aviso, conPerfil = true) {
   };
   repintar();
   const iniciales = it.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
-  const resumen = [it.km != null ? T("sitio.km_n", { n: fmt(it.km, 1) }) : null, it.minutos ? T("sitio.min_n", { n: fmt(it.minutos, 0) }) : null].filter(Boolean).join(" · ");
+  const resumen = [it.manual ? T("sitio.dia.a_mano") : null, it.km != null ? T("sitio.km_n", { n: fmt(it.km, 1) }) : null, it.minutos ? T("sitio.min_n", { n: fmt(it.minutos, 0) }) : null].filter(Boolean).join(" · ");
   articulo = DS.filaActividad({ nombre, foto: it.foto, iniciales, color: it.usuario_id, cuando: feedCuando(it.fecha), emoji: it.emoji, tipo: it.tipo, resumen,
     esfuerzo: textoEsfuerzo(it), sesion: it.sesion ? T("sitio.gr.f.sesion", { sesion: it.sesion.nombre, n: it.sesion.n }) : null,
     detalle: [...feedDetalle(it), conPerfil ? personaEnlace(it.usuario_id, it.mia ? T("sitio.gr.f.yo") : it.nombre) : null].filter(Boolean),

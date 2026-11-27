@@ -27,7 +27,7 @@ Las demás personas usan la web (Ahí la Llevas); su repo (creado desde `plantil
 ## Reglas de seguridad
 
 - **No leas, imprimas ni copies `.env`.** Correr `garmin_connect.py` (que lo lee por dentro) sí se vale.
-- La key de Garmin nunca en el chat ni en archivos; solo como secreto `PERSONAL_API_KEY` de GitHub.
+- La key de Garmin nunca en el chat ni en archivos; solo como secreto `PERSONAL_API_KEY` de GitHub. Las copias se vinculan únicamente al autorizar la GitHub App; ya no hay código de seis dígitos.
 - El `data.json` público sale de una **lista blanca**: sin IDs de Garmin, nombres de actividades, GPS, nombre ni
   fecha de nacimiento. `dashboard/validar.py` y `tests/test_build.py` lo vigilan. Nunca un token de GitHub en el sitio.
 - Lógica en Python; el JS solo pinta. Textos en español. Sin librerías de JS.
