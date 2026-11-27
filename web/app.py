@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 import i18n
 from ajustes import ConfigError
 
-from . import ROOT, admin, aprende, ajustes_web, auth, calculo, coach, correo, cuenta, feed, google, mcp_servidor, grupos, oauth, onboarding, perfil, plan_nuevo, plan_web, tubo
+from . import ROOT, admin, aprende, ajustes_web, auth, calculo, coach, correo, cuenta, feed, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -246,6 +246,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     perfil.montar(app, get_db, actual, render, formulario, settings)
     grupos.montar(app, get_db, actual, render, formulario, settings)
     feed.montar(app, get_db, actual, formulario, settings)
+    persona.montar(app, get_db, actual, settings)
     aprende.montar(app, get_db, actual, render, formulario, settings)
     cuenta.montar(app, get_db, actual, render, formulario, settings)
     admin.montar(app, get_db, actual, render, formulario, settings)

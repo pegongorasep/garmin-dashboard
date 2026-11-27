@@ -303,6 +303,17 @@ def("Grupo", "Fila de actividad", "DS.filaActividad()", "Una actividad del feed 
   DS.filaActividad({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, cuando: "Hace 3 días", emoji: "🏋️", tipo: "Fuerza", resumen: "45 min", esfuerzo: "Esfuerzo 6.0",
     reacciones: h("div", { class: "reacciones" }, DS.botonReaccion({ onclick: () => {} })) }));
 
+def("Grupo", "Cabecera de perfil", "DS.cabeceraPersona()", "Arriba del perfil de una persona: foto, nombre, nivel y grupos en común. Cada línea tiene su ranura de alto fijo, falte o no el nivel.",
+  DS.tarjeta({}, DS.cabeceraPersona({ nombre: "Ana López", iniciales: "AL", color: 1, nivel: "Base", grupos: "Grupos en común: Corredores del parque" })),
+  DS.tarjeta({}, DS.cabeceraPersona({ nombre: "Mario Ruiz", iniciales: "MR", color: 2, grupos: "Grupos en común: Corredores del parque, Oficina" })));
+
+def("Grupo", "Calendario del plan de una persona", "DS.calendarioPlan()", "Esta semana y la siguiente: ✓ si la sesión se hizo, aro si estaba planeada, hueco si no hay nada; debajo, las sesiones de cada semana. Las marcas tienen caja fija.",
+  DS.tarjeta({}, DS.calendarioPlan({ semanas: [
+    { titulo: "Semana 3 · desde el 23 nov", dias: ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"].map((n, i) => ({ nombre: n, numero: 23 + i, hoy: i === 3, hecha: i === 1, etiqueta: i === 1 ? "Z2 #1" : i === 5 ? "Larga" : "" })),
+      sesiones: [{ texto: "Z2 #1", hecha: true }, { texto: "Z2 #2", hecha: false }, { texto: "Larga", hecha: false }] },
+    { titulo: "Semana 4 · desde el 30 nov", dias: ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"].map((n, i) => ({ nombre: n, numero: 30 + i - (i > 0 ? 0 : 0), hoy: false, hecha: false, etiqueta: "" })),
+      sesiones: [{ texto: "Z2 #1", hecha: false }, { texto: "Z2 #2", hecha: false }, { texto: "Larga", hecha: false }] }] })));
+
 def("Grupo", "Comentarios de una actividad", "DS.panelComentarios()", "Dentro del detalle abierto de una actividad: la lista (solo texto plano), la caja con contador de 280 y la línea de quién los ve. `nodo.pintar({ items })` la llena. Va con el botón 💬 de la fila de reacciones (DS.botonComentarios) y, en las pestañas, con el puntito de «nuevo» (item `punto`, `nuevo`).",
   (() => {
     const p = DS.panelComentarios({ ayuda: "Lo ven quienes pueden ver esta actividad.", etiquetaCaja: "Escribe un comentario", placeholder: "Escribe un comentario…", enviarTxt: "Enviar", borrarTxt: "Borrar",

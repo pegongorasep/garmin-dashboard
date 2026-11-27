@@ -641,3 +641,27 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 .coments-error { min-height: 1.2em; margin: 0; color: var(--bad); font: 400 12.5px/1.2em var(--font-sans); }
 .coments-ayuda { margin: 0; color: var(--muted); font: 400 12.5px/17px var(--font-sans); }
 .coments-enviar { flex: none; }
+
+/* Juntos: perfil de una persona. Alto fijo: la cabecera y las marcas del calendario tienen su ranura aunque no haya dato; las secciones ocultas dicen una línea. */
+.act-cab.con-perfil .avatar, .act-cab.con-perfil .act-nombre, .mi-cab.con-perfil .avatar, .mi-cab.con-perfil .mi-nombre { cursor: pointer; }
+.act-cab.con-perfil .act-nombre:hover, .mi-cab.con-perfil .mi-nombre:hover { text-decoration: underline; }
+.pers-cab { display: flex; align-items: center; gap: var(--space-14); min-width: 0; }
+.pers-quien { flex: 1; min-width: 0; display: grid; }
+.pers-nombre { margin: 0; height: 1.3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 20px/1.3em var(--font-sans); }
+.pers-nivel { margin: 0; height: 1.9em; display: flex; align-items: center; }
+.pers-grupos { margin: 0; height: 2.6em; overflow: hidden; color: var(--ink-2); font: 400 13px/1.3em var(--font-sans); }
+.pers-sec { display: grid; gap: var(--space-8); align-content: start; }
+.pers-dato { margin: 0; font: 600 15px/1.4em var(--font-sans); overflow-wrap: anywhere; }
+.pers-faltan { margin: 0; min-height: 1.4em; color: var(--ink-2); font: 400 13.5px/1.4em var(--font-sans); overflow-wrap: anywhere; }
+.pers-oculto { margin: 0; color: var(--muted); font: 400 13.5px/1.4em var(--font-sans); }
+.pers-graf { height: 8.5em; }   /* la gráfica ocupa su ranura aunque tarde en medir el ancho */
+.pers-lista { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; font: 400 13.5px/1.4em var(--font-sans); }
+.pers-cal { display: grid; gap: var(--space-10); }
+.pers-sem { display: grid; gap: var(--space-4); }
+.pers-sem-t { margin: 0; font: 600 13px/1.4em var(--font-sans); color: var(--ink-2); }
+.pers-ses { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; min-height: 1.9em; }
+.pers-marca { display: grid; place-items: center; width: 1.9em; height: 1.9em; margin-top: var(--space-2); box-sizing: border-box; border-radius: var(--radius-pill); font: 600 12px/1 var(--font-sans); }
+.pers-marca.hecha { background: var(--accent); color: var(--on-accent); }
+.pers-marca.plan { box-shadow: inset 0 0 0 2px var(--accent); }
+.pers-acts { display: grid; gap: var(--space-8); }
+.pers-ver { font: 600 13px/1.4em var(--font-sans); color: var(--accent); }

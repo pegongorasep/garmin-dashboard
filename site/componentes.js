@@ -555,10 +555,20 @@ const DS = (() => {
     h("div", { class: "reac-pick", role: "group", "aria-label": T("sitio.gr.elegir") },
       emojis.map((e) => h("button", { type: "button", class: "reac-op", onclick: () => onElegir && onElegir(e) }, e)));
 
+  /** Tocar el avatar o el nombre dentro de una cabecera desplegable abre el perfil (captura el toque antes de que despliegue). */
+  const abrirPersona = (cab, alPersona) => {
+    if (!alPersona) return;
+    cab.classList.add("con-perfil");
+    cab.addEventListener("click", (ev) => {
+      if (ev.target.closest(".avatar, .mi-nombre, .act-nombre")) { ev.stopPropagation(); alPersona(); }
+    }, true);
+  };
+
   /** Tarjeta de una persona del grupo, cerrada por defecto. Recibe { nombre, foto, iniciales, color, pct, etiquetaAnillo, insignias:[texto],
-   *  linea (texto), pausa (texto), dias, etiquetaDias, reacciones (nodos), detalle (nodos), abierto, etiquetaAbrir, onAlternar(abierto) }. */
+   *  linea (texto), pausa (texto), dias, etiquetaDias, reacciones (nodos), detalle (nodos), abierto, etiquetaAbrir, onAlternar(abierto),
+   *  alPersona (tocar el avatar o el nombre abre su perfil en vez de desplegar) }. */
   const tarjetaMiembro = ({ nombre, foto, iniciales, color = 0, pct = null, etiquetaAnillo, insignias = [], linea, pausa, dias = [], etiquetaDias, reacciones = null,
-    detalle = [], abierto = false, etiquetaAbrir, onAlternar } = {}) => {
+    detalle = [], abierto = false, etiquetaAbrir, onAlternar, alPersona } = {}) => {
     const cuerpo = h("div", { class: "mi-detalle", hidden: !abierto }, detalle);
     const cab = h("button", { type: "button", class: "mi-cab", "aria-expanded": String(!!abierto), "aria-label": etiquetaAbrir, onclick: () => {
       const on = cab.getAttribute("aria-expanded") !== "true";
@@ -570,6 +580,7 @@ const DS = (() => {
       h("span", { class: "mi-quien" }, h("span", { class: "mi-nombre" }, nombre),
         insignias.length ? h("span", { class: "mi-ins" }, insignias.map((t) => chip(t, "suave"))) : null),
       pct === null ? null : anilloMini({ pct, etiqueta: etiquetaAnillo }), ico("flecha-abajo"));
+    abrirPersona(cab, alPersona);
     return h("article", { class: "card miembro" }, cab,
       pausa ? h("p", { class: "mi-linea muted" }, pausa) : [h("p", { class: "mi-linea" }, linea), dias.length ? puntosSemana({ dias, etiqueta: etiquetaDias }) : null],
       reacciones, pausa ? null : cuerpo);
@@ -613,9 +624,10 @@ const DS = (() => {
 
   /** Fila de una actividad del feed, cerrada por defecto (al abrirla solo se muestra el detalle; la altura de lo cerrado es fija).
    *  Recibe { nombre, foto, iniciales, color, cuando (texto), emoji, tipo, resumen (km · min), esfuerzo (texto), sesion (texto con ✓),
-   *  detalle (nodos), reacciones (nodo), comentarios (nodo, va al final del detalle), abierto, etiquetaAbrir, onAlternar(abierto) }. */
+   *  detalle (nodos), reacciones (nodo), comentarios (nodo, va al final del detalle), abierto, etiquetaAbrir, onAlternar(abierto),
+   *  alPersona (tocar el avatar o el nombre abre su perfil en vez de desplegar) }. */
   const filaActividad = ({ nombre, foto, iniciales, color = 0, cuando, emoji, tipo, resumen, esfuerzo, sesion, detalle = [], reacciones = null, comentarios = null,
-    abierto = false, etiquetaAbrir, onAlternar } = {}) => {
+    abierto = false, etiquetaAbrir, onAlternar, alPersona } = {}) => {
     const cuerpo = h("div", { class: "act-detalle", hidden: !abierto }, detalle, comentarios);
     const cab = h("button", { type: "button", class: "act-cab", "aria-expanded": String(!!abierto), "aria-label": etiquetaAbrir, onclick: () => {
       const on = cab.getAttribute("aria-expanded") !== "true";
@@ -629,15 +641,32 @@ const DS = (() => {
         h("span", { class: "act-l2" }, h("span", { "aria-hidden": "true" }, emoji), ` ${tipo}${resumen ? ` · ${resumen}` : ""}`),
         h("span", { class: "act-l3" }, [esfuerzo, sesion].filter(Boolean).join(" · "))),
       ico("flecha-abajo"));
+    abrirPersona(cab, alPersona);
     return h("article", { class: "card act-fila" }, cab, reacciones, cuerpo);
   };
+
+
+  /** Cabecera del perfil de una persona. Recibe { nombre, foto, iniciales, color, nivel (texto o null), grupos (texto) }. Alto fijo: nombre, nivel y grupos
+   *  tienen su ranura aunque falten. */
+  const cabeceraPersona = ({ nombre, foto, iniciales, color = 0, nivel = null, grupos = "" } = {}) =>
+    h("div", { class: "pers-cab" }, avatar({ iniciales, color, foto, grande: true }),
+      h("div", { class: "pers-quien" }, h("h2", { class: "pers-nombre" }, nombre),
+        h("p", { class: "pers-nivel" }, nivel ? chip(nivel, "suave") : null), h("p", { class: "pers-grupos" }, grupos)));
+
+  /** Calendario del plan de una persona: una fila de 7 días por semana (✓ si la sesión se hizo, aro si estaba planeada) y debajo las sesiones de esa semana.
+   *  Recibe { semanas:[{ titulo, dias:[{ nombre, numero, hoy, hecha, etiqueta }], sesiones:[{ texto, hecha }] }] }. */
+  const calendarioPlan = ({ semanas = [] } = {}) =>
+    h("div", { class: "pers-cal" }, semanas.map((sm) => h("div", { class: "pers-sem" }, h("p", { class: "pers-sem-t" }, sm.titulo),
+      calendario(sm.dias.map((d) => diaCal({ nombre: d.nombre, numero: d.numero, hoy: d.hoy, titulo: d.etiqueta || undefined,
+        hijos: [h("span", { class: `pers-marca${d.hecha ? " hecha" : d.etiqueta ? " plan" : ""}`, "aria-hidden": "true" }, d.hecha ? "✓" : "")] }))),
+      h("p", { class: "pers-ses" }, sm.sesiones.map((x) => chip(`${x.hecha ? "✓ " : ""}${x.texto}`, x.hecha ? "suave" : undefined))))));
 
   return {
     animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, dialogoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,
-    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad, botonComentarios, panelComentarios,
+    anilloMini, barraFina, puntosSemana, chipReaccion, botonReaccion, selectorReaccion, tarjetaMiembro, filaActividad, botonComentarios, panelComentarios, cabeceraPersona, calendarioPlan,
     /** Silueta de sesión (envoltorio de siluetaSesion): [[min, zona, opcional?]], rachas con lpm, y { alto, conTip, con_calentamiento… }. */
     silueta: (tramos, { alto = 44, conTip = true, rachas = null, ...rampas } = {}) => siluetaSesion(tramos, alto, conTip, rachas, rampas),
   };

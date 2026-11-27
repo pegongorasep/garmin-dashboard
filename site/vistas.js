@@ -755,7 +755,8 @@ function pintarGrupo(g) {
       pausa: pausa ? T("sitio.gr.pausa") : null,
       linea: partes.length ? partes.join(" · ") : T(t.semana ? "sitio.gr.sin_actividad" : "sitio.gr.sin_datos"),
       dias: t.dias || [], etiquetaDias: T("sitio.gr.dias_aria", { n: (t.dias || []).filter((d) => d === "hecha").length }),
-      detalle, abierto: !!grupoAbiertos()[clave], etiquetaAbrir: T("sitio.gr.detalle", { nombre: m.nombre }),
+      detalle: [...detalle, personaEnlace(m.usuario_id, m.nombre)], alPersona: () => { location.hash = `#juntos/persona/${m.usuario_id}`; },
+      abierto: !!grupoAbiertos()[clave], etiquetaAbrir: T("sitio.gr.detalle", { nombre: m.nombre }),
       onAlternar: (on) => grupoGuardarAbierto(clave, on) });
   };
 
@@ -830,7 +831,7 @@ function feedComentarios(it, alCambiar) {
   return panel;
 }
 
-function feedFila(it, aviso) {
+function feedFila(it, aviso, conPerfil = true) {
   const nombre = it.mia ? T("sitio.gr.f.yo") : it.nombre;
   const fila = h("div", { class: "reacciones" });
   let articulo = null;
@@ -862,7 +863,8 @@ function feedFila(it, aviso) {
   const resumen = [it.km != null ? T("sitio.km_n", { n: fmt(it.km, 1) }) : null, it.minutos ? T("sitio.min_n", { n: fmt(it.minutos, 0) }) : null].filter(Boolean).join(" · ");
   articulo = DS.filaActividad({ nombre, foto: it.foto, iniciales, color: it.usuario_id, cuando: feedCuando(it.fecha), emoji: it.emoji, tipo: it.tipo, resumen,
     esfuerzo: textoEsfuerzo(it), sesion: it.sesion ? T("sitio.gr.f.sesion", { sesion: it.sesion.nombre, n: it.sesion.n }) : null,
-    detalle: feedDetalle(it), reacciones: fila, comentarios: panel, abierto: feedAbiertas.has(it.clave), etiquetaAbrir: T("sitio.gr.f.ver", { tipo: it.tipo, nombre }),
+    detalle: [...feedDetalle(it), conPerfil ? personaEnlace(it.usuario_id, it.mia ? T("sitio.gr.f.yo") : it.nombre) : null].filter(Boolean),
+    alPersona: conPerfil ? () => { location.hash = `#juntos/persona/${it.usuario_id}`; } : null, reacciones: fila, comentarios: panel, abierto: feedAbiertas.has(it.clave), etiquetaAbrir: T("sitio.gr.f.ver", { tipo: it.tipo, nombre }),
     onAlternar: (on) => { if (on) { feedAbiertas.add(it.clave); panel.cargar(); } else feedAbiertas.delete(it.clave); } });
   if (feedAbiertas.has(it.clave)) panel.cargar();
   return articulo;
@@ -988,6 +990,93 @@ async function cargarGrupo(id) {
   }
 }
 
+// ---- Perfil de una persona dentro de Juntos (#juntos/persona/<id>): todo lo arma /api/juntos/persona/<id>; aquí solo se pinta ----
+let personaVolver = "#juntos";
+const personaEnlace = (id, nombre) => h("a", { class: "pers-ver", href: `#juntos/persona/${id}` }, T("sitio.gr.p.ver", { nombre }));
+const personaIniciales = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
+const personaLista = (partes) => (partes.length < 2 ? partes.join("") : `${partes.slice(0, -1).join(", ")} ${T("sitio.gr.p.y")} ${partes[partes.length - 1]}`);
+
+function personaFaltan(f) {
+  return personaLista(f.map((x) => (x.k === "facil" ? T(x.n === 1 ? "sitio.gr.p.f_facil_uno" : "sitio.gr.p.f_facil_n", { n: x.n }) : T(`sitio.gr.p.f_${x.k}`))));
+}
+
+function pintarPersona(p) {
+  const oculto = (clave) => h("p", { class: "pers-oculto" }, T(clave));
+  const sec = (titulo, ...hijos) => DS.tarjeta({ titulo, clase: "pers-sec ancha" }, ...hijos.filter(Boolean));
+  const nombre = p.mia ? T("sitio.gr.f.yo") : p.nombre;
+  const enComun = p.grupos.map((g) => g.nombre).join(", ");
+  const partes = [
+    h("div", { class: "grupo-cab ancha" }, h("a", { href: personaVolver }, `← ${T("sitio.tab.grupo")}`)),
+    p.mia ? DS.aviso({ clase: "ok", simbolo: "i", titulo: T("sitio.gr.p.asi_t"),
+      texto: [T("sitio.gr.p.asi_a"), " ", h("a", { href: "/ajustes#compartir" }, T("sitio.gr.p.asi_ajustes"))], extra: "ancha" }) : null,
+    DS.tarjeta({ clase: "ancha" }, DS.cabeceraPersona({ nombre: p.nombre, foto: p.foto, iniciales: personaIniciales(p.nombre), color: p.usuario_id,
+      nivel: p.nivel ? T(`sitio.gr.p.nivel.${p.nivel}`) : null, grupos: p.mia ? T("sitio.gr.p.tus_grupos", { grupos: enComun }) : T("sitio.gr.p.en_comun", { grupos: enComun }) })),
+  ];
+  if (p.pausa) partes.push(sec(T("sitio.gr.p.semana_t"), oculto("sitio.gr.p.pausa")));
+  else {
+    // Esta semana contra el plan
+    const s = p.semana;
+    partes.push(sec(T("sitio.gr.p.semana_t"),
+      s ? h("p", { class: "pers-dato" }, s.objetivo ? T("sitio.gr.p.min_de", { hechos: fmt(s.minutos, 0), meta: fmt(s.objetivo, 0) }) : T("sitio.gr.p.min_solo", { hechos: fmt(s.minutos, 0) })) : oculto("sitio.gr.p.sin_datos"),
+      p.comparte.plan && s && s.objetivo ? h("p", { class: "pers-faltan" }, s.faltan.length ? T("sitio.gr.p.faltan", { lista: personaFaltan(s.faltan) }) : T("sitio.gr.p.al_dia")) : null,
+      !p.comparte.plan ? oculto("sitio.gr.p.no_plan") : null));
+    // Calendario del plan: esta semana y la siguiente
+    if (p.calendario) {
+      partes.push(sec(T("sitio.gr.p.plan_t"), DS.calendarioPlan({ semanas: p.calendario.map((w) => ({
+        titulo: w.n ? T("sitio.gr.p.sem_n", { n: w.n, fecha: fechaCorta(w.inicio) }) : T("sitio.gr.p.sem_f", { fecha: fechaCorta(w.inicio) }),
+        dias: w.dias.map((d) => ({ nombre: d.dia, numero: parseFecha(d.fecha).getDate(), hoy: d.hoy, hecha: d.hecha, etiqueta: d.etiqueta })),
+        sesiones: w.sesiones.map((x) => ({ texto: x.nombre, hecha: x.estado === "hecha" })) })) })));
+    } else partes.push(sec(T("sitio.gr.p.plan_t"), oculto("sitio.gr.p.no_plan")));
+    // Progreso
+    const pr = p.progreso;
+    partes.push(sec(T("sitio.gr.p.prog_t"),
+      pr && pr.semanas.length ? h("div", { class: "pers-graf" }, DS.graficaBarras({ alto: 120, clases: ["s1"], etiqueta: T("sitio.gr.p.graf"),
+        semanas: pr.semanas.map((w) => ({ inicio: w.inicio, valores: [w.minutos] })),
+        texto: (w) => T("sitio.gr.p.graf_tip", { fecha: fechaCorta(w.inicio), min: fmt(w.valores[0], 0) }) })) : oculto("sitio.gr.p.sin_datos"),
+      p.nivel ? h("p", { class: "pers-dato" }, T("sitio.gr.p.nivel_l", { nivel: T(`sitio.gr.p.nivel.${p.nivel}`) })) : null,
+      pr && pr.racha !== null ? h("p", { class: "pers-dato" }, pr.racha > 0 ? `🔥 ${T("sitio.gr.racha", { n: pr.racha })}` : T("sitio.gr.p.sin_racha")) : oculto("sitio.gr.p.no_plan"),
+      pr && pr.carreras ? (pr.carreras.length ? h("ul", { class: "pers-lista" }, pr.carreras.map((c) => h("li", {}, `🏁 ${c.distancia_km ? T("sitio.gr.p.carrera", { km: fmt(c.distancia_km, 1), fecha: fechaCorta(c.fecha) }) : T("sitio.gr.p.carrera_sola", { fecha: fechaCorta(c.fecha) })}`)))
+        : h("p", { class: "pers-dato" }, T("sitio.gr.p.sin_carreras"))) : null));
+    // Actividades recientes
+    if (p.actividades) {
+      const lista = h("div", { class: "pers-acts" }), aviso = h("div", { "aria-live": "polite" });
+      let siguiente = p.actividades.siguiente;
+      if (!feedCache.emojis.length) feedCache.emojis = p.emojis || [];
+      const mas = h("div", { class: "feed-mas" });
+      const pintarMas = () => mas.replaceChildren(...(siguiente ? [DS.boton(T("sitio.gr.feed_mas"), { variante: "sec", chico: true, onclick: async (e) => {
+        e.currentTarget.disabled = true;
+        try {
+          const r = await grupoGet(`/api/juntos/feed?persona=${p.usuario_id}&antes=${encodeURIComponent(siguiente)}`);
+          lista.append(...r.items.map((it) => feedFila(it, aviso, false)));
+          siguiente = r.siguiente;
+        } catch (err) { /* el botón se reactiva abajo */ }
+        pintarMas();
+      } })] : []));
+      lista.append(aviso, ...p.actividades.items.map((it) => feedFila(it, aviso, false)));
+      if (!p.actividades.items.length) lista.append(h("p", { class: "pers-oculto" }, T("sitio.gr.p.sin_act")));
+      pintarMas();
+      partes.push(h("section", { class: "juntos-feed ancha", "aria-label": T("sitio.gr.p.act_t") }, h("h3", {}, T("sitio.gr.p.act_t")), lista, mas));
+    } else partes.push(sec(T("sitio.gr.p.act_t"), oculto("sitio.gr.p.no_act")));
+  }
+  $("vista-grupo").replaceChildren(...partes);
+}
+
+async function cargarPersona(id) {
+  const turno = ++personaTurno; ++grupoTurno;
+  const raiz = $("vista-grupo");
+  raiz.replaceChildren(DS.cargando(T("sitio.gr.cargando")));
+  try {
+    const p = await grupoGet(`/api/juntos/persona/${id}`);
+    if (turno === personaTurno) pintarPersona(p);
+  } catch (e) {
+    if (turno !== personaTurno) return;
+    const noEsta = e && /: 404$/.test(e.message || "");
+    raiz.replaceChildren(noEsta ? DS.estadoVacio({ icono: "personas", titulo: T("sitio.gr.p.no_enc_t"), texto: T("sitio.gr.p.no_enc"), accion: { texto: T("sitio.tab.grupo"), href: "#juntos" } })
+      : DS.errorCarga({ titulo: T("sitio.gr.err_t"), texto: T("sitio.gr.err"), detalle: e && e.message ? e.message : String(e), onReintentar: () => cargarPersona(id) }));
+  }
+}
+let personaTurno = 0;
+
 // Plan y Hoy redibujan lo suyo; Progreso, solo la subvista visible (las gráficas necesitan ancho).
 const REDIBUJAR = {
   hoy: () => PINTAR.hoy.forEach((f) => f()),
@@ -1064,12 +1153,13 @@ function actualizarEncabezado() {
 
 function mostrarVista() {
   const ruta = location.hash.slice(1).split("?")[0];   // "#hoy?sem=+1" solo se lee al arrancar
-  const [nombre0, sub] = (ALIAS_RUTA[ruta] || ruta.replace(/^grupo(?=\/|$)/, "juntos")).split("/");   // #grupo y #grupo/<id> (viejos) valen como #juntos
+  const [nombre0, sub, sub2] = (ALIAS_RUTA[ruta] || ruta.replace(/^grupo(?=\/|$)/, "juntos")).split("/");   // #grupo y #grupo/<id> (viejos) valen como #juntos
   const nombre = nombre0 === "juntos" ? "grupo" : nombre0;
   if (/^grupo(\/|$)/.test(ruta)) history.replaceState(null, "", `#${ruta.replace(/^grupo/, "juntos")}`);
   const solo = !!ui().solo_cuerpo;   // solo cuerpo: todo cae en Progreso > Cuerpo (la ayuda sigue)
   const v = solo && nombre !== "ayuda" ? "progreso" : nombre === "grupo" && !(nGrupos() > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
   subProgreso = solo || (v === "progreso" && sub === "cuerpo") ? "cuerpo" : "corridas";
+  if (v === "grupo" && sub === "persona" && /^#juntos(\/\d+)?$/.test(rutaPrevia)) personaVolver = rutaPrevia;   // el «volver» del perfil
   if (v !== "ayuda") rutaPrevia = `#${ruta.replace(/^grupo(?=\/|$)/, "juntos") || "hoy"}`;
   vistaActual = v;
   for (const id of VISTAS) $(`vista-${id}`).hidden = id !== v;
@@ -1079,7 +1169,7 @@ function mostrarVista() {
   }
   mostrarSubvista();
   REDIBUJAR[v]();
-  if (v === "grupo") cargarGrupo(sub || null);
+  if (v === "grupo") { if (sub === "persona" && /^\d+$/.test(sub2 || "")) cargarPersona(sub2); else cargarGrupo(sub && sub !== "persona" ? sub : null); }
   window.scrollTo(0, 0);
   if (datos && /[?&]abrir\b/.test(location.hash)) {   // para capturas: ?abrir despliega sesiones y "Ver todos los tipos"
     document.querySelectorAll(`#vista-${v} details.fila-ses, #vista-${v} details.todos-tipos`).forEach((x) => { x.open = true; });

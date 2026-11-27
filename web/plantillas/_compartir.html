@@ -1,7 +1,7 @@
 {% from "componentes.html" import boton, tarjeta, opcion %}
 {% if not pref %}
 {% call tarjeta() %}
-  <form class="pila texto" method="post" action="/ajustes/compartir">
+  <form class="pila texto" id="compartir" method="post" action="/ajustes/compartir">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h2 class="pag-h">{{ t("aj.comp_t") }}</h2>
     <p>{{ t("aj.comp_a") }}</p>

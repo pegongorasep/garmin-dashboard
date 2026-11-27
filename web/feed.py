@@ -181,14 +181,15 @@ def hay_nuevo(db: Session, viewer: Usuario, secret: str) -> bool:
     return False
 
 
-def feed(db: Session, viewer: Usuario, secret: str, antes: str | None = None) -> dict:
-    duenos = duenos_visibles(db, viewer)
+def feed(db: Session, viewer: Usuario, secret: str, antes: str | None = None, persona: int | None = None, por_pagina: int = POR_PAGINA) -> dict:
+    """`persona`: solo las actividades de esa persona (perfil), con la misma regla de quién se ve; una que no se ve sale vacía."""
+    duenos = [d for d in duenos_visibles(db, viewer) if persona is None or d.id == persona]
     items: list[dict] = []
     for d in duenos:
         items += actividades_de(db, d, secret, d.id == viewer.id or permisos.puede_ver_plan(db, viewer, d.id))
     items.sort(key=lambda x: (x["fecha"], x["orden"], x["usuario_id"]), reverse=True)
     items = [x for x in items if _tras(x, antes)]
-    pagina, hay_mas = items[:POR_PAGINA], len(items) > POR_PAGINA
+    pagina, hay_mas = items[:por_pagina], len(items) > por_pagina
     por_id = {d.id: d for d in duenos}
     reac = reacciones_de(db, viewer, [x["clave"] for x in pagina])
     ncom = conteo_comentarios(db, [x["clave"] for x in pagina])
@@ -204,10 +205,10 @@ def feed(db: Session, viewer: Usuario, secret: str, antes: str | None = None) ->
 
 def montar(app, get_db, actual, formulario, settings) -> None:
     @app.get("/api/juntos/feed")
-    def api_feed(antes: str | None = None, usuario=Depends(actual), db: Session = Depends(get_db)):
+    def api_feed(antes: str | None = None, persona: int | None = None, usuario=Depends(actual), db: Session = Depends(get_db)):
         if usuario is None:
             return JSONResponse({"error": "Entra primero."}, status_code=401)
-        return feed(db, usuario, settings.secret_key, antes)
+        return feed(db, usuario, settings.secret_key, antes, persona)
 
     @app.post("/api/juntos/reaccionar")
     async def api_reaccionar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
