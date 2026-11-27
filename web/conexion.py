@@ -7,14 +7,16 @@ import json
 import logging
 import secrets
 
+from datetime import timedelta
+
 from fastapi import Depends, Request
-from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from fastapi.responses import JSONResponse, RedirectResponse
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import onboarding, sincronizar, tubo
 from .github_app import GitHubApp, GitHubError
-from .modelos import Usuario, VinculoPendiente
+from .modelos import Cambio, Usuario, VinculoPendiente, ahora
 
 log = logging.getLogger("web.conexion")
 COOKIE = "gh_estado"
@@ -46,11 +48,39 @@ def disparar(db: Session, u: Usuario, tipo: str, gh: GitHubApp, rama: str | None
     return sinc
 
 
+SECRETO = "PERSONAL_API_KEY"
+LIGAS_POR_HORA = 3
+DESCRIPCION_LIGA = "Liga de la guía mandada al correo"
+
+
+def _norm(nombre: str) -> str:
+    return "".join(ch for ch in nombre.lower() if ch.isalnum())
+
+
+def estado_secreto(secretos: list[dict]) -> tuple[str, str | None]:
+    """('listo'|'nombre_mal'|'falta', nombre parecido). Parecido: igual sin mayúsculas/espacios/guiones, o el único secreto."""
+    nombres = [s["name"] for s in secretos]
+    if SECRETO in nombres:
+        return "listo", None
+    for n in nombres:
+        if _norm(n) == _norm(SECRETO):
+            return "nombre_mal", n
+    if len(nombres) == 1:
+        return "nombre_mal", nombres[0]
+    return "falta", None
+
+
+def sinc_json(s) -> dict | None:
+    if s is None:
+        return None
+    return {"estado": s.estado, "tipo": s.tipo, "paso": s.paso, "hechos": s.hechos, "total": s.total, "error": s.error}
+
+
 def _firma(secret: str, datos: str) -> str:
     return hmac.new(secret.encode(), datos.encode(), hashlib.sha256).hexdigest()
 
 
-def montar(app, get_db, actual, render, settings) -> None:
+def montar(app, get_db, actual, render, settings, formulario=None) -> None:
     def destino(para, codigo=None, ok=False):
         if para == "conectado":
             return "/conexiones?" + (f"error={codigo}" if codigo else "ok=conectado")
@@ -134,3 +164,66 @@ def montar(app, get_db, actual, render, settings) -> None:
         resp = RedirectResponse(destino(para, ok=True), 303)
         resp.delete_cookie(COOKIE, path="/conectar/github")
         return resp
+
+    def _gh_listo(usuario):
+        return bool(usuario.gh_instalacion and usuario.repo)
+
+    @app.get("/api/conexion/estado")
+    def api_estado(usuario=Depends(actual), db=Depends(get_db)):
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        viva = sincronizar.actual(db, usuario.id)
+        sinc = viva or sincronizar.ultima_terminada(db, usuario.id)
+        out = {"conectado": _gh_listo(usuario), "secreto": None, "nombre": None, "sinc": sinc_json(sinc),
+               "viva": viva is not None, "error": None}
+        if out["conectado"]:
+            try:
+                out["secreto"], out["nombre"] = estado_secreto(
+                    app_de(app, settings).secretos(usuario.gh_instalacion, usuario.repo))
+            except Exception as e:   # noqa: BLE001
+                log.warning("no se pudieron leer los secretos de %s: %s", usuario.id, getattr(e, "status", type(e).__name__))
+                out["error"] = "otra"
+        return out
+
+    @app.post("/api/conexion/comprobar")
+    async def api_comprobar(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        if formulario is not None:
+            await formulario(request)   # CSRF
+        if usuario is None:
+            return JSONResponse({"error": "Entra primero."}, status_code=401)
+        if not _gh_listo(usuario):
+            return JSONResponse({"error": "sin_conexion"}, status_code=409)
+        gh = app_de(app, settings)
+        try:
+            secreto, _ = estado_secreto(gh.secretos(usuario.gh_instalacion, usuario.repo))
+        except Exception:   # noqa: BLE001
+            return JSONResponse({"error": "otra"}, status_code=502)
+        if secreto != "listo":
+            return JSONResponse({"error": secreto}, status_code=409)
+        viva = sincronizar.actual(db, usuario.id)
+        if viva is None:
+            ult = sincronizar.ultima_terminada(db, usuario.id)
+            if ult is not None and ult.estado == "ok" and ult.tipo in ("comprobacion", "historial"):
+                return {"sinc": sinc_json(ult), "nueva": False}   # ya quedó comprobada: no se vuelve a disparar
+        antes = viva.id if viva else None
+        sinc = disparar(db, usuario, "comprobacion", gh)
+        return {"sinc": sinc_json(sinc), "nueva": sinc is not None and sinc.id != antes}
+
+    @app.post("/bienvenida/liga")
+    async def liga_por_correo(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+        """Celular: manda por correo la liga a la guía para abrirla en la computadora (3 por hora)."""
+        if formulario is not None:
+            await formulario(request)
+        if usuario is None:
+            return RedirectResponse("/entrar", 303)
+        desde = ahora() - timedelta(hours=1)
+        mandadas = db.scalar(select(func.count()).select_from(Cambio).where(
+            Cambio.atleta_id == usuario.id, Cambio.descripcion == DESCRIPCION_LIGA, Cambio.fecha > desde))
+        if mandadas >= LIGAS_POR_HORA:
+            return RedirectResponse("/bienvenida?liga=limite", 303)
+        db.add(Cambio(atleta_id=usuario.id, autor_id=None, via="sistema", visto=True, descripcion=DESCRIPCION_LIGA))
+        db.commit()
+        t = request.state.t
+        request.app.state.enviar(settings, usuario.correo, t("conexion.liga_asunto"),
+                                 t("conexion.liga_texto", liga=settings.base_url.rstrip("/") + "/bienvenida"))
+        return RedirectResponse("/bienvenida?liga=ok", 303)

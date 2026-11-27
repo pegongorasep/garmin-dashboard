@@ -5,9 +5,14 @@
 {% block clase_pie %}ancha{% endblock %}
 {% block contenido %}
 <h1 class="pag-t">{{ t("bv.titulo") }}</h1>
+{% if guia %}
+{% set nombres = [t('bv.g0_n'), t('bv.g1_n'), t('bv.g2_n'), t('bv.g3_n'), t('bv.g4_n')] %}
+{{ barra_pasos(nombres, paso + 1, t("bv.paso", n=paso + 1, total=nombres|length), t("bv.avance")) }}
+{% else %}
 {% set nombres = [t('bv.s1'), t('bv.s2'), t('bv.s3'), t('bv.s4'), t('bv.s5'), t('bv.s6'), t('bv.s7')] %}
 {% if e.sin_plan %}{% set nombres = nombres[:6] %}{% endif %}
 {{ barra_pasos(nombres, paso, t("bv.paso", n=paso, total=nombres|length), t("bv.avance")) }}
+{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 
 {% if pregunta_uso %}
@@ -21,6 +26,19 @@
   </div>
   <p class="pag-s">{{ t("bv.uso_n") }}</p>
 </form>
+
+{% elif guia %}
+{# Guía nueva (GitHub App). Bloque mínimo de C6a: C6b lo reemplaza con las pantallas completas. #}
+<div class="guia-celular">
+  {% if liga_enviada == "ok" %}{% call aviso("ok") %}{{ t("bv.g_liga_ok") }}{% endcall %}
+  {% elif liga_enviada == "limite" %}{% call aviso("warn") %}{{ t("bv.g_liga_limite") }}{% endcall %}{% endif %}
+  <form method="post" action="/bienvenida/liga">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ boton(t("bv.g_liga"), "sec", tipo="submit") }}
+  </form>
+</div>
+<h2 class="pag-h">{{ t("bv.g" ~ paso ~ "_t") }}</h2>
+{% include "_dibujo_paso" ~ paso ~ ".html" ignore missing %}
 
 {% elif paso == 1 %}
 <h2 class="pag-h">{{ t("bv.p1_t") }}</h2>

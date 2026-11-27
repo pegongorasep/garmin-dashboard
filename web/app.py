@@ -251,7 +251,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     cuenta.montar(app, get_db, actual, render, formulario, settings)
     admin.montar(app, get_db, actual, render, formulario, settings)
     google.montar(app, get_db, actual, render, settings, poner_sesion)
-    conexion.montar(app, get_db, actual, render, settings)
+    conexion.montar(app, get_db, actual, render, settings, formulario)
     mcp_servidor.montar(app, settings)
 
     @app.get("/instalar")

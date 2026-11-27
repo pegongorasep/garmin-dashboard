@@ -66,6 +66,33 @@ def paso_inicial(e: dict) -> int:
     return 6 if (e["vinculado"] or e["pendiente"]) else 3
 
 
+GUIA_MAX = 4   # pantallas de la guía nueva: 0 Antes de empezar, 1 Cuenta, 2 Tu copia, 3 Permiso, 4 Tu key
+COOKIE_GUIA = "guia_paso"
+
+
+def guia_activa(settings, u: Usuario, e: dict) -> bool:
+    """La guía nueva (GitHub App) aplica con la app encendida, aviso aceptado, uso completo y sin datos ni plan aún.
+    Quien ya vinculó su copia por el camino viejo (sin instalación) sigue con la guía de siempre."""
+    return bool(settings.app_github and e["consentimiento"] and e["uso"] != "cuerpo" and not e["ajustes"]
+                and not e["datos"] and (not e["vinculado"] or u.gh_instalacion))
+
+
+def guia_paso_maximo(u: Usuario) -> int:
+    return GUIA_MAX if u.gh_instalacion else GUIA_MAX - 1
+
+
+def guia_paso(u: Usuario, pedido, recordado) -> int:
+    """Pantalla de la guía nueva: con instalación, la 4; si no, la pedida o la recordada (cookie), de 0 a 3."""
+    if u.gh_instalacion:
+        return GUIA_MAX
+    for v in (pedido, recordado):
+        try:
+            return max(0, min(int(v), guia_paso_maximo(u)))
+        except (TypeError, ValueError):
+            continue
+    return 0
+
+
 def proximo_lunes(hoy: date | None = None) -> date:
     hoy = hoy or date.today()
     return hoy + timedelta(days=(7 - hoy.weekday()) % 7 or 7)
@@ -95,11 +122,20 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if not (usuario.nombre and usuario.apellido):
             return RedirectResponse("/perfil", 303)
         e = estado(db, usuario)
-        if completo(db, usuario):
+        guia = guia_activa(settings, usuario, e)
+        if completo(db, usuario) and not guia:
             return RedirectResponse("/", 303)
         # recién aceptado el aviso y sin elegir: primero «¿Qué quieres usar?»
         pregunta = (e["consentimiento"] and not e["uso_elegido"] and not e["owner"] and not e["vinculado"]
                     and not e["pendiente"] and not request.query_params.get("paso"))
+        if guia and not pregunta:
+            n = guia_paso(usuario, request.query_params.get("paso"), request.cookies.get(COOKIE_GUIA))
+            resp = render(request, "bienvenida.html", guia=True, paso=n, pregunta_uso=False, pasos=PASOS, e=e, u=usuario,
+                          version=VERSION_AVISO, liga=liga_repo(usuario, settings, None), error=_error_conexion(request),
+                          liga_enviada=request.query_params.get("liga", ""))
+            resp.set_cookie(COOKIE_GUIA, str(n), max_age=30 * 86400, httponly=True, secure=settings.cookie_segura,
+                            samesite="lax", path="/bienvenida")
+            return resp
         try:
             pedido = int(request.query_params.get("paso", ""))
         except ValueError:
