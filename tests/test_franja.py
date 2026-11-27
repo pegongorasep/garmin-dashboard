@@ -190,3 +190,64 @@ def test_aviso_migrar_en_app_js_gana_key_rechazada():
 def test_sync_ui_migrar_app_apagada(ctx):
     from web import sync_web
     assert sync_web.sync_ui(ctx.settings, Usuario(correo="o@x.mx", repo="a/b", repo_id=7)) is None   # sin app no hay migrar
+
+
+@pytest.mark.parametrize("paso,hechos,total,pct,tope", [("arranca", None, None, 5, 15), ("busca", None, None, 25, 30),
+                                                         ("detalles", 5, 10, 52, 57), ("detalles", 10, 10, 75, 80), ("salud", None, None, 80, 90)])
+def test_tope_por_paso(paso, hechos, total, pct, tope):
+    from web import sync_web
+    s = Sincronizacion(usuario_id=1, tipo="normal", estado="corriendo", paso=paso, hechos=hechos, total=total)
+    assert sync_web.porcentaje(s) == pct and sync_web.tope(s) == tope
+    assert sync_web.a_json(s, lambda k, **kw: k)["tope"] == tope
+    s.estado = "ok"
+    assert sync_web.tope(s) == 100
+
+
+@pytest.mark.skipif(not Path(CHROME).exists() and not shutil.which(CHROME), reason="sin Chrome")
+def test_barra_escondida_en_reposo_y_gatea(tmp_path):
+    pagina = tmp_path / "g.html"
+    viva = {"estado": "corriendo", "paso": "busca", "texto": "Buscando", "porcentaje": 25, "tope": 30}
+    ok = {"estado": "ok", "texto": "✓ ¡Listo!", "porcentaje": 100, "tope": 100, "terminada_hace_s": 3.2}
+    pagina.write_text(f"""<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="file://{SITE}/tokens.css"><link rel="stylesheet" href="file://{SITE}/componentes.css">
+<body><div id="encabezado"><header class="encabezado"><div class="encabezado-fila">Titulo</div><p class="act"><span>Actualizado hace 1 h</span></p></header></div>
+<pre id="salida"></pre>
+<script>window.fetch = () => Promise.resolve({{ ok: true, json: () => Promise.resolve({{ sinc: null }}) }});
+// el tiempo virtual de Chrome no avanza cuadros: rAF se simula con temporizadores (también virtuales)
+window.requestAnimationFrame = (f) => setTimeout(() => f(performance.now()), 16);
+window.cancelAnimationFrame = (i) => clearTimeout(i);</script>
+<script src="file://{SITE}/franja.js" data-campo="x"></script>
+<script>
+const vis = () => {{ const b = document.querySelector(".franja-enc-barra"); return !!b && getComputedStyle(b).display !== "none"; }};
+const w = () => parseFloat(document.querySelector(".franja-enc-barra i").style.width || "0");
+const out = {{}};
+setTimeout(() => {{
+  out.reposo = vis();
+  Franja._pintar({json.dumps(viva)});
+  out.visible = vis();
+  setTimeout(() => {{
+    out.w1 = w();
+    setTimeout(() => {{
+      out.w2 = w();
+      Franja._pintar({json.dumps(viva)});   // otro sondeo sin cambio del servidor: no retrocede
+      out.w3 = w();
+      Franja._pintar({json.dumps(ok)});
+      setTimeout(() => {{
+        out.ok_w = w(); out.ok_vis = vis();
+        setTimeout(() => {{
+          out.fin_vis = vis(); out.fin_w = w();
+          document.getElementById("salida").textContent = JSON.stringify(out);
+        }}, 1500);
+      }}, 400);
+    }}, 1000);
+  }}, 500);
+}}, 200);
+</script>""")
+    r = subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--no-sandbox", "--allow-file-access-from-files",
+                        "--virtual-time-budget=9000", "--window-size=390,700", "--dump-dom", f"file://{pagina}"],
+                       capture_output=True, text=True, timeout=60)
+    out = json.loads(r.stdout.split('<pre id="salida">')[1].split("</pre>")[0].replace("&quot;", '"'))
+    assert not out["reposo"] and out["visible"], out
+    assert 0 < out["w1"] < out["w2"] < 30 and out["w3"] >= out["w2"], out
+    assert out["ok_w"] > 95 and out["ok_vis"], out
+    assert not out["fin_vis"] and out["fin_w"] == 0, out

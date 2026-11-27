@@ -35,6 +35,17 @@ def porcentaje(s: Sincronizacion) -> int:
     return PORCENTAJE.get(s.paso or "arranca", 5) if s.estado != "esperando" else 5
 
 
+def tope(s: Sincronizacion) -> int:
+    """Porcentaje donde empieza el paso siguiente: la barra gatea hacia él sin llegar (el JS solo anima entre `porcentaje` y `tope`)."""
+    pct = porcentaje(s)
+    if s.estado in ("ok", "error"):
+        return pct
+    if s.estado != "esperando" and s.paso == "detalles" and s.total:
+        i = max(0, min(s.hechos or 0, s.total))
+        return 30 + round(45 * (i + 1) / s.total) if i < s.total else PORCENTAJE["salud"]
+    return min((v for v in PORCENTAJE.values() if v > pct), default=100)
+
+
 def texto(s: Sincronizacion, t) -> str:
     if s.estado == "ok":
         n = s.nuevas or 0
@@ -72,7 +83,7 @@ def a_json(s: Sincronizacion, t) -> dict:
     if s.terminada is not None:
         hace = max(0, int((ahora() - s.terminada).total_seconds()))
     return {"estado": s.estado, "tipo": s.tipo, "paso": s.paso, "hechos": s.hechos, "total": s.total,
-            "nuevas": s.nuevas, "error": s.error, "texto": texto(s, t), "porcentaje": porcentaje(s),
+            "nuevas": s.nuevas, "error": s.error, "texto": texto(s, t), "porcentaje": porcentaje(s), "tope": tope(s),
             "terminada_hace_s": hace, "accion": accion(s, t)}
 
 

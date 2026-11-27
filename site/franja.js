@@ -10,6 +10,37 @@
   // y una barra de 3 px absoluta pega al borde de abajo del encabezado; en las demás páginas, una franja fija que flota sin empujar nada.
   let flota = null, enc = null, pend = null, temporizador = null, ocultar = null, vistaViva = false, viva = false, ultimo = null, visible = false;
 
+  // Avance fluido: Python manda `porcentaje` (donde va) y `tope` (donde empieza el paso siguiente). Entre avisos la barra gatea de forma
+  // asintótica hacia el tope sin llegar; con un aviso nuevo corre a él en ~300 ms. Nunca retrocede; sin animación con la pestaña oculta.
+  const TAU_CORRE = 100, TAU_GATEA = 5000;
+  let mostrado = 0, base = 0, meta = 0, raf = 0, antes = 0, terminal = true, actual = null;
+  const quieto = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function ancho() { if (actual) actual.relleno.style.width = mostrado.toFixed(2) + "%"; }
+  function reiniciar() { cancelAnimationFrame(raf); raf = 0; mostrado = base = meta = 0; ancho(); }
+
+  function cuadro(t) {
+    raf = 0;
+    if (document.hidden) return;
+    const dt = Math.min(250, Math.max(0, t - (antes || t))); antes = t;
+    if (mostrado < base - 0.2) mostrado += (base - mostrado) * (1 - Math.exp(-dt / TAU_CORRE));
+    else if (mostrado < base) mostrado = base;
+    else if (!terminal && meta > mostrado) mostrado = Math.min(meta - 0.5, mostrado + (meta - mostrado) * (1 - Math.exp(-dt / TAU_GATEA)));
+    ancho();
+    if (mostrado < base || (!terminal && meta - 0.5 > mostrado + 0.01)) raf = requestAnimationFrame(cuadro);
+  }
+
+  function avanzar(m, s, fin) {
+    actual = m;
+    const pct = Math.max(0, Math.min(100, s.porcentaje || 0));
+    const tope = Math.max(pct, Math.min(100, s.tope == null ? pct : s.tope));
+    if (!fin && terminal) reiniciar();   // empieza otra sincronización: la barra parte de 0
+    terminal = fin;
+    base = Math.max(base, pct); meta = fin ? base : Math.max(meta, tope);
+    if (quieto()) { mostrado = Math.max(mostrado, base); ancho(); return; }
+    if (!raf) { antes = 0; raf = requestAnimationFrame(cuadro); }
+  }
+
   function armar(clase) {
     const mk = (tag, c) => { const n = document.createElement(tag); n.className = c; return n; };
     const texto = mk("span", "franja-t"), boton = mk("button", "franja-b"), enlace = mk("a", "franja-b"), relleno = mk("i", "");
@@ -51,6 +82,7 @@
     visible = si;
     const { m, cab } = destino();
     if (cab) cab.classList.toggle("sync-on", si); else if (m !== pend) m.raiz.hidden = !si;
+    if (!si) { actual = m; reiniciar(); terminal = true; }   // al esconderse, el ancho vuelve a 0 (sin animación) para la próxima vez
   }
 
   function reponer() { if (visible && ultimo) pintar(ultimo); }   // el sitio repinta el encabezado: la franja se vuelve a colgar
@@ -70,7 +102,7 @@
     m.texto.textContent = s.texto || "";
     m.raiz.dataset.estado = s.estado;
     if (m.barra) m.barra.dataset.estado = s.estado;
-    m.relleno.style.width = Math.max(0, Math.min(100, s.porcentaje || 0)) + "%";
+    avanzar(m, s, termino);
     m.boton.hidden = m.enlace.hidden = true;
     if (s.estado === "error" && s.accion) {
       if (s.accion.url) { m.enlace.href = s.accion.url; m.enlace.textContent = s.accion.texto; m.enlace.hidden = false; }
