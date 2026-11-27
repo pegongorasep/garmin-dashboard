@@ -603,5 +603,7 @@
 "sitio.zb.seg": "{k}: {m} minutos, {p} %",
 "sitio.zb.tip": "{k} · {m} min · {p} %",
 "sitio.zc.titulo": "Minutos por zona",
-"sitio.zona_objetivo": "Zona objetivo: {z}{lpm} · {min} min de trabajo"
+"sitio.zona_objetivo": "Zona objetivo: {z}{lpm} · {min} min de trabajo",
+"sitio.zonas.sugerir": "En Garmin Connect: Configuración del usuario, Zonas de frecuencia cardiaca, y ajusta tus zonas (o tu FC máx). La próxima vez que sincronices, el plan usa tus zonas.",
+"sitio.zonas.sugerir_t": "Configura tus zonas en Garmin Connect para que el plan use las tuyas"
 }

@@ -169,6 +169,7 @@ function renderPlan(d) {
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
+    (ui().avisos || {}).zonas_garmin ? avisoCerrable("zonas_garmin", { clase: "warn", simbolo: "!", extra: "ancha", titulo: T("sitio.zonas.sugerir_t"), texto: T("sitio.zonas.sugerir") }) : null,
     det.distribucion ? zonaBar(det.distribucion) : null].filter(Boolean));
 }
 

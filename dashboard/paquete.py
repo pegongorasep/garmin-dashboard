@@ -11,13 +11,15 @@ Campos que sobreviven (solo los que lee el motor; búscalos con grep en dashboar
   `id` = 16 hex de sha256(salt:activityId); `es_carrera` se calcula aquí con el nombre y el nombre no sube.
 - activity_details (llave = `id` opaco): {rpe, splits [{tipo, seg, m, fc, n}], ritmos_km, serie [[seg, m, fc]]}.
   `serie` (FC por segundo, sin GPS) puede subir a la web pero nunca sale en un data.json.
-- hr_zones: {sport, maxHeartRateUsed}.
+- hr_zones: {sport, trainingMethod, maxHeartRateUsed, restingHeartRateUsed, lactateThresholdHeartRateUsed,
+  zone1Floor..zone5Floor}: solo números (y el método como palabra en mayúsculas); nada más del perfil de zonas.
 - historial_corridas: {startTimeLocal, activityType.typeKey, distance, duration, eventType.typeKey, fastestSplit_*}.
 - meta: {pulled_at, pulled_at_utc}.
 """
 import hashlib
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -97,6 +99,24 @@ def _detalles(d: dict, salt: str) -> dict:
     return out
 
 
+ZONAS_NUM = ("maxHeartRateUsed", "restingHeartRateUsed", "lactateThresholdHeartRateUsed",
+             "zone1Floor", "zone2Floor", "zone3Floor", "zone4Floor", "zone5Floor")
+ZONAS_CLAVES = {"sport", "trainingMethod", *ZONAS_NUM}
+_PALABRA = re.compile(r"[A-Za-z_]{1,30}")
+
+
+def _zonas_hr(p) -> dict:
+    """Un perfil de zonas de FC de Garmin reducido a lo numérico: `sport` y `trainingMethod` solo si son una palabra
+    corta; los demás campos, solo si son números (o None). Nunca seriales, IDs ni nombres."""
+    p = p if isinstance(p, dict) else {}
+    out = {k: p[k] for k in ("sport", "trainingMethod") if isinstance(p.get(k), str) and _PALABRA.fullmatch(p[k])}
+    for k in ZONAS_NUM:
+        v = p.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) or (k in p and v is None):
+            out[k] = v
+    return out
+
+
 def _historial(lista: list) -> list:
     return [{**_campos(a, ["startTimeLocal", ("activityType", ["typeKey"]), "distance", "duration",
                            ("eventType", ["typeKey"])]), **_con_prefijo(a, "fastestSplit_")} for a in lista or []]
@@ -125,7 +145,7 @@ def armar(data_dir, salt: str) -> dict:
             "daily": _daily(_leer(d / "daily.json", {})),
             "activities": _actividades(_leer(d / "activities.json", []), salt),
             "activity_details": _detalles(_leer(d / "activity_details.json", {}), salt),
-            "hr_zones": [_campos(p, ["sport", "maxHeartRateUsed"]) for p in hr],
+            "hr_zones": [_zonas_hr(p) for p in hr if isinstance(p, dict)],
             "historial_corridas": _historial(_leer(d / "historial_corridas.json", [])),
             "meta": _campos(_leer(d / "meta.json", {}), ["pulled_at", "pulled_at_utc"]),
         },
@@ -164,6 +184,10 @@ def validar(paquete) -> list:
         elif isinstance(o, list):
             for i, v in enumerate(o):
                 recorrer(v, f"{ruta}[{i}]", en_detalle)
+    for p in archivos.get("hr_zones") or []:
+        if not isinstance(p, dict) or _zonas_hr(p) != p:
+            out.append("hr_zones: solo se aceptan los campos numéricos de zonas")
+            break
     for nombre, contenido in archivos.items():
         recorrer(contenido, nombre, nombre == "activity_details")
     pers = paquete.get("personales")

@@ -603,5 +603,7 @@
 "sitio.zb.seg": "{k}: {m} minutes, {p} %",
 "sitio.zb.tip": "{k} · {m} min · {p} %",
 "sitio.zc.titulo": "Minutes per zone",
-"sitio.zona_objetivo": "Target zone: {z}{lpm} · {min} min of work"
+"sitio.zona_objetivo": "Target zone: {z}{lpm} · {min} min of work",
+"sitio.zonas.sugerir": "In Garmin Connect: User Settings, Heart Rate Zones, and adjust your zones (or your max HR). After your next sync the plan uses your zones.",
+"sitio.zonas.sugerir_t": "Set your zones in Garmin Connect so the plan uses yours"
 }

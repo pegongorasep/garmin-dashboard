@@ -26,6 +26,50 @@ def zones(max_hr: float, rhr: float, pcts: list) -> list:
     return [(f"Z{i + 1}", pisos[i], techos[i]) for i in range(len(pcts))]
 
 
+PCTS_DEFECTO_GARMIN = (50, 60, 70, 80, 90)   # los pisos de fábrica de Garmin (% de FC máx o de la reserva)
+TOLERANCIA_DEFECTO_LPM = 2                  # cuánto puede diferir un piso del de fábrica y aun parecerlo (redondeos)
+
+
+def perfil_zonas_garmin(hr_zones):
+    """Perfil de zonas de FC que manda Garmin para correr (sport RUNNING; si no, DEFAULT) o None si falta o está
+    incompleto: necesita FC máx y los 5 pisos numéricos, crecientes y bajo la máxima."""
+    perfiles = [p for p in (hr_zones if isinstance(hr_zones, list) else [hr_zones or {}]) if isinstance(p, dict)]
+    for sport in ("RUNNING", "DEFAULT"):
+        for p in perfiles:
+            if p.get("sport") != sport:
+                continue
+            pisos = [p.get(f"zone{i}Floor") for i in range(1, 6)]
+            mx = p.get("maxHeartRateUsed")
+            nums = pisos + [mx]
+            if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in nums) \
+                    and all(a < b for a, b in zip(pisos, pisos[1:])) and pisos[-1] < mx:
+                return p
+    return None
+
+
+def zonas_garmin(hr_zones):
+    """Zonas [(zona, piso, techo)] de Garmin, con la forma de `zones`; None si no hay perfil usable."""
+    p = perfil_zonas_garmin(hr_zones)
+    if p is None:
+        return None
+    pisos = [round(p[f"zone{i}Floor"]) for i in range(1, 6)]
+    techos = pisos[1:] + [round(p["maxHeartRateUsed"])]
+    return [(f"Z{i + 1}", pisos[i], techos[i]) for i in range(5)]
+
+
+def zonas_de_fabrica(hr_zones) -> bool:
+    """True si los pisos de Garmin parecen los de fábrica (50/60/70/80/90 % de la FC máx o de la reserva, ±2 lpm):
+    la persona no ha configurado sus zonas en Garmin Connect."""
+    p = perfil_zonas_garmin(hr_zones)
+    if p is None:
+        return False
+    mx, rest = p["maxHeartRateUsed"], p.get("restingHeartRateUsed")
+    pisos = [p[f"zone{i}Floor"] for i in range(1, 6)]
+    bases = [(0, mx)] + ([(rest, mx)] if isinstance(rest, (int, float)) and not isinstance(rest, bool) else [])
+    return any(all(abs(piso - (b0 + pct / 100 * (b1 - b0))) <= TOLERANCIA_DEFECTO_LPM
+                   for piso, pct in zip(pisos, PCTS_DEFECTO_GARMIN)) for b0, b1 in bases)
+
+
 def rhr_con_sueno(daily_summaries: list, sleep: list) -> list:
     """Quita la FC en reposo de los días sin noche de sueño registrada: sin reloj de noche, Garmin
     la saca de unos minutos despierto y sale inflada."""

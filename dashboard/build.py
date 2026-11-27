@@ -1027,13 +1027,15 @@ def huella(contenido) -> str:
     return hashlib.sha1(str(contenido).encode("utf-8")).hexdigest()[:10]
 
 
-def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n, sugerencia=None, semana_inicio=None) -> dict:
+def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n, sugerencia=None, semana_inicio=None, sugerir_zonas=False) -> dict:
     """{id: huella} de los avisos que hoy están activos (los que el sitio puede cerrar con «Entendido»). Sin aviso, sin clave."""
     out = {}
     if tarjeta.get("aviso"):
         out["hoy"] = huella(tarjeta["aviso"])
     if aviso_zonas:
         out["zonas"] = huella(aviso_zonas)
+    if sugerir_zonas:   # «configura tus zonas en Garmin»: texto fijo, así que «Entendido» lo cierra para siempre
+        out["zonas_garmin"] = huella("zonas_garmin")
     if fc_max.get("revisar"):
         out["fcmax"] = huella(round(fc_max["estimacion"]))
     if semaforo.get("repetir_semana"):
@@ -1098,7 +1100,12 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     hoy = ahora.date()
     ayer = hoy - timedelta(days=1)
     rhr = m.rhr_7d(data["daily_summaries"], hoy) or 60
-    zonas = m.zones(config["max_hr"], rhr, config["zone_pcts"])
+    # Las zonas son las que Garmin dice (running, o DEFAULT); sin ellas, las calculadas con Karvonen como siempre.
+    zonas_g = m.zonas_garmin(data["hr_zones"])
+    zonas = zonas_g or m.zones(config["max_hr"], rhr, config["zone_pcts"])
+    zonas_origen = "garmin" if zonas_g else "calculadas"
+    # El aviso «configura tus zonas en Garmin» sale con zonas calculadas o con las de fábrica de Garmin.
+    sugerir_zonas = zonas_origen == "calculadas" or m.zonas_de_fabrica(data["hr_zones"])
     config = {**config, "zonas": zonas}   # derivadas de este día: esfuerzo, ritmo a FC ref y plan vs real las leen de aquí
 
     sigs = m.signals(hoy, data, config)
@@ -1178,9 +1185,9 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "numeros": build_numeros(hoy, filas, mejora["modo"]),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
-        "ui": {**build_ui(config, plan, categorias_presentes(config, data)), "avisos": huellas_avisos(
+        "ui": {**build_ui(config, plan, categorias_presentes(config, data)), "zonas_origen": zonas_origen, "avisos": huellas_avisos(
             tarjeta, m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
-            fc_max, luz, n, (sem_pasada or {}).get("sugerencia"), (sem_pasada or {}).get("inicio"))},
+            fc_max, luz, n, (sem_pasada or {}).get("sugerencia"), (sem_pasada or {}).get("inicio"), sugerir_zonas)},
         "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
         "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),
