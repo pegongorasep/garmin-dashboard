@@ -1,0 +1,155 @@
+# Personas sintéticas del simulador de planes (plan/simulador.py). 100 % inventadas: ningún dato real.
+#
+# historial: las últimas 8 semanas de carrera (la última es la más reciente). Cada una: sesiones (minutos de cada
+#            carrera) y continuo (el trote seguido más largo de la semana, en minutos). Vacío = nunca ha corrido.
+# intensos_semana: días intensos que NO son carrera (HIIT, gym, clases): dias (lun mar mié jue vie sáb dom) y tipo.
+# adherencia: fracción de los minutos planeados que hace cada semana del plan: base, y huecos [[desde, hasta], ...]
+#             (semanas del plan, inclusive) en las que hace 0.
+# meta: null o {distancia_km, semanas_hasta}: la carrera es al final de esa semana del plan.
+# formulario: lo que escribiría hoy en el paso 7 de la web; lo que no ponga queda con lo preseleccionado
+#             (ajustes.RESPUESTAS_FORMULARIO). `dias_semana` y `variada` no existen hoy: el motor siempre da 3 corridas.
+# dias_semana: cuántos días quiere correr (para los motores nuevos; el actual lo ignora).
+personas:
+  - id: novata_sin_datos
+    nombre: Novata sin datos
+    descripcion: Nunca ha corrido y deja el formulario como viene (nivel novato, intensidad z2_poca_z3, 20' y 40').
+    edad: 30
+    dias_semana: 3
+    historial: []
+    intensos_semana: {dias: [], tipo: ""}
+    adherencia: {base: 1.0}
+    meta: null
+    formulario: {nivel: novato}
+
+  - id: novata_trota_camina
+    nombre: Novata que trota-camina 15'
+    descripcion: Hace sesiones de 15' alternando trote y caminata (trote seguido de 2'); a media serie se cae 3 semanas.
+    edad: 35
+    dias_semana: 3
+    historial:
+      - {sesiones: [], continuo: 0}
+      - {sesiones: [], continuo: 0}
+      - {sesiones: [15], continuo: 2}
+      - {sesiones: [15, 15], continuo: 2}
+      - {sesiones: [15, 15], continuo: 2}
+      - {sesiones: [15, 15], continuo: 3}
+      - {sesiones: [15, 15, 15], continuo: 3}
+      - {sesiones: [15, 15, 15], continuo: 3}
+    intensos_semana: {dias: [], tipo: ""}
+    adherencia: {base: 0.8, huecos: [[6, 8]]}
+    meta: null
+    formulario: {nivel: novato, caminatas: true, z2: 15, larga: 20}
+
+  - id: pedro_like
+    nombre: Pedro-like
+    descripcion: Base de 3 corridas por semana de 25 a 40', quiere un 10K en 8 semanas y hace CrossFit 4 días; usa caminatas.
+    edad: 40
+    dias_semana: 3
+    historial:
+      - {sesiones: [25, 30, 35], continuo: 35}
+      - {sesiones: [25, 30, 35], continuo: 35}
+      - {sesiones: [25, 30, 40], continuo: 40}
+      - {sesiones: [25, 30, 40], continuo: 40}
+      - {sesiones: [30, 30, 40], continuo: 40}
+      - {sesiones: [25, 30, 40], continuo: 40}
+      - {sesiones: [30, 30, 40], continuo: 40}
+      - {sesiones: [30, 30, 40], continuo: 40}
+    intensos_semana: {dias: [lun, mar, jue, vie], tipo: crossfit}
+    adherencia: {base: 1.0}
+    meta: {distancia_km: 10, semanas_hasta: 8}
+    formulario: {nivel: intermedio, caminatas: true, z2: 25, larga: 40, pierna: [lun, jue]}
+
+  - id: base_intermedia
+    nombre: Base intermedia
+    descripcion: Corre 30' seguidos, 3 veces por semana, sin meta de carrera.
+    edad: 38
+    dias_semana: 3
+    historial:
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+    intensos_semana: {dias: [], tipo: ""}
+    adherencia: {base: 1.0}
+    meta: null
+    formulario: {nivel: intermedio, z2: 30, larga: 35}
+
+  - id: corredor_velocidad
+    nombre: Corredor que quiere velocidad
+    descripcion: Corre 4 veces por semana unos 45' y pide calidad (tempo e intervalos).
+    edad: 33
+    dias_semana: 4
+    historial:
+      - {sesiones: [40, 45, 45, 60], continuo: 60}
+      - {sesiones: [40, 45, 45, 60], continuo: 60}
+      - {sesiones: [40, 45, 45, 60], continuo: 60}
+      - {sesiones: [45, 45, 45, 60], continuo: 60}
+      - {sesiones: [45, 45, 45, 60], continuo: 60}
+      - {sesiones: [45, 45, 45, 65], continuo: 65}
+      - {sesiones: [45, 45, 45, 60], continuo: 60}
+      - {sesiones: [45, 45, 45, 65], continuo: 65}
+    intensos_semana: {dias: [], tipo: ""}
+    adherencia: {base: 1.0}
+    meta: null
+    formulario: {nivel: corredor, intensidad: calidad, calidad: [tempo_z3, intervalos], z2: 45, larga: 65}
+
+  - id: mayor_52_hiit
+    nombre: 52 años con HIIT
+    descripcion: Tiene 52, corre 3 veces por semana unos 30' y hace HIIT 3 días (lun, mié, vie).
+    edad: 52
+    dias_semana: 3
+    historial:
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+      - {sesiones: [30, 30, 35], continuo: 35}
+    intensos_semana: {dias: [lun, mié, vie], tipo: hiit}
+    adherencia: {base: 1.0}
+    meta: null
+    formulario: {nivel: intermedio, z2: 30, larga: 35, pierna: [mié]}
+
+  - id: regresa_tras_pausa
+    nombre: Regresa tras 3 semanas sin correr
+    descripcion: Corría 3 veces por semana y lleva 3 semanas sin salir (viaje y gripa).
+    edad: 45
+    dias_semana: 3
+    historial:
+      - {sesiones: [30, 30, 40], continuo: 40}
+      - {sesiones: [30, 30, 40], continuo: 40}
+      - {sesiones: [30, 35, 40], continuo: 40}
+      - {sesiones: [30, 35, 40], continuo: 40}
+      - {sesiones: [30, 35, 40], continuo: 40}
+      - {sesiones: [], continuo: 0}
+      - {sesiones: [], continuo: 0}
+      - {sesiones: [], continuo: 0}
+    intensos_semana: {dias: [], tipo: ""}
+    adherencia: {base: 1.0}
+    meta: null
+    formulario: {nivel: intermedio, z2: 30, larga: 40}
+
+  - id: cumple_60
+    nombre: Cumple solo el 60 %
+    descripcion: Corre 3 veces por semana unos 25' pero solo hace el 60 % de lo que dice el plan.
+    edad: 36
+    dias_semana: 3
+    historial:
+      - {sesiones: [25, 25, 30], continuo: 30}
+      - {sesiones: [25, 25, 30], continuo: 30}
+      - {sesiones: [25, 25, 30], continuo: 30}
+      - {sesiones: [25, 25, 30], continuo: 30}
+      - {sesiones: [25, 25, 30], continuo: 30}
+      - {sesiones: [25, 25, 30], continuo: 30}
+      - {sesiones: [25, 25, 30], continuo: 30}
+      - {sesiones: [25, 25, 30], continuo: 30}
+    intensos_semana: {dias: [], tipo: ""}
+    adherencia: {base: 0.6}
+    meta: null
+    formulario: {nivel: intermedio, z2: 25, larga: 40}

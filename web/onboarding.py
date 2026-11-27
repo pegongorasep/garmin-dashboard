@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import gen_plan
-from ajustes import (CALIDAD_TIPOS, INTENSIDADES, NIVELES, ConfigError, normalizar_config)
+from ajustes import (CALIDAD_TIPOS, INTENSIDADES, NIVELES, ConfigError, crudo_desde_respuestas, normalizar_config)
 from .errores import ErrorT, texto
 
 from . import cambios, importar, tubo
@@ -100,18 +100,11 @@ def crudo_desde_formulario(f) -> dict:
     edad, fc_max = entero("edad", "ob.edad", True), entero("fc_max", "ob.fc_max", True)
     if edad is None and fc_max is None:
         raise ErrorT("err.edad_o_fc")
-    perfil = {"titulo": (str(f.get("titulo", "")).strip() or "Mi entreno")[:60], "zona_horaria": zona}
-    if edad:
-        perfil["edad"] = edad
-    if fc_max:
-        perfil["fc_max"] = fc_max
-    intensidad = f.get("intensidad", "z2_poca_z3")
-    calidad = [t for t in f.getlist("calidad") if t in CALIDAD_TIPOS] if intensidad == "calidad" else []
-    corrida = {"nivel": f.get("nivel", "intermedio"), "intensidad": intensidad, "calidad_tipos": calidad,
-               "variada": True, "caminatas": f.get("caminatas") == "on", "inicio": str(f.get("inicio", "")),
-               "semanas": 12, "base_min": {"z2": entero("z2", "ob.z2"), "larga": entero("larga", "ob.larga")}}
-    actividades = {"dias_pierna": [d for d in f.getlist("pierna") if d in dict(DIAS)]}
-    return {"perfil": perfil, "corrida": corrida, "actividades": actividades, "inbody": f.get("inbody") == "on"}
+    return crudo_desde_respuestas(
+        str(f.get("inicio", "")), edad=edad, fc_max=fc_max, zona=zona, titulo=f.get("titulo", ""),
+        nivel=f.get("nivel", "intermedio"), intensidad=f.get("intensidad", "z2_poca_z3"), calidad=f.getlist("calidad"),
+        caminatas=f.get("caminatas") == "on", z2=entero("z2", "ob.z2"), larga=entero("larga", "ob.larga"),
+        pierna=[d for d in f.getlist("pierna") if d in dict(DIAS)], inbody=f.get("inbody") == "on")
 
 
 def montar(app, get_db, actual, render, formulario, settings) -> None:

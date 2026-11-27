@@ -257,6 +257,30 @@ def normalizar_config(crudo: dict) -> dict:
     }
 
 
+# Lo que trae preseleccionado el formulario del paso 7 de la web (web/plantillas/bienvenida.html).
+RESPUESTAS_FORMULARIO = {"nivel": "intermedio", "intensidad": "z2_poca_z3", "calidad": [], "caminatas": False,
+                         "z2": 20, "larga": 40, "pierna": [], "zona": "America/Merida", "titulo": "Mi entreno",
+                         "inbody": False}
+
+
+def crudo_desde_respuestas(inicio: str, edad=None, fc_max=None, **resp) -> dict:
+    """`config.yaml` crudo a partir de las respuestas del formulario del plan (las que falten, las de RESPUESTAS_FORMULARIO).
+    Función pura: la usan la web (`onboarding.crudo_desde_formulario`) y el simulador de planes, para que ambos
+    reproduzcan lo mismo. Fuerza `variada: true`, como el formulario."""
+    r = {**RESPUESTAS_FORMULARIO, **resp}
+    perfil = {"titulo": (str(r["titulo"]).strip() or "Mi entreno")[:60], "zona_horaria": r["zona"]}
+    if edad:
+        perfil["edad"] = edad
+    if fc_max:
+        perfil["fc_max"] = fc_max
+    calidad = [t for t in r["calidad"] if t in CALIDAD_TIPOS] if r["intensidad"] == "calidad" else []
+    corrida = {"nivel": r["nivel"], "intensidad": r["intensidad"], "calidad_tipos": calidad,
+               "variada": True, "caminatas": bool(r["caminatas"]), "inicio": str(inicio),
+               "semanas": 12, "base_min": {"z2": r["z2"], "larga": r["larga"]}}
+    return {"perfil": perfil, "corrida": corrida, "actividades": {"dias_pierna": list(r["pierna"])},
+            "inbody": bool(r["inbody"])}
+
+
 def _idioma(v) -> str | None:
     import i18n
     v = str(v or "").strip().lower()[:2]
