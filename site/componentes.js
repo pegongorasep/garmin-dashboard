@@ -63,11 +63,12 @@ const DS = (() => {
     h("span", { class: `avatar ${["av-0", "av-1", "av-2", "av-3", "av-4", "av-5"][color % 6]}${grande ? " g" : ""}`, "aria-hidden": "true" },
       foto ? h("img", { src: foto, alt: "", width: 256, height: 256 }) : iniciales);
 
-  /** Aviso con fondo. Recibe { clase: "warn"|"ok"|"bad", simbolo (insignia al inicio: el color no va solo), titulo, texto, onEntendido (agrega el botón «Entendido») }. */
-  const aviso = ({ clase = "warn", simbolo, titulo, texto, extra, onEntendido } = {}) =>
+  /** Aviso con fondo. Recibe { clase: "warn"|"ok"|"bad", simbolo (insignia al inicio: el color no va solo), titulo, texto, onEntendido (agrega el botón «Entendido»), accion {texto, onclick} (botón al lado) }. */
+  const aviso = ({ clase = "warn", simbolo, titulo, texto, extra, onEntendido, accion } = {}) =>
     h("div", { class: `aviso-fondo ${clase}${extra ? ` ${extra}` : ""}`, role: "status" }, titulo ? h("div", { class: "b-t" }, titulo) : null,
       simbolo ? h("div", { class: "estado" }, insignia(clase, simbolo), h("span", {}, texto)) : texto,
-      onEntendido ? h("div", { class: "aviso-acc" }, boton(T("sitio.aviso.entendido"), { variante: "texto", chico: true, onclick: onEntendido })) : null);
+      onEntendido || accion ? h("div", { class: "aviso-acc" }, accion ? boton(accion.texto, { variante: "sec", chico: true, onclick: accion.onclick }) : null,
+        onEntendido ? boton(T("sitio.aviso.entendido"), { variante: "texto", chico: true, onclick: onEntendido }) : null) : null);
 
   /** Aviso del coach (cuando ves a otra persona). Recibe el nombre. */
   /** Diálogo «Hay una versión nueva» (el real lo arma actualizar.js con el mismo marcado). Devuelve el <dialog>; se abre con .showModal(). */

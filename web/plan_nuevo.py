@@ -5,6 +5,7 @@ y al confirmar el plan se vuelve a generar (es determinista), así que lo que se
 Cada ruta pasa por `ajustes_web.resolver` (`puede_editar`; 404 si no hay acceso) y todo POST lleva CSRF (`formulario`)."""
 import copy
 import re
+import secrets
 from datetime import date, timedelta
 
 from fastapi import Depends, Request
@@ -23,10 +24,10 @@ from .onboarding import DIAS, ZONAS, proximo_lunes
 
 DISTANCIAS = (5, 10, 21, 42)
 MAX_SEMANAS_CARRERA = 52          # la config del plan acepta de 4 a 52 semanas
-MIN_SEMANAS_CARRERA = 4
+MIN_SEMANAS_CARRERA = 1           # una carrera a menos de 4 semanas se permite con aviso (motor_v6: `carrera_semanas_cortas`)
 OBJETIVOS = {"empezando": (), "base": ("mas_tiempo", "carrera"), "corredor": ("base", "velocidad", "carrera")}
 RE_TIEMPO = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
-AVISOS_CON_TEXTO = ("dias_limitados", "carrera_no_recomendada", "carrera_poco_tiempo", "pausa")
+AVISOS_CON_TEXTO = ("dias_limitados", "carrera_no_recomendada", "carrera_poco_tiempo", "carrera_cerca", "pausa")
 PORQUES_CON_TEXTO = ("inicio", "sube", "descarga", "calidad_si", "calidad_no", "escalera", "carrera")
 # TODO(F4+): «1 o 2 sesiones de calidad» (2 solo con >= 4 días y < 3 días intensos). Hoy gen_plan.verificar permite a lo más una
 # sesión con Z3+ por semana, así que por ahora solo se ofrece 1 y no se pregunta.
@@ -144,8 +145,9 @@ def armar_plan(v: dict, nivel: str, calculado: dict) -> dict:
 
 def crudo_nuevo(crudo: dict | None, plan: dict, v: dict, sensor: str | None) -> dict:
     """Ajustes que acompañan al plan: los de la persona (si ya tiene) con inicio, semanas y días de pierna del plan nuevo,
-    o unos nuevos con lo que pidió el formulario. La carrera NO va a `metas`: el plan ya trae su semana de carrera."""
-    semanas = max(len(plan["weeks"]), MIN_SEMANAS_CARRERA)
+    o unos nuevos con lo que pidió el formulario. La carrera del plan va a `metas` con `en_plan: true`
+    (cuenta regresiva, lista de carreras, grupo «carrera»; `plan_efectivo` no la vuelve a aplicar porque el plan ya trae su taper)."""
+    semanas = max(len(plan["weeks"]), 1)
     pierna = list(v["pierna"])
     if crudo is None:
         nuevo = crudo_desde_respuestas(plan["start"], edad=int(v["edad"]) if v["edad"] else None,
@@ -159,6 +161,11 @@ def crudo_nuevo(crudo: dict | None, plan: dict, v: dict, sensor: str | None) -> 
         nuevo.setdefault("actividades", {})["dias_pierna"] = pierna
     nuevo.setdefault("corrida", {}).update({"inicio": plan["start"], "semanas": semanas})
     nuevo["corrida"].pop("semanas_repetidas", None)
+    metas = [x for x in nuevo["corrida"].get("metas") or [] if not x.get("en_plan")]
+    if plan["meta"].get("carrera"):
+        km = plan["meta"]["carrera"]["km"]
+        metas.append({"id": secrets.token_hex(4), "tipo": "carrera", "fecha": v["fecha"], "distancia_km": km, "nombre": f"{km}K", "en_plan": True})
+    nuevo["corrida"]["metas"] = metas
     normalizar_config(nuevo)   # ConfigError si algo no cuadra: no se guarda nada
     return nuevo
 

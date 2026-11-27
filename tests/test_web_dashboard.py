@@ -61,7 +61,7 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
     pages, web_n = norm(esperado(modo_web=False)), norm(web, a_pages=True)
     # las dos mandan "idioma" siempre
     for d in (pages, web_n):
-        for k in ("menu", "plan_acciones", "editar_urls", "plan_url", "cuerpo_nuevo"):
+        for k in ("menu", "plan_acciones", "editar_urls", "plan_url", "repetir_url", "cuerpo_nuevo"):
             d["ui"].pop(k)
     assert pages == web_n
 

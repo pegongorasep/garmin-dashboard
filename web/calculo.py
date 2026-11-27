@@ -170,7 +170,7 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     ui = salida["ui"]
     ui = {**ui, "menu": [{**m, "url": f(m["url"])} for m in ui.get("menu") or [] if m["url"] != "/coach"],
           "plan_acciones": [{**a, "url": f(a["url"])} for a in ui.get("plan_acciones") or []],
-          "plan_url": f(ui.get("plan_url")),
+          "plan_url": f(ui.get("plan_url")), "repetir_url": f(ui.get("repetir_url")),
           "editar_urls": {k: f(v) for k, v in (ui.get("editar_urls") or {}).items()}}
     if ui.get("cuerpo_nuevo"):
         ui["cuerpo_nuevo"] = f(ui["cuerpo_nuevo"])

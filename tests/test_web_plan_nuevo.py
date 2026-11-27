@@ -133,7 +133,6 @@ def test_errores_vuelven_a_las_preguntas_con_400(web_ctx):
     uid, cl = nueva(web_ctx)
     cerca = (lunes_siguiente() + timedelta(days=10)).isoformat()
     for extra, msg in ((dict(objetivo="carrera", fecha="", km="10"), "Escribe una fecha válida"),
-                       (dict(objetivo="carrera", fecha=cerca, km="10"), "al menos a 4 semanas"),
                        (dict(objetivo="carrera", fecha=cerca, km="7"), "Elige 5, 10, 21 o 42"),
                        (dict(inicio="2001-01-01"), "antes de esta semana"),
                        (dict(edad="", fc_max=""), "edad o tu FC"),
@@ -197,3 +196,17 @@ def test_coach_edita_al_atleta_y_un_extrano_recibe_404(web_ctx):
     with web_ctx.sesiones() as db:
         assert db.get(Plan, uid_a).plan["meta"]["motor"] == "v6"
         assert db.query(Cambio).filter_by(atleta_id=uid_a).one().via == "coach"
+
+
+def test_carrera_cercana_avisa_y_se_permite_y_queda_en_metas(web_ctx):
+    uid, cl = nueva(web_ctx)
+    fecha = (lunes_siguiente() + timedelta(days=10)).isoformat()   # 2 semanas
+    r = vista(cl, "base", objetivo="carrera", km="10", fecha=fecha)
+    assert r.status_code == 200 and "plan muy corto" in r.text
+    assert confirmar(cl, "base", objetivo="carrera", km="10", fecha=fecha).status_code in (200, 303)
+    with web_ctx.sesiones() as db:
+        crudo = db.get(Ajustes, uid).config
+        plan = db.get(Plan, uid).plan
+    metas = crudo["corrida"]["metas"]
+    assert len(metas) == 1 and metas[0]["en_plan"] is True and metas[0]["fecha"] == fecha and metas[0]["distancia_km"] == 10
+    assert crudo["corrida"]["semanas"] == len(plan["weeks"]) == 2

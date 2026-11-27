@@ -79,6 +79,7 @@ UMBRALES = {
     "calidad_menos_un_renglon": True,   # con 3+ días intensos el tope baja un renglón (§3.4)
     # Carrera (§3.7). taper: fracción del pico por semana; la última es la semana de la carrera (sin larga)
     "taper": {5: [0.60], 10: [0.80, 0.55], 21: [0.75, 0.50], 42: [0.80, 0.60, 0.45]},
+    "carrera_semanas_cortas": 4,      # carrera a menos semanas que esto: aviso «plan muy corto» (se permite igual)
     "semanas_minimas": {   # desde cada nivel; None = no se recomienda
         5: {"empezando": 9, "base_corta": 6, "base": 4, "corredor": 4},
         10: {"empezando": 16, "base_corta": 10, "base": 8, "corredor": 6},
@@ -277,8 +278,11 @@ def repartir(total: int, dias: int, tope_ses: int | None, tope_lg: int) -> list:
 
 # ───────────────────────────── pasos de cada sesión ─────────────────────────────
 
+NOTA_FACIL = "Z2 o un ritmo en el que puedas platicar"   # las sesiones fáciles del v6 (con su traducción en motor.nota.facil)
+
+
 def pasos_continuo(minutos: int, larga: bool) -> list:
-    return [gen_plan.paso(minutos, "Z2", gen_plan.NOTA_LARGA if larga else gen_plan.NOTA_Z2)]
+    return [gen_plan.paso(minutos, "Z2", gen_plan.NOTA_LARGA if larga else NOTA_FACIL)]
 
 
 def pasos_tc(minutos: int, trote: int, camina: int) -> list:
@@ -374,7 +378,7 @@ def calidad_de_la_semana(n: int, ciclo: int, e: dict, minutos: int, semana_total
 def sesion_aceleraciones(id_: str, nombre: str, minutos: int) -> dict:
     """Etapa 1 de la calidad (§3.4): Z2 con 4–6 aceleraciones de 15 s al final. No cuentan como Z3, por eso todo va en Z2."""
     cola = min(5, minutos)
-    pasos = ([gen_plan.paso(minutos - cola, "Z2", gen_plan.NOTA_Z2)] if minutos > cola else []) + [gen_plan.paso(cola, "Z2", NOTA_ACELERACIONES)]
+    pasos = ([gen_plan.paso(minutos - cola, "Z2", NOTA_FACIL)] if minutos > cola else []) + [gen_plan.paso(cola, "Z2", NOTA_ACELERACIONES)]
     return gen_plan.sesion(id_, "z2", nombre, minutos, pasos, nota=NOTA_ACELERACIONES)
 
 
@@ -524,6 +528,10 @@ def avisos_de(e: dict, calidad: bool, n_semanas: int, carrera: dict | None, dias
             avisos.append({"clave": "carrera_poco_tiempo", "km": carrera["km"], "semanas": n_semanas, "minimas": minimas, "texto":
                            f"Para un {carrera['km']}K desde tu nivel se recomiendan al menos {minimas} semanas y tienes {n_semanas}: "
                            "puedes elegir otra distancia o llegar con trote y caminata. Si sigues, el plan va lo más suave posible."})
+    if carrera and n_semanas < UMBRALES["carrera_semanas_cortas"]:
+        avisos.append({"clave": "carrera_cerca", "semanas": n_semanas, "texto":
+                       f"Tu carrera es en {n_semanas} semana(s): el plan es muy corto. Puedes elegir otra distancia, llegar con trote y caminata, "
+                       "o seguir con este plan corto, que va lo más suave posible."})
     if e["evidencia"].get("desentrenamiento"):
         avisos.append({"clave": "pausa", "texto": "Llevas varios días sin correr: empezamos más despacio."})
     return avisos
@@ -603,7 +611,8 @@ def generar_v6(entrada: dict) -> dict:
             ultima_carga = totales[-1]
     meta = {"motor": "v6", "nivel": nivel, "dias": dias, "objetivo": e["objetivo"], "ciclo": ciclo, "calidad": calidad,
             "semanas": n_semanas, "inicio_minutos": inicio, "avisos": avisos_de(e, base, n_semanas, carrera, dias_aviso),
-            "porque": porques_de(e, inicio, ciclo, calidad, carrera, n_semanas)}
+            "porque": porques_de(e, inicio, ciclo, calidad, carrera, n_semanas),
+            "entrada": e}   # la entrada ya normalizada: con ella `con_carrera` rehace la cola del plan al agregar o quitar una carrera
     if carrera:
         meta["carrera"] = {"km": carrera["km"], "semanas": n_semanas}
     plan = {"start": e["inicio"], "weeks": semanas, "meta": meta}
@@ -757,6 +766,36 @@ def ajustar_semana(plan: dict, n: int, real_prev_min, max_sesion_real_min=None, 
     carrera = (plan.get("meta") or {}).get("carrera")
     w["focus"] = foco(w["kind"], w["sessions"], w.get("evento", ""), f"{carrera['km']}K" if carrera else "")
     return w
+
+
+def con_carrera(plan: dict, desde: int, carrera: dict | None, semanas: int | None = None) -> dict:
+    """El plan v6 con una carrera (`carrera` = {km, fecha, semanas_hasta}) o sin la que tenía (None), rehecho de la semana `desde` en adelante;
+    las anteriores quedan tal cual. Sin carrera el plan dura `semanas` (por defecto las que ya tenía). ValueError si no se puede (sin entrada
+    guardada, la carrera cae antes de `desde`, o el plan resultante no pasa la verificación)."""
+    meta = plan.get("meta") or {}
+    ent = dict(meta.get("entrada") or {})
+    if not ent:
+        raise ValueError("este plan no guarda su entrada")
+    ent["inicio"] = plan["start"]
+    if carrera:
+        ent["meta"], ent["objetivo"] = {"tipo": "carrera", **carrera}, "carrera"
+    else:
+        ent["meta"] = {"tipo": "base"}
+        ent["objetivo"] = "base" if ent.get("objetivo") == "carrera" else ent.get("objetivo", "base")
+        ent["semanas"] = max(semanas or len(plan["weeks"]), desde)
+    try:
+        nuevo = generar_v6(ent)
+    except AssertionError as ex:
+        raise ValueError(f"el plan con carrera no pasa la verificación: {ex}") from None
+    if desde > len(nuevo["weeks"]):
+        raise ValueError("la carrera queda antes de la semana en curso")
+    nuevo["weeks"] = [w for w in plan["weeks"] if w["n"] < desde] + [w for w in nuevo["weeks"] if w["n"] >= desde]
+    nuevo["meta"].update({k: meta[k] for k in ("nivel_calculado", "dolor", "tiempo_carrera") if k in meta})
+    try:
+        verificar(nuevo)
+    except AssertionError as ex:
+        raise ValueError(f"el plan con carrera no pasa la verificación: {ex}") from None
+    return nuevo
 
 
 def es_v6(plan: dict) -> bool:

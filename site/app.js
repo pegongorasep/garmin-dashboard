@@ -191,6 +191,18 @@ function avisoCerrable(id, props) {
   return DS.aviso({ ...props, onEntendido: entendido });
 }
 
+/** «Repetir esta semana»: el mismo POST (con CSRF) que la página del plan; al terminar se recarga para ver el plan nuevo. */
+function accionRepetir(t) {
+  const url = ui().repetir_url, app = $("app");
+  if (!t.repetir || !url || !app.dataset.csrf) return null;
+  return { texto: T("sitio.hoy.repetir"), onclick: async () => {
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ csrf: app.dataset.csrf }) });
+      if (r.ok) location.reload();
+    } catch (e) { /* sin red: el botón sigue ahí */ }
+  } };
+}
+
 const nombrePrueba = (tipo) => T(`sitio.prueba.${tipo}`);
 
 /** "7:42 /km", "93 % de trote" o "25:00" según la prueba. */
@@ -318,6 +330,7 @@ function tarjetaEstaSemana(d, s) {
   const c = DS.tarjeta({ titulo: tituloSemana(d, s), clase: "ancha" }, lineaSemana(st, T(s.estado === "futura" ? "sitio.aun_no" : "sitio.sin_corridas")), intensidadCompacta(s));
   const p = s.plan;
   if (p) {
+    if (p.ajuste_texto) c.append(h("p", { class: "nota" }, p.ajuste_texto));
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, T("sitio.plan.futura", { t: p.total, m: fmt(p.plan_min, 0) })));
     else {
       const min = st.minutos || 0, pct = Math.round((min / p.plan_min) * 100);
@@ -535,7 +548,7 @@ function filaHoyElegir(e, s, t, abierta) {
     opciones: ops.map((v) => ({ id: v, texto: v === "descanso" ? T("sitio.hoy.v_descanso") : T(`sitio.hoy.v_${v}`, { min: sesDe(v).minutes }) })),
     onCambio: (v) => { nom.textContent = nombreDe(v); mi.textContent = minDe(v); por.textContent = textoPor(v); mostrar(v); } });
   const cuerpo = [seg, por, cont];
-  { const av = t.aviso ? avisoCerrable("hoy", { clase: "warn", simbolo: "!", texto: t.aviso }) : null; if (av) cuerpo.push(av); }
+  { const av = t.aviso ? avisoCerrable("hoy", { clase: "warn", simbolo: "!", texto: t.aviso, accion: accionRepetir(t) }) : null; if (av) cuerpo.push(av); }
   return DS.filaSesion({ nombre: h("span", {}, nom, " ", mi), hoy: true, abierta,
     estado: { clase: "nd", simbolo: "—", texto: T("sitio.ses.pendiente"), etiqueta: T("sitio.ses.pendiente_e") }, cuerpo });
 }
@@ -548,7 +561,7 @@ function filaHoy(e, s, t, abierta) {
   if (t.motivo) cuerpo.push(h("p", { class: "nota" }, T("sitio.por", { m: t.motivo })));
   if (t.version === "descanso") cuerpo.push(h("p", {}, T("sitio.descanso")));
   else if (ses) cuerpo.push(...[bloqueSilueta(ses), bloqueCalidad(ses), detallePasos(ses), suave ? null : versionSuave(s)].filter(Boolean));
-  { const av = t.aviso ? avisoCerrable("hoy", { clase: "warn", simbolo: "!", texto: t.aviso }) : null; if (av) cuerpo.push(av); }
+  { const av = t.aviso ? avisoCerrable("hoy", { clase: "warn", simbolo: "!", texto: t.aviso, accion: accionRepetir(t) }) : null; if (av) cuerpo.push(av); }
   return DS.filaSesion({ nombre: t.version === "descanso" ? e.name : `${e.name}${suave ? T("sitio.suave_par") : ""}`, minutos: t.version === "descanso" || !ses ? null : ses.minutes,
     hoy: true, abierta, estado: { clase: "nd", simbolo: "—", texto: T("sitio.ses.pendiente"), etiqueta: T("sitio.ses.pendiente_e") }, cuerpo });
 }

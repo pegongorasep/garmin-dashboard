@@ -197,10 +197,14 @@ def agregar_carrera(db, actor, ahora, atleta, *, fecha: str, nombre: str = "Carr
         f = _fecha(fecha, "fecha de la carrera")
         if f < _hoy(ahora, crudo).isoformat():
             raise ConfigError("fecha de la carrera: debe ser hoy o después")
-        nuevo = plan_vivo.agregar_carrera(crudo, f, str(distancia_km) if distancia_km else None, nombre.strip() or "Carrera")
+        hoy = _hoy(ahora, crudo)
+        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+        nuevo, plan_nuevo = plan_vivo.agregar_carrera_en_plan(crudo, plan, cfg, f, str(distancia_km) if distancia_km else None,
+                                                              nombre.strip() or "Carrera", hoy)
     except (ConfigError, ValueError) as ex:
         raise Rechazo(str(ex)) from None
-    return _guardar(db, actor, a, f"Agregó la carrera «{nombre.strip() or 'Carrera'}» el {f} (IA)", {"ajustes": nuevo})
+    return _guardar(db, actor, a, f"Agregó la carrera «{nombre.strip() or 'Carrera'}» el {f} (IA)",
+                    {"ajustes": nuevo, **({"plan": plan_nuevo} if plan_nuevo is not None else {})})
 
 
 def agregar_evento(db, actor, ahora, atleta, *, tipo: str, desde: str, hasta: str | None = None, modo: str | None = None) -> dict:

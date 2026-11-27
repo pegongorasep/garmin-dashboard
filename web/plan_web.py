@@ -193,8 +193,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             raise ErrorT("err.fecha_carrera")
         km = str(f.get("distancia_km", "")).strip().replace(",", ".")
         nombre = str(f.get("nombre", "")).strip() or "Carrera"
-        nuevo = plan_vivo.agregar_carrera(crudo, fecha, km or None, nombre)
-        return nuevo, None, f"Agregó la carrera «{nombre}» el {lindo(fecha)}"
+        nuevo, plan_nuevo = plan_vivo.agregar_carrera_en_plan(crudo, plan, cfg, fecha, km or None, nombre, hoy)
+        return nuevo, plan_nuevo, f"Agregó la carrera «{nombre}» el {lindo(fecha)}" + ("; el plan se rehízo con su taper" if plan_nuevo else "")
 
     def repetir(db, atleta, crudo, cfg, plan, f, hoy):
         n = build.m.semana_del_plan(hoy, cfg)
@@ -221,7 +221,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         doble("post", f"/plan/{nombre}", accion(nombre, fn))
 
     # rutas con id en la ruta: se registran aparte para leer el parámetro
-    def con_id(sufijo, que, descripcion):
+    def con_id(sufijo, que, descripcion, con_plan=False):
         async def ruta(request: Request, ident: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
             form = await formulario(request)
             atleta, redir = aw.resolver(db, usuario, atleta_id)
@@ -232,10 +232,15 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                 return RedirectResponse("/bienvenida", 303)
             hoy = aw.hoy_de(app.state.reloj, crudo)
             try:
-                nuevo = que(crudo, ident, hoy)
+                if con_plan:   # `que` devuelve (ajustes, plan nuevo o None)
+                    cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+                    nuevo, nuevo_plan = que(crudo, ident, hoy, aw.plan_guardado(db, atleta), cfg)
+                else:
+                    nuevo, nuevo_plan = que(crudo, ident, hoy), None
             except (ConfigError, ValueError) as ex:
                 return pagina(request, usuario, db, atleta_id, status=400, error=texto(ex, request.state.t))
-            cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), descripcion, {"ajustes": nuevo})
+            cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), descripcion,
+                                   {"ajustes": nuevo, **({"plan": nuevo_plan} if nuevo_plan is not None else {})})
             return RedirectResponse(volver(usuario, atleta), 303)
         doble("post", f"/plan/{sufijo}", ruta)
 
@@ -245,7 +250,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     for m_, txt in (("igual", "sigo entrenando igual"), ("menos", "voy a correr menos"), ("pausa", "no voy a correr")):
         con_id(f"evento/{{ident}}/modo-{m_}", lambda c, i, hoy, m_=m_: plan_vivo.cambiar_modo_viaje(c, i, m_),
                f"Cambió el viaje a: {txt}")
-    con_id("meta/{ident}/quitar", lambda c, i, hoy: plan_vivo.quitar_meta(c, i), "Quitó una carrera del plan")
+    con_id("meta/{ident}/quitar", lambda c, i, hoy, plan, cfg: plan_vivo.quitar_meta_en_plan(c, plan, cfg, i, hoy),
+           "Quitó una carrera del plan", con_plan=True)
 
     # ---------- editor de sesión ----------
     def sesion_de(plan, n, sid):

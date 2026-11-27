@@ -36,7 +36,7 @@ a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:f
 .aviso-fondo { border-radius: var(--radius-inner); padding: 10px 12px; font-size: 13px; }
 .aviso-fondo.una-linea { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: var(--space-8); row-gap: var(--space-2); }
 .una-linea .aviso-acc { margin-top: 0; }
-.aviso-acc { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
+.aviso-acc { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4); }
 .aviso-fondo.warn { background: var(--warn-bg); }
 .aviso-fondo.ok { background: var(--ok-bg); }
 .aviso-fondo.bad { background: var(--bad-bg); }

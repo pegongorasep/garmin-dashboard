@@ -13,6 +13,7 @@ import secrets
 from datetime import date, timedelta
 
 import gen_plan
+import motor_v6
 import build
 import metrics as m
 from ajustes import ESCALERA, ConfigError, normalizar_config
@@ -137,7 +138,8 @@ def _suavizada(w: dict) -> list:
 def plan_efectivo(plan: dict, cfg: dict) -> dict:
     """El plan guardado con las carreras y los viajes aplicados a sus semanas. `cfg` ya trae `pausas`. Sin metas ni
     eventos devuelve el mismo plan (idéntico)."""
-    if not cfg["metas"] and not any(e["tipo"] == "viaje" and e["modo"] != "pausa" for e in cfg["eventos"]):
+    metas = [x for x in cfg["metas"] if not x.get("en_plan")]   # las `en_plan` ya están construidas dentro del plan v6
+    if not metas and not any(e["tipo"] == "viaje" and e["modo"] != "pausa" for e in cfg["eventos"]):
         return plan
     inicio = date.fromisoformat(cfg["plan_start"])
     sec = m.secuencia_semanas(inicio, cfg["semanas_repetidas"], cfg["plan_semanas"], cfg.get("pausas", []))
@@ -146,7 +148,7 @@ def plan_efectivo(plan: dict, cfg: dict) -> dict:
     ligera = set()     # n de semanas de viaje con correr menos
     igual = set()      # n de semanas de viaje «sigo igual»: solo se marcan, el plan no cambia
     tipo = {w["n"]: w["kind"] for w in plan["weeks"]}
-    for meta in cfg["metas"]:
+    for meta in metas:
         i = (lunes(date.fromisoformat(meta["fecha"])) - inicio).days // 7
         if 0 <= i < len(sec) and sec[i] is not None:
             carrera[sec[i]] = meta
@@ -204,6 +206,46 @@ def agregar_carrera(crudo: dict, fecha: str, distancia_km, nombre: str) -> dict:
     c["metas"] = list(c.get("metas") or []) + [{"id": _id_nuevo(), "tipo": "carrera", "fecha": fecha,
                                                "distancia_km": distancia_km or None, "nombre": (nombre or "Carrera").strip()}]
     return _validado(nuevo)
+
+
+def agregar_carrera_en_plan(crudo: dict, plan: dict | None, cfg: dict, fecha: str, km, nombre: str, hoy: date) -> tuple[dict, dict | None]:
+    """(ajustes, plan nuevo o None). En un plan v6 la carrera se construye dentro del plan (semanas de taper y de carrera con `motor_v6`)
+    desde la semana en curso y su meta queda con `en_plan: true`. Si no se puede (plan viejo, distancia que no es 5/10/21/42, el plan ya
+    tiene una carrera, la fecha cae en una pausa o antes de la semana en curso), queda la meta normal y `plan_efectivo` la aplica encima."""
+    nuevo = agregar_carrera(crudo, fecha, km, nombre)
+    if not plan or not motor_v6.es_v6(plan) or (plan.get("meta") or {}).get("carrera"):
+        return nuevo, None
+    try:
+        distancia = int(float(km))
+        if distancia not in motor_v6.UMBRALES["taper"]:
+            raise ValueError("distancia sin taper")
+        inicio = date.fromisoformat(cfg["plan_start"])
+        sec = m.secuencia_semanas(inicio, cfg["semanas_repetidas"], 60, cfg.get("pausas", []))
+        i = (lunes(date.fromisoformat(fecha)) - lunes(inicio)).days // 7
+        if not 0 <= i < len(sec) or sec[i] is None:
+            raise ValueError("la fecha cae fuera del plan o en una pausa")
+        desde = semana_tope(cfg, hoy)
+        plan_nuevo = motor_v6.con_carrera(plan, desde, {"km": distancia, "fecha": fecha, "semanas_hasta": sec[i]})
+    except (ValueError, TypeError):
+        return nuevo, None
+    corrida = nuevo["corrida"]
+    corrida["metas"][-1]["en_plan"] = True
+    corrida["semanas"] = len(plan_nuevo["weeks"])
+    return _validado(nuevo), plan_nuevo
+
+
+def quitar_meta_en_plan(crudo: dict, plan: dict | None, cfg: dict, meta_id: str, hoy: date) -> tuple[dict, dict | None]:
+    """(ajustes, plan nuevo o None). Quitar una carrera construida dentro de un plan v6 rehace la cola del plan sin ella (misma duración)."""
+    nuevo = quitar_meta(crudo, meta_id)
+    meta = next((x for x in cfg["metas"] if x["id"] == meta_id), None)
+    if not meta or not meta.get("en_plan") or not plan or not motor_v6.es_v6(plan) or not (plan.get("meta") or {}).get("carrera"):
+        return nuevo, None
+    try:
+        plan_nuevo = motor_v6.con_carrera(plan, min(semana_tope(cfg, hoy), len(plan["weeks"])), None)
+    except ValueError:
+        return nuevo, None
+    nuevo["corrida"]["semanas"] = len(plan_nuevo["weeks"])
+    return _validado(nuevo), plan_nuevo
 
 
 def quitar_meta(crudo: dict, meta_id: str) -> dict:

@@ -280,6 +280,7 @@
 "sitio.hoy.rec_normal": "Tu recuperación está bien: va la normal.",
 "sitio.hoy.rec_suave": "Te propongo la suave.",
 "sitio.hoy.rec_suave_m": "Te propongo la suave: {m}.",
+"sitio.hoy.repetir": "Repetir esta semana",
 "sitio.hoy.v_descanso": "Descanso",
 "sitio.hoy.v_normal": "Normal · {min}′",
 "sitio.hoy.v_suave": "Suave · {min}′",

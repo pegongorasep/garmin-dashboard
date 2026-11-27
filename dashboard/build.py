@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import i18n
 import metrics as m
 import plan_i18n
+import semanal
 import tipos
 from i18n import tt
 from ajustes import CLASES, USER_DIR, cargar_config
@@ -173,7 +174,7 @@ def convert_session(s: dict, zonas: list) -> dict:
 def convert_week(w: dict, zonas: list) -> dict:
     extra = {"evento": w["evento"]} if w.get("evento") else {}   # semana que un viaje o una carrera cambió (solo la web)
     return {"n": w["n"], "block": w["block"], "kind": w["kind"], "etiqueta": w["kind"] if w["kind"] == "descarga" else "carga",
-            "focus": plan_i18n.focus(w["focus"]), **extra,
+            "focus": plan_i18n.focus(w["focus"]), **extra, **({"ajuste_texto": w["ajuste_texto"]} if w.get("ajuste_texto") else {}),
             "sessions": [convert_session(s, zonas) for s in w["sessions"]]}
 
 
@@ -619,7 +620,8 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
             "stats": resumen_corridas(filas),
             "plan": {"total": len(estado), "hechas": sum(1 for e in sesiones if e["estado"] == "hecha"),
                      "incompletas": sum(1 for e in sesiones if e["estado"] == "incompleta"),
-                     "plan_min": sum(x["minutes"] for x in semana["sessions"])} if semana else None,
+                     "plan_min": sum(x["minutes"] for x in semana["sessions"]),
+                     **({"ajuste_texto": semana["ajuste_texto"]} if semana.get("ajuste_texto") else {})} if semana else None,
             "anterior": {k: v for k, v in resumen_corridas(previas).items() if k in ("minutos", "km", "min_trote")},
             "dias": dias, "sesiones": sesiones, "extras": extras,
             "intensidad": intensidad_semana(data["activities"], ini)}
@@ -995,6 +997,7 @@ def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
         "acciones_url": acciones,
         "sin_plan": bool(config.get("sin_plan", False)),
         "plan_acciones": list(config.get("plan_acciones") or []),   # solo en la web: [{texto, url}] sobre el plan
+        "repetir_url": "/plan/repetir" if config.get("plan_url") else None,   # solo en la web: POST del botón «Repetir esta semana» de Hoy
         "plan_url": config.get("plan_url") or None,   # solo en la web: url del plan (botón «Ajustar mi plan»; null = sin botón
         "cuerpo_nuevo": config.get("cuerpo_nuevo") or None,   # solo en la web: url de «Agregar medición»; null = sin botón
         "coach": None,   # solo en la web: {nombre, volver} cuando un coach ve a su atleta (la web lo pone al servir; nunca en la caché)
@@ -1098,6 +1101,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     # Una sesión grabada en varias partes seguidas (fuerza + hiit) es UNA para todo lo que cuenta sesiones.
     data = {**data, "activities": m.unir_encadenadas(data["activities"], config)}
     hoy = ahora.date()
+    plan = semanal.ajustar_plan(plan, data, config, hoy)   # planes v6: la semana en curso según lo corrido la anterior
     ayer = hoy - timedelta(days=1)
     rhr = m.rhr_7d(data["daily_summaries"], hoy) or 60
     # Las zonas son las que Garmin dice (running, o DEFAULT); sin ellas, las calculadas con Karvonen como siempre.
@@ -1139,6 +1143,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         tarjeta = {**tarjeta, "tipo": "pausa", "texto": tt("motor.build.pausa"),
                    "version": None, "sesion_id": None}
     ayer_dato = m.ayer_duro(hoy, data["activities"], data["details"], config)
+    tarjeta["repetir"] = bool(luz.get("repetir_semana"))
     tarjeta["motivo"] = m.motivo(sigs, config, ayer_dato) if tarjeta["version"] in ("suave", "descanso") else None
     tarjeta["opciones"] = m.opciones_hoy(tarjeta["version"], tarjeta.get("sesion"))
     tarjeta["recomendada"] = tarjeta["version"] if tarjeta["opciones"] else None
