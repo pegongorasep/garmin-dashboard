@@ -30,6 +30,7 @@ for _p in (RAIZ / "dashboard", RAIZ / "plan"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 import gen_plan  # noqa: E402
+import motor_v6  # noqa: E402
 import nivel as nivel_mod  # noqa: E402
 from ajustes import _DIA_IDX, crudo_desde_respuestas, normalizar_config  # noqa: E402
 
@@ -146,7 +147,23 @@ def _motor_actual(persona: dict) -> dict:
     return gen_plan.generar(persona["config_actual"])
 
 
-MOTORES = {"actual": _motor_actual}
+def entrada_v6(persona: dict) -> dict:
+    """La entrada de `motor_v6.generar_v6` para una persona: nivel y evidencia de F2, sus días, intensos y meta. Todo viene de la persona (nada del formulario viejo)."""
+    nv = persona["nivel"]
+    meta = persona.get("meta")
+    return {"nivel": nv["nivel"], "evidencia": nv["evidencia"], "inicio_minutos": nv["inicio_minutos"], "dias": persona["dias_semana"],
+            "dias_intensos": persona["intensos_semana"]["dias"], "edad": persona["edad"], "inicio": INICIO,
+            "meta": {"tipo": "carrera", "km": meta["distancia_km"], "semanas_hasta": meta["semanas_hasta"]} if meta else None,
+            "objetivo": "velocidad" if (persona.get("formulario") or {}).get("intensidad") == "calidad" else None}
+
+
+def _motor_v6(persona: dict) -> dict:
+    return motor_v6.generar_v6(entrada_v6(persona))
+
+
+MOTORES = {"actual": _motor_actual, "v6": _motor_v6}
+# Motores que ajustan cada semana a lo que la persona de verdad hizo (motor_v6.ajustar_semana); el actual no ajusta nada.
+AJUSTAN = {"v6"}
 
 
 def obtener_motor(nombre: str):
@@ -272,10 +289,29 @@ def analizar(persona: dict, plan: dict, motor_nombre: str = "?") -> dict:
             "nivel": persona["nivel"], "motor": motor_nombre, "sin_base": not desbloqueado(inicial), "semanas": filas, "reglas": reglas, "resumen": cuenta}
 
 
+def aplicar_ajuste(persona: dict, plan: dict) -> dict:
+    """El plan tal como se vive con el ajuste semanal: la semana n se topa a lo que de verdad se hizo la n−1 y a 110 % de la sesión más larga hecha
+    en las últimas 4 semanas (hecho = planeado × adherencia, igual que en `analizar`). La semana 1 no se ajusta (su tope es `inicio_real`)."""
+    semanas, real_prev, real_normal = [], None, None
+    linea = [list(h["sesiones"]) for h in persona["historial"]]   # sesiones hechas por semana (historial + plan)
+    for w in plan["weeks"]:
+        mayor = max((m for sem in linea[-UMBRALES["ventana_semanas"]:] for m in sem), default=0)
+        w2 = motor_v6.ajustar_semana({**plan, "weeks": semanas + [w]}, w["n"], real_prev, mayor or None, real_normal) if semanas else w
+        semanas.append(w2)
+        f = fraccion(persona, w["n"])
+        hechas = [_escalar(s["minutes"], f) for s in w2["sessions"]] if f > 0 else []
+        linea.append(hechas)
+        real_prev = sum(hechas)
+        if w2["kind"] != "descarga":
+            real_normal = real_prev
+    return {**plan, "weeks": semanas}
+
+
 def simular(persona: dict, motor: str = "actual") -> dict:  # noqa: A002
-    """Genera el plan de `persona` con el motor `motor` y lo analiza."""
+    """Genera el plan de `persona` con el motor `motor` (con el ajuste semanal si ese motor lo hace) y lo analiza."""
     p = _completa(persona)
-    return analizar(p, obtener_motor(motor)(p), motor)
+    plan = obtener_motor(motor)(p)
+    return analizar(p, aplicar_ajuste(p, plan) if motor in AJUSTAN else plan, motor)
 
 
 def simular_todas(motor_nombre: str = "actual") -> list:

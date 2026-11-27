@@ -56,15 +56,15 @@ def focus(texto: str) -> str:
         if m:
             partes.append(tt("motor.focus.larga", n=m[1]))
             continue
-        m = re.fullmatch(r"trote (\d+)'/camina 1'", p)
+        m = re.fullmatch(r"trote (\d+)'/camina (\d+)'", p)
         if m:
-            partes.append(tt("motor.focus.trote", n=m[1]))
+            partes.append(tt("motor.focus.trote", n=m[1]) if m[2] == "1" else tt("motor.focus.trote_w", n=m[1], w=m[2]))
             continue
         m = re.fullmatch(r"(calidad|variada): (.+)", p)
         if m:
             x = _inv("motor.cal.").get(m[2])
             partes.append(tt(f"motor.focus.{m[1]}", x=tt(f"motor.cal.{x}") if x else _tipo_nombre(m[2])))
             continue
-        fijo = {"Descarga": "descarga", "Prueba": "prueba", "prueba": "prueba_min", "picos Z3 opcionales": "picos"}.get(p)
+        fijo = {"Descarga": "descarga", "Prueba": "prueba", "prueba": "prueba_min", "picos Z3 opcionales": "picos", "aceleraciones": "aceleraciones"}.get(p)
         partes.append(tt(f"motor.focus.{fijo}") if fijo else p)
     return " · ".join(partes)

@@ -90,13 +90,17 @@ def con_pausas(cfg: dict, hoy: date) -> dict:
     return {**cfg, "pausas": pausas_de(cfg, hoy)}
 
 
+LETRAS_Z2 = "abcdefgh"
+
+
 def _z2_cortas(w: dict, minutos: int, cfg: dict) -> list:
-    """Dos sesiones de Z2 continuas (o trote/caminata si la persona está en caminatas) de `minutos`."""
+    """Z2 continuas (o trote/caminata si la persona está en caminatas) de `minutos`: una menos que las sesiones de la semana (sin la larga);
+    con las 3 de siempre son 2 (ids z2a, z2b). Los planes de 2, 4 o 5 días (motor v6) quedan con 1, 3 o 4."""
     def una(id_, nombre):
         pasos = gen_plan.pasos_z2(minutos, False, cfg["caminatas"], w["block"], cfg.get("escalon"))
         return gen_plan.con_suave_caminatas(gen_plan.sesion(id_, "z2", nombre, minutos, pasos),
                                             cfg["caminatas"], w["block"], cfg.get("escalon"))
-    return [una("z2a", "Z2 #1"), una("z2b", "Z2 #2")]
+    return [una(f"z2{LETRAS_Z2[i]}", f"Z2 #{i + 1}") for i in range(max(1, len(w["sessions"]) - 1))]
 
 
 def _minutos_z2(w: dict) -> int:
@@ -105,17 +109,27 @@ def _minutos_z2(w: dict) -> int:
 
 
 def _suavizada(w: dict) -> list:
-    """Cada sesión en su versión suave (descarga previa a una carrera). Calidad, variada y prueba pasan a Z2 / Larga."""
-    out = []
+    """Cada sesión en su versión suave (descarga previa a una carrera). Calidad, variada y prueba pasan a Z2 / Larga; el id nuevo es uno libre
+    (con 4–5 sesiones por semana «z2b» ya puede estar ocupado)."""
+    usados = {s["id"] for s in w["sessions"] if s["tipo"] in ("z2", "larga")}
+    out, z2 = [], 0
     for s in w["sessions"]:
         e = s["easy"]
-        tipo = s["tipo"] if s["tipo"] in ("z2", "larga") else ("larga" if s["tipo"] == "prueba" else "z2")
-        id_ = s["id"] if s["tipo"] in ("z2", "larga") else ("larga" if tipo == "larga" else "z2b")
-        nombre = s["name"] if s["tipo"] in ("z2", "larga") else ("Larga" if tipo == "larga" else "Z2 #2")
+        z2 += s["tipo"] != "larga" and s["tipo"] != "prueba"
+        if s["tipo"] in ("z2", "larga"):
+            tipo, id_, nombre = s["tipo"], s["id"], s["name"]
+        elif s["tipo"] == "prueba":
+            tipo, id_, nombre = "larga", "larga", "Larga"
+        else:
+            tipo, nombre = "z2", f"Z2 #{z2}"
+            id_ = next(f"z2{x}" for x in LETRAS_Z2 if f"z2{x}" not in usados)
+            usados.add(id_)
         nuevo = {"id": id_, "tipo": tipo, "name": nombre, "minutes": e["minutes"], "steps": copy.deepcopy(e["steps"]),
                  "easy": copy.deepcopy(e)}
         if "nota" in s:
             nuevo["nota"] = s["nota"]
+        if "dia" in s:
+            nuevo["dia"] = s["dia"]
         out.append(nuevo)
     return out
 

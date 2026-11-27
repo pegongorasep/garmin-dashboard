@@ -172,7 +172,10 @@ def test_simulador_solo_admin_y_completo(web_ctx):
     assert r.status_code == 200 and "sim-matriz" in r.text and "Umbrales" in r.text
     for p in simulador.cargar_personas():
         assert p["nombre"].replace("'", "&#39;") in r.text
-    assert '<option value="actual"' in r.text
+    assert '<option value="actual"' in r.text and '<option value="v6"' in r.text and "Motor v6" in r.text
+    v6 = c.get("/admin/simulador?motor=v6")
+    assert v6.status_code == 200 and "sim-matriz" in v6.text and "progresion_pct" in v6.text   # los umbrales del motor v6 a la vista
+    assert "progresion_pct" not in r.text
     assert c.get("/admin/simulador?motor=actual").status_code == 200
     assert c.get("/admin/simulador?motor=no_existe").status_code == 200       # cae al primero
     assert "/admin/simulador" in c.get("/admin").text

@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import motor_v6
 import simulador
 from . import auth, permisos
 from .modelos import Invitacion, Subida, Usuario, ahora
@@ -65,7 +66,7 @@ def datos_simulador(motor: str) -> dict:
         r["fallan_claves"] = [x for x in r["reglas"] if x["ok"] is False]
     return {"motores": motores, "motor": motor, "resultados": resultados, "claves": simulador.CLAVES,
             "textos_reglas": {x["clave"]: x["texto"] for x in resultados[0]["reglas"]} if resultados else {},
-            "umbrales": simulador.UMBRALES}
+            "umbrales": simulador.UMBRALES, "umbrales_motor": motor_v6.UMBRALES if motor == "v6" else None}
 
 
 def montar(app, get_db, actual, render, formulario, settings) -> None:

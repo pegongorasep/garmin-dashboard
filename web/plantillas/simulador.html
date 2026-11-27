@@ -8,7 +8,7 @@
 <h1 class="pag-t">{{ t("sim.titulo") }}</h1>
 <p class="pag-s">{{ t("sim.explica") }}</p>
 <form class="sim-motor" method="get" action="/admin/simulador">
-  {% set ops = [] %}{% for m in motores %}{% set _ = ops.append((m, t("sim.motor_" ~ m) if m == "actual" else m)) %}{% endfor %}
+  {% set ops = [] %}{% for m in motores %}{% set _ = ops.append((m, t("sim.motor_" ~ m))) %}{% endfor %}
   {{ seleccion(t("sim.motor"), "motor", ops, valor=motor) }}
   {{ boton(t("sim.ver"), "texto", chico=True, tipo="submit") }}
 </form>
@@ -84,6 +84,13 @@
       <thead><tr><th>{{ t("sim.umbral") }}</th><th>{{ t("sim.valor") }}</th></tr></thead>
       <tbody>{% for k, v in umbrales.items() %}<tr><th scope="row"><code>{{ k }}</code></th><td>{{ v }}</td></tr>{% endfor %}</tbody>
     </table></div>
+    {% if umbrales_motor %}
+    <p class="pag-s">{{ t("sim.umbrales_motor") }}</p>
+    <div class="sim-scroll"><table class="sim-matriz">
+      <thead><tr><th>{{ t("sim.umbral") }}</th><th>{{ t("sim.valor") }}</th></tr></thead>
+      <tbody>{% for k, v in umbrales_motor.items() %}<tr><th scope="row"><code>{{ k }}</code></th><td>{{ v }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% endif %}
   </div>
 </details>
 {% endblock %}
