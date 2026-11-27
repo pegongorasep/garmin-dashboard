@@ -9,8 +9,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from ajustes import (CALIDAD_TIPOS, ESCALERA, INTENSIDADES, NIVELES, SENSORES, ConfigError, categorias_por_defecto,
-                     normalizar_config)
+from ajustes import (CALIDAD_TIPOS, ESCALERA, INTENSIDADES, NIVELES, SENSORES, ConfigError, normalizar_config)
 
 from . import cambios, plan_vivo
 from .modelos import Ajustes, Plan, Usuario
@@ -22,12 +21,12 @@ ETIQUETAS = {"titulo": "el título", "timezone": "la zona horaria", "edad": "la 
              "sensor": "el sensor", "nivel": "el nivel", "intensidad": "la intensidad", "calidad_tipos": "los tipos de calidad",
              "caminatas": "las caminatas", "variada": "la corrida variada", "plan_semanas": "las semanas del plan",
              "plan_start": "la fecha de inicio", "base_min": "los minutos base", "semanas_repetidas": "las semanas repetidas",
-             "carreras": "las carreras", "categorias": "las actividades", "dias_pierna": "los días de pierna",
+             "carreras": "las carreras", "dias_pierna": "los días de pierna",
              "inbody": "InBody", "escalon": "el escalón de trote/caminata"}
 # Dónde mostrar un error de `normalizar_config`: (fragmento del mensaje, campo del formulario)
 ERROR_CAMPO = [("corrida.inicio", "inicio"), ("lunes", "inicio"), ("zona", "zona"), ("fc_max", "fc_max"), ("edad", "edad"),
                ("nivel", "nivel"), ("calidad", "calidad"), ("intensidad", "intensidad"), ("semanas_repetidas", "repetidas"),
-               ("corrida.carreras", "carreras"), ("categor", "cats"), ("sensor", "sensor"), ("escalon", "escalon")]
+               ("corrida.carreras", "carreras"), ("sensor", "sensor"), ("escalon", "escalon")]
 
 
 def resolver(db: Session, usuario: Usuario | None, atleta_id: int | None):
@@ -71,7 +70,7 @@ def valores_form(crudo: dict, atleta: Usuario) -> dict:
             "caminatas": cfg["caminatas"], "variada": cfg["variada"], "semanas": cfg["plan_semanas"],
             "inicio": cfg["plan_start"], "z2": cfg["base_min"]["z2"], "larga": cfg["base_min"]["larga"],
             "repetidas": ", ".join(str(n) for n in cfg["semanas_repetidas"]), "escalon": cfg["escalon"] or "",
-            "carreras": ", ".join(corrida.get("carreras") or []), "cats": [c["id"] for c in cfg["categorias"]],
+            "carreras": ", ".join(corrida.get("carreras") or []),
             "pierna": [clave for i, (clave, _) in enumerate(DIAS) if i in cfg["dias_pierna"]],
             "inbody": cfg["inbody"]}
 
@@ -105,15 +104,7 @@ def crudo_general(crudo: dict, f) -> dict:
     if sensor not in SENSORES:
         raise ErrorT("err.sensor", "sensor")
     perfil["sensor"] = sensor
-    # actividades: categorías elegidas (conserva las personalizadas que ya había); los días de pierna van en «Rehacer mi plan»
-    elegidas = f.getlist("cats")
-    previas = {c["id"]: c for c in (act.get("categorias") or [])}
-    defecto = {c["id"]: c for c in categorias_por_defecto()}
-    if not elegidas:
-        raise ErrorT("err.categorias", "cats")
-    cats = [previas.get(i) or defecto[i] for i in elegidas if i in previas or i in defecto]
-    if "categorias" in act or {c["id"] for c in cats} != set(defecto):
-        act["categorias"] = cats
+    # las categorías de actividad ya no se eligen (se usan todas); las propias de configs viejas se conservan tal cual
     nuevo["inbody"] = f.get("inbody") == "on"
     return nuevo
 
@@ -161,13 +152,10 @@ def diferencias(viejo: dict, nuevo: dict) -> list[str]:  # etiquetas en español
 
 
 def contexto_ajustes(db, atleta: Usuario, usuario: Usuario, crudo: dict, valores: dict | None = None, **extra) -> dict:
-    cats = {c["id"]: c for c in categorias_por_defecto()}
-    for c in (crudo.get("actividades") or {}).get("categorias") or []:
-        cats.setdefault(c["id"], c)
     return {"atleta": atleta, "pref": prefijo(usuario, atleta), "v": valores or valores_form(crudo, atleta), "zonas":
             sorted(set(ZONAS) | {(crudo.get("perfil") or {}).get("zona_horaria", "America/Merida")}),
             "niveles": NIVELES, "intensidades": INTENSIDADES, "tipos_calidad": CALIDAD_TIPOS, "escalera": ESCALERA,
-            "categorias": list(cats.values()), "dias": DIAS, "sensores": SENSORES, "errores": {}, "error": None, **extra}
+            "dias": DIAS, "sensores": SENSORES, "errores": {}, "error": None, **extra}
 
 
 def campo_del_error(mensaje: str):
@@ -235,7 +223,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         pref = prefijo(usuario, atleta)
         if "nivel" in form:   # ruta vieja: el formulario de Ajustes traía la corrida; ahora vive en «Ajustar mi plan»
             return RedirectResponse(f"{pref}/plan/rehacer", 307)
-        valores = {k: (form.getlist(k) if k in ("calidad", "cats", "pierna") else form.get(k, "")) for k in form.keys()}
+        valores = {k: (form.getlist(k) if k in ("calidad", "pierna") else form.get(k, "")) for k in form.keys()}
         for k in ("inbody",):
             valores[k] = form.get(k) == "on"
         try:

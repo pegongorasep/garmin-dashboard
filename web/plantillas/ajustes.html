@@ -17,11 +17,6 @@
   {{ campo(t("aj.t_pagina"), "titulo", valor=v.titulo, extra={"maxlength": 60}) }}
   {{ seleccion(t("aj.zona_h"), "zona", zs, valor=v.zona, error=errores.get("zona")) }}
 
-  <h2 class="pag-h">{{ t("aj.actividades") }}</h2>
-  {% call opciones(t("aj.otras"), t("aj.max4"), error=errores.get("cats")) %}
-    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (t("aj.intensa") if c.intensa else ""), valor=c.id, marcado=c.id in v.cats) }}{% endfor %}
-  {% endcall %}
-
   <h2 class="pag-h">{{ t("aj.cuerpo") }}</h2>
   {{ opcion("inbody", t("aj.inbody", liga=pref ~ "/cuerpo"), marcado=v.inbody, html=True) }}
 

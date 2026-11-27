@@ -438,7 +438,7 @@ def test_onboarding_completo(ctx):
     assert "Crear mi plan" in p7
     # preguntas
     datos = {"titulo": "Mi plan", "nivel": "novato", "intensidad": "solo_z2", "caminatas": "on", "z2": "15", "larga": "30",
-             "edad": "35", "fc_max": "", "cats": ["fuerza", "hiit"], "pierna": ["lun"], "inicio": "2030-01-07",
+             "edad": "35", "fc_max": "", "pierna": ["lun"], "inicio": "2030-01-07",
              "sensor": "muñeca", "zona": "America/Merida"}
     malos = [{**datos, "inicio": "2030-01-08"}, {**datos, "edad": "", "fc_max": ""}, {**datos, "zona": "Marte/Base"},
              {**datos, "z2": "abc"}]
@@ -450,7 +450,7 @@ def test_onboarding_completo(ctx):
     with ctx.sesiones() as db:
         a, p = db.get(Ajustes, uid), db.get(Plan, uid)
         assert a.config["corrida"]["inicio"] == "2030-01-07" and a.config["perfil"]["titulo"] == "Mi plan"
-        assert [c["id"] for c in a.config["actividades"]["categorias"]] == ["fuerza", "hiit"]
+        assert "categorias" not in a.config["actividades"]   # ya no se pregunta: se usan todas
         assert len(p.plan["weeks"]) == 12 and p.plan["start"] == "2030-01-07"
         assert db.get(Usuario, uid).sensor == "muñeca"
     # ya con plan: el dashboard (con el pie y el aviso), y /bienvenida regresa a /

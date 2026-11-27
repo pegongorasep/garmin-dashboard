@@ -93,6 +93,16 @@ def _categorias(brutas: list) -> list:
     return out
 
 
+def _categorias_efectivas(propias: list, defecto: list) -> list:
+    """Todas las categorías por defecto + las propias que traigan configs viejas (ya no se elige: nada se filtra).
+    Las propias van primero (ganan al clasificar); una por defecto que ya cubren por completo se omite."""
+    propias = _categorias(propias) if propias else []
+    base = _categorias(defecto)
+    tomados = {t for c in propias for t in c["tipos"]}
+    ids = {c["id"] for c in propias}
+    return propias + [c for c in base if c["id"] not in ids and not set(c["tipos"]) <= tomados]
+
+
 PRUEBAS_TIPOS = ("fc_fija", "trote_continuo", "5k")
 ESCALERA = ["3/1", "5/1", "8/1", "12/1", "continuo"]   # trote/caminata (minutos de trote por 1' de caminata) hasta correr continuo
 SENSORES = ("banda", "muñeca")
@@ -203,7 +213,7 @@ def normalizar_config(crudo: dict) -> dict:
     base = {"z2": 20, "larga": 40, **(corrida.get("base_min") or {})}
     pruebas = _pruebas(corrida.get("pruebas") or [])
 
-    categorias = _categorias(act.get("categorias") or defaults["categorias"])
+    categorias = _categorias_efectivas(act.get("categorias") or [], defaults["categorias"])
     # `actividades.semana` (v4.1 y antes) se tolera y se ignora: ya no se asume ninguna semana típica.
     pierna = sorted(_dia(d, "actividades.dias_pierna") for d in act.get("dias_pierna") or [])
 

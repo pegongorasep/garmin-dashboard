@@ -77,7 +77,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return RedirectResponse("/bienvenida", 303)
         pref = aw.prefijo(usuario, atleta)
         hoy = aw.hoy_de(app.state.reloj, crudo)
-        valores = {k: (form.getlist(k) if k in ("calidad", "cats", "pierna") else form.get(k, "")) for k in form.keys()}
+        valores = {k: (form.getlist(k) if k in ("calidad", "pierna") else form.get(k, "")) for k in form.keys()}
         for k in ("caminatas", "variada"):
             valores[k] = form.get(k) == "on"
         try:

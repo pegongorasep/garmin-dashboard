@@ -63,6 +63,14 @@ def test_sin_archivo(tmp_path):
         ajustes.cargar_config(tmp_path)
 
 
+def test_categorias_propias_se_suman_a_las_de_defecto(tmp_path):
+    c = cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: cf, nombre: CrossFit, letra: CF, tipos: [hiit, strength_training], intensa: true}\n")
+    # la propia va primero; fuerza y hiit quedan cubiertas por ella y se omiten; cardio y movilidad se suman
+    assert [x["id"] for x in c["categorias"]] == ["cf", "cardio", "movilidad"]
+    c = cfg(tmp_path, MINIMA + "actividades:\n  categorias:\n    - {id: pesas, nombre: Pesas, letra: P, tipos: [strength_training]}\n")
+    assert [x["id"] for x in c["categorias"]] == ["pesas", "hiit", "cardio", "movilidad"]
+
+
 def test_maximo_cuatro_categorias(tmp_path):
     cats = "".join(f"  - {{id: c{i}, nombre: C{i}, letra: X, tipos: [yoga]}}\n" for i in range(5))
     with pytest.raises(ajustes.ConfigError, match="Máximo 4"):

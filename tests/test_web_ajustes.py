@@ -40,7 +40,7 @@ def listo(ctx, correo="a@x.com", con_plan=True):
 def form_ajustes(**cambia):
     """Formulario de Ajustes (solo lo general)."""
     base = {"titulo": "Mi entreno", "zona": "America/Merida", "edad": "29", "fc_max": "189", "sensor": "banda",
-            "cats": ["crossfit"], "inbody": "on"}
+            "inbody": "on"}
     base.update(cambia)
     return {k: v for k, v in base.items() if v != ""} | {k: "" for k in ("fc_max",) if base[k] == ""}
 
@@ -145,8 +145,6 @@ def test_errores_junto_al_campo(web_ctx):
     assert r.status_code == 400 and "debe ser lunes" in r.text and 'class="error-t"' in r.text
     r = guardar(cl, zona="Marte/Base")
     assert r.status_code == 400 and "zona" in r.text
-    r = guardar(cl, cats=[])
-    assert r.status_code == 400
     r = rehacer(cl, repetidas="tres")
     assert r.status_code == 400
     assert crudo(web_ctx, uid) == CONFIG
@@ -331,7 +329,7 @@ def test_ajustes_de_pedro_sin_tocar_no_cambian_nada(web_ctx):
         db.commit()
         u = db.get(Usuario, uid)
         v = aw.valores_form(pedro, u)
-    general = {"csrf": tok(cl), "titulo": v["titulo"], "zona": v["zona"], "sensor": v["sensor"], "cats": v["cats"]}
+    general = {"csrf": tok(cl), "titulo": v["titulo"], "zona": v["zona"], "sensor": v["sensor"]}
     plan = {"csrf": tok(cl), "nivel": v["nivel"], "intensidad": v["intensidad"], "semanas": str(v["semanas"]),
             "inicio": v["inicio"], "z2": str(v["z2"]), "larga": str(v["larga"]), "calidad": v["calidad"], "pierna": v["pierna"], "pierna_form": "1"}
     for k in ("caminatas", "variada"):

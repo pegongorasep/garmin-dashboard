@@ -401,16 +401,16 @@ def test_build_con_tres_categorias(monkeypatch):
     out = build.build(data, plan, CONFIG_CORREDOR, AHORA)
     revisar_privacidad(out)
     ui = out["ui"]
-    assert [c["id"] for c in ui["categorias"]] == ["fuerza", "hiit", "cardio"]
-    assert [c["clase"] for c in ui["categorias"]] == ["azul", "aqua", "violeta"]
+    assert [c["id"] for c in ui["categorias"]] == ["fuerza", "hiit"]   # solo las que aparecen en los datos
+    assert [c["clase"] for c in ui["categorias"]] == ["azul", "aqua"]
     assert ui["nombre_intensa"] == "HIIT" and ui["titulo"] == "Mi base" and ui["acciones_url"] is None
     assert ui["textos"]["semana"].endswith("(sábado o domingo). Día de pierna: lunes.")
     assert "Fuerza lunes" not in ui["textos"]["semana"]
-    assert ui["textos"]["incluye"] == "Incluye Fuerza, HIIT, Cardio y corridas."
+    assert ui["textos"]["incluye"] == "Incluye Fuerza, HIIT y corridas."
     lun = next(d for s in out["semanas_hoy"] for d in s["dias"] if d["fecha"] == "2026-11-02")
     assert sorted(o["cat"] for o in lun["otras"]) == ["fuerza", "hiit"]
     assert set(out["detalles"]["carga"]) >= {"fuerza", "hiit", "cardio", "run", "total"}
-    assert set(out["detalles"]["carga_semanas"][0]["cargas"]) == {"fuerza", "hiit", "cardio"}
+    assert set(out["detalles"]["carga_semanas"][0]["cargas"]) == {"fuerza", "hiit", "cardio", "movilidad"}
     assert out["detalles"]["fc_max"]["configurada"] is False
 
 

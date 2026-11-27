@@ -16,7 +16,7 @@ import metrics as m
 import plan_i18n
 import tipos
 from i18n import tt
-from ajustes import USER_DIR, cargar_config
+from ajustes import CLASES, USER_DIR, cargar_config
 from ayuda import armar_ayuda
 
 ROOT = Path(__file__).parent.parent  # el motor (aquí vive site/)
@@ -963,9 +963,18 @@ def texto_inicio_plan(inicio: date) -> str:
 lista_es = i18n.lista   # "a, b y c" / "a, b and c" según el idioma en curso
 
 
-def build_ui(config: dict, plan: dict) -> dict:
+def categorias_presentes(config: dict, data: dict) -> list:
+    """Categorías que de verdad aparecen en las actividades de la persona (leyendas y listas no muestran el resto),
+    con el color según cuántas son."""
+    vistas = {m.classify(a, config) for a in data.get("activities") or []}
+    cats = [c for c in config["categorias"] if c["id"] in vistas]
+    clases = CLASES[min(len(cats), 4)] if cats else []
+    return [{**c, "clase": clases[i % len(clases)]} for i, c in enumerate(cats)]
+
+
+def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
     """Todo lo que el sitio necesita de la config: título, categorías y textos ya armados."""
-    cats = config["categorias"]
+    cats = config["categorias"] if cats is None else cats
     nombre = m.nombre_intensa(config)
     sesiones = [(tt("motor.nombre.calidad") if s.get("tipo") == "calidad" else plan_i18n.nombre(s["name"])) for s in plan["weeks"][0]["sessions"]] if plan.get("weeks") else []
     partes = []
@@ -1164,7 +1173,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "numeros": build_numeros(hoy, filas, mejora["modo"]),
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
-        "ui": {**build_ui(config, plan), "avisos": huellas_avisos(
+        "ui": {**build_ui(config, plan, categorias_presentes(config, data)), "avisos": huellas_avisos(
             tarjeta, m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
             fc_max, luz, n, (sem_pasada or {}).get("sugerencia"), (sem_pasada or {}).get("inicio"))},
         "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor

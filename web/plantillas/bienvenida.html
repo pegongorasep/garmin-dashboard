@@ -133,9 +133,6 @@
   {{ campo(t("bv.larga"), "larga", tipo="number", valor=valores.get('larga', 40), requerido=True, corto=True, extra={"min": "5", "max": "240"}) }}
   {{ campo(t("aj.edad"), "edad", tipo="number", valor=valores.get('edad', ''), corto=True, extra={"min": "10", "max": "99"}) }}
   {{ campo(t("aj.fcmax"), "fc_max", tipo="number", valor=valores.get('fc_max', ''), opcional=t("comun.opcional"), corto=True, ayuda=t("aj.fcmax_ayuda"), extra={"min": "120", "max": "230"}) }}
-  {% call opciones(t("aj.otras"), t("bv.cats_n")) %}
-    {% for c in categorias %}{{ opcion("cats", c.nombre ~ (t("aj.intensa") if c.intensa else ""), valor=c.id) }}{% endfor %}
-  {% endcall %}
   {% call opciones(t("aj.pierna"), t("bv.pierna_n")) %}
     {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave) }}{% endfor %}
   {% endcall %}

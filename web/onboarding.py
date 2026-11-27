@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import gen_plan
-from ajustes import (CALIDAD_TIPOS, INTENSIDADES, NIVELES, ConfigError, categorias_por_defecto, normalizar_config)
+from ajustes import (CALIDAD_TIPOS, INTENSIDADES, NIVELES, ConfigError, normalizar_config)
 from .errores import ErrorT, texto
 
 from . import cambios, importar, tubo
@@ -110,11 +110,7 @@ def crudo_desde_formulario(f) -> dict:
     corrida = {"nivel": f.get("nivel", "intermedio"), "intensidad": intensidad, "calidad_tipos": calidad,
                "variada": True, "caminatas": f.get("caminatas") == "on", "inicio": str(f.get("inicio", "")),
                "semanas": 12, "base_min": {"z2": entero("z2", "ob.z2"), "larga": entero("larga", "ob.larga")}}
-    elegidas = set(f.getlist("cats"))
-    categorias = [c for c in categorias_por_defecto() if c["id"] in elegidas]
     actividades = {"dias_pierna": [d for d in f.getlist("pierna") if d in dict(DIAS)]}
-    if categorias:
-        actividades["categorias"] = categorias
     return {"perfil": perfil, "corrida": corrida, "actividades": actividades, "inbody": f.get("inbody") == "on"}
 
 
@@ -142,7 +138,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         paso = max(1, min(pedido, paso_maximo(e)))
         return render(request, "bienvenida.html", paso=paso, pregunta_uso=pregunta, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
                       liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), proximo_lunes=proximo_lunes().isoformat(),
-                      zonas=ZONAS, categorias=categorias_por_defecto(), dias=DIAS, niveles=NIVELES,
+                      zonas=ZONAS, dias=DIAS, niveles=NIVELES,
                       intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS, error=None, valores={})
 
     @app.post("/bienvenida/consentimiento")
@@ -193,7 +189,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if error:
             return render(request, "bienvenida.html", status=400, paso=2, pasos=PASOS, e=e, u=usuario,
                           version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error,
-                          proximo_lunes="", zonas=[], categorias=[], dias=[], niveles=[], intensidades=[],
+                          proximo_lunes="", zonas=[], dias=[], niveles=[], intensidades=[],
                           tipos_calidad=[], valores={})
         usuario.github_owner = owner
         db.commit()
@@ -228,7 +224,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         e = estado(db, usuario)
         return render(request, "bienvenida.html", status=400, paso=6, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
                       liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=error,
-                      proximo_lunes="", zonas=[], categorias=[], dias=[], niveles=[], intensidades=[],
+                      proximo_lunes="", zonas=[], dias=[], niveles=[], intensidades=[],
                       tipos_calidad=[], valores={})
 
     @app.post("/bienvenida/plan")
@@ -246,7 +242,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         except (ConfigError, ValueError) as ex:
             return render(request, "bienvenida.html", status=400, paso=7, pasos=PASOS, e=e, u=usuario,
                           version=VERSION_AVISO, liga=liga_repo(usuario, settings, tubo.pendiente_vigente(db, usuario.id)), error=texto(ex, request.state.t),
-                          proximo_lunes=proximo_lunes().isoformat(), zonas=ZONAS, categorias=categorias_por_defecto(),
+                          proximo_lunes=proximo_lunes().isoformat(), zonas=ZONAS,
                           dias=DIAS, niveles=NIVELES, intensidades=INTENSIDADES, tipos_calidad=CALIDAD_TIPOS,
                           valores=dict(form.multi_items()) if hasattr(form, "multi_items") else dict(form))
         usuario.sensor = "muñeca" if form.get("sensor") == "muñeca" else "banda"
