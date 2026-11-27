@@ -4,6 +4,7 @@ Uso: python dashboard/validar.py [ruta/data.json]   (sale con código 1 y explic
 No corre pytest: eso es del repo de Pedro.
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -56,6 +57,9 @@ def problemas(datos: dict) -> list:
                 ruta.startswith("/ui/repo_estado/") and o.startswith(PREFIJOS_LIGAS)):
             out.append(f"URL en el JSON: {ruta}")
     recorrer(datos, "")
+    for k, v in ((datos.get("ui") or {}).get("editar_manual") or {}).items():   # liga de editar lo registrado a mano: solo rutas propias
+        if not re.fullmatch(r"m\d+", str(k)) or not re.fullmatch(r"(/a/\d+)?/actividad/\d+", str(v)):
+            out.append(f"editar_manual no vale: {k}")
     for w in (datos.get("plan") or {}).get("semanas") or []:   # km estimados del plan: número o nulo, nunca texto ni ritmo
         for ruta, v in [("plan_km", w.get("plan_km"))] + [("km_est", x.get("km_est")) for x in w.get("sessions") or []]:
             if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):

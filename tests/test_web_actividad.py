@@ -139,3 +139,47 @@ def test_actividad_de_hoy_a_las_8_ya_cuenta(web_ctx):
     sem = salida["semanas_hoy"][salida["semana_hoy_idx"]]
     hoy = next(d for d in sem["dias"] if d["fecha"] == "2026-11-25")
     assert hoy["corrida"] and hoy["corrida"]["minutos"] == 30
+
+
+def _fila_del_dia(salida, fecha):
+    sem = salida["semanas_hoy"][salida["semana_hoy_idx"]]
+    return next(d for d in sem["dias"] if d["fecha"] == fecha)["actividades"]
+
+
+def test_e6_marca_liga_y_ritmo_en_el_sitio(web_ctx):
+    uid, cl = listo(web_ctx)
+    enviar(cl, "/actividad/nueva", datos(nota="NOTA-SECRETA-77", esfuerzo="6"))
+    aid = filas(web_ctx, uid)[0][0]
+    with web_ctx.sesiones() as db:
+        salida = calculo.calcular(db, db.get(Usuario, uid), AHORA)
+    [fila] = _fila_del_dia(salida, "2026-11-24")
+    assert fila["manual"] is True and fila["id"] == f"m{aid}" and fila["rpe"] == 6
+    assert salida["ui"]["editar_manual"] == {f"m{aid}": f"/actividad/{aid}"}
+    assert fila["detalle"]["ritmo_s"] == 360 and fila["detalle"]["zonas"] is None   # 30:00 en 5 km = 6:00/km
+    assert "NOTA-SECRETA-77" not in json.dumps(salida, ensure_ascii=False)
+    from dashboard import validar
+    assert validar.problemas(salida) == []
+    malo = {**salida, "ui": {**salida["ui"], "editar_manual": {"m1": "https://x.com/a"}}}
+    assert any("editar_manual" in p for p in validar.problemas(malo))
+
+
+def test_e6_coach_sin_permiso_no_recibe_liga_y_con_permiso_con_prefijo(web_ctx):
+    uid, cl = listo(web_ctx)
+    enviar(cl, "/actividad/nueva", datos())
+    aid = filas(web_ctx, uid)[0][0]
+    with web_ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        assert calculo.calcular(db, u, AHORA, pref=f"/a/{uid}", editable=False)["ui"]["editar_manual"] == {}
+        con = calculo.calcular(db, u, AHORA, pref=f"/a/{uid}", editable=True)["ui"]["editar_manual"]
+    assert con == {f"m{aid}": f"/a/{uid}/actividad/{aid}"}
+
+
+def test_e6_una_de_garmin_no_lleva_marca():
+    from datetime import date as d
+    from dashboard import build
+    garmin = {"id": 99, "startTimeLocal": "2026-11-24T07:00:00", "duration": 1800, "distance": 5000,
+              "activityType": {"typeKey": "running"}, "averageHR": 150}
+    from dashboard import ajustes
+    cfg = ajustes.config_por_defecto()
+    filas_ = build.actividades_del_dia(d(2026, 11, 24), [garmin], cfg)
+    assert filas_ and "manual" not in filas_[0] and "id" not in filas_[0]

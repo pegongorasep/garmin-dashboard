@@ -477,9 +477,13 @@ def detalle_actividad(a: dict, details: dict, config: dict) -> dict:
     etiqueta = str(a.get("trainingEffectLabel") or "").lower()
     ae, an = a.get("aerobicTrainingEffect"), a.get("anaerobicTrainingEffect")
     ritmos = det.get("ritmos_km") if corrida else None
+    # a mano: el ritmo (por km, o por 100 m en natación) sale de la distancia y el tiempo que la persona anotó, sea cual sea el tipo
+    mano = bool(a.get("manual")) and km >= 0.05 and seg
+    nado = mano and (a.get("activityType") or {}).get("typeKey") == "lap_swimming"
+    ritmo_s = (round(seg / (km * 10)) if nado else round(seg / km)) if mano else (round(seg / km) if corrida and km >= 0.1 else None)
     return {"duracion_min": r1(a["duration"] / 60), "km": r2(km) if km >= 0.05 else None,
-            "ritmo_s": round(seg / km) if corrida and km >= 0.1 else None,
-            "vel_kmh": r1(km / (seg / 3600)) if not corrida and km >= 0.1 and seg else None,
+            "ritmo_s": ritmo_s, "ritmo_unidad": "100 m" if nado else "km",
+            "vel_kmh": r1(km / (seg / 3600)) if not corrida and not mano and km >= 0.1 and seg else None,
             "fc_prom": round(a["averageHR"]) if a.get("averageHR") else None, "fc_max": round(a["maxHR"]) if a.get("maxHR") else None,
             "kcal": round(a["calories"]) if a.get("calories") else None,
             "desnivel_m": round(a["elevationGain"]) if a.get("elevationGain") else None,
@@ -511,7 +515,8 @@ def actividades_del_dia(d: date, acts: list, config: dict, sesiones=None, detail
         e = next((e for e in sesiones or [] if c == "run" and e["fecha"] == d.isoformat()
                   and e["minutos"] == a["duration"] / 60), None)
         km = (a.get("distance") or 0) / 1000
-        out.append({"cat": c, "nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(a["duration"] / 60),
+        a_mano = {"manual": True, "id": str(a["id"])} if a.get("manual") else {}   # las de a mano llevan la marca y su id (la liga de editar la pone la web)
+        out.append({**a_mano, "cat": c, "nombre": nombres[k][0], "icono": nombres[k][1], "minutos": round(a["duration"] / 60),
                     "km": r2(km) if km >= 0.05 else None, "fc_prom": round(a["averageHR"]) if a.get("averageHR") else None,
                     "carrera": carrera, "sesion": {"nombre": e["name"], "estado": e["estado"]} if e else None,
                     **registro_esfuerzo(a, details or {}, config),
@@ -964,6 +969,7 @@ def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
         "cuerpo_nuevo": config.get("cuerpo_nuevo") or None,   # solo en la web: url de «Agregar medición»; null = sin botón
         "coach": None,   # solo en la web: {nombre, volver} cuando un coach ve a su atleta (la web lo pone al servir; nunca en la caché)
         "grupos": int(config.get("grupos") or 0),   # solo en la web: en cuántos grupos está la persona (0 = sin pestaña Grupo)
+        "editar_manual": {},   # solo en la web: {"m<id>": ruta} para editar cada actividad a mano (la pone calculo.calcular, fuera de la caché; solo si puede editar)
         "editar_urls": {str(k): str(v) for k, v in (config.get("editar_urls") or {}).items()},   # solo en la web: {"<n>/<id>": url} de las sesiones editables
         "menu": [{"texto": i["texto"], "url": i["url"]} for i in config.get("menu") or []],   # solo en la web: [{texto, url relativa}]
         "textos": {

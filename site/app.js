@@ -385,7 +385,7 @@ function diaCalendario(x, hoyIso, seleccionado, alTocar) {
 /** El detalle de una actividad (todo viene calculado de Python; lo que falta no se pinta). */
 function detalleActividad(dt, a) {
   const tile = (k, valor, unidad) => (valor == null ? null : DS.tile({ k: T(`sitio.act.${k}`), valor, unidad }));
-  const ritmo = dt.ritmo_s != null ? tile("ritmo", mmss(dt.ritmo_s), "/km") : tile("vel", dt.vel_kmh != null ? fmt(dt.vel_kmh, 1) : null, "km/h");
+  const ritmo = dt.ritmo_s != null ? tile("ritmo", mmss(dt.ritmo_s), `/${dt.ritmo_unidad || "km"}`) : tile("vel", dt.vel_kmh != null ? fmt(dt.vel_kmh, 1) : null, "km/h");
   const tiles = [tile("duracion", fmt(dt.duracion_min, 0), T("sitio.sl.min")), tile("dist", dt.km != null ? fmt(dt.km) : null, "km"), ritmo,
     tile("fc", dt.fc_prom != null ? fmt(dt.fc_prom, 0) : null, T("sitio.lpm")), tile("fcmax", dt.fc_max != null ? fmt(dt.fc_max, 0) : null, T("sitio.lpm")),
     tile("kcal", dt.kcal != null ? fmt(dt.kcal, 0) : null, "kcal"), tile("desnivel", dt.desnivel_m != null ? fmt(dt.desnivel_m, 0) : null, "m"),
@@ -404,9 +404,14 @@ function detalleActividad(dt, a) {
 /** Una actividad del día: tipo, minutos, km y FC prom.; en corridas, la sesión del plan y si se hizo. Al tocarla se abre su detalle. */
 function filaActividad(a) {
   const datos = [T("sitio.min_n", { n: fmt(a.minutos, 0) }), a.km != null ? T("sitio.km_n", { n: fmt(a.km) }) : null,
-    a.fc_prom != null ? `${fmt(a.fc_prom, 0)} ${T("sitio.lpm")}` : null].filter(Boolean).join(" · ");
+    a.fc_prom != null ? `${fmt(a.fc_prom, 0)} ${T("sitio.lpm")}` : null,
+    a.manual && a.rpe != null ? T("sitio.dia.esfuerzo_n", { v: fmt(a.rpe, 0) }) : null].filter(Boolean).join(" · ");
   const ses = a.sesion ? `${a.sesion.nombre} · ${["hecha", "incompleta", "extra", "no_hecha", "pendiente"].includes(a.sesion.estado) ? T(`sitio.dia.${a.sesion.estado}`) : a.sesion.estado}` : null;
-  const cabeza = [h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre), h("span", {}, [ses, datos].filter(Boolean).join(" · "))];
+  // a mano: la marca y «Editar» (Python manda `manual` y, solo si puede editar, la ruta en ui.editar_manual); van en la misma línea del título, sin cambiar la altura
+  const ruta = a.manual ? (ui().editar_manual || {})[a.id] : null;
+  const marca = a.manual ? [h("span", { class: "act-mano" }, T("sitio.dia.a_mano")),
+    ruta ? h("a", { class: "act-editar", href: ruta, onclick: (e) => e.stopPropagation() }, T("sitio.dia.editar")) : null] : [];
+  const cabeza = [h("span", { class: "act-t" }, DS.ico(a.icono || "punto"), a.nombre, ...marca), h("span", {}, [ses, datos].filter(Boolean).join(" · "))];
   if (!a.detalle) return h("div", { class: "act-fila" }, ...cabeza);
   const det = DS.desplegable({ titulo: h("span", { class: "act-fila" }, ...cabeza), clase: "act-det", abierto: detalleAbierto() }, detalleActividad(a.detalle, a));
   det.addEventListener("toggle", () => guardarDetalleAbierto(det.open));

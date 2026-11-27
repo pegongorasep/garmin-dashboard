@@ -168,6 +168,13 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     return out
 
 
+def editar_manual(db: Session, usuario: Usuario, pref: str = "", editable: bool = True) -> dict:
+    """{"m<id>": ruta} para editar cada actividad a mano; vacío si quien mira no puede editar (un coach sin permiso). Sin la nota."""
+    if pref and not editable:
+        return {}
+    return {f"m{f.id}": f"{pref}/actividad/{f.id}" for f in manual.de_persona(db, usuario.id)}
+
+
 def contar_grupos(db: Session, usuario: Usuario, pref: str = "") -> int:
     """Cuántos grupos tiene la persona; 0 cuando un coach ve a su atleta (no se le muestra)."""
     if pref:
@@ -186,7 +193,7 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     # `coach`: solo cuando un coach ve a su atleta, con el mismo nombre que le muestra su página de atletas (nada más).
     coach = {"nombre": usuario.apodo or usuario.correo, "volver": "/coach"} if pref else None
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
-                             "grupos": n_grupos, "coach": coach, "primer_inicio": primer_inicio.de(db, usuario, pref, editable),
+                             "grupos": n_grupos, "coach": coach, "editar_manual": editar_manual(db, usuario, pref, editable), "primer_inicio": primer_inicio.de(db, usuario, pref, editable),
                              **({"sync": sync} if sync is not None and not pref else {})}}
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)
