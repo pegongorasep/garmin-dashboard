@@ -1,18 +1,15 @@
 """Zonas de FC de Garmin (Motor v6 F1): lista blanca numérica del paquete, zonas que usa el motor y su origen."""
 import json
-import sys
 from pathlib import Path
+from ayudas import AHORA, CONFIG_FIXTURE, fixture, PROPIO
 
 ROOT = Path(__file__).parent.parent
 from dashboard import build
 from dashboard import metrics as m
 from dashboard import paquete
 from dashboard import validar
-from test_build import AHORA, CONFIG_FIXTURE, fixture
 
 # Perfil de Garmin con zonas propias (no de fábrica) y otro con las de fábrica (60 % de reserva, etc.)
-PROPIO = {"sport": "RUNNING", "trainingMethod": "HR_RESERVE", "restingHeartRateUsed": 55, "lactateThresholdHeartRateUsed": 172,
-          "zone1Floor": 118, "zone2Floor": 132, "zone3Floor": 146, "zone4Floor": 160, "zone5Floor": 174, "maxHeartRateUsed": 190}
 FABRICA = {"sport": "DEFAULT", "trainingMethod": "HR_RESERVE", "restingHeartRateUsed": 60, "lactateThresholdHeartRateUsed": None,
            "zone1Floor": 126, "zone2Floor": 137, "zone3Floor": 150, "zone4Floor": 164, "zone5Floor": 176, "maxHeartRateUsed": 189}
 

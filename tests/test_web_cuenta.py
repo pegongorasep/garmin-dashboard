@@ -4,10 +4,9 @@ import json
 import zipfile
 
 import sqlalchemy as sa
-from test_web_ajustes import listo
-from test_web_cuentas import csrf_de
 
-from web.modelos import Base, Cambio, Coach, CuentaBorrada, InBody, Sesion, Usuario, ahora
+from web.modelos import Base, Cambio, Coach, CuentaBorrada, InBody, Sesion, Usuario
+from ayudas import csrf_de, listo
 
 
 def preparar(ctx):

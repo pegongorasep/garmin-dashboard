@@ -1,71 +1,21 @@
-import re
-from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from test_sincronizar import V2, _instr, _sincs
-from test_web_cuentas import crear_usuario, entrar
-from test_web_tubo import ctx, paquete_chico, subir, token, usuario_amigo   # noqa: F401
-from web.github_app import GitHubError
-from web.modelos import Cambio, Sincronizacion, Usuario, ahora
-
-
-class Falsa:
-    def __init__(self):
-        self.instalaciones = [55]
-        self.repos = [{"id": 900, "full_name": "ana/ahilallevas-datos", "private": True, "default_branch": "main"}]
-        self.falla_disparo = False
-        self.disparos = []
-
-    def url_instalar(self, state):
-        return f"https://github.com/apps/x/installations/new?state={state}"
-
-    def token_de_usuario(self, code):
-        if code == "mala":
-            raise GitHubError(400, "bad_verification_code")
-        return "TOKEN-SECRETO-USUARIO"
-
-    def instalaciones_del_usuario(self, token):
-        return self.instalaciones
-
-    def repos_de_instalacion(self, inst):
-        return self.repos
-
-    def disparar(self, inst, repo, rama, workflow="deploy.yml"):
-        if self.falla_disparo:
-            raise GitHubError(500, "x")
-        self.disparos.append((inst, repo, rama))
-        return True
-
-
-@pytest.fixture
-def gh(ctx):
-    ctx.settings.github_app_id = ctx.settings.github_app_slug = ctx.settings.github_app_client_id = "x"
-    ctx.settings.github_app_client_secret = ctx.settings.github_app_private_key = "x"
-    f = Falsa()
-    ctx.app.state.github_app = f
-    return f
-
-
-def sesion(ctx, correo="ana@x.com"):
-    uid = usuario_amigo(ctx, owner="ana", consentimiento=True)
-    with ctx.sesiones() as db:
-        db.get(Usuario, uid).correo = correo
-        db.commit()
-    cl = ctx.cliente()
-    entrar(ctx, cl, correo)
-    return cl, uid
-
-
-def empezar(cl, para=None):
-    r = cl.get("/conectar/github" + (f"?para={para}" if para else ""))
-    assert r.status_code == 303
-    return parse_qs(urlparse(r.headers["location"]).query)["state"][0]
-
-
-def volver(cl, state, code="bueno", inst="55"):
-    return cl.get("/conectar/github/vuelta", params={"state": state, "code": code, "installation_id": inst,
-                                                     "setup_action": "install"})
+from web.modelos import Cambio, Sincronizacion, Usuario
+from ayudas import (
+    _instr,
+    _sincs,
+    empezar,
+    entrar,
+    Falsa,
+    paquete_chico,
+    sesion,
+    subir,
+    token_tubo as token,
+    usuario_amigo,
+    V2,
+    volver,
+)
 
 
 def test_apagada_da_404(ctx):

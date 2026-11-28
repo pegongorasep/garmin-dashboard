@@ -1,15 +1,14 @@
 """C4: el motor avisa su avance (garmin_connect.py + scripts/subir.py)."""
 import json
-import sys
 from datetime import date
 from pathlib import Path
 
 import pytest
+from ayudas import ENTORNO, HttpFalso, RespuestaFalsa
 
 ROOT = Path(__file__).parent.parent
 import garmin_connect as gc
 from scripts import subir as sub
-from test_web_tubo import ENTORNO, HttpFalso, RespuestaFalsa
 
 
 class ClienteFalso:

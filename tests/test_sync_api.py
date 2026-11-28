@@ -3,12 +3,14 @@ from datetime import timedelta
 
 import pytest
 
-from test_conexion import sesion
-from test_conexion import gh as _gh   # noqa: F401
-from test_guia import conectada, gh, token   # noqa: F401
-from test_web_tubo import ctx   # noqa: F401
 from web import sincronizar, sync_web
 from web.modelos import Sincronizacion, ahora
+from ayudas import conectada, sesion, token_guia as token
+
+
+@pytest.fixture
+def gh(gh_con_secretos):
+    return gh_con_secretos
 
 
 def listo(ctx, gh):
@@ -142,7 +144,7 @@ def test_corrida_fallida_detectada_y_cache(ctx, gh):
 def test_usuario_ajeno_no_ve_nada(ctx, gh):
     cl, uid, tk = listo(ctx, gh)
     cl.post("/api/sync", data={"csrf": tk})
-    from test_web_cuentas import crear_usuario, entrar
+    from ayudas import crear_usuario, entrar
     crear_usuario(ctx, "otro@x.com")
     otro = ctx.cliente()
     entrar(ctx, otro, "otro@x.com")

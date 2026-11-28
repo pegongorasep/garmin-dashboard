@@ -1,18 +1,15 @@
 """E4: actividades a mano (modelo, validación, motor, cuenta). Sin pantallas todavía."""
 import json
 from datetime import date, datetime, timedelta
-from zoneinfo import ZoneInfo
 
 import pytest
 
 from dashboard import metrics
-from dashboard import semanal
 from dashboard import validar
 from dashboard.ajustes import normalizar_config
-from test_motor_v6_f5 import INICIO, _cfg, _acts, plan_v6
-from test_web_ajustes import listo
 from web import calculo, cuenta, grupos_resumen, manual
 from web.modelos import ActividadManual, MiembroGrupo, Usuario
+from ayudas import listo
 
 HOY = date(2026, 11, 25)
 AHORA_UTC = datetime(2026, 11, 25, 18, 0)   # 12:00 en Mérida; miércoles

@@ -1,4 +1,3 @@
-import sys
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -508,9 +507,6 @@ def test_today_card_proxima_id():
 HOY = date(2026, 11, 14)   # lunes de esa semana: 9 nov; ventanas 12 oct–8 nov y 14 sep–11 oct
 
 
-
-
-
 INBODY = {"prime": "2024-05-25", "mediciones": [
     {"fecha": "2026-11-13", "hora": "08:29", "peso_kg": 93.8, "mme_kg": 39.1, "pgc": 27.1,
      "masa_grasa_kg": 25.5, "puntuacion": 75, "grasa_visceral": 10, "grasa_visceral_rango": [1, 9], "nota": "x"},
@@ -828,7 +824,6 @@ def test_detalle_vigente():
     assert m.detalle_vigente({**completa, "rpe": None}, True, reciente=False)
 
 
-
 # --- v4.3 F3: deriva cardiaca ---
 
 def serie_parejo(min_total=50, ritmo=360, fc=lambda t: 140, paso=5):
@@ -857,7 +852,7 @@ def test_deriva_exige_40_min_y_casi_sin_caminar():
 
 
 def test_deriva_no_pareja_si_un_km_se_sale_de_15_pct():
-    serie, extra, t = [], 0, 0
+    serie, extra = [], 0
     for seg in range(0, 3001, 5):
         ritmo = 360 if not (1500 <= seg < 1900) else 270     # un tramo rápido (-25 %) después de los 10 min
         serie.append([seg, round(extra), 140])

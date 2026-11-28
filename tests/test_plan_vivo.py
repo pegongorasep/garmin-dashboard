@@ -1,8 +1,7 @@
 """Plan vivo (metas, eventos, sesiones flexibles, sensor)."""
 import copy
 import json
-import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -11,13 +10,11 @@ from dashboard import build
 import planes_v6
 from dashboard import metrics as m
 from dashboard import reloj_plan as rp
-from dashboard import tipos
 from dashboard import validar
 from dashboard.ajustes import ConfigError, normalizar_config
-from test_web_ajustes import CONFIG, HOY, crudo, listo, plan_de, tok
-from test_web_cuentas import csrf_de
-from web import cambios, plan_vivo
-from web.modelos import Ajustes, Cambio, Plan, Usuario
+from web import plan_vivo
+from web.modelos import Ajustes, Cambio
+from ayudas import CONFIG, crudo, HOY, listo, plan_de, tok
 
 ROOT = Path(__file__).parent.parent
 HOY_D = date(2026, 11, 25)       # semana 3 del plan que empieza el 2026-11-09
@@ -358,7 +355,7 @@ def test_viaje_enfermedad_carrera_por_la_web_con_historial_y_deshacer(web_ctx):
 
 
 def test_ajustes_conserva_metas_y_eventos(web_ctx):
-    from test_web_ajustes import guardar
+    from ayudas import guardar
     uid, cl = listo(web_ctx)
     cl.post("/plan/carrera", data={"csrf": tok(cl), "nombre": "10K", "fecha": "2027-01-10", "distancia_km": "10"})
     guardar(cl, titulo="Cambié el título")
@@ -366,7 +363,7 @@ def test_ajustes_conserva_metas_y_eventos(web_ctx):
 
 
 def test_el_coach_agrega_un_viaje_y_el_atleta_se_entera(web_ctx):
-    from test_web_ajustes import Coach, entrar
+    from web.modelos import Coach
     uid_a, cl_a = listo(web_ctx, "atleta@x.com")
     uid_c, cl_c = listo(web_ctx, "coach@x.com")
     with web_ctx.sesiones() as db:

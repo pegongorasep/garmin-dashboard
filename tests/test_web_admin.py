@@ -1,10 +1,9 @@
 """F7b: panel de admin."""
 from datetime import timedelta
 
-from test_web_ajustes import listo
-from test_web_cuentas import csrf_de
 
 from web.modelos import Invitacion, Subida, Usuario, ahora
+from ayudas import csrf_de, listo
 
 
 def admin_listo(ctx):

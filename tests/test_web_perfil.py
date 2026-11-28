@@ -4,19 +4,9 @@ import zipfile
 
 from PIL import Image
 
-from test_web_cuentas import csrf_de, entrar, crear_usuario
 from web import perfil
 from web.modelos import Coach, FotoPerfil, Usuario
-
-
-def con_exif_gps(color=(200, 30, 30), tam=(640, 480), formato="JPEG") -> bytes:
-    im = Image.new("RGB", tam, color)
-    exif = Image.Exif()
-    exif[0x010F] = "CamaraSecreta"   # Make
-    exif[0x8825] = {1: "N", 2: (20.0, 58.0, 0.0), 3: "W", 4: (89.0, 37.0, 0.0)}   # GPS
-    b = io.BytesIO()
-    im.save(b, formato, exif=exif.tobytes()) if formato == "JPEG" else im.save(b, formato)
-    return b.getvalue()
+from ayudas import con_exif_gps, crear_usuario, csrf_de, entrar
 
 
 def usuario_sin_nombre(ctx, correo="n@x.com"):

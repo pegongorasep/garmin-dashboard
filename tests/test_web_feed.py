@@ -1,57 +1,28 @@
 """Social S3: feed de actividades de Juntos (quién aparece, privacidad, paginación) y reacciones por actividad."""
 import json
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 
-from test_web_cuentas import CONFIG, csrf_de
-from test_web_grupos import crear, liga, post, sesion
 from web import feed
-from web.modelos import Ajustes, Coach, DatoGarmin, MiembroGrupo, ReaccionActividad, Usuario
+from web.modelos import Ajustes, Coach, DatoGarmin, ReaccionActividad, Usuario
+from ayudas import (
+    act,
+    CONFIG,
+    csrf_de,
+    falso_calcular,
+    ids_feed,
+    liga,
+    post_grupos as post,
+    sesion_grupos as sesion,
+    tres,
+    uid_de,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
-
-
-def dia(i):
-    return (date.today() - timedelta(days=i)).isoformat()
-
-
-def act(cat="run", minutos=40, km=5.0, sesion=None, manual=False):
-    return {"cat": cat, "nombre": "Corrida" if cat == "run" else "Fuerza", "icono": "correr" if cat == "run" else "mancuerna",
-            "minutos": minutos, "km": km, "fc_prom": 140, "carrera": False, "sesion": sesion, "partes": [], "esfuerzo": 3, "rpe": None,
-            "trote": None, "manual": manual, "detalle": {"fc_max": 160, "zonas": None, "kcal": 300}}
-
-
-def falso_calcular(por_usuario):
-    """calcular(db, u) -> data.json mínimo con las actividades dadas {uid: [(días atrás, actividad)]}."""
-    def f(db, u, *a, **k):
-        dias = {}
-        for i, ac in por_usuario.get(u.id, []):
-            dias.setdefault(dia(i), []).append(ac)
-        return {"semanas_hoy": [{"n": 3, "dias": [{"fecha": d, "actividades": v} for d, v in dias.items()]}]}
-    return f
-
-
-def uid_de(ctx, correo):
-    with ctx.sesiones() as db:
-        return db.query(Usuario).filter_by(correo=correo).one().id
-
-
-def tres(web_ctx):
-    """a y b en un grupo; c sin grupo."""
-    a, b, c = (sesion(web_ctx, f"{x}@x.com") for x in "abc")
-    gid = crear(a)
-    post(b, f"/grupos/unirse/{liga(a, gid)}")
-    return a, b, c, gid
-
-
-def ids_feed(cl, **q):
-    r = cl.get("/api/juntos/feed", params=q)
-    assert r.status_code == 200
-    return r.json()
 
 
 def test_feed_matriz_de_visibilidad(web_ctx, monkeypatch):
@@ -107,7 +78,7 @@ def test_feed_orden_paginas_sin_duplicados_y_campos(web_ctx, monkeypatch):
 
 def test_feed_sesion_del_plan_solo_si_comparte_el_plan(web_ctx, monkeypatch):
     a, b, c, gid = tres(web_ctx)
-    ua, ub = uid_de(web_ctx, "a@x.com"), uid_de(web_ctx, "b@x.com")
+    ua = uid_de(web_ctx, "a@x.com")
     s = {"nombre": "Fácil 1", "estado": "hecha"}
     monkeypatch.setattr(feed.calculo, "calcular", falso_calcular({ua: [(1, act(sesion=s))]}))
     assert ids_feed(b)["items"][0]["sesion"] == {"nombre": "Fácil 1", "n": 3}

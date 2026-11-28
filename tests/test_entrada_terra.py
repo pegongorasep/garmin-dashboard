@@ -1,17 +1,12 @@
 """Regresiones de entrada libre y plan sin reloj con fechas deterministas."""
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from plan import nivel
-from dashboard import semanal
 from dashboard import build
-from test_build import CONFIG_FIXTURE, fixture
-from test_motor_v6_f5 import _acts, _cfg, crudo_de, plan_v6
-from test_web_cuentas import csrf_de
-from test_web_plan_nuevo import nueva, respuestas
-from test_zonas_garmin import PROPIO
 from web import calculo
 from web.modelos import Ajustes, Plan, Subida, Usuario
+from ayudas import CONFIG_FIXTURE, crudo_de, csrf_de, fixture, nueva, plan_v6, PROPIO, respuestas
 
 
 def test_ventana_y_volumen_manual():

@@ -4,10 +4,9 @@ import json
 
 import pytest
 
-from test_web_ajustes import crudo, listo, tok
-from test_web_mcp import cuerpo, llamar, rpc, token_para
 from web import cambios
 from web.modelos import Ajustes, Cambio, Usuario
+from ayudas import crudo, cuerpo, listo, llamar, rpc, tok, token_para
 
 
 def _titulo(db, uid, titulo, via="ia", nota=None):

@@ -5,11 +5,21 @@ from datetime import timedelta
 from alembic import command
 from alembic.config import Config
 
-from test_web_cuentas import csrf_de
-from test_web_feed import ROOT, act, falso_calcular, ids_feed, tres, uid_de
-from test_web_grupos import crear, liga, post, sesion
 from web import feed
 from web.modelos import Comentario, DatoGarmin, Usuario, ahora
+from ayudas import (
+    act,
+    crear,
+    csrf_de,
+    falso_calcular,
+    ids_feed,
+    liga,
+    post_grupos as post,
+    ROOT,
+    sesion_grupos as sesion,
+    tres,
+    uid_de,
+)
 
 
 def comentar(cl, uid, clave, texto="Buenísimo", csrf=True):

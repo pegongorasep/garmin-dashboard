@@ -1,11 +1,6 @@
 """F5a: dar y quitar acceso de coach."""
-from test_web_ajustes import listo
-from test_web_cuentas import csrf_de
 from web.modelos import Cambio, Coach
-
-
-def dar(cl, correo):
-    return cl.post("/coach/dar", data={"csrf": csrf_de(cl.get("/coach").text), "correo": correo})
+from ayudas import csrf_de, dar, listo
 
 
 def test_sin_acceso_404_dar_ve_y_quitar_corta_con_sesion_abierta(web_ctx):

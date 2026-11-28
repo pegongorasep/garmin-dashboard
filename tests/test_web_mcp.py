@@ -1,41 +1,9 @@
 """F6b: servidor MCP en /mcp (lecturas) y la cookie de regreso del consentimiento."""
 import json
 
-from test_web_ajustes import listo
 from web import oauth
 from web.modelos import Coach, TokenOAuth
-
-HEAD = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
-
-
-def token_para(web_ctx, uid):
-    with web_ctx.sesiones() as db:
-        ahora = web_ctx.app.state.reloj().replace(tzinfo=None)
-        t, _ = oauth._tokens_nuevos(db, None, ahora, client_id="c", usuario_id=uid, resource="https://ahilallevas.test/mcp")
-        db.commit()
-        return t["access_token"]
-
-
-def rpc(cl, token, metodo, params=None, id_=1, ruta="/mcp"):   # la URL tal cual la usan Claude y ChatGPT
-    h = dict(HEAD)
-    if token:
-        h["Authorization"] = f"Bearer {token}"
-    r = cl.post(ruta, headers=h, json={"jsonrpc": "2.0", "id": id_, "method": metodo, "params": params or {}})
-    return r
-
-
-def cuerpo(r):
-    txt = r.text
-    if r.headers.get("content-type", "").startswith("text/event-stream"):
-        txt = next(l[5:] for l in txt.splitlines() if l.startswith("data:"))
-    return json.loads(txt)
-
-
-def llamar(cl, token, herramienta, **args):
-    r = rpc(cl, token, "tools/call", {"name": herramienta, "arguments": args})
-    assert r.status_code == 200, r.text
-    res = cuerpo(r)["result"]
-    return res.get("isError", False), res["content"][0]["text"]
+from ayudas import cuerpo, listo, llamar, rpc, token_para
 
 
 def test_sin_token_o_token_malo_da_401_con_www_authenticate(web_ctx):
@@ -105,7 +73,7 @@ def test_volver_seguro_solo_acepta_ruta_relativa_al_consentimiento():
 
 
 def test_liga_no_redirige_fuera_con_cookie_manipulada(web_ctx):
-    from test_web_cuentas import csrf_de
+    from ayudas import csrf_de
     from web import auth
     from web.modelos import Usuario
     uid, _ = listo(web_ctx, "a@x.com")
@@ -127,7 +95,6 @@ def _vias(web_ctx, uid):
 
 
 def test_escrituras_registran_via_ia_y_se_deshacen(web_ctx):
-    from web import cambios
     from web.modelos import Ajustes
     uid, _ = listo(web_ctx, "a@x.com")
     tok = token_para(web_ctx, uid)
@@ -181,7 +148,7 @@ def test_ia_de_otro_no_escribe_y_coach_si(web_ctx):
 
 
 def test_conexiones_lista_revoca_y_el_token_revocado_da_401(web_ctx):
-    from test_web_cuentas import csrf_de
+    from ayudas import csrf_de
     uid, cl = listo(web_ctx, "a@x.com")
     tok = token_para(web_ctx, uid)
     with web_ctx.sesiones() as db:

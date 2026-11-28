@@ -1,9 +1,7 @@
 """Ayuda personalizada (v4.5 F4): se arma con la config y el plan de cada persona."""
 import json
-import sys
 from pathlib import Path
 
-import pytest
 import yaml
 
 ROOT = Path(__file__).parent.parent

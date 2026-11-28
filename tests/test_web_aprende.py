@@ -1,8 +1,8 @@
 """«Aprende»: artículos de teoría en aprende/es/*.yaml (carga, índice, página, 404, login, slug seguro)."""
 import pytest
 
-from test_web_cuentas import crear_usuario, entrar
 from web import aprende
+from ayudas import crear_usuario, entrar
 
 SLUGS = ["zonas", "zona-2", "long-run", "volumen", "semana", "calidad", "trote-caminata", "fuerza",
          "recuperacion", "dolor", "carrera"]

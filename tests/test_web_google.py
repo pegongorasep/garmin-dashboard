@@ -6,7 +6,6 @@ import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from web import auth
-from web.modelos import Usuario
 from tests.test_web_cuentas import crear_usuario, entrar
 
 LLAVE = rsa.generate_private_key(public_exponent=65537, key_size=2048)

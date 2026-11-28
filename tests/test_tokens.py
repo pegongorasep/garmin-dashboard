@@ -1,7 +1,6 @@
 """site/tokens.css sale de diseno/tokens.json y todo el CSS/JS usa solo variables que existen."""
 import json
 import re
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent

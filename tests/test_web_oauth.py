@@ -4,9 +4,8 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
 
-from test_web_ajustes import listo
-from test_web_cuentas import csrf_de
 from web.modelos import CodigoOAuth, TokenOAuth
+from ayudas import csrf_de, listo
 
 REDIR = "https://claude.ai/api/mcp/auth_callback"
 VERIF = "v" * 50
@@ -166,6 +165,6 @@ def test_sin_sesion_vuelve_al_consentimiento_despues_de_entrar(web_ctx):
     cid = registrar(cl).json()["client_id"]
     cl.get("/oauth/autorizar", params=params(cid))
     cl.post("/entrar", data={"csrf": csrf_de(cl.get("/entrar").text), "correo": "a@x.com"})
-    from test_web_cuentas import codigo_de
+    from ayudas import codigo_de
     r = cl.post("/entrar/codigo", data={"csrf": csrf_de(cl.get("/entrar").text), "correo": "a@x.com", "codigo": codigo_de(web_ctx)})
     assert r.status_code == 303 and r.headers["location"].startswith("/oauth/autorizar?") and f"client_id={cid}" in r.headers["location"]

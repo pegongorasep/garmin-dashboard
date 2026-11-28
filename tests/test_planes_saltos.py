@@ -1,46 +1,22 @@
 """P2: saltos (repetir / retomar) en el calendario del plan y en plan_vivo."""
-import copy
-import sys
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from ayudas import cfg_de, crudo_carrera, crudo_con, INI, plan_carrera
 
 ROOT = Path(__file__).parent.parent
 from dashboard import metrics as m
-from plan import motor_v6 as v6
 from dashboard.ajustes import normalizar_config
-from test_motor_v6 import entrada
-from test_web_cuentas import CONFIG
 from web import plan_vivo
 from web.errores import ErrorT
 
-INI = date(2026, 11, 9)
 LUN = lambda i: INI + timedelta(weeks=i)   # noqa: E731  lunes de la semana del calendario i (0 = primera)
 HOY = LUN(4) + timedelta(days=2)            # miércoles de la semana 5
 
 
-def crudo_con(corrida=None, **resto):
-    c = copy.deepcopy(CONFIG)
-    c["corrida"] = {**c["corrida"], **(corrida or {})}
-    return {**c, **resto}
-
-
-def cfg_de(crudo, hoy=HOY):
-    return plan_vivo.con_pausas(normalizar_config(crudo), hoy)
-
-
 def plan_corto(n=12):
     return {"start": INI.isoformat(), "weeks": [{"n": i, "kind": "carga", "sessions": []} for i in range(1, n + 1)]}
-
-
-def plan_carrera(km=10, hasta=14):
-    return v6.generar_v6(entrada(inicio=INI.isoformat(), meta={"km": km, "semanas_hasta": hasta}))
-
-
-def crudo_carrera(plan):
-    return crudo_con({"semanas": len(plan["weeks"]),
-                      "metas": [{"id": "c1", "tipo": "carrera", "fecha": "2027-02-14", "distancia_km": 10, "nombre": "10K", "en_plan": True}]})
 
 
 # --- secuencia ---

@@ -6,11 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from test_conexion import gh, sesion   # noqa: F401
-from test_garmin_ajustes import con_ajustes
-from test_web_tubo import ctx   # noqa: F401
 from web import sync_web
 from web.modelos import Usuario
+from ayudas import con_ajustes, sesion
 
 RAIZ = Path(__file__).resolve().parent.parent
 SITE = RAIZ / "site"

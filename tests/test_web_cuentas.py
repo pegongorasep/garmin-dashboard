@@ -1,61 +1,14 @@
-import json
-import re
-from pathlib import Path
 from datetime import timedelta
 
-from dashboard.ajustes import leer_config_yaml
 from web import auth
-from web.modelos import Ajustes, CodigoLogin, Coach, Consentimiento, LigaLogin, Sesion, Usuario, ahora
-from web.privacidad import VERSION_AVISO
-
-
-CONFIG = json.loads(json.dumps(leer_config_yaml(Path(__file__).parent / "fixtures" / "config.yaml"), default=str))
-
-
-def csrf_de(html: str) -> str:
-    return re.search(r'name="csrf" value="([^"]+)"', html).group(1)
-
-
-def post(cl, url, **campos):
-    """GET a la página (para la cookie y el token CSRF) y luego POST con el token."""
-    r = cl.get(url)
-    return cl.post(url, data={"csrf": csrf_de(r.text), **campos})
-
-
-def liga_de(ctx) -> str:
-    return re.search(r"https://ahilallevas\.test(/entrar/liga/\S+)", ctx.enviados[-1][2]).group(1)
-
-
-def con_codigo(cl, correo, codigo):
-    return cl.post("/entrar/codigo", data={"csrf": csrf_de(cl.get("/entrar").text), "correo": correo, "codigo": codigo})
-
-
-def codigo_de(ctx) -> str:
-    return re.search(r"entrar a Ahí la Llevas: (\d{6}) \(vale 10 minutos\)", ctx.enviados[-1][2]).group(1)
-
-
-def entrar(ctx, cl, correo):
-    r = post(cl, "/entrar", correo=correo)
-    con_codigo(cl, correo, codigo_de(ctx))
-    return cl
+from web.modelos import CodigoLogin, Coach, LigaLogin, Sesion, Usuario, ahora
+from ayudas import codigo_de, con_codigo, crear_usuario, csrf_de, entrar, post
 
 
 def liga_nueva(ctx, correo) -> str:
     """Liga vieja (ya no se manda por correo): la crea directo para probar que sigue sirviendo."""
     with ctx.sesiones() as db:
         return "/entrar/liga/" + auth.crear_liga(db, auth.buscar_por_correo(db, correo))
-
-
-def crear_usuario(ctx, correo="a@x.com", con_ajustes=False):
-    with ctx.sesiones() as db:
-        u = Usuario(correo=correo, nombre="Ana", apellido="Prueba")
-        db.add(u)
-        db.commit()
-        if con_ajustes:
-            db.add(Ajustes(usuario_id=u.id, config=CONFIG))
-            db.add(Consentimiento(usuario_id=u.id, version_aviso=VERSION_AVISO))
-            db.commit()
-        return u.id
 
 
 def test_invitacion_de_un_solo_uso(web_ctx):
@@ -203,7 +156,7 @@ def test_permisos_puede_ver_y_editar(web_ctx):
     a = crear_usuario(web_ctx, "a@x.com")
     b = crear_usuario(web_ctx, "b@x.com")
     with web_ctx.sesiones() as db:
-        ua, ub = db.get(Usuario, a), db.get(Usuario, b)
+        ua = db.get(Usuario, a)
         assert puede_ver(db, ua, a) and puede_editar(db, ua, a)
         assert not puede_ver(db, ua, b) and not puede_editar(db, ua, b) and not puede_ver(db, None, a)
         ua.es_admin = True   # el admin no ve a los demás

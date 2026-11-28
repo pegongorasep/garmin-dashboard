@@ -1,41 +1,13 @@
 """Conexión C6a: guía nueva (estado de pasos), /api/conexion/*, liga por correo."""
 import pytest
 
-from test_conexion import Falsa, empezar, sesion, volver
-from test_conexion import gh as _gh   # noqa: F401
-from test_web_cuentas import csrf_de
-from test_web_tubo import ctx   # noqa: F401
 from web.modelos import Cambio, Sincronizacion, Usuario
-
-
-class ConSecretos(Falsa):
-    def __init__(self):
-        super().__init__()
-        self.secs = []
-        self.falla_secretos = False
-
-    def secretos(self, inst, repo):
-        if self.falla_secretos:
-            from web.github_app import GitHubError
-            raise GitHubError(500, "x")
-        return [{"name": n, "updated_at": None} for n in self.secs]
+from ayudas import conectada, empezar, sesion, token_guia as token, volver
 
 
 @pytest.fixture
-def gh(_gh, ctx):
-    f = ConSecretos()
-    ctx.app.state.github_app = f
-    return f
-
-
-def conectada(ctx, gh):
-    cl, uid = sesion(ctx)
-    volver(cl, empezar(cl))
-    return cl, uid
-
-
-def token(cl):
-    return csrf_de(cl.get("/bienvenida").text)
+def gh(gh_con_secretos):
+    return gh_con_secretos
 
 
 def test_pantallas_con_app_encendida(ctx, gh):

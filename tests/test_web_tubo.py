@@ -1,7 +1,6 @@
 import gzip
 import json
 import re
-import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -9,79 +8,34 @@ from pathlib import Path
 import jwt
 import pytest
 import yaml
-from cryptography.hazmat.primitives.asymmetric import rsa
-from jwt.algorithms import RSAAlgorithm
 
 from dashboard import ajustes
 from dashboard import build
 from dashboard import paquete
 from dashboard import validar
-from test_web_cuentas import CONFIG, crear_usuario, csrf_de, entrar, post
-from test_web_plan_nuevo import confirmar, lunes_siguiente
-from web import calculo, importar, onboarding, tubo
+from web import calculo, importar, tubo
 from web.modelos import Ajustes, Cambio, Consentimiento, DatoGarmin, Plan, Subida, Usuario, ahora
 from web.privacidad import VERSION_AVISO
+from ayudas import (
+    auth_tubo as auth,
+    CONFIG,
+    crear_usuario,
+    csrf_de,
+    ENTORNO,
+    entrar,
+    HttpFalso,
+    ISS,
+    LLAVE,
+    OTRA_LLAVE,
+    paquete_chico,
+    RespuestaFalsa,
+    subir,
+    token_tubo as token,
+    usuario_amigo,
+)
 
 ROOT = Path(__file__).parent.parent
 HAY_DATOS = (ROOT / "data" / "activities.json").exists() and (ROOT / "config.yaml").exists()
-ISS = "https://token.actions.githubusercontent.com"
-WORKFLOW = "pegongorasep/garmin-dashboard/.github/workflows/motor.yml@refs/tags/stable"
-LLAVE = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-OTRA_LLAVE = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-
-
-def jwks_falso():
-    jwk = json.loads(RSAAlgorithm.to_jwk(LLAVE.public_key()))
-    jwk.update({"kid": "k1", "use": "sig", "alg": "RS256"})
-    return {"keys": [jwk]}
-
-
-def token(web_ctx, llave=LLAVE, **extra):
-    claims = {"iss": ISS, "aud": web_ctx.settings.oidc_audience, "exp": int(time.time()) + 600,
-              "repository": "amigo/garmin-prueba", "repository_id": "777", "repository_owner": "Amigo",
-              "repository_owner_id": "5", "repository_visibility": "private", "job_workflow_ref": WORKFLOW, **extra}
-    return jwt.encode({k: v for k, v in claims.items() if v is not None}, llave, algorithm="RS256", headers={"kid": "k1"})
-
-
-@pytest.fixture
-def ctx(web_ctx):
-    web_ctx.app.state.jwks_fetch = lambda url: jwks_falso()
-    web_ctx.app.state.__dict__.pop("jwks_cache", None)
-    return web_ctx
-
-
-def usuario_amigo(ctx, owner="amigo", consentimiento=True, repo_id=None):
-    with ctx.sesiones() as db:
-        u = Usuario(correo="amigo@x.com", nombre="Ana", apellido="Prueba", github_owner=owner, repo_id=repo_id, repo="amigo/garmin-prueba" if repo_id else None)
-        db.add(u)
-        db.commit()
-        if consentimiento:
-            db.add(Consentimiento(usuario_id=u.id, version_aviso=VERSION_AVISO))
-            db.commit()
-        return u.id
-
-
-def auth(tok):
-    return {"Authorization": f"Bearer {tok}"}
-
-
-def paquete_chico(**cambios):
-    pq = {"esquema": 1, "motor": "abc123", "archivos": {
-        "daily": {"daily_summaries": [{"calendarDate": "2026-11-01", "heartRate": {"restingValue": 60}}], "sleep": [], "hrv": []},
-        "activities": [{"id": "a1", "es_carrera": False, "startTimeLocal": "2026-11-01 07:00:00",
-                        "activityType": {"typeKey": "running"}, "duration": 1200.0, "distance": 3000.0}],
-        "activity_details": {"a1": {"rpe": 3.0, "serie": [[0, 0, 100]]}}, "hr_zones": [{"sport": "DEFAULT", "maxHeartRateUsed": 190}],
-        "historial_corridas": [], "meta": {"pulled_at": "2026-11-01", "pulled_at_utc": "2026-11-01T12:00:00+00:00"}}}
-    pq.update(cambios)
-    return pq
-
-
-def subir(cl, tok, pq, comprimir=True):
-    cuerpo = json.dumps(pq).encode()
-    cab = auth(tok)
-    if comprimir:
-        cuerpo, cab = gzip.compress(cuerpo), {**cab, "Content-Encoding": "gzip"}
-    return cl.post("/api/tubo/subida", content=cuerpo, headers={**cab, "Content-Type": "application/json"})
 
 
 # --- OIDC ---
@@ -192,7 +146,7 @@ def test_subida_guarda_con_upsert_y_registra(ctx):
 
 
 def test_subida_con_clave_prohibida_da_422(ctx):
-    uid = usuario_amigo(ctx, repo_id=777)
+    usuario_amigo(ctx, repo_id=777)
     pq = paquete_chico()
     pq["archivos"]["activities"][0]["activityName"] = "Carrera secreta"
     r = subir(ctx.cliente(), token(ctx), pq)
@@ -319,36 +273,8 @@ def test_paso_a_paso_no_pide_la_key():
 from scripts import subir as sub
 
 
-class RespuestaFalsa:
-    def __init__(self, status=200, cuerpo=None):
-        self.status_code, self._c = status, cuerpo or {}
-
-    def json(self):
-        return self._c
-
-    def raise_for_status(self):
-        pass
-
-
-class HttpFalso:
-    def __init__(self, post, get=None):
-        self._post, self._get, self.llamadas = post, get, []
-
-    def post(self, url, **kw):
-        self.llamadas.append(("post", url, kw))
-        return self._post(url, **kw)
-
-    def get(self, url, **kw):
-        self.llamadas.append(("get", url, kw))
-        return self._get(url, **kw)
-
-
 def _caido(url, **kw):
     raise sub.requests.ConnectionError("web caída")
-
-
-ENTORNO = {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://actions.example/t?x=1", "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "tok",
-           "GITHUB_REPOSITORY_ID": "777"}
 
 
 def test_subir_con_la_web_caida_falla_visible(tmp_path):
@@ -457,8 +383,6 @@ def test_imagen_no_contiene_archivos_personales():
                         "for f in " + " ".join(malos) + "; do [ -e $f ] && echo $f; done; true"],
                        capture_output=True, text=True, check=True)
     assert r.stdout.split() == [], r.stdout
-
-
 
 
 # --- primera subida: config/plan/InBody del repo ---

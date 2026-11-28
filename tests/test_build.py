@@ -1,10 +1,10 @@
 import json
-import sys
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from ayudas import AHORA, CONFIG_BUILD as CONFIG, CONFIG_FIXTURE, fixture
 
 ROOT = Path(__file__).parent.parent
 from dashboard import build
@@ -13,10 +13,7 @@ from dashboard import validar
 
 from dashboard.ajustes import cargar_config
 
-CONFIG = cargar_config(ROOT / "tests" / "fixtures")
 # El fixture es de la semana del 26 oct: usa una copia del config con ese inicio de plan.
-CONFIG_FIXTURE = {**CONFIG, "plan_start": "2026-10-26"}
-AHORA = datetime(2026, 11, 4, 12, 0, tzinfo=ZoneInfo("America/Merida"))  # miércoles, semana 2
 
 PROHIBIDAS = ["activityId", "activityName", "ownerDisplayName", "ownerFullName", "userProfilePk",
               "userProfilePK", "userProfileId", "uuid", "activityUUID", "displayName", "locationName",
@@ -24,39 +21,6 @@ PROHIBIDAS = ["activityId", "activityName", "ownerDisplayName", "ownerFullName",
               "startLatitude", "startLongitude", "endLatitude", "endLongitude",
               "splitSummaries", "splits", "serie"]
 SECRETOS = ["Persona Inventada", "persona@ejemplo.com", "Calle Secreta", "Corrida de Calle Secreta"]
-
-
-def fixture():
-    def act(i, dia, tipo, **kw):
-        return {"activityId": i, "activityUUID": f"uuid-{i}", "activityName": "Corrida de Calle Secreta",
-                "ownerDisplayName": "Persona Inventada", "ownerFullName": "Persona Inventada",
-                "userProfilePk": 99, "locationName": "Calle Secreta",
-                "ownerProfileImageUrlSmall": "https://ejemplo.com/foto.png",
-                "startTimeLocal": f"{dia} 18:00:00", "duration": 1800.0,
-                "activityType": {"typeKey": tipo}, "averageHR": 140.0, "averageSpeed": 3.0,
-                "maxHR": 180.0, "hrTimeInZone_1": 300, "hrTimeInZone_2": 900, "hrTimeInZone_3": 300,
-                "hrTimeInZone_4": 0, "hrTimeInZone_5": 0, "distance": 4500.0, **kw}
-    tramos = [{"splitType": "RWD_RUN", "duration": 1200.0, "distance": 3000.0, "noOfSplits": 3},
-              {"splitType": "RWD_WALK", "duration": 600.0, "distance": 700.0, "noOfSplits": 3}]
-    dias = [f"2026-10-{d:02d}" for d in range(20, 32)] + ["2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04"]
-    return {
-        "daily_summaries": [{"calendarDate": d, "displayName": "Persona Inventada",
-                             "heartRate": {"restingValue": 60}} for d in dias],
-        "sleep": [{"calendarDate": d, "sleepTimeSeconds": 25000, "userProfilePK": 99} for d in dias],
-        "hrv": [{"calendarDate": d, "lastNightAvg": 34, "status": "BALANCED",
-                 "baseline": {"lowUpper": 28, "balancedLow": 30, "balancedUpper": 38}} for d in dias],
-        "activities": [act(1, "2026-11-02", "hiit"), act(2, "2026-11-03", "running", splitSummaries=tramos),
-                       act(3, "2026-10-28", "running", splitSummaries=tramos, endLatitude=1.0, endLongitude=2.0),
-                       act(4, "2026-11-03", "hiit")],
-        "details": {"1": {"rpe": 6.0, "feel": 50},
-                    "2": {"rpe": 4.0, "feel": 50, "splits": [
-                        {"tipo": "RWD_RUN", "seg": 1200.0, "m": 3000.0, "fc": 145.0, "n": 3},
-                        {"tipo": "RWD_WALK", "seg": 600.0, "m": 700.0, "fc": 125.0, "n": 3}]},
-                    "3": {"rpe": None, "feel": None}},
-        "hr_zones": [{"sport": "DEFAULT", "maxHeartRateUsed": 190, "restingHeartRateUsed": 64, "zone1Floor": 125, "zone2Floor": 138,
-                      "zone3Floor": 151, "zone4Floor": 164, "zone5Floor": 177}],   # zonas de Garmin (la web solo pinta lpm con ellas)
-        "meta": {"pulled_at_utc": "2026-11-04T17:00:00+00:00"},
-    }
 
 
 def revisar_privacidad(out: dict, extras=()):

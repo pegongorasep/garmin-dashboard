@@ -1,9 +1,9 @@
-import sys
 from pathlib import Path
 
 import pytest
 
 
+from ayudas import Falsa, ConSecretos, jwks_falso
 from dashboard import i18n
 
 i18n.ESTRICTO = True   # en pruebas, una clave que falta lanza error
@@ -37,3 +37,28 @@ def web_ctx():
         return TestClient(c.app, base_url="https://ahilallevas.test", follow_redirects=False)
     c.cliente = cliente
     return c
+
+
+@pytest.fixture
+def ctx(web_ctx):
+    """web_ctx con las llaves públicas de GitHub (JWKS) falsas, para el token OIDC del tubo."""
+    web_ctx.app.state.jwks_fetch = lambda url: jwks_falso()
+    web_ctx.app.state.__dict__.pop("jwks_cache", None)
+    return web_ctx
+
+
+@pytest.fixture
+def gh(ctx):
+    """App de GitHub falsa (`Falsa`) ya instalada en la web."""
+    ctx.settings.github_app_id = ctx.settings.github_app_slug = ctx.settings.github_app_client_id = "x"
+    ctx.settings.github_app_client_secret = ctx.settings.github_app_private_key = "x"
+    f = Falsa()
+    ctx.app.state.github_app = f
+    return f
+
+
+@pytest.fixture
+def gh_con_secretos(gh, ctx):
+    f = ConSecretos()
+    ctx.app.state.github_app = f
+    return f

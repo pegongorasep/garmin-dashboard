@@ -3,13 +3,14 @@
 import json
 import os
 from copy import deepcopy
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
 
-from test_build import AHORA, CONFIG_FIXTURE, ROOT, build, fixture
+from dashboard import build
+from ayudas import AHORA, CONFIG_FIXTURE, fixture, ROOT
 
 GOLDEN = Path(__file__).parent / "fixtures" / "golden_semana.json"
 TZ = ZoneInfo("America/Merida")

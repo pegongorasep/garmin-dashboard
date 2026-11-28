@@ -3,12 +3,8 @@ from datetime import timedelta
 
 import pytest
 
-from test_conexion import Falsa, sesion
-from test_conexion import gh as _gh   # noqa: F401
-from test_sincronizar import V2, _instr
-from test_web_cuentas import csrf_de
-from test_web_tubo import auth, ctx, paquete_chico, subir, token   # noqa: F401
 from web.modelos import Usuario, ahora
+from ayudas import _instr, auth_tubo as auth, csrf_de, Falsa, paquete_chico, sesion, subir, token_tubo as token, V2
 
 
 class ConSecretos(Falsa):
@@ -21,7 +17,7 @@ class ConSecretos(Falsa):
 
 
 @pytest.fixture
-def gh(_gh, ctx):
+def gh(gh, ctx):
     f = ConSecretos()
     ctx.app.state.github_app = f
     return f
@@ -39,7 +35,7 @@ def desde(ctx, uid):
 
 
 def test_un_solo_correo_por_incidente_y_subida_buena_limpia(ctx):
-    from test_web_tubo import usuario_amigo
+    from ayudas import usuario_amigo
     uid = usuario_amigo(ctx, repo_id=777)
     assert rechazar(ctx, "1").status_code == 200
     assert desde(ctx, uid) is not None
@@ -55,7 +51,7 @@ def test_un_solo_correo_por_incidente_y_subida_buena_limpia(ctx):
 
 
 def test_aviso_en_data_json_aparece_y_se_va(ctx, gh):
-    from test_garmin_ajustes import con_ajustes
+    from ayudas import con_ajustes
     cl, uid = sesion(ctx)
     con_ajustes(ctx, uid)
     with ctx.sesiones() as db:

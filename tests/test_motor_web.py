@@ -8,7 +8,6 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).parent.parent
 

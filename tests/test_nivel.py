@@ -1,5 +1,4 @@
 """Nivel desde Garmin (plan/nivel.py) con actividades sintéticas."""
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 

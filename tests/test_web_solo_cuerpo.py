@@ -1,21 +1,6 @@
-from test_web_cuentas import csrf_de, entrar, post, crear_usuario
 from sqlalchemy import text
-from web.modelos import Consentimiento, InBody, Usuario
-from web.privacidad import VERSION_AVISO
-
-
-def nuevo(ctx, correo="c@x.com", uso=None, consentido=True):
-    uid = crear_usuario(ctx, correo)
-    with ctx.sesiones() as db:
-        if consentido:
-            db.add(Consentimiento(usuario_id=uid, version_aviso=VERSION_AVISO))
-        db.get(Usuario, uid).uso = uso
-        db.commit()
-    return uid, entrar(ctx, ctx.cliente(), correo)
-
-
-def token(cl, url="/bienvenida"):
-    return csrf_de(cl.get(url).text)
+from web.modelos import InBody, Usuario
+from ayudas import nuevo, token_cuerpo as token
 
 
 def test_cuenta_vieja_con_repo_no_ve_la_pregunta(web_ctx):
@@ -71,7 +56,7 @@ def test_cuerpo_nuevo_segun_inbody_activo(web_ctx):
 
 def test_cuerpo_nuevo_sin_inbody_no_hay_boton(web_ctx):
     import copy
-    from test_web_ajustes import CONFIG
+    from ayudas import CONFIG
     from web.calculo import config_de
     from web.modelos import Ajustes
     uid, cl = nuevo(web_ctx, uso="completo")

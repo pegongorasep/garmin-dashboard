@@ -1,8 +1,7 @@
 """L1 «Sin plan»: la pregunta del onboarding, el modo sin plan, los interruptores de Ajustes y un data.json válido sin plan."""
 from dashboard import validar
-from test_web_cuentas import crear_usuario, csrf_de, entrar
-from test_web_solo_cuerpo import nuevo, token
-from web.modelos import Ajustes, Plan, Usuario
+from web.modelos import Ajustes, Usuario
+from ayudas import crear_usuario, csrf_de, entrar, nuevo, token_cuerpo as token
 
 
 def vincular(ctx, uid):

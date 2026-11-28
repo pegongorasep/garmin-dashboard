@@ -6,8 +6,7 @@ from dashboard import build
 from dashboard import metrics as m
 import planes_v6
 from dashboard.ajustes import normalizar_config
-from test_build import CONFIG, fixture
-from test_web_ajustes import CONFIG as CONFIG_WEB
+from ayudas import CONFIG as CONFIG_WEB, CONFIG_BUILD as CONFIG, fixture
 
 PLAN = {**planes_v6.generar(normalizar_config(CONFIG_WEB)), "start": "2026-10-26"}
 INI = date(2026, 10, 26)   # semana 1

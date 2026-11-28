@@ -1,20 +1,7 @@
 """C10: sección Garmin en /ajustes (tres estados), desconectar y reconectar."""
-import copy
 
-from test_conexion import empezar, gh, sesion, volver   # noqa: F401
-from test_web_ajustes import CONFIG
-from test_web_cuentas import csrf_de
-from test_web_tubo import ctx   # noqa: F401
 from web.modelos import Ajustes, Cambio, DatoGarmin, Subida, Usuario
-
-
-def con_ajustes(ctx, uid):
-    with ctx.sesiones() as db:
-        u = db.get(Usuario, uid)
-        u.repo, u.repo_id = "ana/ahilallevas-datos", 900
-        db.add(Ajustes(usuario_id=uid, config=copy.deepcopy(CONFIG)))
-        db.add(DatoGarmin(usuario_id=uid, tipo="dia", clave="2026-11-24", contenido={"calendarDate": "2026-11-24"}))
-        db.commit()
+from ayudas import con_ajustes, csrf_de, empezar, sesion, volver
 
 
 def desconectar(cl, **extra):
@@ -107,7 +94,7 @@ def test_el_coach_no_ve_ni_desconecta(ctx, gh):
         db.commit()
         db.add(Coach(atleta_id=uid, coach_id=coach.id))
         db.commit()
-    from test_web_cuentas import entrar
+    from ayudas import entrar
     cc = entrar(ctx, ctx.cliente(), "coach@x.com")
     assert "Desconectar Garmin" not in cc.get(f"/a/{uid}/ajustes").text
     t = csrf_de(cc.get("/ajustes").text) if cc.get("/ajustes").status_code == 200 else "x"

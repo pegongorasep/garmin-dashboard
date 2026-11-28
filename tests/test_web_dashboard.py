@@ -108,13 +108,12 @@ def test_cache_se_reusa_y_se_invalida(web_ctx):
 
 @pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
 def test_ruta_data_json_de_la_web_sirve_el_del_usuario(web_ctx):
-    from test_web_cuentas import csrf_de, liga_de  # noqa: F401
     uid = usuario_pedro(web_ctx)
     with web_ctx.sesiones() as db:
         importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
         db.add(Consentimiento(usuario_id=uid, version_aviso=VERSION_AVISO))
         db.commit()
-    from test_web_cuentas import entrar
+    from ayudas import entrar
     cl = entrar(web_ctx, web_ctx.cliente(), "pedro@example.com")
     assert "<title>" in cl.get("/").text
     r = cl.get("/data.json")
@@ -123,7 +122,7 @@ def test_ruta_data_json_de_la_web_sirve_el_del_usuario(web_ctx):
 
 
 def test_data_con_claves_prohibidas_no_se_sirve(web_ctx, monkeypatch):
-    from test_web_cuentas import CONFIG, entrar
+    from ayudas import CONFIG, entrar
     with web_ctx.sesiones() as db:
         u = Usuario(correo="a@x.com", nombre="Ana", apellido="Prueba")
         db.add(u)

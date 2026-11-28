@@ -1,22 +1,12 @@
 """E5: formulario de actividad a mano (rutas, permisos, CSRF, validación, caché, coach)."""
 import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
-from test_web_ajustes import HOY as AHORA, listo
-from test_web_cuentas import csrf_de
 from web import calculo, manual
 from web.modelos import ActividadManual, Coach, Usuario
+from ayudas import datos, enviar, HOY as AHORA, listo
 
 HOY = date(2026, 11, 25)   # el reloj de `listo`
-
-
-def datos(**kw):
-    return {"tipo": "correr", "fecha": "2026-11-24", "distancia": "5", "tiempo": "30:00", **kw}
-
-
-def enviar(cl, url, form, ir=None):
-    r = cl.get(ir or url)
-    return cl.post(url, data={"csrf": csrf_de(r.text), **form}, follow_redirects=False)
 
 
 def filas(web_ctx, uid):
@@ -117,7 +107,7 @@ def test_guardar_invalida_la_cache_y_la_nota_no_sale(web_ctx):
     sem = despues["semanas_hoy"][despues["semana_hoy_idx"]]
     assert next(d for d in sem["dias"] if d["fecha"] == "2026-11-24")["corrida"]
     aid = filas(web_ctx, uid)[0][0]
-    r = enviar(cl, f"/actividad/{aid}", datos(tiempo="45:00"))
+    enviar(cl, f"/actividad/{aid}", datos(tiempo="45:00"))
     with web_ctx.sesiones() as db:
         otra = calculo.calcular(db, db.get(Usuario, uid), AHORA)
     assert otra != despues

@@ -2,30 +2,18 @@
 import re
 from datetime import datetime
 
-from test_web_cuentas import csrf_de, entrar, crear_usuario
-from test_web_perfil import con_exif_gps
 from web import perfil
-from web.modelos import FotoPerfil, Grupo, InvitacionGrupo, MiembroGrupo, Usuario
-
-
-def sesion(ctx, correo):
-    crear_usuario(ctx, correo)
-    return entrar(ctx, ctx.cliente(), correo)
-
-
-def post(cl, url, **campos):
-    return cl.post(url, data={"csrf": csrf_de(cl.get("/grupos/nuevo").text), **campos})
-
-
-def crear(cl, nombre="Los Fieras"):
-    r = post(cl, "/grupos/nuevo", nombre=nombre)
-    assert r.status_code == 303
-    return int(r.headers["location"].rsplit("/", 1)[1])
-
-
-def liga(cl, gid):
-    t = post(cl, f"/grupos/{gid}/invitar").text
-    return re.search(r"/grupos/unirse/([\w-]+)", t).group(1)
+from web.modelos import Grupo, InvitacionGrupo, MiembroGrupo, Usuario
+from ayudas import (
+    con_exif_gps,
+    crear,
+    crear_usuario,
+    csrf_de,
+    entrar,
+    liga,
+    post_grupos as post,
+    sesion_grupos as sesion,
+)
 
 
 def test_crear_y_unirse(web_ctx):
@@ -309,8 +297,8 @@ def test_pagina_trae_data_grupos_y_el_coach_no(web_ctx):
     crear(a, "Otro")
     assert 'data-grupos="2"' in a.get("/").text
     # el coach que ve a su atleta: sin atributo (= 0) y data.json con 0
-    from test_web_coach import dar
-    from test_web_ajustes import listo
+    from ayudas import dar
+    from ayudas import listo
     uid_a, atl = listo(web_ctx, "atl@x.com")
     crear(atl)
     uid_c, coach = listo(web_ctx, "coach@x.com", con_plan=False)

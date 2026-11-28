@@ -1,8 +1,8 @@
 from datetime import date, timedelta
 
-from test_web_cuentas import crear_usuario
 from web import sincronizar as sz
 from web.modelos import Subida, Usuario, ahora
+from ayudas import _instr, _sincs, auth_tubo as auth, crear_usuario, paquete_chico, subir, token_tubo as token, usuario_amigo, V2
 
 
 def _u(ctx, db):
@@ -66,20 +66,7 @@ def test_dias_y_rango(web_ctx):
 
 
 # --- C3: el tubo habla de sincronizaciones ---
-from test_web_tubo import auth, ctx, paquete_chico, subir, token, usuario_amigo   # noqa: F401
 from web.modelos import Sincronizacion
-
-V2 = {"motor_version": 2}
-
-
-def _instr(ctx, cuerpo=None, **claims):
-    return ctx.cliente().post("/api/tubo/instrucciones", json=cuerpo, headers=auth(token(ctx, **claims)))
-
-
-def _sincs(ctx):
-    with ctx.sesiones() as db:
-        return [(s.tipo, s.estado, s.paso, s.run_id, s.hechos, s.total, s.error, s.nuevas)
-                for s in db.query(Sincronizacion).order_by(Sincronizacion.id)]
 
 
 def test_motor_viejo_recibe_lo_de_hoy(ctx):

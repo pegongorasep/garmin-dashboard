@@ -3,9 +3,9 @@ en el catálogo, y /diseno solo para el admin."""
 import re
 from pathlib import Path
 
-from test_web_cuentas import crear_usuario, entrar
 from web.app import ESTATICOS_SITE
 from web.modelos import Usuario
+from ayudas import crear_usuario, entrar
 
 ROOT = Path(__file__).resolve().parent.parent
 CSS = (ROOT / "site" / "componentes.css").read_text()

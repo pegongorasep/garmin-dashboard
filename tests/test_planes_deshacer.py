@@ -1,9 +1,9 @@
 """P4: repetir / retomar solo se deshace durante la misma semana; los demás cambios, igual que siempre."""
 from datetime import datetime, timezone
 
-from test_web_ajustes import CONFIG, HOY, crudo, listo, tok
 from web import cambios
 from web.modelos import Cambio
+from ayudas import CONFIG, crudo, HOY, listo, tok
 
 LUNES_SIG = datetime(2026, 11, 30, 18, 0, tzinfo=timezone.utc)   # lunes de la semana siguiente (HOY es miércoles 25)
 

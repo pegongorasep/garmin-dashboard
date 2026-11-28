@@ -6,11 +6,9 @@ from datetime import date, timedelta
 from dashboard import metrics as m
 import planes_v6
 from dashboard.ajustes import normalizar_config
-from test_planes_saltos import cfg_de, crudo_carrera, crudo_con, plan_carrera
-from test_web_ajustes import CONFIG, HOY, crudo, listo, tok
-from test_web_mcp import cuerpo, llamar, rpc, token_para
 from web import plan_vivo
 from web.modelos import Ajustes, Cambio, Plan
+from ayudas import cfg_de, CONFIG, crudo, crudo_carrera, cuerpo, listo, llamar, plan_carrera, rpc, tok, token_para
 
 INI = date(2026, 11, 9)
 LUN = lambda n: INI + timedelta(weeks=n - 1)   # noqa: E731  lunes de la semana n (sin saltos)
@@ -165,7 +163,7 @@ def test_el_dialogo_ofrece_las_dos_opciones(web_ctx):
 # --- /plan/nuevo con la carrera puesta ---
 
 def test_plan_nuevo_con_parametros_deja_la_carrera_puesta(web_ctx):
-    from test_web_plan_nuevo import lunes_siguiente
+    from ayudas import lunes_siguiente
     uid, cl = listo(web_ctx)
     fecha = (lunes_siguiente() + timedelta(weeks=12, days=5)).isoformat()
     r = cl.get(f"/plan/nuevo?carrera=1&fecha={fecha}&km=21&nombre=X")

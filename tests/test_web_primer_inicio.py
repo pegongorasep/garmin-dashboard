@@ -1,10 +1,8 @@
 """Parte 2, E3: primer inicio (ui.primer_inicio): tarjeta de Garmin, «+ Registrar actividad» y primeros pasos."""
 from dashboard import validar
-from test_web_ajustes import listo
-from test_web_coach import dar
-from test_web_cuentas import crear_usuario, entrar
 from web.modelos import Ajustes, Consentimiento, InBody, Grupo, MiembroGrupo, Usuario
 from web.privacidad import VERSION_AVISO
+from ayudas import crear_usuario, dar, entrar, listo
 
 
 def nuevo(ctx, correo="n@x.com"):
@@ -22,7 +20,7 @@ def pi(cl, url="/data.json"):
 
 
 def test_cuenta_nueva_registra_primera_corrida_desde_hoy(web_ctx):
-    from test_web_actividad import datos, enviar
+    from ayudas import datos, enviar
 
     _, cl = nuevo(web_ctx)
     antes = cl.get("/data.json").json()
@@ -79,7 +77,7 @@ def test_cada_primer_paso_se_va_al_cumplirse(web_ctx):
         db.commit()
     assert ids() == ["plan"]
     with web_ctx.sesiones() as db:
-        from test_web_ajustes import CONFIG
+        from ayudas import CONFIG
         import copy
         db.add(Ajustes(usuario_id=uid, config=copy.deepcopy(CONFIG)))
         db.commit()

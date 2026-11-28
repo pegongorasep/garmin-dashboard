@@ -2,9 +2,9 @@
 import json
 from datetime import date, timedelta
 
-from test_web_feed import act, dia, tres, uid_de
 from web import feed
 from web.modelos import Plan, Usuario
+from ayudas import act, dia, tres, uid_de
 
 HOY = date.today()
 LUN = HOY - timedelta(days=HOY.weekday())

@@ -1,11 +1,10 @@
 """Motor v6 (plan/motor_v6.py): reglas del motor, personas del simulador y compatibilidad con el resto de la app
 (entrenamientos del reloj en simulación, asignación de sesiones, semana de carrera con 2–5 sesiones)."""
-import copy
-import sys
 from datetime import date
 from pathlib import Path
 
 import pytest
+from ayudas import entrada, EV_BASE, LUNES
 
 ROOT = Path(__file__).parent.parent
 from dashboard import build
@@ -16,13 +15,6 @@ from plan import motor_v6 as v6
 from dashboard import reloj_plan as rp
 from plan import simulador as sim
 from dashboard.ajustes import cargar_config
-
-LUNES = "2026-11-30"
-EV_BASE = {"semanas_consistentes": 8, "trote_continuo_min": 35, "minutos_sem_prom": 95, "sesion_max_30d": 35, "dias_intensos": []}
-
-
-def entrada(**kw):
-    return {"nivel": "base", "dias": 3, "inicio": LUNES, "inicio_minutos": 100, "evidencia": dict(EV_BASE), "edad": 35, **kw}
 
 
 def minutos(w):

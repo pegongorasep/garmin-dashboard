@@ -1,10 +1,9 @@
 """P3: vista previa de «Repetir o retomar» (/plan/propuesta.json), POST de retomar y MCP."""
 import copy
 
-from test_planes_saltos import crudo_carrera, plan_carrera
-from test_web_ajustes import CONFIG, HOY, crudo, listo, plan_de, tok
 from web import calculo
 from web.modelos import Ajustes, CacheData, Cambio, Plan, Usuario
+from ayudas import CONFIG, crudo, crudo_carrera, HOY, listo, plan_carrera, tok
 
 
 def _con_carrera(ctx, uid):
@@ -107,7 +106,7 @@ def test_permisos_de_propuesta_y_retomar(web_ctx):
 
 
 def test_coach_ve_propuesta_con_prefijo(web_ctx):
-    from test_web_ajustes import Coach
+    from web.modelos import Coach
     uid_a, _ = listo(web_ctx, "atleta@x.com")
     uid_c, cl_c = listo(web_ctx, "coach@x.com")
     with web_ctx.sesiones() as db:

@@ -1,6 +1,5 @@
 """Plan v6 para las pruebas que antes usaban el generador viejo: `generar(cfg)` arma un plan del motor v6 con lo que dice la config
 (nivel viejo -> nivel v6, semanas e inicio). Reexporta las piezas de `pasos`."""
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent

@@ -6,15 +6,17 @@ from pathlib import Path
 
 import pytest
 
-from test_conexion import sesion
-from test_guia import conectada, gh, token   # noqa: F401
-from test_conexion import gh as _gh   # noqa: F401
-from test_web_tubo import ctx   # noqa: F401
 from web import sincronizar
 from web.modelos import Sincronizacion, Usuario
+from ayudas import conectada, sesion
 
 SITE = Path(__file__).resolve().parent.parent / "site"
 CHROME = shutil.which("google-chrome") or shutil.which("chromium") or "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+
+@pytest.fixture
+def gh(gh_con_secretos):
+    return gh_con_secretos
 
 
 def test_ui_sync_por_defecto_en_build():

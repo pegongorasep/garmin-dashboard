@@ -8,9 +8,9 @@ import pytest
 from plan import convertir_viejo as cv
 from plan import motor_v6
 from dashboard import validar
-from test_web_cuentas import crear_usuario
 from web import calculo, cli
 from web.modelos import Ajustes, CacheData, Cambio, Plan
+from ayudas import crear_usuario
 
 ROOT = Path(__file__).parent.parent
 VIEJO = json.loads((ROOT / "plan" / "plan.json").read_text()) if (ROOT / "plan" / "plan.json").exists() else None
@@ -47,7 +47,6 @@ def test_ajustes_con_carrera_quita_la_de_7_semanas():
 
 
 def _cuenta(ctx):
-    from test_web_cuentas import CONFIG
     uid = crear_usuario(ctx, "pedro@example.com", con_ajustes=True)
     siete = motor_v6.generar_v6({"nivel": "base", "dias": 3, "inicio": "2026-11-16", "semanas": 7, "inicio_minutos": 100})
     with ctx.sesiones() as db:

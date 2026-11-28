@@ -1,18 +1,13 @@
 """Motor v6 F4: «Quiero un plan» (/plan/nuevo): nivel desde Garmin, preguntas por nivel, vista previa, confirmar, coach y CSRF."""
 import re
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from plan import motor_v6
 
 from dashboard import validar
-from test_web_cuentas import crear_usuario, csrf_de, entrar
 from web.modelos import Ajustes, CacheData, Cambio, Coach, DatoGarmin, Plan, Usuario
-
-
-def lunes_siguiente() -> date:
-    hoy = date.today()
-    return hoy + timedelta(days=(7 - hoy.weekday()) % 7 or 7)
+from ayudas import confirmar, crear_usuario, csrf_de, entrar, lunes_siguiente, nueva, preguntas, respuestas
 
 
 def sembrar(ctx, uid, semanas=8, por_semana=4, minutos=50):
@@ -29,28 +24,9 @@ def sembrar(ctx, uid, semanas=8, por_semana=4, minutos=50):
         db.commit()
 
 
-def preguntas(cl, nivel, pref=""):
-    r = cl.get(f"{pref}/plan/nuevo")
-    return cl.post(f"{pref}/plan/nuevo/preguntas", data={"csrf": csrf_de(r.text), "nivel": nivel, "frecuencia_actual": "3", "corrida_larga": "5"})
-
-
-def respuestas(**extra):
-    return {"dias": "3", "frecuencia_actual": "3", "corrida_larga": "5", "inicio": lunes_siguiente().isoformat(), "edad": "35", "zona": "America/Merida", **extra}
-
-
 def vista(cl, nivel, pref="", **extra):
     r = preguntas(cl, nivel, pref)
     return cl.post(f"{pref}/plan/nuevo/vista", data={"csrf": csrf_de(r.text), "nivel": nivel, **respuestas(**extra)})
-
-
-def confirmar(cl, nivel, pref="", **extra):
-    r = preguntas(cl, nivel, pref)
-    return cl.post(f"{pref}/plan/nuevo/confirmar", data={"csrf": csrf_de(r.text), "nivel": nivel, **respuestas(**extra)})
-
-
-def nueva(web_ctx, correo="n@x.com"):
-    uid = crear_usuario(web_ctx, correo)
-    return uid, entrar(web_ctx, web_ctx.cliente(), correo)
 
 
 def test_sin_sesion_va_a_entrar_y_sin_datos_propone_empezando(web_ctx):

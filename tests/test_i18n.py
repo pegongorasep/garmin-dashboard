@@ -47,7 +47,7 @@ def test_cookie_idioma_y_correo_en_ingles(web_ctx):
 
 def test_paginas_de_la_web_en_ingles(web_ctx):
     """Las páginas con sesión salen en inglés: sin textos del catálogo en español."""
-    from test_web_ajustes import listo
+    from ayudas import listo
     uid, c = listo(web_ctx)
     c.cookies.set("idioma", "en")
     rutas = ["/ajustes", "/plan/acciones", "/cuerpo", "/cuerpo/nuevo", "/historial", "/coach", "/conexiones", "/ayuda/conector",
@@ -60,7 +60,7 @@ def test_paginas_de_la_web_en_ingles(web_ctx):
 
 
 def test_bienvenida_y_sesion_en_ingles(web_ctx):
-    from test_web_ajustes import listo
+    from ayudas import listo
     from web.modelos import Ajustes
     uid, c = listo(web_ctx)
     c.cookies.set("idioma", "en")
@@ -94,8 +94,6 @@ def test_json_del_sitio_al_dia_y_con_todas_las_claves_del_js():
 
 
 def test_idioma_en_data_json_solo_si_esta_en_config():
-    from datetime import datetime
-    from dashboard import build
     from dashboard import ajustes
     cfg = ajustes.config_por_defecto()
     assert cfg["idioma"] is None
@@ -104,7 +102,7 @@ def test_idioma_en_data_json_solo_si_esta_en_config():
 
 
 def test_web_sirve_textos_del_sitio_e_idioma_en_data_json(web_ctx):
-    from test_web_ajustes import listo
+    from ayudas import listo
     uid, c = listo(web_ctx)
     r = c.get("/i18n/en.json")
     assert r.status_code == 200 and r.json()["sitio.tab.hoy"] == "Today"
@@ -137,7 +135,7 @@ def _textos(o, acc):
 
 def test_data_json_en_ingles_sin_espanol_conocido():
     from dashboard import build
-    from test_build import AHORA, CONFIG_FIXTURE, fixture
+    from ayudas import AHORA, CONFIG_FIXTURE, fixture
     plan = build.load(build.ROOT / "plan" / "plan.example.json")
     en = build.build(fixture(), plan, {**CONFIG_FIXTURE, "idioma": "en"}, AHORA)
     es = build.build(fixture(), plan, {**CONFIG_FIXTURE, "idioma": "es"}, AHORA)
@@ -154,7 +152,7 @@ def test_data_json_en_ingles_sin_espanol_conocido():
 
 def test_notas_del_plan_llevan_id_y_texto_traducido():
     from dashboard import build
-    from test_build import AHORA, CONFIG_FIXTURE, fixture
+    from ayudas import AHORA, CONFIG_FIXTURE, fixture
     plan = build.load(build.ROOT / "plan" / "plan.example.json")
     for idioma, texto in (("es", "opcional"), ("en", "optional")):
         out = build.build(fixture(), plan, {**CONFIG_FIXTURE, "idioma": idioma}, AHORA)
@@ -163,7 +161,7 @@ def test_notas_del_plan_llevan_id_y_texto_traducido():
 
 
 def test_calculo_de_la_web_cachea_por_idioma(web_ctx):
-    from test_web_ajustes import listo
+    from ayudas import listo
     from web import calculo
     from web.modelos import Usuario
     uid, _ = listo(web_ctx)

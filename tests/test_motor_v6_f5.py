@@ -1,23 +1,11 @@
 """Motor v6 F5: carreras construidas dentro del plan (`en_plan`), eventos sobre planes v6 y plan fijo en build (sin ajuste semanal)."""
-import copy
-from datetime import date, timedelta
+from datetime import timedelta
 
 from dashboard import build
 from plan import motor_v6
 from dashboard.ajustes import normalizar_config
 from web import plan_vivo
-
-INICIO = date(2026, 11, 30)   # lunes
-EV = {"minutos_sem_prom": 60, "trote_continuo_min": 30, "semanas_consistentes": 2, "sesion_max_30d": 30}
-
-
-def plan_v6(**extra):
-    return motor_v6.generar_v6({"nivel": "base", "dias": 3, "meta": "base", "inicio": INICIO.isoformat(), "evidencia": EV,
-                                "inicio_minutos": 60, "semanas": 12, **extra})
-
-
-def crudo_de(plan, **corrida):
-    return {"perfil": {"edad": 35, "zona_horaria": "America/Merida"}, "corrida": {"inicio": plan["start"], "semanas": len(plan["weeks"]), **corrida}}
+from ayudas import _acts, _cfg, crudo_de, INICIO, plan_v6
 
 
 def cfg_de(crudo, hoy):
@@ -61,24 +49,10 @@ def test_viaje_sobre_plan_v6_sigue_funcionando():
     assert cfg_de(crudo, INICIO + timedelta(weeks=1, days=2))["pausas"]
 
 
-def _acts(minutos_por_semana: dict):
-    out = []
-    for i, mins in minutos_por_semana.items():
-        for k in range(3):
-            f = INICIO + timedelta(weeks=i, days=2 * k)
-            out.append({"startTimeLocal": f"{f} 07:00:00", "duration": mins / 3 * 60, "activityType": {"typeKey": "running"}})
-    return out
-
-
-def _cfg(plan):
-    return {"plan_start": plan["start"], "semanas_repetidas": [], "pausas": [], "plan_semanas": len(plan["weeks"]),
-            **{k: v for k, v in normalizar_config(crudo_de(plan)).items()}}
-
-
 def test_plan_fijo_la_semana_en_curso_sale_igual_aunque_la_anterior_se_corriera_poco():
     from datetime import datetime
     from zoneinfo import ZoneInfo
-    from test_build import fixture
+    from ayudas import fixture
     plan = plan_v6()
     cfg = {**_cfg(plan), "modo": "web"}
     ahora = datetime.combine(INICIO + timedelta(weeks=1, days=2), datetime.min.time(), tzinfo=ZoneInfo("America/Merida")).replace(hour=12)

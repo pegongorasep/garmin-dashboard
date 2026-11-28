@@ -1,10 +1,8 @@
 """Simulador de planes (plan/simulador.py): personas, simulación y reglas.
 Las reglas REPORTAN: aquí solo se prueba que detectan un plan malo hecho a mano y aceptan uno bueno, no que el motor
 v6 las cumpla (eso lo vigila tests/test_motor_v6.py)."""
-import sys
 from pathlib import Path
 
-import pytest
 
 ROOT = Path(__file__).parent.parent
 from plan import simulador as sim
