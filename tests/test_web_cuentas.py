@@ -227,6 +227,16 @@ def test_cabeceras_de_seguridad(web_ctx):
     assert r.headers["cache-control"] == "no-store"
 
 
+def test_hsts_solo_con_https(web_ctx):
+    from fastapi.testclient import TestClient
+    r = web_ctx.cliente().get("/")
+    assert r.headers["strict-transport-security"] == "max-age=31536000; includeSubDomains"
+    http = TestClient(web_ctx.app, base_url="http://localhost")
+    assert "strict-transport-security" not in http.get("/").headers
+    proxy = http.get("/", headers={"x-forwarded-proto": "https"})
+    assert "strict-transport-security" in proxy.headers
+
+
 def test_codigo_correcto_crea_sesion_y_solo_sirve_una_vez(web_ctx):
     crear_usuario(web_ctx, "si@x.com")
     cl = web_ctx.cliente()

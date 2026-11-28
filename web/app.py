@@ -98,6 +98,9 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
         resp.headers.setdefault("X-Frame-Options", "DENY")
         resp.headers.setdefault("Referrer-Policy", "same-origin")
         resp.headers.setdefault("Content-Security-Policy", CSP)
+        # HSTS solo por https (Cloud Run termina TLS y avisa con x-forwarded-proto); en local/http no
+        if request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").split(",")[0].strip() == "https":
+            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         if not request.url.path.startswith("/estaticos"):
             resp.headers.setdefault("Cache-Control", "no-store")
         return resp
