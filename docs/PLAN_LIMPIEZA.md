@@ -36,6 +36,7 @@ Objetivo: que el código no se vuelva un revoltijo. Sin cambios de comportamient
   el texto «Corre /ajustar», y pasar a i18n los textos fijos de `build.py` («Plan terminado», «Ve a Ajustes…»).
 - `publicar_pages` en `tubo.py`: se deja la respuesta si los tubos en `stable` la leen; si no, se quita.
 - `run_local.sh` y `dashboard/build.py` siguen funcionando para Pedro.
+- Hecho: la columna sin uso `usuarios.migrado` se quitó en la migración 0023.
 
 ## Después (cuando se integren las ramas de los worktrees)
 

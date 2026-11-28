@@ -161,7 +161,7 @@ Páginas varias
 
 **Migración Alembic**
 1. Edita la tabla en `web/modelos.py` (fechas en UTC naive; JSON con `sa.JSON`).
-2. Crea `web/alembic/versions/00NN_nombre.py` con la siguiente numeración (hoy la última es `0022`); `revision = "00NN"`, `down_revision = "00NN-1"`, con `upgrade()` y `downgrade()`.
+2. Crea `web/alembic/versions/00NN_nombre.py` con la siguiente numeración (hoy la última es `0023`); `revision = "00NN"`, `down_revision = "00NN-1"`, con `upgrade()` y `downgrade()`.
 3. Aplícala en local: `.venv/bin/alembic -c web/alembic.ini upgrade head`. En producción corre sola al arrancar (el `CMD` del Dockerfile; máximo 1 instancia).
 4. Columnas nuevas con `nullable=True` o valor por defecto. Si la tabla guarda algo de una persona, revisa `web/cuenta.py` (descarga y borrado de cuenta).
 

@@ -245,6 +245,7 @@ def test_migracion_compartir_sube_y_baja_y_los_usuarios_quedan_en_si(tmp_path):
     cols = lambda: {r[1] for r in sqlite3.connect(db).execute("pragma table_info(usuarios)")}  # noqa: E731
     command.upgrade(cfg, "0013")
     con = sqlite3.connect(db)
+    # en 0013 la columna usuarios.migrado aún existe (se quitó en 0023)
     con.execute("insert into usuarios (correo, es_admin, creado, migrado, sensor, sin_plan) values ('v@x.com', 0, '2026-01-01', 0, 'banda', 0)")
     con.commit()
     con.close()
