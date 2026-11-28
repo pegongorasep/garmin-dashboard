@@ -160,7 +160,7 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     ui = {**ui, "menu": [{**m, "url": f(m["url"])} for m in ui.get("menu") or [] if m["url"] != "/coach"],
           "plan_acciones": [{**a, "url": f(a["url"])} for a in ui.get("plan_acciones") or []],
           "plan_url": f(ui.get("plan_url")), "repetir_url": f(ui.get("repetir_url")),
-          "propuesta_url": f(ui.get("propuesta_url")), "retomar_url": f(ui.get("retomar_url")),
+          "propuesta_url": f(ui.get("propuesta_url")), "plan_nuevo_url": f(ui.get("plan_nuevo_url")), "retomar_url": f(ui.get("retomar_url")),
           "editar_urls": {k: f(v) for k, v in (ui.get("editar_urls") or {}).items()}}
     if ui.get("cuerpo_nuevo"):
         ui["cuerpo_nuevo"] = f(ui["cuerpo_nuevo"])
@@ -218,7 +218,7 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
 def _ui_saltos(db: Session, usuario: Usuario, ui: dict, ahora_naive: datetime, idioma: str | None, editable: bool) -> dict:
     """«Repetir o retomar»: las ligas y las semanas 1..N-1 con sus fechas (según la secuencia actual). Vacío sin semana en curso,
     sin plan o si quien mira no puede editar. Va fuera de la caché: depende de hoy y de quién mira."""
-    vacio = {"propuesta_url": None, "retomar_url": None, "retomar_opciones": []}
+    vacio = {"propuesta_url": None, "plan_nuevo_url": None, "retomar_url": None, "retomar_opciones": []}
     if not editable or not ui.get("repetir_url"):
         return vacio
     cfg = config_de(db, usuario, idioma=idioma)
@@ -230,7 +230,7 @@ def _ui_saltos(db: Session, usuario: Usuario, ui: dict, ahora_naive: datetime, i
     n = sec[i] if 0 <= i < len(sec) else None
     if n is None:
         return vacio
-    ligas = {"propuesta_url": "/plan/propuesta.json", "retomar_url": "/plan/retomar"}
+    ligas = {"propuesta_url": "/plan/propuesta.json", "plan_nuevo_url": "/plan/nuevo", "retomar_url": "/plan/retomar"}
     opciones = []
     for x in range(1, n):
         j = next((k for k in range(i) if sec[k] == x), None)

@@ -2,6 +2,8 @@
 
 Acordado con Pedro el 2026-11-27. Plan por fases: `docs/PLAN_PLANES.md`.
 
+**Hecho el 2026-11-27 (P1–P7).**
+
 ## Por qué
 
 Con el ajuste semanal automático, la semana del 23 al 29 de noviembre de Pedro salió de 16, 19 y 23 minutos en lugar de

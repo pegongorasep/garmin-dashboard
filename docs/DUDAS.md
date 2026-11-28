@@ -439,3 +439,13 @@ Decisiones que se apartan del plan o que el plan dejaba abiertas:
 - **v5 sensor (pulso por actividad).** `garmin_connect.pull_activity_details` guarda en cada detalle solo `pulso: "banda"|"muñeca"` (banda si `metadataDTO.sensors` trae un sensor `HEART_RATE`; nunca serie, sku ni fabricante). Detalle sin `pulso` (viejo) se vuelve a pedir una vez; actividad sin detalle usa `config.sensor` (default banda). La deriva solo se calcula con banda; el pico de FC máx prefiere sesiones con banda (aviso seguro con banda, cauto si solo hay muñeca). Web: el paquete sube `pulso` (`paquete._detalles`); paquetes viejos caen a `usuarios.sensor`/`perfil.sensor`. Se quitó el campo «Sensor de pulso» de `/ajustes` (el valor guardado queda de respaldo; el onboarding lo sigue pidiendo). Hueco: actividades que no son corrida/CrossFit no tienen detalle, así que usan el respaldo.
 
 - **Pages retirado 2026-11-26.** `motor.yml` quedó solo como tubo de datos (sin build, Pages ni sincronía de instrucciones); `subir.py subir` sale con 1 si la subida falla (solo "repo no vinculado" es no fatal). Se borraron `template/` y `scripts/sync_template.sh`. Se dejó a propósito, por duda: `modo` "pages"/"web" en `ajustes.normalizar_config` (y las pruebas que comparan ambos modos), el nombre `publicar_pages` y la columna `Usuario.migrado` en `web/tubo.py`/`modelos.py` (compat con motores viejos), y los tokens "pages" en `ui` de `build.py`. Quitarlos requiere tocar la regla de oro de paridad plan/data.json.
+
+## Planes fijos (2026-11-27)
+
+- Retomar desde la semana X con N semanas hechas: se repiten k = N−X semanas (x = N no cambia nada; la UI ofrece 1..N−1).
+- El taper de una carrera objetivo se detecta por el evento `descarga_carrera`/`carrera`.
+- Las `semanas_repetidas` viejas no se aplican en la cola de un salto.
+- Carrera de paso: minutos = min(larga, km×5), tipo larga, una por semana, sin versión «suave».
+- `/plan/nuevo` no usa el nombre de la carrera (solo fecha y km).
+- Las metas viejas con `en_plan` siguen usando `motor_v6.con_carrera` al quitarlas.
+- El coach ve la vista previa desde el sitio del atleta (`/a/<id>/plan/propuesta.json`).

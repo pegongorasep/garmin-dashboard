@@ -958,7 +958,7 @@ def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
         "sync": {"puede": False, "url_autorizar": None, "historial_pendiente": False, "key_rechazada": False, "migrar": False, "repo": None},   # solo en la web (la pone web/sync_web.sync_ui): botón «Sincronizar»; sin ella el sitio pinta lo de siempre
         "plan_acciones": list(config.get("plan_acciones") or []),   # solo en la web: [{texto, url}] sobre el plan
         "repetir_url": "/plan/repetir" if config.get("plan_url") else None,   # solo en la web: POST del botón «Repetir esta semana» de Hoy
-        "propuesta_url": None, "retomar_url": None, "retomar_opciones": [],   # solo en la web (calculo.calcular, fuera de la caché y solo si puede editar): vista previa y POST de «Repetir o retomar», y las semanas 1..N-1 con sus fechas [{semana, desde, hasta}]
+        "propuesta_url": None, "plan_nuevo_url": None, "retomar_url": None, "retomar_opciones": [],   # solo en la web (calculo.calcular, fuera de la caché y solo si puede editar): vista previa y POST de «Repetir o retomar», y las semanas 1..N-1 con sus fechas [{semana, desde, hasta}]
         "plan_url": config.get("plan_url") or None,   # solo en la web: url del plan (botón «Ajustar mi plan»; null = sin botón
         "cuerpo_nuevo": config.get("cuerpo_nuevo") or None,   # solo en la web: url de «Agregar medición»; null = sin botón
         "coach": None,   # solo en la web: {nombre, volver} cuando un coach ve a su atleta (la web lo pone al servir; nunca en la caché)

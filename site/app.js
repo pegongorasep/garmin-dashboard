@@ -202,7 +202,7 @@ function accionRepetir(t) {
 function avisoRetomar(d) {
   const r = d.hoy && d.hoy.retomar;
   if (!r) return null;
-  const app = $("app"), u = ui(), nuevo = u.propuesta_url ? u.propuesta_url.replace(/\/plan\/propuesta\.json.*$/, "/plan/nuevo") : (u.plan_url || "/plan/nuevo");
+  const app = $("app"), u = ui(), nuevo = u.plan_nuevo_url || u.plan_url || "/plan/nuevo";
   const puede = u.propuesta_url && app.dataset.csrf;
   const botones = h("div", { class: "botones" },
     puede ? DS.boton(r.accion === "repetir" ? T("sitio.hoy.retomar_repetir") : T("sitio.hoy.retomar", { x: r.semana }), { variante: "sec",

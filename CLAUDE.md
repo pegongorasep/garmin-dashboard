@@ -17,6 +17,9 @@ Las demás personas usan la web (Ahí la Llevas); su repo (creado desde `plantil
 - Construir el sitio: `.venv/bin/python dashboard/build.py` (opciones: `--day AAAA-MM-DD`, `--out ruta`).
   Con `GARMIN_USER_DIR=<carpeta>` usa los archivos personales de otra persona (config.yaml, plan/, data/).
 - Planes: solo el motor v6 (`plan/motor_v6.py`, piezas en `plan/pasos.py`; `.venv/bin/python -m plan.simulador` lo prueba con personas sintéticas). El `plan/plan.json` de Pedro es del motor anterior y se queda como está (el sitio lo sigue pintando). Validar privacidad: `.venv/bin/python dashboard/validar.py`.
+  El motor solo genera el plan al crearlo (no hay ajuste semanal). «Repetir esta semana» y «Retomar desde la semana X» guardan
+  `corrida.saltos` (`m.secuencia_de`), con vista previa en `/plan/propuesta.json`, y se deshacen solo en la misma semana.
+  «Agregar carrera» = carrera de paso (`de_paso`, reemplaza la larga en `plan_efectivo`) o plan nuevo para esa carrera.
 - Reloj (solo Pedro): `.venv/bin/python reloj.py semana` simula; `--si` manda la semana del plan al reloj. Login una vez en la Terminal (`reloj.py login`); en Claude, `/reloj`.
 - En local: `./run_local.sh` (baja datos, construye y sirve en http://localhost:8000).
 - Deploy de la web: push a `main` y `gh workflow run web.yml`; seguirlo con `gh run watch`. `deploy.yml` es el tubo de datos
