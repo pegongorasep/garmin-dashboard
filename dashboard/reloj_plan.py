@@ -5,7 +5,7 @@ Solo de Pedro: no la usa el workflow ni la plantilla. Los IDs de Garmin nunca pa
 import re
 from datetime import date
 
-from dashboard import metrics as m
+from dashboard.metricas import semana as mt_semana
 
 DESCRIPCION = "Plan del dashboard"   # marca para reconocer lo que mandó el plan
 
@@ -22,7 +22,7 @@ OBJETIVO_ZONA_FC = {"workoutTargetTypeId": 4, "workoutTargetTypeKey": "heart.rat
 
 def semana_actual(hoy: date, config: dict, plan: dict):
     """Semana del plan (cuenta `semanas_repetidas`) que toca hoy, o None si no hay."""
-    n = m.semana_del_plan(hoy, config)
+    n = mt_semana.semana_del_plan(hoy, config)
     return n if n is not None and any(w["n"] == n for w in plan["weeks"]) else None
 
 
@@ -97,7 +97,7 @@ def resumen_pasos(pasos: list) -> str:
 
 
 def clasificar(enviados: list, estado: list):
-    """(borrar_sin_preguntar, pendientes). `estado`: lista de m.assign_sessions de la semana de esos enviados.
+    """(borrar_sin_preguntar, pendientes). `estado`: lista de mt_semana.assign_sessions de la semana de esos enviados.
     Una sesión `hecha` se borra sin preguntar; `pendiente` (o que ya no existe en el plan) se pregunta."""
     por_id = {e["id"]: e["estado"] for e in estado}
     borrar, pendientes = [], []

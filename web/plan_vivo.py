@@ -14,7 +14,7 @@ from datetime import date, timedelta
 
 from plan import motor_v6
 from plan import pasos as ps
-from dashboard import metrics as m
+from dashboard.metricas import semana as mt_semana
 from dashboard.ajustes import normalizar_config
 from .errores import ErrorT
 
@@ -33,7 +33,7 @@ def semana_tope(cfg: dict, hoy: date) -> int:
     """Primer número de semana del plan que todavía no pasa: las anteriores no se tocan al regenerar.
     Antes del inicio = 1; después del final = total + 1."""
     inicio = date.fromisoformat(cfg["plan_start"])
-    sec = m.secuencia_de(cfg)
+    sec = mt_semana.secuencia_de(cfg)
     i = (hoy - inicio).days // 7
     if i < 0:
         return 1
@@ -105,7 +105,7 @@ def plan_efectivo(plan: dict, cfg: dict) -> dict:
     if not viajes and not de_paso:
         return plan
     inicio = date.fromisoformat(cfg["plan_start"])
-    sec = m.secuencia_de(cfg)
+    sec = mt_semana.secuencia_de(cfg)
     ligera, igual = set(), set()   # n de semanas de viaje con correr menos / «sigo igual» (solo se marca)
     for e in viajes:
         for d in semanas_de(e, date.fromisoformat(e["hasta"])):
@@ -236,7 +236,7 @@ def _semanas_taper(plan: dict, carrera: dict) -> set[int]:
 
 def _saltar(crudo: dict, plan: dict, cfg: dict, hoy: date, x: int | None) -> tuple[dict, dict]:
     """Repetir (x None: la semana en curso, desde el próximo lunes) o retomar desde x (desde este lunes)."""
-    n = m.semana_del_plan(hoy, cfg)
+    n = mt_semana.semana_del_plan(hoy, cfg)
     if n is None:
         raise ErrorT("err.sin_semana")
     if x is None:
@@ -259,7 +259,7 @@ def _saltar(crudo: dict, plan: dict, cfg: dict, hoy: date, x: int | None) -> tup
     nuevo, c = _corrida(crudo)
     c["saltos"] = list(c.get("saltos") or []) + [{"lunes": desde.isoformat(), "semana": x, "quita": quita}]
     nuevo = _validado(nuevo)
-    sec = m.secuencia_de(con_pausas(normalizar_config(nuevo), hoy))
+    sec = mt_semana.secuencia_de(con_pausas(normalizar_config(nuevo), hoy))
     fin = lunes(date.fromisoformat(cfg["plan_start"])) + timedelta(weeks=len(sec)) - timedelta(days=1)
     return nuevo, {"k": k, "quita": quita, "fin": fin.isoformat(), "objetivo": carrera is not None}
 
@@ -274,7 +274,7 @@ def retomar(crudo: dict, plan: dict, cfg: dict, hoy: date, x: int) -> tuple[dict
     try:
         x = int(x)
     except (TypeError, ValueError):
-        raise ErrorT("err.retomar_rango", n=m.semana_del_plan(hoy, cfg) or 0) from None
+        raise ErrorT("err.retomar_rango", n=mt_semana.semana_del_plan(hoy, cfg) or 0) from None
     return _saltar(crudo, plan, cfg, hoy, x)
 
 

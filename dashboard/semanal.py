@@ -1,7 +1,7 @@
 """Cifras de la semana y del plan para Hoy, Plan y Progreso (cumplimiento, ritmo, volumen)."""
 from datetime import date, timedelta
 
-from dashboard import metrics as m
+from dashboard.metricas import comun, corridas as mt_corridas
 from dashboard.fechas import lunes as _lunes
 
 
@@ -21,11 +21,11 @@ def resumen_semana(ini: date, hasta: date, data: dict, config: dict, todas: bool
     Única fuente de minutos y km de una semana: Hoy, Plan, Progreso y la web leen esto.
     Con `todas=True` (modo sin plan) los minutos cuentan todas las categorías y el km solo las corridas: {actividades, minutos, km}."""
     if todas:
-        lista = [a for a in data["activities"] if m.classify(a, config) and ini <= m.day_of(a) <= hasta]
+        lista = [a for a in data["activities"] if comun.classify(a, config) and ini <= comun.day_of(a) <= hasta]
         return {"actividades": len(lista), "minutos": round(sum(x["duration"] for x in lista) / 60, 1),
-                "km": round(sum((x.get("distance") or 0) for x in lista if m.classify(x, config) == "run") / 1000, 1)}
-    acts = [a for a in data["activities"] if ini <= m.day_of(a) <= hasta]
-    return resumen_corridas(m.run_rows(acts, data["details"], config))
+                "km": round(sum((x.get("distance") or 0) for x in lista if comun.classify(x, config) == "run") / 1000, 1)}
+    acts = [a for a in data["activities"] if ini <= comun.day_of(a) <= hasta]
+    return resumen_corridas(mt_corridas.run_rows(acts, data["details"], config))
 
 
 def volumen(resumen: dict, unidad: str = "min"):
@@ -45,7 +45,7 @@ def ritmo_facil(filas: list, hoy: date, semanas: int = RITMO_SEMANAS):
     """Ritmo fácil reciente en min/km: mediana de las corridas reales (no carreras, mínimo 0.5 km y 5 min; cuentan también las de trote-caminata) de las últimas
     `semanas` semanas, descartando ritmos fuera de RITMO_LIMITES. None si hay menos de RITMO_MIN_CORRIDAS (sin datos)."""
     ritmos = []
-    for f in m.periodo_filas(filas, hoy, semanas):
+    for f in mt_corridas.periodo_filas(filas, hoy, semanas):
         if f.get("carrera") or (f.get("km") or 0) < RITMO_MIN_CORRIDA[0] or (f.get("minutos") or 0) < RITMO_MIN_CORRIDA[1]:
             continue
         r = f["minutos"] / f["km"]
@@ -118,7 +118,7 @@ def racha_semanas(semanas: list, idx: int, hoy: date = None, data: dict = None, 
     Plan: sobre `semanas_hoy` (semanas pasadas con cumplimiento completa/casi). Libre: sobre las actividades de cada semana."""
     if libre:
         ini = hoy - timedelta(days=hoy.weekday())
-        tiene = lambda k: any(m.classify(a, config) and ini - timedelta(weeks=k) <= m.day_of(a) < ini - timedelta(weeks=k - 1)
+        tiene = lambda k: any(comun.classify(a, config) and ini - timedelta(weeks=k) <= comun.day_of(a) < ini - timedelta(weeks=k - 1)
                               for a in data["activities"])
         return {"semanas": racha([tiene(k) for k in range(MAX_RACHA, 0, -1)], tiene(0)), "modo": "libre"}
     ok = lambda s: s.get("estado") == "pasada" and bool(s.get("plan")) and cumplimiento(s["plan"]["hechas"], s["plan"]["total"]) in ("completa", "casi")

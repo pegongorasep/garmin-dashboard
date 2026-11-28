@@ -6,7 +6,8 @@ from datetime import date, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from dashboard import build
+from dashboard.construir import comun as c_comun
+from dashboard.metricas import semana as mt_semana
 from plan import pasos
 from dashboard.ajustes import ConfigError, normalizar_config
 from .errores import ErrorT, texto
@@ -35,8 +36,8 @@ def contexto(db, atleta, crudo, hoy, idioma=None):
     cfg = plan_vivo.con_pausas(normalizar_config(crudo), hoy)
     plan = aw.plan_guardado(db, atleta) or {"start": cfg["plan_start"], "weeks": []}
     efectivo = plan_vivo.plan_efectivo(plan, cfg)
-    n = build.m.semana_del_plan(hoy, cfg)
-    terminado = bool(plan["weeks"]) and build.plan_terminado(hoy, cfg, efectivo)
+    n = mt_semana.semana_del_plan(hoy, cfg)
+    terminado = bool(plan["weeks"]) and c_comun.plan_terminado(hoy, cfg, efectivo)
     return {"cfg": cfg, "plan": plan, "n": n, "terminado": terminado, "hoy": hoy.isoformat(),
             "editables": plan_vivo.TIPOS_EDITABLES, "tipos_evento": TIPOS_EVENTO}
 
@@ -143,7 +144,7 @@ def quitadas(info) -> str:
     return f"; se quitaron las semanas {', '.join(map(str, info['quita']))}" if info["quita"] else ""
 
 def repetir(db, atleta, crudo, cfg, plan, f, hoy):
-    n = build.m.semana_del_plan(hoy, cfg)
+    n = mt_semana.semana_del_plan(hoy, cfg)
     nuevo, info = plan_vivo.repetir(crudo, plan or {"weeks": []}, cfg, hoy)
     return nuevo, None, f"Repitió la semana {n}{quitadas(info)}"
 
@@ -176,7 +177,7 @@ def propuesta(request: Request, accion: str = "", semana: str = "", atleta_id: i
             try:
                 x = int(semana)
             except ValueError:
-                raise ErrorT("err.retomar_rango", n=build.m.semana_del_plan(hoy, cfg) or 0) from None
+                raise ErrorT("err.retomar_rango", n=mt_semana.semana_del_plan(hoy, cfg) or 0) from None
             nuevo, info = plan_vivo.retomar(crudo, plan, cfg, hoy, x)
         else:
             raise ErrorT("err.faltan")

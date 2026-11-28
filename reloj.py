@@ -24,7 +24,7 @@ from garminconnect import Garmin
 
 RAIZ = Path(__file__).parent
 sys.path.insert(0, str(RAIZ))   # se corre como archivo: la raíz del repo al path
-from dashboard import build  # noqa: E402
+from dashboard.construir import cargar, comun as c_comun  # noqa: E402
 from dashboard import reloj_plan as rp  # noqa: E402
 from dashboard.ajustes import USER_DIR, cargar_config  # noqa: E402
 
@@ -112,7 +112,7 @@ def lunes_de(est: dict, config: dict) -> date:
     """Lunes de la semana en que se mandaron los `enviados` (guardado; si falta, se deduce del número de semana)."""
     if est.get("lunes"):
         return date.fromisoformat(est["lunes"])
-    return build.monday(date.fromisoformat(config["plan_start"])) + timedelta(weeks=(est["semana"] or 1) - 1)
+    return c_comun.monday(date.fromisoformat(config["plan_start"])) + timedelta(weeks=(est["semana"] or 1) - 1)
 
 
 def lista_semana(g, n: int, config: dict, plan: dict, conservados: list) -> list:
@@ -139,18 +139,18 @@ def dispositivo(g: Garmin, guardado):
 def semana(a) -> None:
     config = cargar_config()
     hoy = datetime.now(ZoneInfo(config["timezone"])).date()
-    plan, data = (json.loads(Path(a.plan).read_text()) if a.plan else build.load_plan()), None
+    plan, data = (json.loads(Path(a.plan).read_text()) if a.plan else cargar.load_plan()), None
     n = a.semana or rp.semana_actual(hoy, config, plan)
     if n is None:
         sys.exit("Hoy no hay semana de plan activa (usa --semana N para elegir una).")
     actualizar_datos()
-    data = build.load_data()
+    data = cargar.load_data()
     est = leer_estado()
     enviados = [{**e, "semana_n": e.get("semana_n", est.get("semana"))} for e in est.get("enviados", [])]
     pendientes, borrar_ya = [], []
     if enviados:
         dia = lunes_de(est, config)
-        _, estado = build.week_assignment(dia, data, config, plan, hasta=dia + timedelta(days=6))
+        _, estado = c_comun.week_assignment(dia, data, config, plan, hasta=dia + timedelta(days=6))
         borrar_ya, pendientes = rp.clasificar(enviados, estado)
     if a.si and pendientes and not (a.borrar_pendientes or a.conservar_pendientes):
         sys.exit("Hay pendientes de una semana anterior: elige --borrar-pendientes o --conservar-pendientes.")
@@ -186,7 +186,7 @@ def semana(a) -> None:
                 continue   # ya no existe en Garmin: cuenta como borrado
             print(f"No se pudo borrar {e['nombre']}: {type(ex).__name__}")
             restantes.append(e)
-    est = {**est, "semana": n, "lunes": build.monday(hoy).isoformat(), "enviados": restantes}
+    est = {**est, "semana": n, "lunes": c_comun.monday(hoy).isoformat(), "enviados": restantes}
     est["dispositivo"] = dispositivo(g, est.get("dispositivo"))
     guardar_estado(est)
     for s, w in por_subir:

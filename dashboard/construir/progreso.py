@@ -1,5 +1,6 @@
 """Pruebas, mejora, números, días y detalles."""
-from dashboard import metrics as m, semanal
+from dashboard import semanal
+from dashboard.metricas import carga as mt_carga, carreras, comun as mt_comun, corridas as mt_corridas, zonas as mt_zonas
 from dashboard.i18n import tt
 from datetime import date, timedelta
 from dashboard.construir.actividades import historial_corridas
@@ -16,7 +17,7 @@ def base_prueba(tipo: str, filas: list, data: dict, config: dict):
         mejor = min(previas, default=None)
         return None if mejor is None else {"fuente": "mejor_5k", "fecha": mejor[1], "valor": round(mejor[0])}
     primeras = [f for f in filas if inicio <= date.fromisoformat(f["fecha"]) < inicio + timedelta(days=14)]
-    v = m.promedio([f["ritmo_ref_s"] if tipo == "fc_fija" else f["pct_trote"] for f in primeras])
+    v = mt_corridas.promedio([f["ritmo_ref_s"] if tipo == "fc_fija" else f["pct_trote"] for f in primeras])
     return None if v is None else {"fuente": "inicio", "fecha": None, "valor": round(v, 1 if tipo == "trote_continuo" else 0)}
 
 
@@ -30,37 +31,37 @@ def prueba_resultado(data: dict, config: dict, plan: dict):
     e = next((e for e in estado if ses and e["id"] == "prueba" and e["fecha"]), None)
     if ses is None or e is None:
         return None
-    a = next(a for a in data["activities"] if m.classify(a, config) == "run"
-             and m.day_of(a).isoformat() == e["fecha"] and a["duration"] / 60 == e["minutos"])
-    fila = m.run_rows([a], data["details"], config)[0]
-    serie = (data["details"].get(str(m.id_de(a))) or {}).get("serie") or []
-    medido = m.valor_prueba(ses["prueba"], serie, fila["pct_trote"])
-    km = (data["details"].get(str(m.id_de(a))) or {}).get("ritmos_km") or []
+    a = next(a for a in data["activities"] if mt_comun.classify(a, config) == "run"
+             and mt_comun.day_of(a).isoformat() == e["fecha"] and a["duration"] / 60 == e["minutos"])
+    fila = mt_corridas.run_rows([a], data["details"], config)[0]
+    serie = (data["details"].get(str(mt_comun.id_de(a))) or {}).get("serie") or []
+    medido = carreras.valor_prueba(ses["prueba"], serie, fila["pct_trote"])
+    km = (data["details"].get(str(mt_comun.id_de(a))) or {}).get("ritmos_km") or []
     if medido is None and ses["prueba"] == "5k" and len(km) >= 5:   # sin serie, el ritmo por km de una carrera sirve
         medido = {"valor": sum(km[:5]), "km": 5.0}
     previas = [p for p in config.get("pruebas", []) if p["tipo"] == ses["prueba"] and p["fecha"] < e["fecha"]]
     base = ({"fuente": "prueba", "fecha": previas[-1]["fecha"], "valor": previas[-1]["valor"]} if previas
-            else base_prueba(ses["prueba"], m.run_rows([a2 for a2 in data["activities"] if m.classify(a2, config) == "run"],
+            else base_prueba(ses["prueba"], mt_corridas.run_rows([a2 for a2 in data["activities"] if mt_comun.classify(a2, config) == "run"],
                                                          data["details"], config), data, config))
     out = {"tipo": ses["prueba"], "fecha": e["fecha"], "estado": e["estado"], "valor": None, "km": None,
            "base": base, "dif": None, "mejor": None}
     if medido:
-        out.update(valor=medido["valor"], km=medido["km"], seguido=medido.get("seguido"), **(m.comparar_prueba(ses["prueba"], medido["valor"], base) or {}))
+        out.update(valor=medido["valor"], km=medido["km"], seguido=medido.get("seguido"), **(carreras.comparar_prueba(ses["prueba"], medido["valor"], base) or {}))
     return out
 
 
 def _tiempo(seg: float) -> str:
     """mm:ss, o h:mm:ss si pasa de una hora."""
     t = round(seg)
-    return f"{t // 3600}:{t % 3600 // 60:02d}:{t % 60:02d}" if t >= 3600 else m._mmss(t)
+    return f"{t // 3600}:{t % 3600 // 60:02d}:{t % 60:02d}" if t >= 3600 else mt_corridas._mmss(t)
 
 
 def texto_prueba(p: dict) -> dict:
     """Textos ya armados de la prueba para los cuadritos: valor, comparación y si mejoró (None = igual o sin base)."""
     tipo, v, base = p["tipo"], p["valor"], p.get("base")
     nombre = tt(f"motor.prueba.{tipo}")
-    fmt = (lambda x: (tt("motor.prueba.seguidos", x=f"{x:.0f}") if x >= m.PRUEBA_SEGUIDO_PCT else tt("motor.prueba.pct_trote", x=f"{x:.0f}")) if tipo == "trote_continuo"
-           else _tiempo(x) if tipo == "5k" else f"{m._mmss(x)} /km")
+    fmt = (lambda x: (tt("motor.prueba.seguidos", x=f"{x:.0f}") if x >= carreras.PRUEBA_SEGUIDO_PCT else tt("motor.prueba.pct_trote", x=f"{x:.0f}")) if tipo == "trote_continuo"
+           else _tiempo(x) if tipo == "5k" else f"{mt_corridas._mmss(x)} /km")
     out = {"nombre": nombre, "valor": None if v is None else fmt(v), "cambio": None, "mejor": p.get("mejor")}
     if v is None:
         out["cambio"] = tt("motor.cuadro.sin_resultado")
@@ -85,20 +86,20 @@ def build_mejora(hoy: date, filas: list, zonas: list, data=None, config=None, pl
     desde = monday(hoy) - timedelta(weeks=4)
     recientes = [f for f in filas if date.fromisoformat(f["fecha"]) >= desde]
     modo = "ritmo" if recientes and not any((f["caminatas"] or 0) > 0 for f in recientes) else "trote"
-    ref = m.fc_referencia(zonas)
+    ref = mt_zonas.fc_referencia(zonas)
     validas = [f for f in filas if f["ritmo_ref_s"]]
     ult4 = validas[-4:]
-    actual = m.promedio([f["ritmo_ref_s"] for f in ult4])
+    actual = mt_corridas.promedio([f["ritmo_ref_s"] for f in ult4])
     inicio = None
     if config is not None:
         ini = date.fromisoformat(config["plan_start"])
-        inicio = m.promedio([f["ritmo_ref_s"] for f in validas if ini <= date.fromisoformat(f["fecha"]) < ini + timedelta(days=14)])
+        inicio = mt_corridas.promedio([f["ritmo_ref_s"] for f in validas if ini <= date.fromisoformat(f["fecha"]) < ini + timedelta(days=14)])
     ritmo = {"fc_ref": ref, "n": len(ult4), "actual_s": None, "inicio_s": None, "dif_s": None, "mejora": None,
              "valor": None, "cambio": None, "motivo": None}
     if actual is None:
         ritmo["motivo"] = tt("motor.mejora.sin_aire", ref=ref)
     else:
-        ritmo.update(actual_s=round(actual), valor=f"{m._mmss(actual)} /km",
+        ritmo.update(actual_s=round(actual), valor=f"{mt_corridas._mmss(actual)} /km",
                      motivo=tt("motor.mejora.promedio", n=len(ult4)) if len(ult4) > 1 else tt("motor.mejora.ultima"))
         if inicio is None:
             ritmo["cambio"] = None
@@ -126,14 +127,14 @@ def build_mejora(hoy: date, filas: list, zonas: list, data=None, config=None, pl
 def build_numeros(hoy: date, filas: list, modo: str, periodos=(4, 8, 12)) -> dict:
     """Fila de números de Progreso por periodo (4, 8 o 12 semanas): corridas, minutos y km por semana y ritmo a la FC de
     referencia (modo "ritmo") o % trote (modo "trote"), con el valor del periodo anterior y el cambio. `filas` es run_rows;
-    usa el mismo conjunto de corridas por periodo que la frase del periodo (m.periodo_filas)."""
+    usa el mismo conjunto de corridas por periodo que la frase del periodo (mt_corridas.periodo_filas)."""
     def periodo(k, atras):
-        g = m.periodo_filas(filas, hoy, k, atras)
+        g = mt_corridas.periodo_filas(filas, hoy, k, atras)
         if not g:
             return None
         clave = "ritmo_ref_s" if modo == "ritmo" else "pct_trote"
         return {"corridas": len(g) / k, "minutos": sum(f["minutos"] for f in g) / k, "km": sum(f["km"] for f in g) / k,
-                "extra": m.promedio([f.get(clave) for f in g])}
+                "extra": mt_corridas.promedio([f.get(clave) for f in g])}
     campos = [("corridas", "corridas"), ("minutos", "minutos"), ("km", "km"), ("extra", "ritmo_ref" if modo == "ritmo" else "pct_trote")]
     out = {}
     for k in periodos:
@@ -150,7 +151,7 @@ def build_numeros(hoy: date, filas: list, modo: str, periodos=(4, 8, 12)) -> dic
             mejor = None if not delta else (delta < 0 if id_ == "ritmo_ref" else delta > 0)
             items.append({"id": id_, "valor": v, "anterior": a, "delta": delta, "bueno": mejor})
         out[str(k)] = items
-    caminatas = {str(k): any((f["caminatas"] or 0) > 0 for f in m.periodo_filas(filas, hoy, k)) for k in periodos}
+    caminatas = {str(k): any((f["caminatas"] or 0) > 0 for f in mt_corridas.periodo_filas(filas, hoy, k)) for k in periodos}
     return {"modo": modo, "periodos": out, "caminatas": caminatas}
 
 
@@ -164,7 +165,7 @@ def build_days(hoy: date, data: dict) -> list:
     v_hrv = [hrv.get(f, {}).get("lastNightAvg") for f in fechas]
     v_rhr = [((daily.get(f) or {}).get("heartRate") or {}).get("restingValue") for f in fechas]
     v_sue = [horas(f) for f in fechas]
-    p_hrv, p_rhr, p_sue = (m.rolling_mean(v) for v in (v_hrv, v_rhr, v_sue))
+    p_hrv, p_rhr, p_sue = (mt_corridas.rolling_mean(v) for v in (v_hrv, v_rhr, v_sue))
     dias = []
     for i in range(6, 90):
         base = hrv.get(fechas[i], {}).get("baseline") or {}
@@ -176,11 +177,11 @@ def build_days(hoy: date, data: dict) -> list:
 
 def build_details(hoy: date, data: dict, config: dict, fc_max: dict, reloj, plan: dict = None) -> dict:
     ini, acts = monday(hoy), data["activities"]
-    carga = lambda s: {k: r1(v) for k, v in m.week_load(acts, data["details"], s, config).items()}  # noqa: E731
-    dist = m.week_distribution(acts, ini)
+    carga = lambda s: {k: r1(v) for k, v in mt_carga.week_load(acts, data["details"], s, config).items()}  # noqa: E731
+    dist = mt_carga.week_distribution(acts, ini)
     semanas = []
     for s in semanal.serie_semanas(hoy, plan, config):
-        c = m.week_load(acts, data["details"], s, config)
+        c = mt_carga.week_load(acts, data["details"], s, config)
         semanas.append({"inicio": s.isoformat(), "actual": s == ini,
                         "cargas": {k["id"]: r1(c[k["id"]]) for k in config["categorias"]},
                         "carga_corrida": r1(c["run"])})

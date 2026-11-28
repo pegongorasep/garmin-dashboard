@@ -10,6 +10,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from dashboard import build
+from dashboard.construir import cargar
+from dashboard.metricas import semana as mt_semana
 from dashboard import i18n
 from dashboard import validar
 from dashboard.ajustes import normalizar_config
@@ -103,7 +105,7 @@ def datos_de(db: Session, usuario: Usuario, crudo: dict | None = None) -> dict:
 
 def plan_de(db: Session, usuario: Usuario) -> dict:
     p = db.get(Plan, usuario.id)
-    return p.plan if p else build.load(build.ROOT / "plan" / "plan.example.json")
+    return p.plan if p else cargar.load(build.ROOT / "plan" / "plan.example.json")
 
 
 def _huella_codigo() -> str:
@@ -227,7 +229,7 @@ def _ui_saltos(db: Session, usuario: Usuario, ui: dict, ahora_naive: datetime, i
     hoy = ahora_naive.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"])).date()
     cfg = plan_vivo.con_pausas(cfg, hoy)
     inicio = date.fromisoformat(cfg["plan_start"])
-    sec = build.m.secuencia_de(cfg)
+    sec = mt_semana.secuencia_de(cfg)
     i = (hoy - inicio).days // 7
     n = sec[i] if 0 <= i < len(sec) else None
     if n is None:

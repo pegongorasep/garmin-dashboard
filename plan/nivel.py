@@ -11,7 +11,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).parent.parent
-from dashboard import metrics
+from dashboard.metricas import comun, corridas as mt_corridas
 
 NIVELES = ("empezando", "base", "corredor")
 
@@ -79,7 +79,7 @@ def trote_continuo_min(a: dict, detalles: dict | None = None) -> float:
     """Trote seguido de una corrida, en minutos: el tramo típico de trote si hay trote/caminata; si no, toda la corrida."""
     if a.get("manual"):
         return 0.0
-    rw = metrics.run_walk(a, detalles or {})
+    rw = mt_corridas.run_walk(a, detalles or {})
     if rw is None:
         return (a.get("duration") or 0) / 60
     return rw["patron_trote_min"] or 0.0
@@ -90,7 +90,7 @@ def hay_corrida_garmin(actividades: list, hoy, config: dict | None = None) -> bo
     hoy, cfg = _hoy(hoy), _config(config)
     return any(not a.get("manual") and _fecha(a) <= hoy
                and 0 <= (hoy - _fecha(a)).days < UMBRALES["dias_continuo"]
-               and metrics.classify(a, cfg) == "run" for a in actividades)
+               and comun.classify(a, cfg) == "run" for a in actividades)
 
 
 def nivel_sin_reloj(calculado: dict, dias: int, larga: int) -> dict:
@@ -112,9 +112,9 @@ def nivel_desde_datos(actividades: list, hoy, config: dict | None = None, detall
     u = UMBRALES
     cfg, hoy = _config(config), _hoy(hoy)
     todas = [a for a in actividades if _fecha(a) <= hoy]
-    corridas = [a for a in todas if metrics.classify(a, cfg) == "run"]
-    ids_intensas = {c["id"] for c in metrics.categorias_intensas(cfg)}
-    intensas = [a for a in metrics.unir_encadenadas(todas, cfg) if metrics.classify(a, cfg) in ids_intensas]
+    corridas = [a for a in todas if comun.classify(a, cfg) == "run"]
+    ids_intensas = {c["id"] for c in comun.categorias_intensas(cfg)}
+    intensas = [a for a in mt_corridas.unir_encadenadas(todas, cfg) if comun.classify(a, cfg) in ids_intensas]
 
     def en_semanas(lista, n):
         return [a for a in lista if (s := _semana(a, hoy)) is not None and s <= n]

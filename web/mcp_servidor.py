@@ -12,7 +12,7 @@ from datetime import date, timezone
 from dashboard.ajustes import ConfigError, normalizar_config
 from sqlalchemy import select
 
-from dashboard import build
+from dashboard.metricas import semana as mt_semana
 
 from . import ajustes_web as aw
 from . import calculo, cambios, oauth, plan_vivo
@@ -228,7 +228,7 @@ def repetir_semana(db, actor, ahora, atleta, *, semana: int | None = None, resum
     try:
         hoy = _hoy(ahora, crudo)
         cfg = plan_vivo.con_pausas(normalizar_config(crudo), hoy)
-        n = build.m.semana_del_plan(hoy, cfg)
+        n = mt_semana.semana_del_plan(hoy, cfg)
         if n is None:
             raise ConfigError("Hoy no hay una semana de plan para repetir.")
         if semana is None:

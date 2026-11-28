@@ -1,5 +1,5 @@
 """Redondeos y fechas sueltas que usan varios módulos."""
-from dashboard import metrics as m
+from dashboard.metricas import comun, recuperacion, semana as mt_semana, zonas as mt_zonas
 from datetime import date, timedelta
 
 from dashboard.fechas import lunes as monday  # noqa: F401
@@ -10,25 +10,25 @@ def r1(x):
 
 
 def light_on(day: date, data: dict, config: dict, prev=None) -> dict:
-    return m.traffic_light(m.signals(day, data, config), prev)
+    return recuperacion.traffic_light(recuperacion.signals(day, data, config), prev)
 
 
 def week_runs(week_start: date, hasta: date, data: dict, config: dict) -> list:
     """Corridas de la semana (lun–dom) hasta `hasta`, en orden, con minutos y la luz de su día."""
-    runs = sorted((a for a in data["activities"] if m.classify(a, config) == "run"
-                   and week_start <= m.day_of(a) <= hasta), key=lambda a: a["startTimeLocal"])
-    return [{"fecha": m.day_of(a).isoformat(), "minutos": a["duration"] / 60, "zonas": m.zone_minutes(a),
-             "luz": light_on(m.day_of(a), data, config)["color"]} for a in runs]
+    runs = sorted((a for a in data["activities"] if comun.classify(a, config) == "run"
+                   and week_start <= comun.day_of(a) <= hasta), key=lambda a: a["startTimeLocal"])
+    return [{"fecha": comun.day_of(a).isoformat(), "minutos": a["duration"] / 60, "zonas": mt_zonas.zone_minutes(a),
+             "luz": light_on(comun.day_of(a), data, config)["color"]} for a in runs]
 
 
 def week_assignment(day: date, data: dict, config: dict, plan: dict, hasta=None):
     """(semana del plan, asignación de sus sesiones) para la semana que contiene `day`; (None, []) si no hay."""
-    n = m.semana_del_plan(day, config)
+    n = mt_semana.semana_del_plan(day, config)
     semana = next((w for w in plan["weeks"] if w["n"] == n), None)
     if semana is None:
         return None, []
     ini = monday(day)
-    return semana, m.assign_sessions(semana, week_runs(ini, hasta or day, data, config), config)
+    return semana, mt_semana.assign_sessions(semana, week_runs(ini, hasta or day, data, config), config)
 
 
 def rw_json(rw) -> dict:
@@ -48,7 +48,7 @@ def r2(x):
 
 def _total_semanas(config: dict, plan: dict) -> int:
     """Semanas del calendario del plan: las de la secuencia (repetidas, saltos y pausas). Sin plan_semanas en la config, las del plan."""
-    return len(m.secuencia_de({**config, "plan_semanas": len(plan["weeks"])}))
+    return len(mt_semana.secuencia_de({**config, "plan_semanas": len(plan["weeks"])}))
 
 
 def ultima_semana(config: dict, plan: dict) -> date:

@@ -1,6 +1,7 @@
 """Textos y categorías de la interfaz, eventos del plan, huellas/avisos y titular de hoy."""
 import hashlib
-from dashboard import i18n, metrics as m, plan_i18n
+from dashboard import i18n, plan_i18n
+from dashboard.metricas import comun
 from dashboard.ajustes import CLASES
 from dashboard.i18n import tt
 from datetime import date
@@ -18,7 +19,7 @@ lista_es = i18n.lista   # "a, b y c" / "a, b and c" según el idioma en curso
 def categorias_presentes(config: dict, data: dict) -> list:
     """Categorías que de verdad aparecen en las actividades de la persona (leyendas y listas no muestran el resto),
     con el color según cuántas son."""
-    vistas = {m.classify(a, config) for a in data.get("activities") or []}
+    vistas = {comun.classify(a, config) for a in data.get("activities") or []}
     cats = [c for c in config["categorias"] if c["id"] in vistas]
     clases = CLASES[min(len(cats), 4)] if cats else []
     return [{**c, "clase": clases[i % len(clases)]} for i, c in enumerate(cats)]
@@ -27,7 +28,7 @@ def categorias_presentes(config: dict, data: dict) -> list:
 def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
     """Todo lo que el sitio necesita de la config: título, categorías y textos ya armados."""
     cats = config["categorias"] if cats is None else cats
-    nombre = m.nombre_intensa(config)
+    nombre = comun.nombre_intensa(config)
     sesiones = [(tt("motor.nombre.calidad") if s.get("tipo") == "calidad" else plan_i18n.nombre(s["name"])) for s in plan["weeks"][0]["sessions"]] if plan.get("weeks") else []
     partes = []
     if sesiones:
