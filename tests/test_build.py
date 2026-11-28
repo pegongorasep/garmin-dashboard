@@ -1136,3 +1136,13 @@ def test_build_con_datos_vacios_no_truena():
     assert validar.problemas(out) == []
     assert out["plan"]["semanas"] == [] and out["progreso"]["corridas"] == []
     assert out["composicion"] is None
+
+
+def test_sin_garmin_no_pide_configurar_la_fc_max_en_garmin():
+    plan = build.load(ROOT / "plan" / "plan.example.json")
+    data = fixture()
+    data["hr_zones"] = []   # sin FC máx del reloj: con Garmin sale el aviso de configurarla
+    con = build.build(data, plan, CONFIG_FIXTURE, AHORA)
+    sin = build.build(data, plan, {**CONFIG_FIXTURE, "garmin_conectado": False}, AHORA)
+    assert con["aviso_zonas"]
+    assert sin["aviso_zonas"] is None and "zonas" not in (sin["ui"].get("avisos") or {})

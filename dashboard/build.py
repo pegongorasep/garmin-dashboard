@@ -1155,12 +1155,15 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     racha_json = semanal.racha_semanas(semanas_hoy, semana_hoy_idx, hoy, data, config, libre=bool(config.get("sin_plan")))
     sem_pasada = resumen_semana_pasada(hoy, data, config, plan, semanas_hoy)
     retomar = retomar_sugerido(hoy, data, config, plan, semanas_hoy, n, m.en_pausa(hoy, config))
+    # Sin Garmin conectado no hay reloj donde configurar la FC máx: el aviso no aplica.
+    aviso_fc = m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")) \
+        if config.get("garmin_conectado", True) else None
     return {
         "generado": ahora.isoformat(timespec="minutes"),
         "datos_al": datos_al,
         "zonas": [{"zona": z, "piso": lo, "techo": hi} for z, lo, hi in zonas],
         "rhr_promedio_7d": r1(rhr),
-        "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
+        "aviso_zonas": aviso_fc,
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
                 "titular": titular_hoy(tarjeta, (semana_plan or {}).get("sessions"), manana_id),
                 "semana_pasada": sem_pasada, "retomar": retomar},
@@ -1191,7 +1194,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
                      "dias": build_days(hoy, data)},
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": {**build_ui(config, plan, categorias_presentes(config, data)), "zonas_origen": zonas_origen, "avisos": huellas_avisos(
-            tarjeta, m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
+            tarjeta, aviso_fc,
             fc_max, luz, n, (sem_pasada or {}).get("sugerencia"), (sem_pasada or {}).get("inicio"), sugerir_zonas, retomar)},
         "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
