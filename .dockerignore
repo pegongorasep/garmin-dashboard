@@ -2,6 +2,7 @@
 .env
 .env.*
 **/.env
+gha-creds-*.json
 data/
 config.yaml
 plan/plan.json

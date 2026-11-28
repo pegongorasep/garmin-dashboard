@@ -187,11 +187,11 @@ Planes
 
 ## 5. Cómo probar
 
-- Todo: `.venv/bin/python -m pytest -q` (el Python del sistema no tiene pytest). Un archivo: `.venv/bin/python -m pytest -q tests/test_build.py`.
+- Todo: `.venv/bin/python -m pytest -q -n auto` (en paralelo; el Python del sistema no tiene pytest). Un archivo: `.venv/bin/python -m pytest -q tests/test_build.py`.
 - Planes: `.venv/bin/python -m plan.simulador` (personas sintéticas y reglas de seguridad).
 - Privacidad del `data.json`: `.venv/bin/python dashboard/validar.py [ruta/data.json]`.
 - Construir el sitio: `.venv/bin/python dashboard/build.py` (`--day AAAA-MM-DD`, `--out ruta`). Con `GARMIN_USER_DIR=<carpeta>` usa config.yaml, plan/ y data/ de otra persona.
 - Web en local: `./run_web.sh` usa la **base de producción** (lee la cadena de Secret Manager con la sesión de `gcloud`; no migra: si la revisión de la base no es la del código, no arranca; lo que se guarda ahí es real). `./run_web.sh --temporal` usa SQLite (`web/dev.db`) con las migraciones al día; para probar cambios de estructura, siempre este. En ambos modos solo escucha en esta compu, no manda correos ni habla con GitHub o Google, no usa la caché de `data.json`, y la liga o código de entrada sale en la consola.
 - Admin local: `python -m web.cli crear-admin <correo>`, `invitar [--nota X]`, `importar <correo> <carpeta> [--repo-id N]`.
 - Sitio estático solo con datos de Pedro: `./run_local.sh` (baja datos, construye y sirve en http://localhost:8000).
-- CI (`web.yml`): `pip install -r requirements.txt -r web/requirements.txt -r requirements-dev.txt` y `python -m pytest -q`.
+- CI (`web.yml`): `pip install -r requirements.txt -r web/requirements.txt -r requirements-dev.txt`, `ruff check .` y `python -m pytest -q -n auto`.

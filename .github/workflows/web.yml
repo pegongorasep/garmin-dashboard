@@ -25,7 +25,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt -r web/requirements.txt -r requirements-dev.txt
       - run: ruff check .
-      - run: python -m pytest -q
+      - run: python -m pytest -q -n auto
 
   desplegar:
     needs: pruebas
@@ -43,15 +43,29 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_PROVEEDOR_WIF }}
           service_account: ${{ vars.GCP_CUENTA_SERVICIO }}
 
-      - uses: google-github-actions/setup-gcloud@v2
-
-      - name: Construir y subir la imagen
+      # gcloud ya viene en ubuntu-latest y toma las credenciales que deja el paso `auth`
+      - name: Nombre de la imagen y acceso a Artifact Registry
         run: |
           IMAGEN="${REGION}-docker.pkg.dev/${{ vars.GCP_PROYECTO }}/${REPOSITORIO}/${SERVICIO}:${GITHUB_SHA}"
           echo "IMAGEN=${IMAGEN}" >> "$GITHUB_ENV"
           gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-          docker build -t "${IMAGEN}" .
-          docker push "${IMAGEN}"
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Caché de capas en GitHub Actions: si no cambian los requirements ni la imagen base, no se repite el pip install.
+      # El repo es público: nada de build-args ni secretos en la imagen (el Dockerfile copia solo carpetas de código).
+      - name: Construir y subir la imagen
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGEN }}
+          provenance: false   # un manifiesto simple para Cloud Run
+          cache-from: type=gha
+          cache-to: type=gha,mode=max,ignore-error=true
 
       - name: Desplegar en Cloud Run
         run: |
