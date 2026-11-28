@@ -5,7 +5,7 @@ import copy
 import secrets
 from datetime import date
 
-import motor_v6
+from plan import motor_v6
 
 NIVEL_DEFECTO = "base"   # supuesto: base aeróbica (Z2 + picos Z3 opcionales, 3 días por semana); Empezando no admite Z3
 

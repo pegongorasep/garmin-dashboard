@@ -1,7 +1,7 @@
 """Errores de formulario con clave del catálogo i18n: `str(ex)` sigue saliendo en español (pruebas, MCP) y la web lo
 muestra en el idioma de la persona con `texto(ex, t)`."""
-from ajustes import ConfigError
-import i18n
+from dashboard.ajustes import ConfigError
+from dashboard import i18n
 
 
 class ErrorT(ConfigError):

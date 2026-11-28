@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-import build
+from dashboard import build
 import planes_v6
-import metrics as m
-import reloj_plan as rp
-import tipos
-import validar
-from ajustes import ConfigError, normalizar_config
+from dashboard import metrics as m
+from dashboard import reloj_plan as rp
+from dashboard import tipos
+from dashboard import validar
+from dashboard.ajustes import ConfigError, normalizar_config
 from test_web_ajustes import CONFIG, HOY, crudo, listo, plan_de, tok
 from test_web_cuentas import csrf_de
 from web import cambios, plan_vivo
@@ -405,7 +405,7 @@ def test_reloj_plan_con_semana_en_pausa_y_con_repeticiones():
 def test_el_plan_de_pedro_sin_metas_ni_eventos_queda_identico():
     if not (ROOT / "config.yaml").exists() or not (ROOT / "plan" / "plan.json").exists():
         pytest.skip("no hay archivos personales")
-    from ajustes import cargar_config
+    from dashboard.ajustes import cargar_config
     cfg = cargar_config(ROOT)
     plan = json.loads((ROOT / "plan" / "plan.json").read_text())
     web = plan_vivo.con_pausas({**cfg, "modo": "web"}, HOY_D)

@@ -7,9 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-sys.path.insert(0, str(ROOT / "plan"))
-import simulador as sim  # noqa: E402
+from plan import simulador as sim
 
 BASE = {"sesiones": [30, 30, 30], "continuo": 30}
 

@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from datetime import timedelta
 
-from ajustes import leer_config_yaml
+from dashboard.ajustes import leer_config_yaml
 from web import auth
 from web.modelos import Ajustes, CodigoLogin, Coach, Consentimiento, LigaLogin, Sesion, Usuario, ahora
 from web.privacidad import VERSION_AVISO

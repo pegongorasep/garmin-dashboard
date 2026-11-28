@@ -3,9 +3,9 @@ import copy
 import json
 from datetime import date, timedelta
 
-import metrics as m
+from dashboard import metrics as m
 import planes_v6
-from ajustes import normalizar_config
+from dashboard.ajustes import normalizar_config
 from test_planes_saltos import cfg_de, crudo_carrera, crudo_con, plan_carrera
 from test_web_ajustes import CONFIG, HOY, crudo, listo, tok
 from test_web_mcp import cuerpo, llamar, rpc, token_para

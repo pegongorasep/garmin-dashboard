@@ -5,8 +5,8 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-import motor_v6
-import simulador
+from plan import motor_v6
+from plan import simulador
 from . import auth, permisos
 from .modelos import Invitacion, Subida, Usuario, ahora
 

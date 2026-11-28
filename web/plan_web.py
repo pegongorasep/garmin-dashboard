@@ -6,9 +6,9 @@ from datetime import date, timezone
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-import build
-import pasos
-from ajustes import ConfigError, normalizar_config
+from dashboard import build
+from plan import pasos
+from dashboard.ajustes import ConfigError, normalizar_config
 from .errores import ErrorT, texto
 
 from . import ajustes_web as aw

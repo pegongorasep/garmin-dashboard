@@ -199,7 +199,7 @@ def test_matriz_de_interruptores_en_la_tarjeta(web_ctx, monkeypatch, act_on, pla
 
 def test_plan_visible_matriz():
     """El filtro compartido: sin plan nada; sin actividades sin avance; nunca ligas de edición, eventos ni viajes."""
-    import semanal
+    from dashboard import semanal
     plan = {"inicio": "2026-11-09", "semana_actual": 2, "nivel": "base", "largo": 2, "bloques": [1], "faltan": "Te faltan: 1", "eventos": [{"tipo": "viaje"}],
             "semanas_repetidas": [1], "estado_sesiones": [{"id": "a", "estado": "hecha", "ajustada": False, "corrida": {"fecha": "x"}}],
             "semanas": [{"n": 1, "block": 1, "kind": "carga", "etiqueta": "carga", "focus": "f", "sessions": [{"id": "a", "minutes": 20}], "plan_min": 20,

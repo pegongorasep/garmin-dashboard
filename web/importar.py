@@ -4,8 +4,8 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-import paquete
-from ajustes import leer_config_yaml, normalizar_config
+from dashboard import paquete
+from dashboard.ajustes import leer_config_yaml, normalizar_config
 
 from . import cambios, datos
 from .modelos import Usuario

@@ -106,7 +106,7 @@ def _buscar_plan_viejo(db, u, archivo=None):
 
 
 def _cargar_plan_viejo(db, args) -> int:
-    import convertir_viejo as cv   # web/__init__ puso plan/ en sys.path
+    from plan import convertir_viejo as cv
     u = auth.buscar_por_correo(db, args.correo)
     if u is None:
         print(f"No hay cuenta con {args.correo}", file=sys.stderr)

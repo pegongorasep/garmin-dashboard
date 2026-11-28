@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-import semanal
+from dashboard import semanal
 
 from . import calculo, feed, grupos, permisos, semana_plan
 from .modelos import Grupo, MiembroGrupo, Plan, Usuario

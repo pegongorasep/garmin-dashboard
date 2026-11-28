@@ -2,8 +2,7 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "dashboard"))
-import metrics as m  # noqa: E402
+from dashboard import metrics as m
 
 CFG = {
     "max_hr": 190, "max_hr_floor": 183, "max_hr_review_above": 200,

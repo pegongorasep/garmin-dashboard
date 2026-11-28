@@ -7,12 +7,11 @@ from zoneinfo import ZoneInfo
 import pytest
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-import build  # noqa: E402
-import semanal  # noqa: E402
-import validar  # noqa: E402
+from dashboard import build
+from dashboard import semanal
+from dashboard import validar
 
-from ajustes import cargar_config  # noqa: E402
+from dashboard.ajustes import cargar_config
 
 CONFIG = cargar_config(ROOT / "tests" / "fixtures")
 # El fixture es de la semana del 26 oct: usa una copia del config con ese inicio de plan.
@@ -446,8 +445,7 @@ def test_acciones_url_no_sale_de_la_variable_de_github(monkeypatch):
 
 # --- v4 F3: calidad, mejora por ritmo, primer día, InBody opcional ---
 
-sys.path.insert(0, str(ROOT / "plan"))
-import planes_v6  # noqa: E402
+import planes_v6
 
 VACIO = {"daily_summaries": [], "sleep": [], "hrv": [], "activities": [], "details": {}, "hr_zones": [],
          "meta": {}, "inbody": None}
@@ -581,7 +579,7 @@ def test_numeros_de_progreso():
 # --- v4.2 F2: catálogo, forma y silueta ---
 
 def test_catalogo_de_tipos():
-    import tipos
+    from dashboard import tipos
     ids = [t["id"] for t in tipos.CATALOGO]
     assert len(ids) == len(set(ids)) == 14
     for t in tipos.CATALOGO:
@@ -593,7 +591,7 @@ def test_catalogo_de_tipos():
 
 
 def test_forma_derivada_y_silueta_sin_tocar_el_plan():
-    import tipos
+    from dashboard import tipos
     plan = planes_v6.generar({**CONFIG_CORREDOR, "intensidad": "calidad"})
     s = plan["weeks"][1]["sessions"]
     assert all("forma" not in x for x in s)                       # el plan no lleva `forma`: se deriva
@@ -603,7 +601,7 @@ def test_forma_derivada_y_silueta_sin_tocar_el_plan():
 
 
 def test_silueta_despliega_repeat_caminata_en_su_zona_y_opcionales():
-    import tipos
+    from dashboard import tipos
     pasos = [{"kind": "warmup", "minutes": 5, "zone": "Z1-Z2"},
              {"kind": "repeat", "times": 2, "steps": [{"kind": "run", "minutes": 3, "zone": "Z3"},
                                                       {"kind": "walk", "minutes": 1, "zone": "Z1-Z2"}]},
@@ -828,7 +826,7 @@ def test_semana_actual_ya_no_marca_dias_y_dice_que_falta():
 
 
 def test_semana_libre_solo_sin_plan_promedios_racha_y_sin_claves_prohibidas():
-    import validar
+    from dashboard import validar
     cfg = {**CONFIG_CORREDOR, "sin_plan": True}
     out = build.build(fixture(), planes_v6.generar(cfg), cfg, AHORA)
     sl = out["semana_libre"]
@@ -1034,7 +1032,7 @@ def _filas_ritmo(hoy, ritmos, km=5.0, **extra):
 
 
 def test_ritmo_facil_mediana_limites_y_sin_datos():
-    import semanal
+    from dashboard import semanal
     from datetime import date
     hoy = date(2026, 11, 25)
     assert semanal.ritmo_facil(_filas_ritmo(hoy, [6, 7, 9]), hoy) == 7        # mediana, no promedio
@@ -1050,7 +1048,7 @@ def test_ritmo_facil_mediana_limites_y_sin_datos():
 
 
 def test_volumen_plan_km_redondea_y_cae_a_minutos():
-    import semanal
+    from dashboard import semanal
     assert semanal.volumen_plan(60, "min", 7.0) == 60
     assert semanal.volumen_plan(60, "km", 7.0) == 8.5      # 8.57 → a 0.5
     assert semanal.volumen_plan(3, "km", 8.0) == 0.5       # nunca 0 km
@@ -1059,7 +1057,7 @@ def test_volumen_plan_km_redondea_y_cae_a_minutos():
 
 
 def test_periodos_de_progreso_siempre_4_8_12_y_todo_el_plan():
-    import semanal
+    from dashboard import semanal
     from datetime import date, timedelta
     hoy = date(2026, 11, 25)   # miércoles; la semana actual empieza el 2026-11-23
     def plan(n, inicio="2026-10-12"):
@@ -1082,7 +1080,7 @@ def test_periodos_de_progreso_siempre_4_8_12_y_todo_el_plan():
 
 
 def test_plan_visible_sin_actividades_no_filtra_el_ritmo():
-    import semanal
+    from dashboard import semanal
     plan = {"largo": 2, "semanas": [
         {"n": 1, "block": 1, "kind": "carga", "sessions": [{"id": "a", "minutes": 30, "km_est": 4.0}], "plan_min": 30, "plan_km": 4.0},
         {"n": 2, "block": 1, "kind": "carga", "sessions": [{"id": "a", "minutes": 30, "km_est": 4.0}], "plan_min": 30, "plan_km": 4.0}]}
@@ -1106,14 +1104,14 @@ def test_build_trae_km_estimados_en_semanas_futuras_y_periodos_del_plan():
     assert len(out["progreso"]["semanas"]) >= 16 and "16" in out["progreso"]["numeros"]["periodos"]
     fut = [w for w in out["plan"]["semanas"] if w["n"] > out["plan"]["semana_actual"]]
     assert fut and all("plan_km" in w and all("km_est" in s for s in w["sessions"]) for w in fut)
-    import validar
+    from dashboard import validar
     assert validar.problemas(out) == []
 
 
 def test_ritmo_facil_principiante_trote_camina_y_ritmo_por_nivel():
-    import semanal
+    from dashboard import semanal
     from datetime import date
-    from nivel import RITMO_NIVEL
+    from plan.nivel import RITMO_NIVEL
     hoy = date(2026, 11, 25)
     filas = _filas_ritmo(hoy, [12, 13.5, 15], km=1.0)   # 12–15 min/km, 1 km
     filas[0]["minutos"] = 12
@@ -1124,7 +1122,7 @@ def test_ritmo_facil_principiante_trote_camina_y_ritmo_por_nivel():
 
 
 def test_perfil_sin_actividades_km_del_nivel_y_el_js_pinta_km_est():
-    import semanal
+    from dashboard import semanal
     plan = {"nivel": "empezando", "largo": 1, "semanas": [
         {"n": 1, "block": 1, "kind": "carga", "plan_min": 45, "plan_km": 3.5,
          "sessions": [{"id": "a", "minutes": 15, "km_est": 2.5}]}]}   # 2.5 y 3.5 = ritmo real de 6 min/km

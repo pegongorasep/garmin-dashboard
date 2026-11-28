@@ -9,10 +9,10 @@ import inspect
 import json
 from datetime import date, timezone
 
-from ajustes import ConfigError, normalizar_config
+from dashboard.ajustes import ConfigError, normalizar_config
 from sqlalchemy import select
 
-import build
+from dashboard import build
 
 from . import ajustes_web as aw
 from . import calculo, cambios, oauth, plan_vivo
@@ -25,7 +25,7 @@ REGLAS = ("Reglas fijas: haz cambios conservadores (poco a poco, nunca saltos gr
 _ACTOR: contextvars.ContextVar = contextvars.ContextVar("mcp_actor", default=None)
 
 
-from mcp.server.mcpserver.exceptions import ToolError  # noqa: E402
+from mcp.server.mcpserver.exceptions import ToolError
 
 
 class Rechazo(ToolError):

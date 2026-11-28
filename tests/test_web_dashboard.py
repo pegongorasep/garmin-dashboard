@@ -9,9 +9,9 @@ import pytest
 from alembic import command
 from alembic.config import Config
 
-import ajustes
-import build
-import validar
+from dashboard import ajustes
+from dashboard import build
+from dashboard import validar
 from web import calculo, cli, datos, importar
 from web.modelos import Ajustes, Base, Consentimiento, CacheData, DatoGarmin, Usuario
 from web.privacidad import VERSION_AVISO

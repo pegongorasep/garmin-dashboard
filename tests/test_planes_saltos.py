@@ -7,14 +7,13 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).parent.parent
-sys.path[:0] = [str(ROOT / "dashboard"), str(ROOT / "plan"), str(ROOT)]
-import metrics as m  # noqa: E402
-import motor_v6 as v6  # noqa: E402
-from ajustes import normalizar_config  # noqa: E402
-from test_motor_v6 import entrada  # noqa: E402
-from test_web_cuentas import CONFIG  # noqa: E402
-from web import plan_vivo  # noqa: E402
-from web.errores import ErrorT  # noqa: E402
+from dashboard import metrics as m
+from plan import motor_v6 as v6
+from dashboard.ajustes import normalizar_config
+from test_motor_v6 import entrada
+from test_web_cuentas import CONFIG
+from web import plan_vivo
+from web.errores import ErrorT
 
 INI = date(2026, 11, 9)
 LUN = lambda i: INI + timedelta(weeks=i)   # noqa: E731  lunes de la semana del calendario i (0 = primera)

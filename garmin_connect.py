@@ -14,9 +14,9 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-sys.path.insert(0, str(Path(__file__).parent / "dashboard"))
-import metrics  # noqa: E402
-from ajustes import USER_DIR, ConfigError, cargar_config, config_por_defecto  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # se corre como archivo: la raíz del repo al path
+from dashboard import metrics  # noqa: E402
+from dashboard.ajustes import USER_DIR, ConfigError, cargar_config, config_por_defecto  # noqa: E402
 
 load_dotenv(USER_DIR / ".env")
 load_dotenv(Path(__file__).parent / ".env")

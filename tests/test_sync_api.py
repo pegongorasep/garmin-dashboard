@@ -104,7 +104,7 @@ def test_historial_dice_365_y_reintentar(ctx, gh):
     with ctx.sesiones() as db:
         x = db.query(Sincronizacion).one()
         sincronizar.avanzar(db, x, "busca")
-        assert "365" in sync_web.texto(x, lambda k, **v: __import__("i18n").t(k, "es", **v))
+        assert "365" in sync_web.texto(x, lambda k, **v: __import__("dashboard.i18n", fromlist=["t"]).t(k, "es", **v))
         sincronizar.terminar(db, x, ok=False, error="otra")
     s = cl.get("/api/sync").json()["sinc"]
     assert s["texto"] == "Falta tu historial" and s["accion"]["post"]["tipo"] == "historial"

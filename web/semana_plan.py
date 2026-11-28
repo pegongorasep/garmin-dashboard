@@ -1,6 +1,6 @@
 """Semana contra el plan, compartido por el perfil (`persona.py`) y las tarjetas del grupo (`grupos_resumen.py`): una sola lógica.
 Todo estructurado (el JS arma las frases en el idioma de quien mira) y solo conteos, tipos de sesión y categorías: nunca nombres de Garmin."""
-from metrics import faltan   # la regla de «lo que falta» vive en el motor
+from dashboard.metrics import faltan   # la regla de «lo que falta» vive en el motor
 
 
 def semana_vs_plan(actual: dict, con_plan: bool) -> dict:

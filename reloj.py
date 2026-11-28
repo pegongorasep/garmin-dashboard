@@ -23,10 +23,10 @@ from zoneinfo import ZoneInfo
 from garminconnect import Garmin
 
 RAIZ = Path(__file__).parent
-sys.path.insert(0, str(RAIZ / "dashboard"))
-import build  # noqa: E402
-import reloj_plan as rp  # noqa: E402
-from ajustes import USER_DIR, cargar_config  # noqa: E402
+sys.path.insert(0, str(RAIZ))   # se corre como archivo: la raíz del repo al path
+from dashboard import build  # noqa: E402
+from dashboard import reloj_plan as rp  # noqa: E402
+from dashboard.ajustes import USER_DIR, cargar_config  # noqa: E402
 
 TOKENS = Path.home() / ".garminconnect"
 ESTADO = USER_DIR / "data" / "reloj.json"   # IDs de Garmin de lo que mandó el plan; gitignored, nunca se publica

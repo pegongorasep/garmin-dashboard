@@ -12,10 +12,10 @@ import yaml
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.algorithms import RSAAlgorithm
 
-import ajustes
-import build
-import paquete
-import validar
+from dashboard import ajustes
+from dashboard import build
+from dashboard import paquete
+from dashboard import validar
 from test_web_cuentas import CONFIG, crear_usuario, csrf_de, entrar, post
 from test_web_plan_nuevo import confirmar, lunes_siguiente
 from web import calculo, importar, onboarding, tubo
@@ -316,8 +316,7 @@ def test_paso_a_paso_no_pide_la_key():
 
 # --- scripts/subir.py ---
 
-sys.path.insert(0, str(ROOT / "scripts"))
-import subir as sub  # noqa: E402
+from scripts import subir as sub
 
 
 class RespuestaFalsa:

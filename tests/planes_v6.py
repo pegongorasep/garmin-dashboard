@@ -4,11 +4,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-for _p in (ROOT / "dashboard", ROOT / "plan"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
-import motor_v6  # noqa: E402
-from pasos import redondea5, suave, suma, zonas_de  # noqa: E402,F401
+from plan import motor_v6
+from plan.pasos import redondea5, suave, suma, zonas_de   # noqa: F401
 
 NIVEL_V6 = {"novato": "empezando", "intermedio": "base", "corredor": "corredor"}
 EVIDENCIA = {"empezando": {"semanas_consistentes": 0, "trote_continuo_min": 0, "minutos_sem_prom": 0, "sesion_max_30d": 0},

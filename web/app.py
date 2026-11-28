@@ -13,8 +13,8 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-import i18n
-from ajustes import ConfigError
+from dashboard import i18n
+from dashboard.ajustes import ConfigError
 
 from . import ROOT, actividad_web, admin, aprende, ajustes_web, auth, calculo, coach, conexion, correo, cuenta, feed, garmin_key, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, sync_web, tubo
 from .privacidad import VERSION_AVISO

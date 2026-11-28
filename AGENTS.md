@@ -24,6 +24,8 @@ Local de Pedro: `garmin_connect.py` -> `dashboard/build.py` -> `site/data.json` 
 
 Convención: `montar(app, ...)` = el módulo registra rutas (se llama desde `web/app.py`; no se usa `APIRouter`). Sin `montar` = lógica pura o utilería.
 
+Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan import pasos`, `from scripts import subir`); nada de `sys.path` ni imports planos. Solo los puntos de entrada que se corren como archivo (`garmin_connect.py`, `reloj.py`, `dashboard/build.py`, `scripts/subir.py`, `scripts/web_local.py`) insertan la raíz del repo en `sys.path` una vez; `pytest` usa `pythonpath = ["."]` (`pyproject.toml`).
+
 ### Raíz
 - `garmin_connect.py`: descarga historial de la Garmin Connect Personal API a `data/` (lo corre el tubo).
 - `reloj.py`: manda entrenamientos al reloj; solo la Mac de Pedro (usa `dashboard/reloj_plan.py`).

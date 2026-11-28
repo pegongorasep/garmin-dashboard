@@ -4,8 +4,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-import ajustes  # noqa: E402
+from dashboard import ajustes
 
 MINIMA = """
 perfil: {zona_horaria: America/Merida, edad: 30}

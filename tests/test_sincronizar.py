@@ -66,8 +66,8 @@ def test_dias_y_rango(web_ctx):
 
 
 # --- C3: el tubo habla de sincronizaciones ---
-from test_web_tubo import auth, ctx, paquete_chico, subir, token, usuario_amigo   # noqa: E402,F401
-from web.modelos import Sincronizacion   # noqa: E402
+from test_web_tubo import auth, ctx, paquete_chico, subir, token, usuario_amigo   # noqa: F401
+from web.modelos import Sincronizacion
 
 V2 = {"motor_version": 2}
 

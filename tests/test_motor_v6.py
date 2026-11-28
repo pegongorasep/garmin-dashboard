@@ -8,16 +8,14 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-sys.path.insert(0, str(ROOT / "plan"))
-import build  # noqa: E402
-import semanal  # noqa: E402
-import pasos  # noqa: E402
-import metrics as m  # noqa: E402
-import motor_v6 as v6  # noqa: E402
-import reloj_plan as rp  # noqa: E402
-import simulador as sim  # noqa: E402
-from ajustes import cargar_config  # noqa: E402
+from dashboard import build
+from dashboard import semanal
+from plan import pasos
+from dashboard import metrics as m
+from plan import motor_v6 as v6
+from dashboard import reloj_plan as rp
+from plan import simulador as sim
+from dashboard.ajustes import cargar_config
 
 LUNES = "2026-11-30"
 EV_BASE = {"semanas_consistentes": 8, "trote_continuo_min": 35, "minutos_sem_prom": 95, "sesion_max_30d": 35, "dias_intensos": []}
@@ -349,7 +347,7 @@ def test_build_convierte_y_asigna_sesiones(clave):
 
 
 def test_plan_i18n_entiende_el_foco_de_v6():
-    import plan_i18n
+    from dashboard import plan_i18n
     assert "aceleraciones" in plan_i18n.focus("Larga 40' · aceleraciones")
     assert plan_i18n.focus("Descarga · trote 1'/camina 2'").startswith("Descarga")
     assert "1'/camina 2'" in plan_i18n.focus("Larga 22' · trote 1'/camina 2'")

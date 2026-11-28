@@ -5,7 +5,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-import semanal
+from dashboard import semanal
 
 from . import calculo, semana_plan
 from .modelos import Ajustes, MiembroGrupo, Plan, Usuario

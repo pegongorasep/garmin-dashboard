@@ -10,7 +10,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ajustes import SENSORES, ConfigError, normalizar_config
+from dashboard.ajustes import SENSORES, ConfigError, normalizar_config
 
 from . import cambios
 from .modelos import Ajustes, Cambio, Plan, Subida, Usuario, ahora

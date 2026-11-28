@@ -22,7 +22,7 @@ class SinPermiso(Exception):
 class NoSeDeshace(Exception):
     """El cambio ya se deshizo, es de otra persona o fue una creación (no hay un «antes» al que volver)."""
     def __init__(self, clave: str):
-        import i18n
+        from dashboard import i18n
         self.clave, self.vars = clave, {}
         super().__init__(i18n.t(clave, "es"))
 
@@ -219,7 +219,7 @@ def autor_texto(db: Session, c: Cambio) -> str:
 def avisos_de(db: Session, atleta_id: int) -> list[dict]:
     """Cambios del coach o de la IA que el atleta aún no marca como vistos y siguen vigentes (para el banner del dashboard).
     `cerrable` (solo si es verdad): un cambio que solo toca InBody y se puede aceptar ya (la ✕ del banner)."""
-    import i18n
+    from dashboard import i18n
     pend = pendientes_de(db, atleta_id)
     out = []
     for c in list(reversed(pend))[:MAX_AVISOS]:

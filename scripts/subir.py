@@ -22,6 +22,8 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # se corre como archivo: la raíz del repo al path
+
 URL_POR_DEFECTO = "https://ahilallevas.com"
 TIMEOUT = 60
 REINTENTOS = 2
@@ -95,8 +97,7 @@ def instrucciones(http=requests, dormir=time.sleep) -> str:
 def subir(data_dir: Path, entorno=os.environ, http=requests, dormir=time.sleep) -> str:
     """Sube el paquete. Devuelve SUBIDO, NO_VINCULADO (la persona aún no vincula su repo: no es un fallo) o FALLO."""
     try:
-        sys.path.insert(0, str(Path(__file__).parent.parent / "dashboard"))
-        import paquete
+        from dashboard import paquete
         pq = paquete.armar(data_dir, salt=entorno.get("GITHUB_REPOSITORY_ID", ""))
         pers = paquete.personales(data_dir.parent)
         if pers:
@@ -170,7 +171,6 @@ def bajar(args: list, main_garmin=None, entorno=os.environ, http=requests, reloj
 
     try:
         if main_garmin is None:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
             import garmin_connect
             main_garmin = garmin_connect.main
         main_garmin(args, avance=avance)

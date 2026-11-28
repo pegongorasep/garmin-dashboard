@@ -165,7 +165,7 @@ def test_styles_css_no_tiene_reglas_muertas():
 
 
 def test_simulador_solo_admin_y_completo(web_ctx):
-    import simulador
+    from plan import simulador
     assert web_ctx.cliente().get("/admin/simulador").status_code == 404      # sin sesión
     crear_usuario(web_ctx, "normal@x.com")
     assert entrar(web_ctx, web_ctx.cliente(), "normal@x.com").get("/admin/simulador").status_code == 404

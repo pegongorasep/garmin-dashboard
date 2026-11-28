@@ -4,9 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-sys.path.insert(0, str(ROOT / "plan"))
-import nivel as nv  # noqa: E402
+from plan import nivel as nv
 
 HOY = datetime(2026, 11, 30)
 
@@ -96,7 +94,7 @@ def test_actividades_futuras_se_ignoran():
 
 
 def test_personas_del_simulador_tienen_nivel():
-    import simulador as sim
+    from plan import simulador as sim
     niveles = {p["id"]: p["nivel"]["nivel"] for p in sim.cargar_personas()}
     assert niveles["novata_sin_datos"] == "empezando" and niveles["novata_trota_camina"] == "empezando"
     assert niveles["corredor_velocidad"] == "corredor" and niveles["pedro_like"] == "base"

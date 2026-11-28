@@ -77,8 +77,8 @@ def test_golden(nombre):
 
 
 def test_una_sola_fuente():
-    import metrics as m
-    import semanal
+    from dashboard import metrics as m
+    from dashboard import semanal
     out = generar("plan_lun_sig")
     con_progreso = [w for w in out["plan"]["semanas"] if "progreso" in w]
     assert con_progreso

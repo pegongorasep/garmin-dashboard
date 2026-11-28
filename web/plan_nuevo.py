@@ -11,9 +11,9 @@ from datetime import date, datetime, time, timedelta, timezone
 from fastapi import Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
-import motor_v6
-from ajustes import ConfigError, crudo_desde_respuestas, normalizar_config
-from nivel import NIVELES as NIVELES_V6, PISO_NIVEL, UMBRALES as UMBRALES_NIVEL, hay_corrida_garmin, nivel_desde_datos, nivel_sin_reloj
+from plan import motor_v6
+from dashboard.ajustes import ConfigError, crudo_desde_respuestas, normalizar_config
+from plan.nivel import NIVELES as NIVELES_V6, PISO_NIVEL, UMBRALES as UMBRALES_NIVEL, hay_corrida_garmin, nivel_desde_datos, nivel_sin_reloj
 
 from . import ajustes_web as aw
 from . import calculo, cambios

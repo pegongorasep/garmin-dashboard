@@ -8,9 +8,9 @@ import re
 import unicodedata
 from datetime import date, datetime, timedelta
 
-import plan_i18n
-import tipos
-from i18n import tt
+from dashboard import plan_i18n
+from dashboard import tipos
+from dashboard.i18n import tt
 
 ZONAS = ["Z1", "Z2", "Z3", "Z4", "Z5"]
 

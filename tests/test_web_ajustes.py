@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 import pytest
 
 import planes_v6
-import validar
-from ajustes import normalizar_config
+from dashboard import validar
+from dashboard.ajustes import normalizar_config
 from test_web_cuentas import CONFIG, csrf_de, entrar, post
 from web import cambios
 from web.modelos import Ajustes, Cambio, Coach, Consentimiento, DatoGarmin, InBody, Plan, Usuario
@@ -270,7 +270,7 @@ def test_el_menu_de_la_web_trae_las_nuevas_paginas(web_ctx):
 def test_ajustes_de_pedro_sin_tocar_no_cambian_nada(web_ctx):
     """El formulario no pierde ni agrega nada de la config real de Pedro (categorías propias, fechas, plan editado a mano)."""
     from pathlib import Path
-    from ajustes import leer_config_yaml
+    from dashboard.ajustes import leer_config_yaml
     raiz = Path(__file__).parent.parent
     if not (raiz / "config.yaml").exists():
         pytest.skip("no hay archivos personales")

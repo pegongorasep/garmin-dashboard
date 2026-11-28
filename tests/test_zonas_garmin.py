@@ -4,13 +4,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-sys.path.insert(0, str(ROOT))
-import build  # noqa: E402
-import metrics as m  # noqa: E402
-import paquete  # noqa: E402
-import validar  # noqa: E402
-from test_build import AHORA, CONFIG_FIXTURE, fixture  # noqa: E402
+from dashboard import build
+from dashboard import metrics as m
+from dashboard import paquete
+from dashboard import validar
+from test_build import AHORA, CONFIG_FIXTURE, fixture
 
 # Perfil de Garmin con zonas propias (no de fábrica) y otro con las de fábrica (60 % de reserva, etc.)
 PROPIO = {"sport": "RUNNING", "trainingMethod": "HR_RESERVE", "restingHeartRateUsed": 55, "lactateThresholdHeartRateUsed": 172,

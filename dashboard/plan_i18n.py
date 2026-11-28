@@ -6,8 +6,8 @@ y se pide su equivalente con `tt`. Un texto que no se reconoce (p. ej. una nota 
 import re
 from functools import lru_cache
 
-import i18n
-from i18n import tt
+from dashboard import i18n
+from dashboard.i18n import tt
 
 
 @lru_cache(maxsize=None)

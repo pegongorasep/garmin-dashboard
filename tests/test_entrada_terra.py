@@ -2,8 +2,8 @@
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import nivel
-import semanal
+from plan import nivel
+from dashboard import semanal
 from dashboard import build
 from test_build import CONFIG_FIXTURE, fixture
 from test_motor_v6_f5 import _acts, _cfg, crudo_de, plan_v6

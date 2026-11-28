@@ -11,16 +11,12 @@ Qué NO hace: no calcula zonas de FC (los pasos dicen Z1/Z2/…; el sitio las tr
 cuánto hizo la persona: el plan es fijo y no se ajusta cada semana.
 """
 import math
-import sys
 from datetime import date, timedelta
 from pathlib import Path
 
 RAIZ = Path(__file__).parent.parent
-for _p in (RAIZ / "dashboard", RAIZ / "plan"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
-import pasos as ps  # noqa: E402
-from nivel import PISO_NIVEL  # noqa: E402
+from plan import pasos as ps
+from plan.nivel import PISO_NIVEL
 
 ZONAS_ALTAS = {"Z3", "Z4", "Z5"}
 NIVELES = ("empezando", "base", "corredor")

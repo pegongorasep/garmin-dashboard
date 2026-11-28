@@ -1,9 +1,7 @@
 """Cifras de la semana y del plan para Hoy, Plan y Progreso (cumplimiento, ritmo, volumen)."""
-import sys
 from datetime import date, timedelta
-from pathlib import Path
 
-import metrics as m
+from dashboard import metrics as m
 
 
 
@@ -43,10 +41,7 @@ RITMO_LIMITES = (4.0, 16.0)                # min/km creíbles de trote o trote-c
 RITMO_MIN_CORRIDA = (0.5, 5)               # km y minutos mínimos para que una corrida cuente
 
 
-_PLAN = str(Path(__file__).resolve().parent.parent / "plan")
-if _PLAN not in sys.path:
-    sys.path.insert(0, _PLAN)
-from nivel import RITMO_NIVEL  # noqa: E402  (ritmo genérico por nivel, junto a PISO_NIVEL)
+from plan.nivel import RITMO_NIVEL   # ritmo genérico por nivel, junto a PISO_NIVEL
 
 
 def ritmo_facil(filas: list, hoy: date, semanas: int = RITMO_SEMANAS):

@@ -9,10 +9,10 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-import build
-import i18n
-import validar
-from ajustes import normalizar_config
+from dashboard import build
+from dashboard import i18n
+from dashboard import validar
+from dashboard.ajustes import normalizar_config
 
 from . import cambios, datos, manual, plan_vivo, primer_inicio, tubo
 from .modelos import ActividadManual, Ajustes, CacheData, DatoGarmin, InBody, MiembroGrupo, Plan, Usuario, ahora

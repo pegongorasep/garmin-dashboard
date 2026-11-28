@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-import convertir_viejo as cv  # noqa: E402
-import motor_v6  # noqa: E402
+from plan import convertir_viejo as cv
+from plan import motor_v6
 from dashboard import validar
 from test_web_cuentas import crear_usuario
 from web import calculo, cli

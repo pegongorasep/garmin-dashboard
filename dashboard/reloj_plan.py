@@ -5,7 +5,7 @@ Solo de Pedro: no la usa el workflow ni la plantilla. Los IDs de Garmin nunca pa
 import re
 from datetime import date
 
-import metrics as m
+from dashboard import metrics as m
 
 DESCRIPCION = "Plan del dashboard"   # marca para reconocer lo que mandó el plan
 

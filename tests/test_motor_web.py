@@ -11,12 +11,10 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-sys.path.insert(0, str(ROOT / "plan"))
 
-import ajustes  # noqa: E402
-import build  # noqa: E402
-import metrics as m  # noqa: E402
+from dashboard import ajustes
+from dashboard import build
+from dashboard import metrics as m
 
 FIX = ROOT / "tests" / "fixtures"
 

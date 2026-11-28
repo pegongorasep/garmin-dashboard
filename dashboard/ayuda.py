@@ -6,8 +6,8 @@ Solo habla de lo que su plan tiene: caminatas, picos de Z3, variada o calidad (c
 El sitio solo pinta estos bloques.
 """
 
-from i18n import lista as _lista, tt
-from plan_i18n import nombre as _nombre_ses
+from dashboard.i18n import lista as _lista, tt
+from dashboard.plan_i18n import nombre as _nombre_ses
 
 PRUEBAS = ("fc_fija", "trote_continuo", "5k")   # los textos de cada prueba salen del catálogo (motor.ayuda.pru.*)
 

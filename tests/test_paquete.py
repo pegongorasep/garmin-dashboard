@@ -7,14 +7,11 @@ from zoneinfo import ZoneInfo
 import pytest
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-sys.path.insert(0, str(ROOT / "plan"))
-sys.path.insert(0, str(ROOT))
 
-import ajustes  # noqa: E402
-import build  # noqa: E402
-import paquete  # noqa: E402
-import validar  # noqa: E402
+from dashboard import ajustes
+from dashboard import build
+from dashboard import paquete
+from dashboard import validar
 
 HAY_DATOS = (ROOT / "data" / "activities.json").exists() and (ROOT / "config.yaml").exists()
 
@@ -112,7 +109,7 @@ def test_validar_detecta_problemas(tmp_path):
 
 
 def test_es_carrera_del_paquete_manda_sobre_el_nombre():
-    import metrics
+    from dashboard import metrics
     cfg = ajustes.config_por_defecto()
     base = {"activityType": {"typeKey": "running"}, "startTimeLocal": "2026-11-01 07:00:00"}
     assert metrics.es_carrera({**base, "es_carrera": True}, cfg)

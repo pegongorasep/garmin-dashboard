@@ -2,10 +2,10 @@
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import build
-import metrics as m
+from dashboard import build
+from dashboard import metrics as m
 import planes_v6
-from ajustes import normalizar_config
+from dashboard.ajustes import normalizar_config
 from test_build import CONFIG, fixture
 from test_web_ajustes import CONFIG as CONFIG_WEB
 

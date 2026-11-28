@@ -275,7 +275,7 @@ def crudo_desde_respuestas(inicio: str, edad=None, fc_max=None, zona="America/Me
 
 
 def _idioma(v) -> str | None:
-    import i18n
+    from dashboard import i18n
     v = str(v or "").strip().lower()[:2]
     return v if v in i18n.idiomas() else None
 

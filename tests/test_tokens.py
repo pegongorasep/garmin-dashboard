@@ -5,8 +5,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
-import tokens  # noqa: E402
+from scripts import tokens
 
 USAN = [*ROOT.glob("site/*.css"), *ROOT.glob("site/*.js"), *ROOT.glob("web/estaticos/*.css"),
         *ROOT.glob("web/plantillas/*.html")]

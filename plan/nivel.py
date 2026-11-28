@@ -7,14 +7,11 @@ Todos los umbrales están en `UMBRALES`: ahí se afinan.
 Ventanas: se cuentan hacia atrás desde `hoy` (semana 1 = los 7 días anteriores a `hoy`, semana 2 = los 7 previos...).
 """
 import statistics
-import sys
 from datetime import date, datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).parent.parent
-if str(RAIZ / "dashboard") not in sys.path:
-    sys.path.insert(0, str(RAIZ / "dashboard"))
-import metrics  # noqa: E402
+from dashboard import metrics
 
 NIVELES = ("empezando", "base", "corredor")
 
@@ -73,7 +70,7 @@ def _semana(a: dict, hoy: datetime) -> int | None:
 def _config(config: dict | None) -> dict:
     if config:
         return config
-    from ajustes import categorias_por_defecto
+    from dashboard.ajustes import categorias_por_defecto
     return {"run_types": ["running", "treadmill_running", "trail_running", "track_running"],
             "categorias": categorias_por_defecto()}
 

@@ -1,5 +1,5 @@
 """Catálogo es/en: mismas claves y variables; elección de idioma; selector."""
-import i18n
+from dashboard import i18n
 
 
 def test_catalogos_iguales():
@@ -95,8 +95,8 @@ def test_json_del_sitio_al_dia_y_con_todas_las_claves_del_js():
 
 def test_idioma_en_data_json_solo_si_esta_en_config():
     from datetime import datetime
-    import build
-    import ajustes
+    from dashboard import build
+    from dashboard import ajustes
     cfg = ajustes.config_por_defecto()
     assert cfg["idioma"] is None
     assert ajustes.normalizar_config({"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}, "idioma": "en-US"})["idioma"] == "en"
@@ -136,7 +136,7 @@ def _textos(o, acc):
 
 
 def test_data_json_en_ingles_sin_espanol_conocido():
-    import build
+    from dashboard import build
     from test_build import AHORA, CONFIG_FIXTURE, fixture
     plan = build.load(build.ROOT / "plan" / "plan.example.json")
     en = build.build(fixture(), plan, {**CONFIG_FIXTURE, "idioma": "en"}, AHORA)
@@ -153,7 +153,7 @@ def test_data_json_en_ingles_sin_espanol_conocido():
 
 
 def test_notas_del_plan_llevan_id_y_texto_traducido():
-    import build
+    from dashboard import build
     from test_build import AHORA, CONFIG_FIXTURE, fixture
     plan = build.load(build.ROOT / "plan" / "plan.example.json")
     for idioma, texto in (("es", "opcional"), ("en", "optional")):

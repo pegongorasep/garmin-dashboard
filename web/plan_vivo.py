@@ -12,10 +12,10 @@ import copy
 import secrets
 from datetime import date, timedelta
 
-import motor_v6
-import pasos as ps
-import metrics as m
-from ajustes import normalizar_config
+from plan import motor_v6
+from plan import pasos as ps
+from dashboard import metrics as m
+from dashboard.ajustes import normalizar_config
 from .errores import ErrorT
 
 TIPOS_EDITABLES = ("z2", "larga", "variada")

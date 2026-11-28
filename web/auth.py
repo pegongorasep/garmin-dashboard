@@ -7,7 +7,7 @@ from datetime import timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-import i18n
+from dashboard import i18n
 
 from .modelos import CodigoLogin, Invitacion, LigaLogin, Sesion, Usuario, ahora
 

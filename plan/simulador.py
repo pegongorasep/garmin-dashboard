@@ -19,19 +19,15 @@ Cómo se simula (simple a propósito):
 Uso: python -m plan.simulador [--persona id]
 """
 import argparse
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
 
 RAIZ = Path(__file__).parent.parent
-for _p in (RAIZ / "dashboard", RAIZ / "plan"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
-import motor_v6  # noqa: E402
-import nivel as nivel_mod  # noqa: E402
-from ajustes import _DIA_IDX  # noqa: E402
+from plan import motor_v6
+from plan import nivel as nivel_mod
+from dashboard.ajustes import _DIA_IDX
 
 PERSONAS_YAML = Path(__file__).with_name("personas.yaml")
 INICIO = "2026-11-30"   # lunes fijo: la simulación es determinista

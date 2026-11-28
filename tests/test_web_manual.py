@@ -5,10 +5,10 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-import metrics
-import semanal
-import validar
-from ajustes import normalizar_config
+from dashboard import metrics
+from dashboard import semanal
+from dashboard import validar
+from dashboard.ajustes import normalizar_config
 from test_motor_v6_f5 import INICIO, _cfg, _acts, plan_v6
 from test_web_ajustes import listo
 from web import calculo, cuenta, grupos_resumen, manual

@@ -7,11 +7,9 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-sys.path.insert(0, str(ROOT / "plan"))
-import ayuda  # noqa: E402
-import planes_v6  # noqa: E402
-from ajustes import cargar_config  # noqa: E402
+from dashboard import ayuda
+import planes_v6
+from dashboard.ajustes import cargar_config
 
 ZONAS = [("Z1", 125, 138), ("Z2", 138, 150), ("Z3", 150, 163), ("Z4", 163, 176), ("Z5", 176, 189)]
 

@@ -5,8 +5,7 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "dashboard"))
-import reloj_plan as rp  # noqa: E402
+from dashboard import reloj_plan as rp
 
 CONFIG = {"plan_start": "2026-11-09", "semanas_repetidas": [], "plan_semanas": 12}
 PLAN = json.loads((ROOT / "plan" / "plan.json").read_text())

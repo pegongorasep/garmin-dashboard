@@ -19,7 +19,7 @@ CHROME = shutil.which("google-chrome") or shutil.which("chromium") or "/Applicat
 
 def test_ui_sync_por_defecto_en_build():
     from dashboard import build
-    from ajustes import cargar_config
+    from dashboard.ajustes import cargar_config
     cfg = cargar_config(None) if callable(cargar_config) else {}
     ui = build.build_ui(cfg, {"weeks": []}, [])
     assert ui["sync"] == {"puede": False, "url_autorizar": None, "historial_pendiente": False, "key_rechazada": False, "migrar": False, "repo": None}

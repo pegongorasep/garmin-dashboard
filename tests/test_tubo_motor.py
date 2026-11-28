@@ -7,11 +7,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT))
-import garmin_connect as gc  # noqa: E402
-import subir as sub  # noqa: E402
-from test_web_tubo import ENTORNO, HttpFalso, RespuestaFalsa  # noqa: E402
+import garmin_connect as gc
+from scripts import subir as sub
+from test_web_tubo import ENTORNO, HttpFalso, RespuestaFalsa
 
 
 class ClienteFalso:

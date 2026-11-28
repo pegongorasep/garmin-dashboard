@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-import paquete as paquete_mod
+from dashboard import paquete as paquete_mod
 
 from . import cambios, datos, importar
 from .modelos import Ajustes, Cambio, Sincronizacion, Subida, Usuario, ahora
@@ -148,7 +148,7 @@ def sinc_del_run(db: Session, u: Usuario, claims: dict):
 
 def avisar_key_rechazada(enviar, settings, u: Usuario) -> None:
     """Correo único del incidente «Garmin rechazó tu key» (con liga a /garmin/key). Nunca tumba la petición."""
-    import i18n
+    from dashboard import i18n
     idioma = u.idioma or "es"
     try:
         enviar(settings, u.correo, i18n.t("conexion.key_asunto", idioma),

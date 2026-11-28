@@ -2,9 +2,9 @@
 import copy
 from datetime import date, timedelta
 
-import build
-import motor_v6
-from ajustes import normalizar_config
+from dashboard import build
+from plan import motor_v6
+from dashboard.ajustes import normalizar_config
 from web import plan_vivo
 
 INICIO = date(2026, 11, 30)   # lunes

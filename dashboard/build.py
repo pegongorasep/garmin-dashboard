@@ -6,18 +6,20 @@ Es el único lugar con reloj: "hoy" se calcula en la zona horaria del config.
 import argparse
 import hashlib
 import json
+import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import i18n
-import metrics as m
-import plan_i18n
-import semanal
-import tipos
-from i18n import tt
-from ajustes import CLASES, USER_DIR, cargar_config
-from ayuda import armar_ayuda
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # se corre como archivo: la raíz del repo al path
+from dashboard import i18n  # noqa: E402
+from dashboard import metrics as m
+from dashboard import plan_i18n
+from dashboard import semanal
+from dashboard import tipos
+from dashboard.i18n import tt
+from dashboard.ajustes import CLASES, USER_DIR, cargar_config
+from dashboard.ayuda import armar_ayuda
 
 ROOT = Path(__file__).parent.parent  # el motor (aquí vive site/)
 DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]   # español (referencia); lo que sale usa i18n.csv("motor.dias_cortos")

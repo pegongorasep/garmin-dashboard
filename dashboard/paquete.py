@@ -23,9 +23,9 @@ import re
 import subprocess
 from pathlib import Path
 
-import ajustes
-import metrics
-import validar as validar_json
+from dashboard import ajustes
+from dashboard import metrics
+from dashboard import validar as validar_json
 
 ESQUEMA = 1
 ARCHIVOS = ("daily", "activities", "activity_details", "hr_zones", "historial_corridas", "meta")
