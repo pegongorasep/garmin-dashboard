@@ -1,7 +1,7 @@
 """Dependencias compartidas de las rutas (`APIRouter`): leen de `request.app.state`, que arma `crear_app()`.
 
 Cada app tiene su propio `app.state` (settings, sesiones, plantillas), así que varias apps en un proceso no se mezclan.
-Los módulos nuevos usan estas funciones con `router = APIRouter()`; los viejos (`montar(...)`) reciben las mismas funciones.
+Todos los módulos con rutas usan estas funciones con `router = APIRouter()`.
 """
 import secrets
 
@@ -53,3 +53,9 @@ def poner_sesion(resp: Response, valor: str, cfg) -> None:
     """Cookie de sesión (misma que `crear_app` pone al entrar por correo)."""
     resp.set_cookie(auth.COOKIE_SESION, valor, max_age=auth.DIAS_SESION * 86400, httponly=True,
                     secure=cfg.cookie_segura, samesite="lax", path="/")
+
+
+def doble(router, metodo: str, ruta: str, fn) -> None:
+    """Registra la misma ruta para uno mismo y para el atleta de un coach (`/a/{atleta_id}` + ruta)."""
+    for base in ("", "/a/{atleta_id}"):
+        getattr(router, metodo)(base + ruta)(fn)

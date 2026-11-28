@@ -322,7 +322,8 @@ def construir(app):
     return srv
 
 
-def montar(app, settings) -> None:
+def montar_mcp(app, settings) -> None:
+    """Monta el servidor MCP como sub-app ASGI en `/mcp` (con su lifespan): no encaja en un `APIRouter`."""
     base = settings.base_url.rstrip("/")
     srv = construir(app)
     from urllib.parse import urlsplit

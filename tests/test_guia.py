@@ -94,8 +94,8 @@ def test_comprobar_falla_de_github_es_otra(ctx, gh):
 
 def test_liga_por_correo_con_limite(ctx, gh):
     enviados = []
+    cl, uid = sesion(ctx)   # entrar usa el correo de `ctx`; el cambio va después
     ctx.app.state.enviar = lambda settings, para, asunto, texto: enviados.append((para, texto))
-    cl, uid = sesion(ctx)
     assert cl.post("/bienvenida/liga").status_code == 403
     tk = token(cl)
     for _ in range(3):

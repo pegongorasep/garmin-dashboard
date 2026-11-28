@@ -38,8 +38,8 @@ def test_ui_sync_repo_solo_la_propia_cuenta(ctx, gh):
     u = Usuario(correo="r@x.mx", repo="ana/ahilallevas-datos", repo_id=7)
     assert sync_web.sync_ui(ctx.settings, u)["repo"] == "ana/ahilallevas-datos"
     assert sync_web.sync_ui(ctx.settings, Usuario(correo="s@x.mx"))["repo"] is None
-    # el coach viendo a su atleta no recibe ui.sync: app.py solo lo calcula si atleta.id == usuario.id
-    assert "if atleta.id == getattr(usuario, 'id', None) else None" in (RAIZ / "web" / "app.py").read_text()
+    # el coach viendo a su atleta no recibe ui.sync: sitio.py solo lo calcula si atleta.id == usuario.id
+    assert "if atleta.id == getattr(usuario, 'id', None) else None" in (RAIZ / "web" / "sitio.py").read_text()
 
 
 def test_svg_del_sitio_es_el_mismo_dibujo_de_la_guia():

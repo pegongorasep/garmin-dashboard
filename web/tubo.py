@@ -12,7 +12,7 @@ from datetime import timedelta
 
 import httpx
 import jwt
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from dashboard import paquete as paquete_mod
 
 from . import cambios, datos, importar
+from .deps import get_db
 from .modelos import Ajustes, Cambio, Sincronizacion, Subida, Usuario, ahora
 
 log = logging.getLogger("web.tubo")
@@ -216,124 +217,128 @@ def _importar_personales(db, u, pers) -> None:
         log.warning("no se importaron los archivos personales de %s", u.id, exc_info=True)
 
 
-def montar(app, get_db, settings) -> None:
-    def autenticar(request: Request, db: Session) -> Usuario:
-        auth = request.headers.get("authorization", "")
-        if not auth.lower().startswith("bearer "):
-            raise TuboError(401, "falta el token")
-        try:
-            claims = verificar_token(auth[7:].strip(), settings, _jwks(app, settings))
-        except TuboError:
-            raise
-        except Exception:   # JWKS inalcanzable u otro fallo: no se adivina
-            log.exception("no se pudo verificar el token")
-            raise TuboError(503, "no se pudo verificar el token") from None
-        request.state.claims = claims
-        return usuario_del_token(db, claims)
+router = APIRouter()
 
-    def error(e: TuboError):
-        return JSONResponse({"error": e.mensaje, **e.extra}, status_code=e.status)
 
-    def _cerrar_sinc(db, u, request, ok, nuevas=None):
-        from . import sincronizar
-        try:
-            sinc = sinc_del_run(db, u, request.state.claims)
-            if sinc is not None:
-                era_comprobacion = sinc.tipo == "comprobacion"
-                sincronizar.terminar(db, sinc, ok=ok, error=None if ok else "otra", nuevas=nuevas)
-                if ok and era_comprobacion and settings.app_github and u.gh_instalacion:
-                    from . import conexion   # tras la comprobación se pide el historial; si falla, queda en error
-                    conexion.disparar(db, u, "historial", conexion.app_de(request.app, settings))
-        except Exception:   # noqa: BLE001  cerrar la sincronización nunca tumba la subida
-            db.rollback()
-            log.warning("no se cerró la sincronización de %s", u.id, exc_info=True)
+def autenticar(request: Request, db: Session) -> Usuario:
+    settings = request.app.state.settings
+    auth = request.headers.get("authorization", "")
+    if not auth.lower().startswith("bearer "):
+        raise TuboError(401, "falta el token")
+    try:
+        claims = verificar_token(auth[7:].strip(), settings, _jwks(request.app, settings))
+    except TuboError:
+        raise
+    except Exception:   # JWKS inalcanzable u otro fallo: no se adivina
+        log.exception("no se pudo verificar el token")
+        raise TuboError(503, "no se pudo verificar el token") from None
+    request.state.claims = claims
+    return usuario_del_token(db, claims)
 
-    @app.post("/api/tubo/instrucciones")
-    async def instrucciones(request: Request, db=Depends(get_db)):
-        try:
-            u = autenticar(request, db)
-            v2 = request.headers.get("x-motor-version", "").strip() == "2"
-            if not v2:
-                try:
-                    cuerpo = json.loads(await request.body() or b"null")
-                except ValueError:
-                    cuerpo = None
-                v2 = isinstance(cuerpo, dict) and cuerpo.get("motor_version") == 2
-            if not v2:
-                return instrucciones_de(db, u)   # motor viejo: exactamente lo de siempre
-            return instrucciones_v2(db, u, request.state.claims)
-        except TuboError as e:
-            return error(e)
+def error(e: TuboError):
+    return JSONResponse({"error": e.mensaje, **e.extra}, status_code=e.status)
 
-    @app.post("/api/tubo/avance")
-    async def avance(request: Request, db=Depends(get_db)):
-        from . import sincronizar
-        try:
-            u = autenticar(request, db)
-            try:
-                c = json.loads(await request.body() or b"null")
-            except ValueError:
-                c = None
-            if not isinstance(c, dict) or c.get("paso") not in PASOS:
-                raise TuboError(422, "avance no válido")
-            nums = {}
-            for k in ("hechos", "total"):
-                if c.get(k) is not None:
-                    nums[k] = _entero_acotado(c[k])
-                    if nums[k] is None:
-                        raise TuboError(422, "avance no válido")
-            err = c.get("error")
-            if err is not None and not isinstance(err, str):
-                raise TuboError(422, "avance no válido")
-        except TuboError as e:
-            return error(e)
+def _cerrar_sinc(db, u, request, ok, nuevas=None):
+    from . import sincronizar
+    settings = request.app.state.settings
+    try:
         sinc = sinc_del_run(db, u, request.state.claims)
-        nuevo_incidente = False
-        if err == "key_rechazada":
-            nuevo_incidente = u.key_rechazada_desde is None   # uno por incidente, haya o no sincronización
         if sinc is not None:
-            sincronizar.avanzar(db, sinc, c["paso"], **nums)
-            if err:
-                sincronizar.terminar(db, sinc, ok=False, error=err if err in ERRORES else "otra")
-        elif err == "key_rechazada":
-            sincronizar.marcar_key_rechazada(u)
-            db.commit()
-        if nuevo_incidente:
-            avisar_key_rechazada(request.app.state.enviar, settings, u)
-        return {"ok": True}
+            era_comprobacion = sinc.tipo == "comprobacion"
+            sincronizar.terminar(db, sinc, ok=ok, error=None if ok else "otra", nuevas=nuevas)
+            if ok and era_comprobacion and settings.app_github and u.gh_instalacion:
+                from . import conexion   # tras la comprobación se pide el historial; si falla, queda en error
+                conexion.disparar(db, u, "historial", conexion.app_de(request.app, settings))
+    except Exception:   # noqa: BLE001  cerrar la sincronización nunca tumba la subida
+        db.rollback()
+        log.warning("no se cerró la sincronización de %s", u.id, exc_info=True)
 
-    @app.post("/api/tubo/subida")
-    async def subida(request: Request, db=Depends(get_db)):
-        try:
-            u = autenticar(request, db)
-            crudo = _descomprimir(await request.body(), request.headers.get("content-encoding", ""))
+@router.post("/api/tubo/instrucciones")
+async def instrucciones(request: Request, db=Depends(get_db)):
+    try:
+        u = autenticar(request, db)
+        v2 = request.headers.get("x-motor-version", "").strip() == "2"
+        if not v2:
             try:
-                pq = json.loads(crudo)
+                cuerpo = json.loads(await request.body() or b"null")
             except ValueError:
-                raise TuboError(400, "JSON no válido") from None
-        except TuboError as e:
-            return error(e)
-        problemas = paquete_mod.validar(pq)
-        motor = pq.get("motor") if isinstance(pq, dict) and isinstance(pq.get("motor"), str) else None
-        if problemas:
-            db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error="; ".join(problemas)[:2000]))
-            db.commit()
-            _cerrar_sinc(db, u, request, False)
-            return JSONResponse({"error": "paquete no válido", "problemas": problemas}, status_code=422)
+                cuerpo = None
+            v2 = isinstance(cuerpo, dict) and cuerpo.get("motor_version") == 2
+        if not v2:
+            return instrucciones_de(db, u)   # motor viejo: exactamente lo de siempre
+        return instrucciones_v2(db, u, request.state.claims)
+    except TuboError as e:
+        return error(e)
+
+@router.post("/api/tubo/avance")
+async def avance(request: Request, db=Depends(get_db)):
+    from . import sincronizar
+    try:
+        u = autenticar(request, db)
         try:
-            cuentas = datos.guardar_paquete(db, u.id, pq)
-        except Exception as e:   # no se guarda a medias
-            db.rollback()
-            log.exception("falló guardar el paquete de %s", u.id)
-            db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error=type(e).__name__))
-            db.commit()
-            _cerrar_sinc(db, u, request, False)
-            return JSONResponse({"error": "no se pudo guardar"}, status_code=500)
-        db.commit()   # el paquete queda guardado antes de importar (un rollback ahí no debe tirarlo)
-        _importar_personales(db, u, pq.get("personales"))
-        db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=True))
-        u.key_rechazada_desde = None   # una subida buena: la key vuelve a servir
-        u.historial_desde = None   # el pedido pendiente se cumplió con esta subida
+            c = json.loads(await request.body() or b"null")
+        except ValueError:
+            c = None
+        if not isinstance(c, dict) or c.get("paso") not in PASOS:
+            raise TuboError(422, "avance no válido")
+        nums = {}
+        for k in ("hechos", "total"):
+            if c.get(k) is not None:
+                nums[k] = _entero_acotado(c[k])
+                if nums[k] is None:
+                    raise TuboError(422, "avance no válido")
+        err = c.get("error")
+        if err is not None and not isinstance(err, str):
+            raise TuboError(422, "avance no válido")
+    except TuboError as e:
+        return error(e)
+    sinc = sinc_del_run(db, u, request.state.claims)
+    nuevo_incidente = False
+    if err == "key_rechazada":
+        nuevo_incidente = u.key_rechazada_desde is None   # uno por incidente, haya o no sincronización
+    if sinc is not None:
+        sincronizar.avanzar(db, sinc, c["paso"], **nums)
+        if err:
+            sincronizar.terminar(db, sinc, ok=False, error=err if err in ERRORES else "otra")
+    elif err == "key_rechazada":
+        sincronizar.marcar_key_rechazada(u)
         db.commit()
-        _cerrar_sinc(db, u, request, True, (cuentas.get("actividad") or {}).get("nuevos"))
-        return {"ok": True}
+    if nuevo_incidente:
+        avisar_key_rechazada(request.app.state.enviar, request.app.state.settings, u)
+    return {"ok": True}
+
+@router.post("/api/tubo/subida")
+async def subida(request: Request, db=Depends(get_db)):
+    try:
+        u = autenticar(request, db)
+        crudo = _descomprimir(await request.body(), request.headers.get("content-encoding", ""))
+        try:
+            pq = json.loads(crudo)
+        except ValueError:
+            raise TuboError(400, "JSON no válido") from None
+    except TuboError as e:
+        return error(e)
+    problemas = paquete_mod.validar(pq)
+    motor = pq.get("motor") if isinstance(pq, dict) and isinstance(pq.get("motor"), str) else None
+    if problemas:
+        db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error="; ".join(problemas)[:2000]))
+        db.commit()
+        _cerrar_sinc(db, u, request, False)
+        return JSONResponse({"error": "paquete no válido", "problemas": problemas}, status_code=422)
+    try:
+        cuentas = datos.guardar_paquete(db, u.id, pq)
+    except Exception as e:   # no se guarda a medias
+        db.rollback()
+        log.exception("falló guardar el paquete de %s", u.id)
+        db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=False, error=type(e).__name__))
+        db.commit()
+        _cerrar_sinc(db, u, request, False)
+        return JSONResponse({"error": "no se pudo guardar"}, status_code=500)
+    db.commit()   # el paquete queda guardado antes de importar (un rollback ahí no debe tirarlo)
+    _importar_personales(db, u, pq.get("personales"))
+    db.add(Subida(usuario_id=u.id, motor=motor, bytes=len(crudo), ok=True))
+    u.key_rechazada_desde = None   # una subida buena: la key vuelve a servir
+    u.historial_desde = None   # el pedido pendiente se cumplió con esta subida
+    db.commit()
+    _cerrar_sinc(db, u, request, True, (cuentas.get("actividad") or {}).get("nuevos"))
+    return {"ok": True}

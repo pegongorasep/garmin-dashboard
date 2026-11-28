@@ -5,7 +5,7 @@ import copy
 from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from dashboard.ajustes import SENSORES, ConfigError, normalizar_config
 
 from . import cambios
+from .deps import actual, formulario, get_db, render
 from .modelos import Ajustes, Cambio, Plan, Subida, Usuario, ahora
 from .errores import ErrorT, texto
 from .onboarding import ZONAS
@@ -143,183 +144,181 @@ def contexto_garmin(db: Session, u: Usuario, t, settings) -> dict:
         estado = "sin_app" if app else "solo_estado"
     return {"estado": estado, "repo": u.repo, "ultima": hace_texto(t, ultima) if ultima else None}
 
+router = APIRouter()
 
-def montar(app, get_db, actual, render, formulario, settings) -> None:
-    # ---------- ajustes ----------
-    def pantalla_ajustes(request, usuario, db, atleta_id, **extra):
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        crudo = crudo_de(db, atleta)
-        if crudo is None:
-            return render(request, "ajustes_sin_plan.html", atleta=atleta, pref=prefijo(usuario, atleta),
-                          **garmin_extra(request, db, usuario, atleta))
-        return render(request, "ajustes.html", **contexto_ajustes(db, atleta, usuario, crudo, ok=request.query_params.get("ok"),
-                      **garmin_extra(request, db, usuario, atleta), **extra))
 
-    def garmin_extra(request, db, usuario, atleta) -> dict:
-        if atleta.id != usuario.id:   # un coach viendo a su atleta no ve ni toca su conexión
-            return {}
-        return {"garmin": contexto_garmin(db, atleta, request.state.t, settings),
-                "garmin_aviso": request.query_params.get("garmin")}
+def pantalla_ajustes(request, usuario, db, atleta_id, **extra):
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    crudo = crudo_de(db, atleta)
+    if crudo is None:
+        return render(request, "ajustes_sin_plan.html", atleta=atleta, pref=prefijo(usuario, atleta),
+                      **garmin_extra(request, db, usuario, atleta))
+    return render(request, "ajustes.html", **contexto_ajustes(db, atleta, usuario, crudo, ok=request.query_params.get("ok"),
+                  **garmin_extra(request, db, usuario, atleta), **extra))
 
-    @app.get("/ajustes")
-    def ajustes_get(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        return pantalla_ajustes(request, usuario, db, None)
+def garmin_extra(request, db, usuario, atleta) -> dict:
+    if atleta.id != usuario.id:   # un coach viendo a su atleta no ve ni toca su conexión
+        return {}
+    return {"garmin": contexto_garmin(db, atleta, request.state.t, request.app.state.settings),
+            "garmin_aviso": request.query_params.get("garmin")}
 
-    @app.get("/a/{atleta_id}/ajustes")
-    def ajustes_get_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return pantalla_ajustes(request, usuario, db, atleta_id)
+@router.get("/ajustes")
+def ajustes_get(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+    return pantalla_ajustes(request, usuario, db, None)
 
-    @app.post("/ajustes/garmin/desconectar")
-    async def ajustes_garmin_desconectar(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        """«Sí, desconectar»: solo la propia persona. Los datos se quedan; se pierde el vínculo con la copia y la app."""
-        await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        if usuario.repo_id or usuario.gh_instalacion:
-            desconectar_garmin(db, usuario)
-            db.commit()
-        return RedirectResponse("/ajustes?garmin=desconectado", 303)
+@router.get("/a/{atleta_id}/ajustes")
+def ajustes_get_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return pantalla_ajustes(request, usuario, db, atleta_id)
 
-    @app.post("/ajustes/compartir")
-    async def ajustes_compartir(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        """Los dos interruptores sociales (actividades y plan). Solo la propia persona: un coach no los cambia."""
-        form = await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        usuario.compartir_actividades = form.get("compartir_actividades") == "1"
-        usuario.compartir_plan = form.get("compartir_plan") == "1"
+@router.post("/ajustes/garmin/desconectar")
+async def ajustes_garmin_desconectar(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+    """«Sí, desconectar»: solo la propia persona. Los datos se quedan; se pierde el vínculo con la copia y la app."""
+    await formulario(request)
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    if usuario.repo_id or usuario.gh_instalacion:
+        desconectar_garmin(db, usuario)
         db.commit()
-        return RedirectResponse("/ajustes?ok=1", 303)
+    return RedirectResponse("/ajustes?garmin=desconectado", 303)
 
-    @app.post("/ajustes/plan")
-    async def ajustes_plan(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        """«Quiero un plan de running» (lleva a /plan/nuevo) o «Quitar mi plan» (sin_plan=True;
-        el plan guardado se queda). Solo la propia persona."""
-        form = await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        if form.get("accion") == "quitar":
-            usuario.sin_plan = True
-            db.commit()
-            return RedirectResponse("/", 303)
-        return RedirectResponse("/plan/nuevo", 303)   # el plan se arma ahí; sin_plan pasa a False al confirmar
+@router.post("/ajustes/compartir")
+async def ajustes_compartir(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+    """Los dos interruptores sociales (actividades y plan). Solo la propia persona: un coach no los cambia."""
+    form = await formulario(request)
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    usuario.compartir_actividades = form.get("compartir_actividades") == "1"
+    usuario.compartir_plan = form.get("compartir_plan") == "1"
+    db.commit()
+    return RedirectResponse("/ajustes?ok=1", 303)
 
-    async def guardar_ajustes(request: Request, usuario, db, atleta_id):
-        """Guardar los ajustes generales: nunca rehace el plan ni pide confirmación."""
-        form = await formulario(request)
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        crudo = crudo_de(db, atleta)
-        if crudo is None:
-            return RedirectResponse("/bienvenida", 303)
-        pref = prefijo(usuario, atleta)
-        valores = {k: form.get(k, "") for k in form.keys()}
-        for k in ("inbody",):
-            valores[k] = form.get(k) == "on"
-        try:
-            nuevo = crudo_general(crudo, form)
-            cambios_txt = diferencias(crudo, nuevo)
-            if not cambios_txt:
-                return RedirectResponse(f"{pref}/ajustes?ok=sin", 303)
-        except (ConfigError, ValueError) as ex:
-            msg = texto(ex, request.state.t)
-            campo = ex.campo if hasattr(ex, "clave") else campo_del_error(str(ex))
-            extra = {"errores": {campo: msg}} if campo else {"error": msg}
-            return render(request, "ajustes.html", status=400, **contexto_ajustes(db, atleta, usuario, crudo, {**valores_form(crudo, atleta), **valores}, **extra))
-        cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), "Ajustes: cambió " + ", ".join(cambios_txt), {"ajustes": nuevo})
-        if (nuevo.get("perfil") or {}).get("sensor") in SENSORES and atleta.sensor != nuevo["perfil"]["sensor"]:
-            atleta.sensor = nuevo["perfil"]["sensor"]   # copia de consulta rápida; la verdad está en los ajustes
-            db.commit()
-        return RedirectResponse(f"{pref}/ajustes?ok=1", 303)
+@router.post("/ajustes/plan")
+async def ajustes_plan(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+    """«Quiero un plan de running» (lleva a /plan/nuevo) o «Quitar mi plan» (sin_plan=True;
+    el plan guardado se queda). Solo la propia persona."""
+    form = await formulario(request)
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    if form.get("accion") == "quitar":
+        usuario.sin_plan = True
+        db.commit()
+        return RedirectResponse("/", 303)
+    return RedirectResponse("/plan/nuevo", 303)   # el plan se arma ahí; sin_plan pasa a False al confirmar
 
-    @app.post("/ajustes")
-    async def ajustes_post(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        return await guardar_ajustes(request, usuario, db, None)
+async def guardar_ajustes(request: Request, usuario, db, atleta_id):
+    """Guardar los ajustes generales: nunca rehace el plan ni pide confirmación."""
+    form = await formulario(request)
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    crudo = crudo_de(db, atleta)
+    if crudo is None:
+        return RedirectResponse("/bienvenida", 303)
+    pref = prefijo(usuario, atleta)
+    valores = {k: form.get(k, "") for k in form.keys()}
+    for k in ("inbody",):
+        valores[k] = form.get(k) == "on"
+    try:
+        nuevo = crudo_general(crudo, form)
+        cambios_txt = diferencias(crudo, nuevo)
+        if not cambios_txt:
+            return RedirectResponse(f"{pref}/ajustes?ok=sin", 303)
+    except (ConfigError, ValueError) as ex:
+        msg = texto(ex, request.state.t)
+        campo = ex.campo if hasattr(ex, "clave") else campo_del_error(str(ex))
+        extra = {"errores": {campo: msg}} if campo else {"error": msg}
+        return render(request, "ajustes.html", status=400, **contexto_ajustes(db, atleta, usuario, crudo, {**valores_form(crudo, atleta), **valores}, **extra))
+    cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), "Ajustes: cambió " + ", ".join(cambios_txt), {"ajustes": nuevo})
+    if (nuevo.get("perfil") or {}).get("sensor") in SENSORES and atleta.sensor != nuevo["perfil"]["sensor"]:
+        atleta.sensor = nuevo["perfil"]["sensor"]   # copia de consulta rápida; la verdad está en los ajustes
+        db.commit()
+    return RedirectResponse(f"{pref}/ajustes?ok=1", 303)
 
-    @app.post("/a/{atleta_id}/ajustes")
-    async def ajustes_post_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return await guardar_ajustes(request, usuario, db, atleta_id)
+@router.post("/ajustes")
+async def ajustes_post(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+    return await guardar_ajustes(request, usuario, db, None)
 
-    # ---------- historial ----------
-    def fila_historial(db, c, tz, crudo, hoy, snaps, pendientes):
-        base = cambios.puede_deshacer_base(c, crudo, hoy)
-        orden = cambios.orden_ok(c, snaps)
-        return {"c": c, "quien": cambios.autor_texto(db, c), "cuando": c.fecha.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).strftime("%d/%m/%Y %H:%M"),
-                "puede": base and orden, "espera_deshacer": base and not orden, "via": c.via,
-                "pendiente": cambios.es_pendiente(c), "puede_aceptar": cambios.puede_aceptar(c, pendientes),
-                "resumen": cambios.resumen(c, tope=None), "lineas_nota": len((c.nota or "").splitlines())}
+@router.post("/a/{atleta_id}/ajustes")
+async def ajustes_post_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return await guardar_ajustes(request, usuario, db, atleta_id)
 
-    def pantalla_historial(request, usuario, db, atleta_id, **extra):
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        crudo = crudo_de(db, atleta) or {}
-        tz = ZoneInfo((crudo.get("perfil") or {}).get("zona_horaria") or "America/Merida")
-        hoy = hoy_de(app.state.reloj, crudo)
-        snaps, pendientes = cambios.instantanea(db, atleta.id, cambios.CAMPOS), cambios.pendientes_de(db, atleta.id)
-        filas = [fila_historial(db, c, tz, crudo, hoy, snaps, pendientes) for c in cambios.historial(db, atleta.id)]
-        return render(request, "historial.html", atleta=atleta, pref=prefijo(usuario, atleta), filas=filas,
-                      es_atleta=usuario.id == atleta.id, **extra)
+# ---------- historial ----------
+def fila_historial(db, c, tz, crudo, hoy, snaps, pendientes):
+    base = cambios.puede_deshacer_base(c, crudo, hoy)
+    orden = cambios.orden_ok(c, snaps)
+    return {"c": c, "quien": cambios.autor_texto(db, c), "cuando": c.fecha.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).strftime("%d/%m/%Y %H:%M"),
+            "puede": base and orden, "espera_deshacer": base and not orden, "via": c.via,
+            "pendiente": cambios.es_pendiente(c), "puede_aceptar": cambios.puede_aceptar(c, pendientes),
+            "resumen": cambios.resumen(c, tope=None), "lineas_nota": len((c.nota or "").splitlines())}
 
-    @app.get("/historial")
-    def historial_get(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        return pantalla_historial(request, usuario, db, None, ok=request.query_params.get("ok"))
+def pantalla_historial(request, usuario, db, atleta_id, **extra):
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    crudo = crudo_de(db, atleta) or {}
+    tz = ZoneInfo((crudo.get("perfil") or {}).get("zona_horaria") or "America/Merida")
+    hoy = hoy_de(request.app.state.reloj, crudo)
+    snaps, pendientes = cambios.instantanea(db, atleta.id, cambios.CAMPOS), cambios.pendientes_de(db, atleta.id)
+    filas = [fila_historial(db, c, tz, crudo, hoy, snaps, pendientes) for c in cambios.historial(db, atleta.id)]
+    return render(request, "historial.html", atleta=atleta, pref=prefijo(usuario, atleta), filas=filas,
+                  es_atleta=usuario.id == atleta.id, **extra)
 
-    @app.get("/a/{atleta_id}/historial")
-    def historial_get_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return pantalla_historial(request, usuario, db, atleta_id, ok=request.query_params.get("ok"))
+@router.get("/historial")
+def historial_get(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+    return pantalla_historial(request, usuario, db, None, ok=request.query_params.get("ok"))
 
-    async def historial_accion(request: Request, usuario, db, atleta_id, accion: str, cambio_id: int | None = None):   # accion: visto | deshacer
-        await formulario(request)
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        pref = prefijo(usuario, atleta)
-        if accion == "visto":
-            if usuario.id != atleta.id:   # el coach no consume los avisos del atleta
-                return RedirectResponse(f"{pref}/historial?ok=visto", 303)
-            if cambio_id is None:
-                cambios.marcar_vistos(db, atleta.id)
-            elif not cambios.aceptar(db, atleta.id, cambio_id):
-                return RedirectResponse(f"{pref}/historial?ok=orden_visto#c{cambio_id}", 303)
+@router.get("/a/{atleta_id}/historial")
+def historial_get_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return pantalla_historial(request, usuario, db, atleta_id, ok=request.query_params.get("ok"))
+
+async def historial_accion(request: Request, usuario, db, atleta_id, accion: str, cambio_id: int | None = None):   # accion: visto | deshacer
+    await formulario(request)
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    pref = prefijo(usuario, atleta)
+    if accion == "visto":
+        if usuario.id != atleta.id:   # el coach no consume los avisos del atleta
             return RedirectResponse(f"{pref}/historial?ok=visto", 303)
-        try:
-            cambios.deshacer(db, usuario, cambio_id, hoy=hoy_de(app.state.reloj, crudo_de(db, atleta)))
-        except cambios.SinPermiso:
-            raise HTTPException(404) from None
-        except cambios.NoSeDeshace as ex:
-            return pantalla_historial(request, usuario, db, atleta_id, error=texto(ex, request.state.t))
-        return RedirectResponse(f"{pref}/historial?ok=deshecho", 303)
+        if cambio_id is None:
+            cambios.marcar_vistos(db, atleta.id)
+        elif not cambios.aceptar(db, atleta.id, cambio_id):
+            return RedirectResponse(f"{pref}/historial?ok=orden_visto#c{cambio_id}", 303)
+        return RedirectResponse(f"{pref}/historial?ok=visto", 303)
+    try:
+        cambios.deshacer(db, usuario, cambio_id, hoy=hoy_de(request.app.state.reloj, crudo_de(db, atleta)))
+    except cambios.SinPermiso:
+        raise HTTPException(404) from None
+    except cambios.NoSeDeshace as ex:
+        return pantalla_historial(request, usuario, db, atleta_id, error=texto(ex, request.state.t))
+    return RedirectResponse(f"{pref}/historial?ok=deshecho", 303)
 
-    @app.post("/historial/visto")
-    async def historial_visto(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        return await historial_accion(request, usuario, db, None, "visto")
+@router.post("/historial/visto")
+async def historial_visto(request: Request, usuario=Depends(actual), db=Depends(get_db)):
+    return await historial_accion(request, usuario, db, None, "visto")
 
-    @app.post("/historial/{cambio_id}/visto")
-    async def historial_visto_uno(request: Request, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return await historial_accion(request, usuario, db, None, "visto", cambio_id)
+@router.post("/historial/{cambio_id}/visto")
+async def historial_visto_uno(request: Request, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return await historial_accion(request, usuario, db, None, "visto", cambio_id)
 
-    @app.post("/a/{atleta_id}/historial/{cambio_id}/visto")
-    async def historial_visto_uno_atleta(request: Request, atleta_id: int, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return await historial_accion(request, usuario, db, atleta_id, "visto", cambio_id)
+@router.post("/a/{atleta_id}/historial/{cambio_id}/visto")
+async def historial_visto_uno_atleta(request: Request, atleta_id: int, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return await historial_accion(request, usuario, db, atleta_id, "visto", cambio_id)
 
-    @app.post("/historial/{cambio_id}/deshacer")
-    async def historial_deshacer(request: Request, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return await historial_accion(request, usuario, db, None, "deshacer", cambio_id)
+@router.post("/historial/{cambio_id}/deshacer")
+async def historial_deshacer(request: Request, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return await historial_accion(request, usuario, db, None, "deshacer", cambio_id)
 
-    @app.post("/a/{atleta_id}/historial/visto")
-    async def historial_visto_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return await historial_accion(request, usuario, db, atleta_id, "visto")
+@router.post("/a/{atleta_id}/historial/visto")
+async def historial_visto_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return await historial_accion(request, usuario, db, atleta_id, "visto")
 
-    @app.post("/a/{atleta_id}/historial/{cambio_id}/deshacer")
-    async def historial_deshacer_atleta(request: Request, atleta_id: int, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
-        return await historial_accion(request, usuario, db, atleta_id, "deshacer", cambio_id)
+@router.post("/a/{atleta_id}/historial/{cambio_id}/deshacer")
+async def historial_deshacer_atleta(request: Request, atleta_id: int, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
+    return await historial_accion(request, usuario, db, atleta_id, "deshacer", cambio_id)
 
-    # ---------- InBody ----------
-    montar_cuerpo(app, get_db, actual, render, formulario)
 
 
 CAMPOS_CUERPO = [("peso_kg", "Peso (kg)", True, 20, 400), ("pgc", "Grasa corporal (%)", False, 1, 70),
@@ -361,94 +360,99 @@ def medicion_desde_form(f, previa: dict | None = None) -> dict:
     return med
 
 
-def montar_cuerpo(app, get_db, actual, render, formulario) -> None:
-    def cargar(db, atleta):
-        return cambios.instantanea(db, atleta.id, ("inbody",))["inbody"]
+def _cargar(db, atleta):
+    return cambios.instantanea(db, atleta.id, ("inbody",))["inbody"]
 
-    def ctx(db, usuario, atleta, **extra):
-        crudo = crudo_de(db, atleta) or {}
-        return {"atleta": atleta, "pref": prefijo(usuario, atleta), "campos": CAMPOS_CUERPO,
-                "inbody_activo": (crudo.get("inbody", True)), **extra}
+def ctx(db, usuario, atleta, **extra):
+    crudo = crudo_de(db, atleta) or {}
+    return {"atleta": atleta, "pref": prefijo(usuario, atleta), "campos": CAMPOS_CUERPO,
+            "inbody_activo": (crudo.get("inbody", True)), **extra}
 
-    def lista(request, usuario, db, atleta_id):
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        meds = sorted(cargar(db, atleta), key=lambda x: x["fecha"], reverse=True)
-        completas = lambda x: all(x.get(k) is not None for k in ("peso_kg", "mme_kg", "pgc"))  # noqa: E731
-        return render(request, "cuerpo.html", meds=meds, completas=completas, ok=request.query_params.get("ok"),
+def lista(request, usuario, db, atleta_id):
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    meds = sorted(_cargar(db, atleta), key=lambda x: x["fecha"], reverse=True)
+    completas = lambda x: all(x.get(k) is not None for k in ("peso_kg", "mme_kg", "pgc"))  # noqa: E731
+    return render(request, "cuerpo.html", meds=meds, completas=completas, ok=request.query_params.get("ok"),
+                  **ctx(db, usuario, atleta))
+
+def formulario_get(request, usuario, db, atleta_id, fecha=None):
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    med = None
+    if fecha:
+        med = next((x for x in _cargar(db, atleta) if x["fecha"] == fecha), None)
+        if med is None:
+            raise HTTPException(404)
+    return render(request, "cuerpo_form.html", med=med or {"fecha": date.today().isoformat()}, editando=bool(fecha), orig=fecha,
+                  error=None, **ctx(db, usuario, atleta))
+
+async def guardar(request, usuario, db, atleta_id, fecha=None):
+    form = await formulario(request)
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    meds = _cargar(db, atleta)
+    previa = next((x for x in meds if x["fecha"] == fecha), None) if fecha else None
+    if fecha and previa is None:
+        raise HTTPException(404)
+    try:
+        med = medicion_desde_form(form, previa)
+        if med["fecha"] != fecha and any(x["fecha"] == med["fecha"] for x in meds):
+            raise ErrorT("err.fecha_dup")
+    except ConfigError as ex:
+        return render(request, "cuerpo_form.html", status=400, med=dict(form.items()), editando=bool(fecha), orig=fecha, error=texto(ex, request.state.t),
                       **ctx(db, usuario, atleta))
+    nuevas = [x for x in meds if x["fecha"] != fecha] + [med]
+    nuevas.sort(key=lambda x: x["fecha"])
+    verbo = "Editó" if fecha else "Agregó"
+    cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta),
+                           f"{verbo} la medición InBody del {med['fecha']} (peso {med['peso_kg']} kg)", {"inbody": nuevas})
+    return RedirectResponse(f"{prefijo(usuario, atleta)}/cuerpo?ok=1", 303)
 
-    def formulario_get(request, usuario, db, atleta_id, fecha=None):
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        med = None
-        if fecha:
-            med = next((x for x in cargar(db, atleta) if x["fecha"] == fecha), None)
-            if med is None:
-                raise HTTPException(404)
-        return render(request, "cuerpo_form.html", med=med or {"fecha": date.today().isoformat()}, editando=bool(fecha), orig=fecha,
-                      error=None, **ctx(db, usuario, atleta))
+async def borrar(request, usuario, db, atleta_id, fecha):
+    await formulario(request)
+    atleta, redir = resolver(db, usuario, atleta_id)
+    if redir:
+        return redir
+    meds = _cargar(db, atleta)
+    if not any(x["fecha"] == fecha for x in meds):
+        raise HTTPException(404)
+    cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta),
+                           f"Borró la medición InBody del {fecha}", {"inbody": [x for x in meds if x["fecha"] != fecha]})
+    return RedirectResponse(f"{prefijo(usuario, atleta)}/cuerpo?ok=borrada", 303)
 
-    async def guardar(request, usuario, db, atleta_id, fecha=None):
-        form = await formulario(request)
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        meds = cargar(db, atleta)
-        previa = next((x for x in meds if x["fecha"] == fecha), None) if fecha else None
-        if fecha and previa is None:
-            raise HTTPException(404)
-        try:
-            med = medicion_desde_form(form, previa)
-            if med["fecha"] != fecha and any(x["fecha"] == med["fecha"] for x in meds):
-                raise ErrorT("err.fecha_dup")
-        except ConfigError as ex:
-            return render(request, "cuerpo_form.html", status=400, med=dict(form.items()), editando=bool(fecha), orig=fecha, error=texto(ex, request.state.t),
-                          **ctx(db, usuario, atleta))
-        nuevas = [x for x in meds if x["fecha"] != fecha] + [med]
-        nuevas.sort(key=lambda x: x["fecha"])
-        verbo = "Editó" if fecha else "Agregó"
-        cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta),
-                               f"{verbo} la medición InBody del {med['fecha']} (peso {med['peso_kg']} kg)", {"inbody": nuevas})
-        return RedirectResponse(f"{prefijo(usuario, atleta)}/cuerpo?ok=1", 303)
 
-    async def borrar(request, usuario, db, atleta_id, fecha):
-        await formulario(request)
-        atleta, redir = resolver(db, usuario, atleta_id)
-        if redir:
-            return redir
-        meds = cargar(db, atleta)
-        if not any(x["fecha"] == fecha for x in meds):
-            raise HTTPException(404)
-        cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta),
-                               f"Borró la medición InBody del {fecha}", {"inbody": [x for x in meds if x["fecha"] != fecha]})
-        return RedirectResponse(f"{prefijo(usuario, atleta)}/cuerpo?ok=borrada", 303)
+def cuerpo_lista(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    return lista(request, usuario, db, atleta_id)
 
-    for base, param in (("", None), ("/a/{atleta_id}", "atleta_id")):
-        def rutas(base=base):
-            @app.get(f"{base}/cuerpo")
-            def _lista(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-                return lista(request, usuario, db, atleta_id)
 
-            @app.get(f"{base}/cuerpo/nuevo")
-            def _nuevo(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-                return formulario_get(request, usuario, db, atleta_id)
+def cuerpo_nuevo(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    return formulario_get(request, usuario, db, atleta_id)
 
-            @app.post(f"{base}/cuerpo/nuevo")
-            async def _nuevo_post(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-                return await guardar(request, usuario, db, atleta_id)
 
-            @app.get(base + "/cuerpo/{fecha}/editar")
-            def _editar(request: Request, fecha: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-                return formulario_get(request, usuario, db, atleta_id, fecha)
+async def cuerpo_nuevo_post(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    return await guardar(request, usuario, db, atleta_id)
 
-            @app.post(base + "/cuerpo/{fecha}/editar")
-            async def _editar_post(request: Request, fecha: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-                return await guardar(request, usuario, db, atleta_id, fecha)
 
-            @app.post(base + "/cuerpo/{fecha}/borrar")
-            async def _borrar(request: Request, fecha: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-                return await borrar(request, usuario, db, atleta_id, fecha)
-        rutas()
+def cuerpo_editar(request: Request, fecha: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    return formulario_get(request, usuario, db, atleta_id, fecha)
+
+
+async def cuerpo_editar_post(request: Request, fecha: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    return await guardar(request, usuario, db, atleta_id, fecha)
+
+
+async def cuerpo_borrar(request: Request, fecha: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    return await borrar(request, usuario, db, atleta_id, fecha)
+
+
+for base in ("", "/a/{atleta_id}"):
+    router.get(f"{base}/cuerpo")(cuerpo_lista)
+    router.get(f"{base}/cuerpo/nuevo")(cuerpo_nuevo)
+    router.post(f"{base}/cuerpo/nuevo")(cuerpo_nuevo_post)
+    router.get(base + "/cuerpo/{fecha}/editar")(cuerpo_editar)
+    router.post(base + "/cuerpo/{fecha}/editar")(cuerpo_editar_post)
+    router.post(base + "/cuerpo/{fecha}/borrar")(cuerpo_borrar)

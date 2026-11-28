@@ -3,7 +3,7 @@ en el catálogo, y /diseno solo para el admin."""
 import re
 from pathlib import Path
 
-from web.app import ESTATICOS_SITE
+from web.sitio import ESTATICOS_SITE
 from web.modelos import Usuario
 from ayudas import crear_usuario, entrar
 

@@ -22,7 +22,7 @@ Local de Pedro: `garmin_connect.py` -> `dashboard/build.py` -> `site/data.json` 
 
 ## 2. Mapa de módulos
 
-Convención: módulos nuevos = `router = APIRouter()` con rutas de primer nivel y dependencias de `web/deps.py` (`get_db`, `actual`, `render`, `formulario`, `settings`; leen `request.app.state`), registrado con `app.include_router(x.router)` en `crear_app()` (ya así: `coach.py`, perfil, cuenta, admin, onboarding, garmin_key, aprende, actividad_web, persona, feed, grupos, sync_web, google). Los viejos con `montar(app, ...)` (rutas como closures) se están migrando. Sin ninguno de los dos = lógica pura o utilería.
+Convención: todo módulo con rutas es `router = APIRouter()` con funciones de primer nivel y dependencias de `web/deps.py` (`get_db`, `actual`, `render`, `formulario`, `settings`, `doble`; leen `request.app.state`), registrado con `app.include_router(x.router)` en `crear_app()`. Sin `router` = lógica pura o utilería. Única excepción: `mcp_servidor.montar_mcp(app, settings)` (monta una sub-app ASGI en `/mcp` y su lifespan; no cabe en un router).
 
 Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan import pasos`, `from scripts import subir`); nada de `sys.path` ni imports planos. Solo los puntos de entrada que se corren como archivo (`garmin_connect.py`, `reloj.py`, `dashboard/build.py`, `scripts/subir.py`, `scripts/web_local.py`) insertan la raíz del repo en `sys.path` una vez; `pytest` usa `pythonpath = ["."]` (`pyproject.toml`).
 
@@ -72,7 +72,8 @@ Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan im
 
 ### `web/`
 Cuentas y entrada
-- `app.py`: `crear_app()`; login, CSRF, idioma, páginas base, `/data.json`, `/a/<id>/` (sitio del coach), estáticos, `/i18n/*.json`. Rutas.
+- `app.py`: `crear_app()` solo configura: settings, `app.state`, middlewares (idioma, cabeceras/`CSP`) y `include_router` en orden. Sin rutas.
+- `entrada.py`: `/salud`, entrar (código y liga), invitaciones, `/idioma`, `/salir`, `/privacidad`. Rutas. `sitio.py`: `/`, `/data.json`, `/a/<id>/` (sitio del coach), `/i18n/*.json`, `/fuentes`, `/diseno`, `/{archivo}` (estáticos de `site/`, `ESTATICOS_SITE`; siempre al final). Rutas.
 - `auth.py`: invitaciones, ligas de entrada, sesiones y CSRF (tokens solo como hash). Lógica.
 - `google.py`: login con Google (OIDC + PKCE; sigue exigiendo invitación). Rutas.
 - `correo.py`: envío con Resend. `config.py`: `Settings` desde variables de entorno. `db.py`: motor y sesiones SQLAlchemy.
@@ -153,7 +154,7 @@ Páginas varias
 5. Cambió algo del sitio: sube `VERSION` en `site/sw.js` (ver la receta de archivo nuevo).
 
 **Ruta nueva de la web**
-1. Crea `web/<tema>.py` con `router = APIRouter()` y funciones de primer nivel que importan de `web/deps.py` (copia `web/coach.py`); regístralo con `app.include_router(<tema>.router)` en `crear_app()` de `web/app.py`. El orden importa: `/plan/nuevo` va antes de `/plan/{...}`; `@app.get("/{archivo}")` va siempre al final.
+1. Crea `web/<tema>.py` con `router = APIRouter()` y funciones de primer nivel que importan de `web/deps.py` (copia `web/coach.py`); regístralo con `app.include_router(<tema>.router)` en `crear_app()` de `web/app.py` (la tupla de módulos; el orden importa: `plan_nuevo` antes de `plan_web` porque `/plan/nuevo` no debe chocar con `/plan/{...}`; `sitio` va siempre al final por su `/{archivo}`).
 2. Todo POST empieza con `form = await formulario(request)` (verifica el CSRF, 403 si falla); en plantillas el campo es `csrf` (viene de `render`). Sin sesión: `RedirectResponse("/entrar", 303)`.
 3. Toda consulta de datos de una persona pasa por `permisos.puede_ver` / `puede_editar` (si no puede: 404). Páginas de edición: `ajustes_web.resolver(db, usuario, atleta_id)`; la ruta se repite bajo `/a/{atleta_id}/...` para el coach.
 4. Toda escritura a `ajustes`, `planes` o `inbody` va por `cambios.aplicar_cambio`.
@@ -167,7 +168,7 @@ Páginas varias
 4. Columnas nuevas con `nullable=True` o valor por defecto. Si la tabla guarda algo de una persona, revisa `web/cuenta.py` (descarga y borrado de cuenta).
 
 **Archivo nuevo de `site/`**
-1. Agrégalo a `ESTATICOS_SITE` en `web/app.py` (si no, `/archivo` da 404) y, si carga en las páginas, a `ESTATICOS` en `site/sw.js`.
+1. Agrégalo a `ESTATICOS_SITE` en `web/sitio.py` (si no, `/archivo` da 404) y, si carga en las páginas, a `ESTATICOS` en `site/sw.js`.
 2. Cárgalo en `site/index.html` (y en `catalogo.html` si aplica); orden: `base.js` primero.
 3. Sube `VERSION` en `site/sw.js` (`"v82"` -> `"v83"`) y actualiza la aserción en `tests/test_autorizar.py` (busca `VERSION = "v`). Es lo que hace que la app abierta ofrezca actualizar.
 4. Colores y espacios solo con variables de `tokens.css`; los valores crudos permitidos están en `tests/test_componentes.py`. `tokens.css` e `iconos.js` se generan: edita `diseno/tokens.json` o `diseno/iconos/*.svg` y corre `.venv/bin/python scripts/tokens.py`.

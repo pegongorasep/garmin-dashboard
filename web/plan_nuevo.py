@@ -8,7 +8,7 @@ import logging
 import secrets
 from datetime import date, datetime, time, timedelta, timezone
 
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from plan import motor_v6
@@ -16,6 +16,7 @@ from dashboard.ajustes import ConfigError, crudo_desde_respuestas, normalizar_co
 from plan.nivel import NIVELES as NIVELES_V6, PISO_NIVEL, UMBRALES as UMBRALES_NIVEL, hay_corrida_garmin, nivel_desde_datos, nivel_sin_reloj
 
 from . import ajustes_web as aw
+from .deps import actual, doble, formulario, get_db, render
 from . import calculo, cambios
 from .errores import ErrorT, texto
 from .onboarding import DIAS, ZONAS, proximo_lunes
@@ -315,193 +316,191 @@ def nivel_indicado(calculado: dict, frecuencia: int, larga: int) -> dict:
 
 # ───────────────────────────── rutas ─────────────────────────────
 
-def montar(app, get_db, actual, render, formulario, settings) -> None:
-    def doble(metodo: str, ruta: str, fn) -> None:
-        for base in ("", "/a/{atleta_id}"):
-            getattr(app, metodo)(base + ruta)(fn)
+router = APIRouter()
 
-    def contexto(request, db, usuario, atleta_id):
-        """(atleta, contexto base) o (None, respuesta). Calcula el nivel desde las actividades guardadas (barato: se hace por petición)."""
-        atleta, redir = aw.resolver(db, usuario, atleta_id)
-        if redir:
-            return None, redir
-        crudo = aw.crudo_de(db, atleta)
-        hoy = aw.hoy_de(app.state.reloj, crudo or {})
-        base = crudo or {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}
-        d = calculo.datos_de(db, atleta, base)
-        cfg = normalizar_config(base)
-        fin_hoy = datetime.combine(hoy, time.max)  # las actividades manuales se guardan a mediodía, incluso si se anotan antes
-        calculado = nivel_desde_datos(d["activities"], fin_hoy, cfg, d["details"])
-        sin_garmin = not hay_corrida_garmin(d["activities"], fin_hoy, cfg)
-        return atleta, {"atleta": atleta, "pref": aw.prefijo(usuario, atleta), "crudo": crudo, "hoy": hoy, "calculado": calculado,
-                        "sin_garmin": sin_garmin, "espera_historial": bool(atleta.repo_id and atleta.historial_pendiente),
-                        "niveles": NIVELES_V6, "dias": DIAS, "zonas": sorted(set(ZONAS)), "evidencia": evidencia_en_palabras(calculado, request.state.t),
-                        "opciones_km": [(str(d), request.state.t("pn.km_op", km=d)) for d in DISTANCIAS],
-                        "error": None, "errores": {}}
 
-    def elegido(form, calculado) -> str:
-        n = form.get("nivel")
-        return n if n in NIVELES_V6 else calculado["nivel"]
+def contexto(request, db, usuario, atleta_id):
+    """(atleta, contexto base) o (None, respuesta). Calcula el nivel desde las actividades guardadas (barato: se hace por petición)."""
+    atleta, redir = aw.resolver(db, usuario, atleta_id)
+    if redir:
+        return None, redir
+    crudo = aw.crudo_de(db, atleta)
+    hoy = aw.hoy_de(request.app.state.reloj, crudo or {})
+    base = crudo or {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}
+    d = calculo.datos_de(db, atleta, base)
+    cfg = normalizar_config(base)
+    fin_hoy = datetime.combine(hoy, time.max)  # las actividades manuales se guardan a mediodía, incluso si se anotan antes
+    calculado = nivel_desde_datos(d["activities"], fin_hoy, cfg, d["details"])
+    sin_garmin = not hay_corrida_garmin(d["activities"], fin_hoy, cfg)
+    return atleta, {"atleta": atleta, "pref": aw.prefijo(usuario, atleta), "crudo": crudo, "hoy": hoy, "calculado": calculado,
+                    "sin_garmin": sin_garmin, "espera_historial": bool(atleta.repo_id and atleta.historial_pendiente),
+                    "niveles": NIVELES_V6, "dias": DIAS, "zonas": sorted(set(ZONAS)), "evidencia": evidencia_en_palabras(calculado, request.state.t),
+                    "opciones_km": [(str(d), request.state.t("pn.km_op", km=d)) for d in DISTANCIAS],
+                    "error": None, "errores": {}}
 
-    def aplicar_respuestas(ctx, form, nivel):
-        """Sin Garmin el nivel lo elige la persona; sus respuestas solo fijan el inicio y la evidencia (y el aviso si no alcanzan al nivel)."""
-        if ctx["espera_historial"]:
-            raise ErrorT("err.pn_historial", None)
-        if not ctx["sin_garmin"]:
-            return
-        cal = ctx["calculado"]
-        if nivel == "empezando":
-            ctx["calculado"] = {"nivel": "empezando", "evidencia": {**cal["evidencia"], "trote_continuo_min": 0, "nivel_sin_pausa": "empezando"},
-                                "inicio_minutos": PISO_NIVEL["empezando"]}
-            return
-        frecuencia = _entero(form.get("frecuencia_actual", ""), "frecuencia_actual", 1, 7)
-        larga = _entero(form.get("corrida_larga", ""), "corrida_larga", 1, 1440)
-        ctx["calculado"] = nivel_indicado(cal, frecuencia, larga)
+def elegido(form, calculado) -> str:
+    n = form.get("nivel")
+    return n if n in NIVELES_V6 else calculado["nivel"]
 
-    def avisos_nivel(nivel, calculado, t, paso, sin_garmin) -> list[str]:
-        out = []
-        if sin_garmin and paso < 3:   # sin Garmin el nivel «real» sale de las respuestas del paso 2
-            return out
-        if NIVELES_V6.index(nivel) > NIVELES_V6.index(calculado["nivel"]):
-            out.append(t("pn.nivel_alto", nivel=t("pn.nivel." + nivel), calculado=t("pn.nivel." + calculado["nivel"])))
+def aplicar_respuestas(ctx, form, nivel):
+    """Sin Garmin el nivel lo elige la persona; sus respuestas solo fijan el inicio y la evidencia (y el aviso si no alcanzan al nivel)."""
+    if ctx["espera_historial"]:
+        raise ErrorT("err.pn_historial", None)
+    if not ctx["sin_garmin"]:
+        return
+    cal = ctx["calculado"]
+    if nivel == "empezando":
+        ctx["calculado"] = {"nivel": "empezando", "evidencia": {**cal["evidencia"], "trote_continuo_min": 0, "nivel_sin_pausa": "empezando"},
+                            "inicio_minutos": PISO_NIVEL["empezando"]}
+        return
+    frecuencia = _entero(form.get("frecuencia_actual", ""), "frecuencia_actual", 1, 7)
+    larga = _entero(form.get("corrida_larga", ""), "corrida_larga", 1, 1440)
+    ctx["calculado"] = nivel_indicado(cal, frecuencia, larga)
+
+def avisos_nivel(nivel, calculado, t, paso, sin_garmin) -> list[str]:
+    out = []
+    if sin_garmin and paso < 3:   # sin Garmin el nivel «real» sale de las respuestas del paso 2
         return out
+    if NIVELES_V6.index(nivel) > NIVELES_V6.index(calculado["nivel"]):
+        out.append(t("pn.nivel_alto", nivel=t("pn.nivel." + nivel), calculado=t("pn.nivel." + calculado["nivel"])))
+    return out
 
-    def pantalla(request, ctx, paso, nivel=None, valores=None, status=200, **extra):
-        nivel = nivel or ctx["calculado"]["nivel"]
-        campos = campos_de(nivel, ctx["crudo"] is not None, ctx["sin_garmin"])
-        v = valores or valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
-        return render(request, "plan_nuevo.html", status=status, paso=paso, nivel=nivel, campos=campos, v=v,
-                      avisos_nivel=avisos_nivel(nivel, ctx["calculado"], request.state.t, paso, ctx["sin_garmin"]) + extra.pop("avisos_extra", []),
-                      objetivos=OBJETIVOS[nivel], calidad_semanas=CALIDAD_SEMANAS, **{**ctx, **extra})
+def pantalla(request, ctx, paso, nivel=None, valores=None, status=200, **extra):
+    nivel = nivel or ctx["calculado"]["nivel"]
+    campos = campos_de(nivel, ctx["crudo"] is not None, ctx["sin_garmin"])
+    v = valores or valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+    return render(request, "plan_nuevo.html", status=status, paso=paso, nivel=nivel, campos=campos, v=v,
+                  avisos_nivel=avisos_nivel(nivel, ctx["calculado"], request.state.t, paso, ctx["sin_garmin"]) + extra.pop("avisos_extra", []),
+                  objetivos=OBJETIVOS[nivel], calidad_semanas=CALIDAD_SEMANAS, **{**ctx, **extra})
 
-    def paso1(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        atleta, ctx = contexto(request, db, usuario, atleta_id)
-        if atleta is None:
-            return ctx
-        return pantalla(request, ctx, 1, preset=preset_carrera(request.query_params, ctx["hoy"]))
-    doble("get", "/plan/nuevo", paso1)
+def paso1(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    atleta, ctx = contexto(request, db, usuario, atleta_id)
+    if atleta is None:
+        return ctx
+    return pantalla(request, ctx, 1, preset=preset_carrera(request.query_params, ctx["hoy"]))
+doble(router, "get", "/plan/nuevo", paso1)
 
-    async def volver_nivel(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        form = await formulario(request)
-        atleta, ctx = contexto(request, db, usuario, atleta_id)
-        if atleta is None:
-            return ctx
-        nivel = elegido(form, ctx["calculado"])
-        v = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+async def volver_nivel(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    form = await formulario(request)
+    atleta, ctx = contexto(request, db, usuario, atleta_id)
+    if atleta is None:
+        return ctx
+    nivel = elegido(form, ctx["calculado"])
+    v = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+    v.update({k: str(form.get(k, "")) for k in v if k != "nivel" and k in form})
+    return pantalla(request, ctx, 1, nivel, v, nivel_previo=nivel)
+doble(router, "post", "/plan/nuevo/nivel", volver_nivel)
+
+async def paso2(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    """Paso 2: las preguntas del nivel elegido. Llega desde el paso 1 (solo trae el nivel) o desde «Cambiar respuestas» (trae todo)."""
+    form = await formulario(request)
+    atleta, ctx = contexto(request, db, usuario, atleta_id)
+    if atleta is None:
+        return ctx
+    if ctx["espera_historial"]:
+        return pantalla(request, ctx, 1, status=400, error=texto(ErrorT("err.pn_historial", None), request.state.t))
+    nivel = elegido(form, ctx["calculado"])
+    v = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+    if "dias" in form:   # vuelve de la vista previa: se conservan sus respuestas
         v.update({k: str(form.get(k, "")) for k in v if k != "nivel" and k in form})
-        return pantalla(request, ctx, 1, nivel, v, nivel_previo=nivel)
-    doble("post", "/plan/nuevo/nivel", volver_nivel)
+    else:
+        con_preset(v, preset_carrera(form, ctx["hoy"]), nivel)
+    return pantalla(request, ctx, 2, nivel, v)
+doble(router, "post", "/plan/nuevo/preguntas", paso2)
 
-    async def paso2(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        """Paso 2: las preguntas del nivel elegido. Llega desde el paso 1 (solo trae el nivel) o desde «Cambiar respuestas» (trae todo)."""
-        form = await formulario(request)
-        atleta, ctx = contexto(request, db, usuario, atleta_id)
-        if atleta is None:
-            return ctx
-        if ctx["espera_historial"]:
-            return pantalla(request, ctx, 1, status=400, error=texto(ErrorT("err.pn_historial", None), request.state.t))
+def generar_o_error(request, ctx, form, con_saltos=False):
+    """(nivel, respuestas, plan) o lanza ErrorT/ConfigError. Con `con_saltos` también deja en `ctx["ajuste"]` el ajuste de volumen,
+    su rango y a dónde lleva cada botón (solo la vista previa lo necesita; confirmar no)."""
+    nivel = elegido(form, ctx["calculado"])
+    aplicar_respuestas(ctx, form, nivel)
+    base = max(ctx["calculado"]["inicio_minutos"], PISO_NIVEL[nivel])
+    ctx["calculado"] = {**ctx["calculado"], "inicio_minutos": base}
+    v = leer_respuestas(form, nivel, campos_de(nivel, ctx["crudo"] is not None, ctx["sin_garmin"]), ctx["hoy"])
+    lo, hi = rango_ajuste(base, nivel)
+    try:
+        pct = int(v["ajuste_pct"])
+    except ValueError:
+        pct = 0
+    pct = min(max(pct - pct % AJUSTE_PASO, lo), hi)   # múltiplo de 5 dentro del rango
+    v["ajuste_pct"] = str(pct)
+    plan = armar_plan(v, nivel, ctx["calculado"])
+    if con_saltos:
+        ctx["ajuste"] = {"pct": pct, "lo": lo, "hi": hi, **saltos_volumen(v, nivel, ctx["calculado"], pct, lo, hi, minutos_inicio(plan))}
+    return nivel, v, plan
+
+def avisos_calidad(nivel, v, ctx, t) -> list[str]:
+    if nivel == "empezando" or v["calidad_desde"] in ("", "no"):
+        return []
+    larga = float(v["corrida_larga"]) if ctx["sin_garmin"] and v["corrida_larga"] else ctx["calculado"]["evidencia"].get("trote_continuo_min", 0)
+    return [t("pn.av_calidad_larga", min=CALIDAD_LARGA_MIN)] if larga < CALIDAD_LARGA_MIN else []
+
+def tarjeta_del_plan(request, db, atleta, ctx, plan, v):
+    """Lo que la pestaña Plan pintaría con este plan (mismo build y lista blanca que el sitio), sin guardar nada; solo lectura.
+    None si algo falla: la vista previa sigue sin el plan completo."""
+    try:
+        nuevo = crudo_nuevo(ctx["crudo"], plan, v, atleta.sensor)
+        ahora_utc = request.app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None)
+        return calculo.calcular_propuesta(db, atleta, nuevo, ahora_utc, request.state.idioma, plan=plan, editable=False)["plan"]
+    except (ConfigError, calculo.DataInvalido):
+        log.exception("plan completo de la vista previa")
+        return None
+
+def paquete(request, db, atleta, ctx, plan, v) -> dict:
+    """Todo lo que pinta el paso 3 y lo que repinta el JS al mover el volumen (el mismo dict en la página y en vista.json)."""
+    prev = vista_previa(plan, request.state.t, ctx["ajuste"])
+    return {**prev, "ajuste_pct": ctx["ajuste"]["pct"], "plan": tarjeta_del_plan(request, db, atleta, ctx, plan, v)}
+
+async def vista(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    """Paso 3: la vista previa. No guarda nada."""
+    form = await formulario(request)
+    atleta, ctx = contexto(request, db, usuario, atleta_id)
+    if atleta is None:
+        return ctx
+    t = request.state.t
+    try:
+        nivel, v, plan = generar_o_error(request, ctx, form, con_saltos=True)
+    except ConfigError as ex:
         nivel = elegido(form, ctx["calculado"])
-        v = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
-        if "dias" in form:   # vuelve de la vista previa: se conservan sus respuestas
-            v.update({k: str(form.get(k, "")) for k in v if k != "nivel" and k in form})
-        else:
-            con_preset(v, preset_carrera(form, ctx["hoy"]), nivel)
-        return pantalla(request, ctx, 2, nivel, v)
-    doble("post", "/plan/nuevo/preguntas", paso2)
+        campo = getattr(ex, "campo", None)
+        vals = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
+        vals.update({k: str(form.get(k, "")) for k in vals if k != "nivel" and k in form})
+        return pantalla(request, ctx, 2, nivel, vals, status=400, **({"errores": {campo: texto(ex, t)}} if campo else {"error": texto(ex, t)}))
+    return pantalla(request, ctx, 3, nivel, v, prev=paquete(request, db, atleta, ctx, plan, v), avisos_extra=avisos_calidad(nivel, v, ctx, t))
+doble(router, "post", "/plan/nuevo/vista", vista)
 
-    def generar_o_error(request, ctx, form, con_saltos=False):
-        """(nivel, respuestas, plan) o lanza ErrorT/ConfigError. Con `con_saltos` también deja en `ctx["ajuste"]` el ajuste de volumen,
-        su rango y a dónde lleva cada botón (solo la vista previa lo necesita; confirmar no)."""
-        nivel = elegido(form, ctx["calculado"])
-        aplicar_respuestas(ctx, form, nivel)
-        base = max(ctx["calculado"]["inicio_minutos"], PISO_NIVEL[nivel])
-        ctx["calculado"] = {**ctx["calculado"], "inicio_minutos": base}
-        v = leer_respuestas(form, nivel, campos_de(nivel, ctx["crudo"] is not None, ctx["sin_garmin"]), ctx["hoy"])
-        lo, hi = rango_ajuste(base, nivel)
-        try:
-            pct = int(v["ajuste_pct"])
-        except ValueError:
-            pct = 0
-        pct = min(max(pct - pct % AJUSTE_PASO, lo), hi)   # múltiplo de 5 dentro del rango
-        v["ajuste_pct"] = str(pct)
-        plan = armar_plan(v, nivel, ctx["calculado"])
-        if con_saltos:
-            ctx["ajuste"] = {"pct": pct, "lo": lo, "hi": hi, **saltos_volumen(v, nivel, ctx["calculado"], pct, lo, hi, minutos_inicio(plan))}
-        return nivel, v, plan
+async def vista_json(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    """Los botones de volumen sin recargar: lo mismo que pinta el paso 3 para otro `ajuste_pct`. No guarda nada (ni caché ni base)."""
+    form = await formulario(request)
+    atleta, ctx = contexto(request, db, usuario, atleta_id)
+    if atleta is None:
+        return ctx
+    sin_cache = {"Cache-Control": "no-store"}
+    try:
+        nivel, v, plan = generar_o_error(request, ctx, form, con_saltos=True)
+    except ConfigError as ex:
+        return JSONResponse({"error": texto(ex, request.state.t)}, status_code=400, headers=sin_cache)
+    return JSONResponse(paquete(request, db, atleta, ctx, plan, v), headers=sin_cache)
+doble(router, "post", "/plan/nuevo/vista.json", vista_json)
 
-    def avisos_calidad(nivel, v, ctx, t) -> list[str]:
-        if nivel == "empezando" or v["calidad_desde"] in ("", "no"):
-            return []
-        larga = float(v["corrida_larga"]) if ctx["sin_garmin"] and v["corrida_larga"] else ctx["calculado"]["evidencia"].get("trote_continuo_min", 0)
-        return [t("pn.av_calidad_larga", min=CALIDAD_LARGA_MIN)] if larga < CALIDAD_LARGA_MIN else []
-
-    def tarjeta_del_plan(request, db, atleta, ctx, plan, v):
-        """Lo que la pestaña Plan pintaría con este plan (mismo build y lista blanca que el sitio), sin guardar nada; solo lectura.
-        None si algo falla: la vista previa sigue sin el plan completo."""
-        try:
-            nuevo = crudo_nuevo(ctx["crudo"], plan, v, atleta.sensor)
-            ahora_utc = app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None)
-            return calculo.calcular_propuesta(db, atleta, nuevo, ahora_utc, request.state.idioma, plan=plan, editable=False)["plan"]
-        except (ConfigError, calculo.DataInvalido):
-            log.exception("plan completo de la vista previa")
-            return None
-
-    def paquete(request, db, atleta, ctx, plan, v) -> dict:
-        """Todo lo que pinta el paso 3 y lo que repinta el JS al mover el volumen (el mismo dict en la página y en vista.json)."""
-        prev = vista_previa(plan, request.state.t, ctx["ajuste"])
-        return {**prev, "ajuste_pct": ctx["ajuste"]["pct"], "plan": tarjeta_del_plan(request, db, atleta, ctx, plan, v)}
-
-    async def vista(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        """Paso 3: la vista previa. No guarda nada."""
-        form = await formulario(request)
-        atleta, ctx = contexto(request, db, usuario, atleta_id)
-        if atleta is None:
-            return ctx
-        t = request.state.t
-        try:
-            nivel, v, plan = generar_o_error(request, ctx, form, con_saltos=True)
-        except ConfigError as ex:
-            nivel = elegido(form, ctx["calculado"])
-            campo = getattr(ex, "campo", None)
-            vals = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
-            vals.update({k: str(form.get(k, "")) for k in vals if k != "nivel" and k in form})
-            return pantalla(request, ctx, 2, nivel, vals, status=400, **({"errores": {campo: texto(ex, t)}} if campo else {"error": texto(ex, t)}))
-        return pantalla(request, ctx, 3, nivel, v, prev=paquete(request, db, atleta, ctx, plan, v), avisos_extra=avisos_calidad(nivel, v, ctx, t))
-    doble("post", "/plan/nuevo/vista", vista)
-
-    async def vista_json(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        """Los botones de volumen sin recargar: lo mismo que pinta el paso 3 para otro `ajuste_pct`. No guarda nada (ni caché ni base)."""
-        form = await formulario(request)
-        atleta, ctx = contexto(request, db, usuario, atleta_id)
-        if atleta is None:
-            return ctx
-        sin_cache = {"Cache-Control": "no-store"}
-        try:
-            nivel, v, plan = generar_o_error(request, ctx, form, con_saltos=True)
-        except ConfigError as ex:
-            return JSONResponse({"error": texto(ex, request.state.t)}, status_code=400, headers=sin_cache)
-        return JSONResponse(paquete(request, db, atleta, ctx, plan, v), headers=sin_cache)
-    doble("post", "/plan/nuevo/vista.json", vista_json)
-
-    async def confirmar(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-        """Guarda el plan como el plan vivo (queda en el historial, se puede deshacer) y manda a la pestaña Plan."""
-        form = await formulario(request)
-        atleta, ctx = contexto(request, db, usuario, atleta_id)
-        if atleta is None:
-            return ctx
-        t = request.state.t
-        try:
-            nivel, v, plan = generar_o_error(request, ctx, form)
-            ajustes = crudo_nuevo(ctx["crudo"], plan, v, atleta.sensor)
-        except ConfigError as ex:
-            return pantalla(request, ctx, 2, elegido(form, ctx["calculado"]), None, status=400, error=texto(ex, t))
-        meta = plan["meta"]
-        desc = (f"Plan nuevo (motor v6): nivel {nivel}, {meta['dias']} días por semana, {len(plan['weeks'])} semanas"
-                + (f", carrera de {meta['carrera']['km']} km" if meta.get("carrera") else ""))
-        cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), desc, {"ajustes": ajustes, "plan": plan})
-        if atleta.sin_plan:
-            atleta.sin_plan = False
-            db.commit()
-        pref = aw.prefijo(usuario, atleta)
-        return RedirectResponse(f"{pref}/plan/acciones?ok=nuevo" if pref else "/?ok=plan#plan", 303)
-    doble("post", "/plan/nuevo/confirmar", confirmar)
+async def confirmar(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+    """Guarda el plan como el plan vivo (queda en el historial, se puede deshacer) y manda a la pestaña Plan."""
+    form = await formulario(request)
+    atleta, ctx = contexto(request, db, usuario, atleta_id)
+    if atleta is None:
+        return ctx
+    t = request.state.t
+    try:
+        nivel, v, plan = generar_o_error(request, ctx, form)
+        ajustes = crudo_nuevo(ctx["crudo"], plan, v, atleta.sensor)
+    except ConfigError as ex:
+        return pantalla(request, ctx, 2, elegido(form, ctx["calculado"]), None, status=400, error=texto(ex, t))
+    meta = plan["meta"]
+    desc = (f"Plan nuevo (motor v6): nivel {nivel}, {meta['dias']} días por semana, {len(plan['weeks'])} semanas"
+            + (f", carrera de {meta['carrera']['km']} km" if meta.get("carrera") else ""))
+    cambios.aplicar_cambio(db, atleta, usuario, cambios.via_de(usuario, atleta), desc, {"ajustes": ajustes, "plan": plan})
+    if atleta.sin_plan:
+        atleta.sin_plan = False
+        db.commit()
+    pref = aw.prefijo(usuario, atleta)
+    return RedirectResponse(f"{pref}/plan/acciones?ok=nuevo" if pref else "/?ok=plan#plan", 303)
+doble(router, "post", "/plan/nuevo/confirmar", confirmar)
