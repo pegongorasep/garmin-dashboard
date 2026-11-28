@@ -147,7 +147,9 @@ def _editable(db, actor, atleta) -> tuple[Usuario, dict, dict | None, date]:
 RESUMEN = ("Siempre manda `resumen`: una descripción detallada para la persona, en lenguaje normal y en segunda persona. "
            "Incluye qué cambiaste (semana, día y sesión, con los valores de antes y de después), por qué lo cambiaste "
            "(lo que te dijo o lo que viste en sus datos) y qué notará en su plan. Sin ids internos. Escribe todo lo que "
-           "haga falta; la web lo muestra colapsado si es largo.")
+           "haga falta; la web lo muestra colapsado si es largo. No basta con decir qué sesión cambiaste: di qué cambió dentro "
+           "de ella. Por ejemplo: «Aumenté 1 minuto de Zona 1 al final del calentamiento», «Subí el volumen de la semana "
+           "10% (de 120 a 132 min)», «Cambié el trote continuo por intervalos 4× (3' Z2 + 1' caminata)».")
 
 
 def _guardar(db, actor, a, desc, paquete, resumen=None) -> dict:
