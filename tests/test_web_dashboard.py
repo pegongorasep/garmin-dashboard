@@ -59,6 +59,7 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
     assert web["ui"].pop("repo_estado") is None
     web["ui"].pop("primer_inicio")   # solo la web (E3); se prueba en test_web_primer_inicio
     web["ui"].pop("recordatorio_corrida")
+    web["ui"].update(propuesta_url=None, retomar_url=None, retomar_opciones=[])   # solo la web, fuera de la caché (P3)
     esp = norm(esperado(modo_web=True))
     assert norm(web) == esp
     # La web usa fecha de subida y zonas reales; el sitio de archivos mantiene sus propios valores.

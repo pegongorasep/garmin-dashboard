@@ -212,18 +212,25 @@ def editar_sesion(db, actor, ahora, atleta, *, semana: int, sesion_id: str, fila
     return _guardar(db, actor, a, f"Cambió la sesión {(ses or {}).get('name') or 'de entreno'} de la semana {semana} (IA)", {"plan": nuevo})
 
 
-def repetir_semana(db, actor, ahora, atleta) -> dict:
-    """Repite la semana del plan en curso (el plan se recorre una semana)."""
+def repetir_semana(db, actor, ahora, atleta, *, semana: int | None = None) -> dict:
+    """Repite la semana del plan en curso (el plan se recorre una semana). Con `semana` (de la 1 a la actual) retoma desde esa
+    semana: el plan vuelve a ella y el resto se recorre. Con carrera objetivo se quitan semanas de carga para que la carrera siga en su fecha."""
     a, crudo, plan, _ = _editable(db, actor, atleta)
     try:
-        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), _hoy(ahora, crudo))
-        n = build.m.semana_del_plan(_hoy(ahora, crudo), cfg)
+        hoy = _hoy(ahora, crudo)
+        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+        n = build.m.semana_del_plan(hoy, cfg)
         if n is None:
             raise ConfigError("Hoy no hay una semana de plan para repetir.")
-        nuevo, _info = plan_vivo.repetir(crudo, plan or {"weeks": []}, cfg, _hoy(ahora, crudo))
+        if semana is None:
+            nuevo, info = plan_vivo.repetir(crudo, plan or {"weeks": []}, cfg, hoy)
+        else:
+            nuevo, info = plan_vivo.retomar(crudo, plan or {"weeks": []}, cfg, hoy, semana)
     except (ConfigError, ValueError) as ex:
         raise Rechazo(str(ex)) from None
-    return _guardar(db, actor, a, f"Repitió la semana {n} (IA)", {"ajustes": nuevo})
+    quita = f"; se quitaron las semanas {', '.join(map(str, info['quita']))}" if info["quita"] else ""
+    desc = f"Repitió la semana {n}" if semana is None else f"Retomó desde la semana {semana}"
+    return _guardar(db, actor, a, f"{desc}{quita} (IA)", {"ajustes": nuevo})
 
 
 def registrar_inbody(db, actor, ahora, atleta, *, fecha: str, peso_kg: float, mme_kg: float | None = None,

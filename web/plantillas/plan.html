@@ -98,8 +98,7 @@
 
 {% call tarjeta(t("plan.repetir_t")) %}
   <p>{% if n %}{{ t("plan.rep_si", n=n) }}{% else %}{{ t("plan.rep_no") }}{% endif %}</p>
-  {% if n %}<form class="acciones" method="post" action="{{ pref }}/plan/repetir"><input type="hidden" name="csrf" value="{{ csrf }}">
-    {{ boton(t("plan.rep_boton", n=n), tipo="submit") }}</form>{% endif %}
+  {% if n %}<div class="acciones">{{ boton(t("plan.rep_ver"), href=pref ~ "/#plan") }}</div>{% endif %}
 {% endcall %}
 
 {% call tarjeta(t("plan.sesiones")) %}

@@ -192,16 +192,10 @@ function avisoCerrable(id, props) {
   return DS.aviso({ ...props, onEntendido: entendido });
 }
 
-/** «Repetir esta semana»: el mismo POST (con CSRF) que la página del plan; al terminar se recarga para ver el plan nuevo. */
+/** «Repetir esta semana» (Hoy): ya no aplica directo; abre la vista previa de repetir (ver `abrirRepetirRetomar`, en vistas.js). */
 function accionRepetir(t) {
-  const url = ui().repetir_url, app = $("app");
-  if (!t.repetir || !url || !app.dataset.csrf) return null;
-  return { texto: T("sitio.hoy.repetir"), onclick: async () => {
-    try {
-      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ csrf: app.dataset.csrf }) });
-      if (r.ok) location.reload();
-    } catch (e) { /* sin red: el botón sigue ahí */ }
-  } };
+  if (!t.repetir || !ui().propuesta_url || !$("app").dataset.csrf) return null;
+  return { texto: T("sitio.hoy.repetir"), onclick: () => abrirRepetirRetomar({ accion: "repetir" }) };
 }
 
 const nombrePrueba = (tipo) => T(`sitio.prueba.${tipo}`);

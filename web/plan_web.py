@@ -1,10 +1,10 @@
 """Páginas del plan vivo: /plan (metas, eventos) y /plan/sesion/<n>/<id> (editor de pasos).
 Todo cambio pasa por `aplicar_cambio`; las rutas valen para uno mismo y para el atleta de un coach (`/a/<id>/plan`)."""
 import json
-from datetime import date
+from datetime import date, timezone
 
 from fastapi import Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 import build
 import pasos
@@ -12,7 +12,7 @@ from ajustes import ConfigError, normalizar_config
 from .errores import ErrorT, texto
 
 from . import ajustes_web as aw
-from . import cambios, plan_vivo
+from . import calculo, cambios, plan_vivo
 from .modelos import Usuario
 from .permisos import puede_ver
 
@@ -140,13 +140,56 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         nuevo, plan_nuevo = plan_vivo.agregar_carrera_en_plan(crudo, plan, cfg, fecha, km or None, nombre, hoy)
         return nuevo, plan_nuevo, f"Agregó la carrera «{nombre}» el {lindo(fecha)}" + ("; el plan se rehízo con su taper" if plan_nuevo else "")
 
+    def quitadas(info) -> str:
+        return f"; se quitaron las semanas {', '.join(map(str, info['quita']))}" if info["quita"] else ""
+
     def repetir(db, atleta, crudo, cfg, plan, f, hoy):
         n = build.m.semana_del_plan(hoy, cfg)
-        nuevo, _info = plan_vivo.repetir(crudo, plan, cfg, hoy)
-        return nuevo, None, f"Repitió la semana {n}"
+        nuevo, info = plan_vivo.repetir(crudo, plan or {"weeks": []}, cfg, hoy)
+        return nuevo, None, f"Repitió la semana {n}{quitadas(info)}"
 
-    for nombre, fn in (("viaje", viaje), ("enfermedad", enfermo), ("carrera", carrera), ("repetir", repetir)):
+    def retomar(db, atleta, crudo, cfg, plan, f, hoy):
+        x = int(f.get("semana") or "x")   # ValueError -> 400
+        nuevo, info = plan_vivo.retomar(crudo, plan or {"weeks": []}, cfg, hoy, x)
+        return nuevo, None, f"Retomó desde la semana {x}{quitadas(info)}"
+
+    for nombre, fn in (("viaje", viaje), ("enfermedad", enfermo), ("carrera", carrera), ("repetir", repetir), ("retomar", retomar)):
         doble("post", f"/plan/{nombre}", accion(nombre, fn))
+
+    def propuesta(request: Request, accion: str = "", semana: str = "", atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+        """Vista previa de «Repetir o retomar»: calcula el plan que quedaría sin guardar nada (ni la caché)."""
+        atleta, redir = aw.resolver(db, usuario, atleta_id)
+        if redir:
+            return redir
+        crudo = aw.crudo_de(db, atleta)
+        if crudo is None:
+            raise HTTPException(404)
+        hoy = aw.hoy_de(app.state.reloj, crudo)
+        t = request.state.t
+        sin_cache = {"Cache-Control": "no-store"}
+        try:
+            cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+            plan = aw.plan_guardado(db, atleta) or {"weeks": []}
+            if accion == "repetir":
+                nuevo, info = plan_vivo.repetir(crudo, plan, cfg, hoy)
+                x = None
+            elif accion == "retomar":
+                try:
+                    x = int(semana)
+                except ValueError:
+                    raise ErrorT("err.retomar_rango", n=build.m.semana_del_plan(hoy, cfg) or 0) from None
+                nuevo, info = plan_vivo.retomar(crudo, plan, cfg, hoy, x)
+            else:
+                raise ErrorT("err.faltan")
+            ahora_utc = app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None)
+            data = calculo.calcular_propuesta(db, atleta, nuevo, ahora_utc, request.state.idioma)
+        except ConfigError as ex:
+            return JSONResponse({"error": texto(ex, t)}, status_code=400, headers=sin_cache)
+        aviso = t("plan.aviso_carrera", quita=", ".join(map(str, info["quita"]))) if info["objetivo"] and info["quita"] else None
+        pref = aw.prefijo(usuario, atleta)
+        return JSONResponse({"plan": data["plan"], "info": info, "aviso": aviso,
+                             "aplicar": {"url": f"{pref}/plan/{accion}", "semana": x}}, headers=sin_cache)
+    doble("get", "/plan/propuesta.json", propuesta)
 
     # rutas con id en la ruta: se registran aparte para leer el parámetro
     def con_id(sufijo, que, descripcion, con_plan=False):

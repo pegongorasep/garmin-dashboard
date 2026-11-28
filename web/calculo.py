@@ -2,7 +2,7 @@
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
@@ -51,11 +51,12 @@ def acciones_url(usuario: Usuario) -> str | None:
     return f"https://github.com/{usuario.repo}/actions/workflows/deploy.yml" if usuario.repo else None
 
 
-def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: str | None = None) -> dict:
+def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: str | None = None, crudo_nuevo: dict | None = None) -> dict:
+    """Config de la persona; `crudo_nuevo` (una propuesta) sustituye a los ajustes guardados."""
     aj = db.get(Ajustes, usuario.id)
     idioma = idioma or usuario.idioma or "es"
     # sin ajustes (nadie los tiene al registrarse): el motor usa los de fábrica y la persona queda sin plan, con o sin copia
-    base = aj.config if aj else {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}   # los de fábrica (config_por_defecto)
+    base = crudo_nuevo if crudo_nuevo is not None else aj.config if aj else {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}   # los de fábrica (config_por_defecto)
     crudo = {**base, "modo": "web", "menu": menu_de(idioma) if menu is None else menu,
              "plan_acciones": plan_acciones(idioma), "idioma": idioma}
     if aj is not None and not usuario.sin_plan:
@@ -159,6 +160,7 @@ def con_prefijo(salida: dict, pref: str) -> dict:
     ui = {**ui, "menu": [{**m, "url": f(m["url"])} for m in ui.get("menu") or [] if m["url"] != "/coach"],
           "plan_acciones": [{**a, "url": f(a["url"])} for a in ui.get("plan_acciones") or []],
           "plan_url": f(ui.get("plan_url")), "repetir_url": f(ui.get("repetir_url")),
+          "propuesta_url": f(ui.get("propuesta_url")), "retomar_url": f(ui.get("retomar_url")),
           "editar_urls": {k: f(v) for k, v in (ui.get("editar_urls") or {}).items()}}
     if ui.get("cuerpo_nuevo"):
         ui["cuerpo_nuevo"] = f(ui["cuerpo_nuevo"])
@@ -201,6 +203,7 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
         fecha = ahora_naive.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"])).date().isoformat()
         recordatorio = {"fecha": fecha, "url": f"{pref}/actividad/nueva?tipo=correr&fecha={fecha}"}
     salida["ui"]["recordatorio_corrida"] = recordatorio
+    salida["ui"].update(_ui_saltos(db, usuario, salida["ui"], ahora_naive, idioma, editable))
     # También fuera de la caché: se van al marcarlos vistos. El coach no los ve: son del atleta y siguen pendientes.
     avisos = [] if pref else cambios.avisos_de(db, usuario.id)
     if avisos:
@@ -210,6 +213,31 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
         log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)
         raise DataInvalido(problemas)
     return con_prefijo(salida, pref) if pref else salida
+
+
+def _ui_saltos(db: Session, usuario: Usuario, ui: dict, ahora_naive: datetime, idioma: str | None, editable: bool) -> dict:
+    """«Repetir o retomar»: las ligas y las semanas 1..N-1 con sus fechas (según la secuencia actual). Vacío sin semana en curso,
+    sin plan o si quien mira no puede editar. Va fuera de la caché: depende de hoy y de quién mira."""
+    vacio = {"propuesta_url": None, "retomar_url": None, "retomar_opciones": []}
+    if not editable or not ui.get("repetir_url"):
+        return vacio
+    cfg = config_de(db, usuario, idioma=idioma)
+    hoy = ahora_naive.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"])).date()
+    cfg = plan_vivo.con_pausas(cfg, hoy)
+    inicio = date.fromisoformat(cfg["plan_start"])
+    sec = build.m.secuencia_de(cfg)
+    i = (hoy - inicio).days // 7
+    n = sec[i] if 0 <= i < len(sec) else None
+    if n is None:
+        return vacio
+    ligas = {"propuesta_url": "/plan/propuesta.json", "retomar_url": "/plan/retomar"}
+    opciones = []
+    for x in range(1, n):
+        j = next((k for k in range(i) if sec[k] == x), None)
+        if j is not None:
+            d = inicio + timedelta(weeks=j)
+            opciones.append({"semana": x, "desde": d.isoformat(), "hasta": (d + timedelta(days=6)).isoformat()})
+    return {**ligas, "retomar_opciones": opciones}
 
 
 def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, idioma: str | None = None) -> dict:
@@ -223,14 +251,31 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
     if cache and cache.huella == h and ahora() - cache.calculado < timedelta(minutes=MINUTOS_CACHE):
         return cache.contenido
     aj = db.get(Ajustes, usuario.id)
-    crudo = aj.config if aj else {}
+    salida = _armar(db, usuario, aj.config if aj else {}, cfg, local, bool(aj))
+    if cache is None:
+        db.add(CacheData(usuario_id=usuario.id, contenido=salida, huella=h))
+    else:
+        cache.contenido, cache.huella, cache.calculado = salida, h, ahora()
+    db.commit()
+    return salida
+
+
+def calcular_propuesta(db: Session, usuario: Usuario, crudo_nuevo: dict, ahora_utc: datetime | None = None, idioma: str | None = None) -> dict:
+    """data.json que tendría la persona con `crudo_nuevo` en lugar de sus ajustes: no lee ni escribe la caché ni la base."""
+    cfg = config_de(db, usuario, idioma=idioma, crudo_nuevo=crudo_nuevo)
+    local = (ahora_utc.replace(tzinfo=ZoneInfo("UTC")) if ahora_utc else datetime.now(ZoneInfo("UTC"))).astimezone(ZoneInfo(cfg["timezone"]))
+    return _armar(db, usuario, crudo_nuevo, cfg, local, True)
+
+
+def _armar(db: Session, usuario: Usuario, crudo: dict, cfg: dict, local: datetime, con_ajustes: bool) -> dict:
+    """El motor con la config y el plan (más los datos) de la persona; pasa por la lista blanca. Compartido por la caché y la propuesta."""
     cfg = plan_vivo.con_pausas(cfg, local.date())
     if cfg["sin_plan"]:   # sin plan: el motor corre con un plan vacío (nadie edita sesiones que no hay)
         plan = {"start": cfg["plan_start"], "weeks": []}
     else:
         plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
     ultima = tubo.ultima_subida(db, usuario.id)
-    cfg = {**cfg, "editar_urls": editar_urls(plan) if aj else {},
+    cfg = {**cfg, "editar_urls": editar_urls(plan) if con_ajustes else {},
            "garmin_conectado": bool(usuario.repo_id), "garmin_ultima_subida": ultima if usuario.repo_id else None,
            "garmin_historial_pendiente": bool(usuario.historial_pendiente)}
     salida = build.build(datos_de(db, usuario, crudo), plan, cfg, local)
@@ -238,9 +283,4 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
     if problemas:
         log.error("data.json de usuario %s no cumple la lista blanca: %s", usuario.id, problemas)
         raise DataInvalido(problemas)
-    if cache is None:
-        db.add(CacheData(usuario_id=usuario.id, contenido=salida, huella=h))
-    else:
-        cache.contenido, cache.huella, cache.calculado = salida, h, ahora()
-    db.commit()
     return salida

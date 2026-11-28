@@ -185,6 +185,7 @@ function renderPlan(d) {
     guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: T("sitio.plan.listo"), texto: T("sitio.plan.guardado") }) : null,
     acciones.length ? h("div", { class: "botones ancha" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
     ui().plan_url ? h("div", { class: "botones ancha" }, DS.boton(T("sitio.plan.ajustar"), { variante: "sec", href: ui().plan_url })) : null,
+    botonRepetirRetomar(),
     tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
@@ -291,6 +292,54 @@ function tarjetaPlan(plan, { editarUrls = {}, textoDescarga = "", sel = null, al
 
 /** La tarjeta de la pestaña Plan: el bloque con las opciones propias de quien lo ve (ligas de editar, texto de descarga, semana elegida). */
 const tarjetaDoceSemanas = (d) => tarjetaPlan(d.plan || {}, { editarUrls: ui().editar_urls || {}, textoDescarga: (ui().textos || {}).descarga, sel: planSel, alElegir: (n) => { planSel = n; } });
+
+/** «Repetir o retomar»: diálogo con las opciones; al elegir una pide la propuesta al servidor y la pinta con la misma tarjeta del plan. `inicial`
+ *  ({accion, semana}) salta directo a la vista previa. «Sí, aplicar» manda el POST (con CSRF) y recarga; «No» cierra. Python decide todo. */
+function abrirRepetirRetomar(inicial = null) {
+  const u = ui(), app = $("app");
+  if (!u.propuesta_url) return;
+  const d = DS.dialogo({ titulo: T("sitio.plan.rr_titulo"), cuerpo: [] });
+  const cuerpo = d.querySelector(".dl-cuerpo");
+  d.addEventListener("close", () => d.remove());
+  const error = (txt) => cuerpo.replaceChildren(h("p", { class: "nota", role: "alert" }, txt), DS.boton(T("sitio.plan.rr_no"), { variante: "sec", onclick: () => d.close() }));
+  const aplicar = async (a) => {
+    try {
+      const body = new URLSearchParams({ csrf: app.dataset.csrf });
+      if (a.semana != null) body.set("semana", String(a.semana));
+      const r = await fetch(a.url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+      if (r.ok) location.reload(); else error(T("sitio.plan.rr_error"));
+    } catch (e) { error(T("sitio.plan.rr_error")); }
+  };
+  const previa = async (accion, semana) => {
+    cuerpo.replaceChildren(h("p", { class: "nota" }, T("sitio.plan.rr_cargando")));
+    try {
+      const q = new URLSearchParams({ accion, ...(semana != null ? { semana: String(semana) } : {}) });
+      const r = await fetch(`${u.propuesta_url}?${q}`, { headers: { Accept: "application/json" } });
+      const resp = await r.json();
+      if (!r.ok) return error(resp.error || T("sitio.plan.rr_error"));
+      const fin = resp.info && resp.info.fin ? fechaLarga(resp.info.fin) : null;
+      cuerpo.replaceChildren(
+        ...(resp.aviso ? [DS.aviso({ clase: "warn", simbolo: "!", texto: resp.aviso })] : []),
+        ...(fin ? [h("p", { class: "nota" }, T("sitio.plan.rr_fin", { f: fin }))] : []),
+        tarjetaPlan(resp.plan, { titulo: T("sitio.plan.rr_propuesta"), sel: resp.plan.semana_actual ?? null, clase: "" }),
+        h("div", { class: "botones" }, DS.boton(T("sitio.plan.rr_aplicar"), { onclick: () => aplicar(resp.aplicar) }),
+          DS.boton(T("sitio.plan.rr_no"), { variante: "sec", onclick: () => d.close() })));
+    } catch (e) { error(T("sitio.plan.rr_error")); }
+  };
+  const actual = ((datos && datos.plan) || {}).semana_actual;
+  cuerpo.replaceChildren(
+    DS.boton(T("sitio.plan.rr_repetir", { n: actual ?? "" }), { variante: "sec", onclick: () => previa("repetir") }),
+    ...((u.retomar_opciones || []).length ? [h("p", { class: "nota" }, T("sitio.plan.rr_retomar_t")),
+      h("div", { class: "botones" }, u.retomar_opciones.map((o) => DS.boton(T("sitio.plan.rr_retomar", { n: o.semana, d: fechaLarga(o.desde), h: fechaLarga(o.hasta) }),
+        { variante: "sec", onclick: () => previa("retomar", o.semana) })))] : []));
+  document.body.append(d);
+  d.showModal();
+  if (inicial) previa(inicial.accion, inicial.semana);
+}
+
+/** La tarjeta de la pestaña Plan: botón «Repetir o retomar» (solo si el servidor dio `propuesta_url`) y el bloque de semanas. */
+const botonRepetirRetomar = () => (ui().propuesta_url && $("app").dataset.csrf
+  ? h("div", { class: "botones ancha" }, DS.boton(T("sitio.plan.rr_boton"), { variante: "sec", onclick: () => abrirRepetirRetomar() })) : null);
 
 const nombreEvento = (t) => (["viaje", "enfermedad", "lesion", "carrera"].includes(t) ? T(`sitio.ev.${t}`) : t);
 const tipoSemana = (k) => (k === "descarga" || k === "carga" ? T(`sitio.plan.${k}`) : k);
