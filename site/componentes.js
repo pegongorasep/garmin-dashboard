@@ -529,7 +529,10 @@ const DS = (() => {
    *  nace en el botón (sin la API, cambia al instante). `entrada()`: la primera vez que se pinta Hoy, anillo y barras se
    *  llenan (clase en <html> que se quita sola); las repintadas posteriores no animan. `unaVez()`: lo que lleva `data-una-vez="<pantalla>"`
    *  se anima (clase `anim`) la primera vez que está a la vista en esta apertura de la app (y entonces se llama su `alVerse()`, si lo trae); al volver a la pestaña o repintar sale quieto.
-   *  Se llama al cambiar de vista y al pintar algo que llega tarde. */
+   *  Con la app en segundo plano nada cuenta como visto. Se llama al cambiar de vista, al volver a la app y al pintar algo que llega tarde.
+   *  `logro({ anillo (nodo de anilloPlan), desde (% anterior), dias (círculos del calendario), palomitas (insignias de sesión), logo,
+   *  llena, pasado (ms ya corridos: la retoma ahí) })`: sesión cumplida. El anillo avanza del % anterior al que trae, se llena el día y
+   *  se dibuja la palomita; semana completa (`llena`): además dos ondas y brinca el logo. Dura 2.4 s; los nodos ya traen el estado final. */
   const animar = (() => {
     const sinMov = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     let hecha = false;
@@ -544,6 +547,39 @@ const DS = (() => {
         t.ready.then(() => document.documentElement.animate(
           { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${fin}px at ${x}px ${y}px)`] },
           { duration: 450, easing: "ease-out", pseudoElement: "::view-transition-new(root)" })).catch(() => {});
+      },
+      logro({ anillo, desde = 0, dias = [], palomitas = [], logo: marca, llena = false, pasado = 0 } = {}) {
+        if (sinMov()) return;
+        // Web Animations: sin estilos en línea, y un repintado la puede retomar con `currentTime`
+        const mover = (el, cuadros, opciones) => {
+          if (!el || !el.animate) return null;
+          const a = el.animate(cuadros, { fill: "backwards", ...opciones });
+          a.currentTime = pasado;
+          return a;
+        };
+        if (anillo) {
+          anillo.classList.add("logro");   // esta vez no lleva la animación de entrada de Hoy
+          const l = anillo.querySelector(".l"), C = parseFloat(l.getAttribute("stroke-dasharray"));
+          mover(l, [{ strokeDashoffset: `${C * (1 - Math.min(Math.max(desde, 0), 100) / 100)}px` }, { strokeDashoffset: `${l.getAttribute("stroke-dashoffset")}px` }],
+            { duration: 1000, delay: 150, easing: "cubic-bezier(.4,0,.2,1)" });
+          if (llena) for (const delay of [1400, 1450]) {
+            const onda = sv("circle", { class: "logro-onda", cx: 36, cy: 36, r: 30 });
+            anillo.querySelector("svg").prepend(onda);
+            const a = mover(onda, [{ opacity: 0.7, transform: "scale(1)" }, { opacity: 0, transform: "scale(1.45)" }], { duration: 900, delay, easing: "ease-out", fill: "none" });
+            if (a) a.onfinish = () => onda.remove();
+          }
+        }
+        for (const dia of dias) mover(dia, [{ offset: 0, transform: "scale(.5)", backgroundColor: "transparent", color: "var(--ink)" }],
+          { duration: 500, delay: 700, easing: "cubic-bezier(.3,1.7,.5,1)" });
+        for (const insignia of palomitas.filter(Boolean)) {
+          const trazo = sv("path", { d: "M6.5 12.5l3.5 3.5L17.5 8.5", "stroke-dasharray": "17 34" });
+          insignia.replaceChildren(sv("svg", { class: "logro-marca", viewBox: "0 0 24 24", "aria-hidden": "true" }, trazo));
+          mover(trazo, [{ strokeDashoffset: "20px" }, { strokeDashoffset: "0px" }], { duration: 400, delay: 900, easing: "ease-out" });
+        }
+        if (llena && marca) for (const barra of marca.querySelectorAll("rect")) {
+          mover(barra, [{ transform: "scaleY(1)", easing: "ease-out" }, { transform: "scaleY(1.35)", easing: "ease-out" }, { transform: "scaleY(1)" }],
+            { duration: 600, delay: 1100, fill: "none" });
+        }
       },
       entrada() {
         if (hecha) return;
@@ -562,7 +598,7 @@ const DS = (() => {
       unaVez() {
         for (const el of document.querySelectorAll("[data-una-vez]")) {
           if (el.closest("[hidden]")) el.classList.remove("anim");   // al esconderse la pierde: si no, el CSS la repetiría al volver
-          else if (!yaAnimadas.has(el.dataset.unaVez)) { yaAnimadas.add(el.dataset.unaVez); el.classList.add("anim"); if (el.alVerse) el.alVerse(); }
+          else if (!document.hidden && !yaAnimadas.has(el.dataset.unaVez)) { yaAnimadas.add(el.dataset.unaVez); el.classList.add("anim"); if (el.alVerse) el.alVerse(); }
         }
       },
     };

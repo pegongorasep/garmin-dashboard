@@ -307,6 +307,7 @@ async function recargarDatos() {
 const ES_SITIO = !!$("app");
 if (ES_SITIO) {
 window.addEventListener("franja:lista", recargarDatos);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) DS.animar.unaVez(); });   // lo que esperaba a que se viera
 window.addEventListener("franja:sin_app", (ev) => { ev.preventDefault(); recargarDatos(); });   // desinstalaron la app: el encabezado vuelve a ofrecer autorizar
 window.addEventListener("franja:estado", (ev) => { const b = $("sync-btn"); if (b && b.tagName === "BUTTON") b.disabled = !!(ev.detail && ev.detail.viva); });
 }

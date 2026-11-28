@@ -1,6 +1,6 @@
 # Plan: estados vacíos y animaciones (2026-11-28)
 
-**Estado: aprobado por Pedro el 2026-11-28; sin construir.**
+**Estado: aprobado por Pedro el 2026-11-28; construido (A1 a A5).**
 
 Muestra aprobada (referencia visual): https://claude.ai/artifact/LRpjoz5N1p4KgTWHRmMig2
 Cada animación responde a un momento: **vacío** (se anima una vez por apertura de la app y por pantalla), **espera**

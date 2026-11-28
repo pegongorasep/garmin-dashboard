@@ -653,8 +653,56 @@ function pintarSemana(d) {
   const sems = semanasHoy(d), s = sems[semIdx];
   const caja = $("hoy-semana");
   if (!s) { caja.replaceChildren(); return; }
-  const reciente = carreraReciente(d);
-  caja.replaceChildren(...[selectorSemana(d), tarjetaEstaSemana(d, s), tarjetaTusCorridas(d, s, !reciente), reciente ? tarjetaCarreraHoy(reciente) : null].filter(Boolean));
+  const reciente = carreraReciente(d), semana = tarjetaEstaSemana(d, s), corridas = tarjetaTusCorridas(d, s, !reciente);
+  sesionCumplida(s, semana, corridas);
+  caja.replaceChildren(...[selectorSemana(d), semana, corridas, reciente ? tarjetaCarreraHoy(reciente) : null].filter(Boolean));
+  DS.animar.unaVez();   // el selector repinta sin cambiar de vista
+}
+
+// --- sesión cumplida ---
+
+const LOGRO_MS = 2400;          // lo que dura la celebración (DS.animar.logro)
+const semanasSinGuardar = {};   // por cuenta, solo si el teléfono no deja guardar
+let logroEnCurso = null;        // la celebración que va corriendo: { llave, semana, ids, desde, llena, t0 }
+let tarjetasVistas = 0;
+
+/** Lo último que este teléfono vio de la semana de esa cuenta: { semana, hechas: [ids], pct } (null: nada, o sin almacenamiento). */
+function semanaVista(llave) {
+  if (semanasSinGuardar[llave]) return semanasSinGuardar[llave];
+  try {
+    const v = JSON.parse(localStorage.getItem(`semana-vista-${llave}`));
+    return v && typeof v.semana === "string" && Array.isArray(v.hechas) ? v : null;
+  } catch (e) { return null; }
+}
+function guardarSemanaVista(llave, v) {
+  try { localStorage.setItem(`semana-vista-${llave}`, JSON.stringify(v)); delete semanasSinGuardar[llave]; } catch (e) { semanasSinGuardar[llave] = v; }
+}
+
+/** Sesión cumplida: solo en tu cuenta (la llave de los primeros pasos; al coach no le llega) y en la semana de hoy. Los estados y el %
+ *  son de Python; aquí se compara con lo que este teléfono ya vio, cuando la tarjeta está a la vista (`alVerse`): si hay una sesión
+ *  hecha nueva se celebra una vez, desde el % anterior (semana nueva: desde cero). Sin registro previo solo se guarda. Un repintado a
+ *  media celebración la retoma donde iba. */
+function sesionCumplida(s, semana, corridas) {
+  const llave = (((ui().primer_inicio || {}).barras) || {}).llave;
+  if (llave === undefined || llave === null || s.estado !== "actual" || !s.plan) return;
+  const sesiones = s.sesiones || [], hechas = sesiones.filter((e) => e.estado === "hecha").map((e) => e.id);
+  semana.setAttribute("data-una-vez", `semana-${++tarjetasVistas}`);
+  semana.alVerse = () => {
+    const antes = semanaVista(llave);
+    if (antes && antes.semana > s.inicio) return;   // datos más viejos que lo ya visto: no se pisa
+    guardarSemanaVista(llave, { semana: s.inicio, hechas, pct: s.plan.min_pct || 0 });
+    const base = antes && (antes.semana === s.inicio ? antes : { hechas: [], pct: 0 });
+    const nuevas = base ? hechas.filter((id) => !base.hechas.includes(id)) : [];
+    if (nuevas.length) logroEnCurso = { llave, semana: s.inicio, ids: nuevas, desde: base.pct || 0, llena: s.plan.hechas >= s.plan.total, t0: Date.now() };
+    const l = logroEnCurso;
+    if (!l || l.llave !== llave || l.semana !== s.inicio || Date.now() - l.t0 >= LOGRO_MS || !l.ids.every((id) => hechas.includes(id))) return;
+    const cumplidas = sesiones.map((e, i) => [e, i]).filter(([e]) => l.ids.includes(e.id));
+    const dias = semana.querySelectorAll(".cal > .dia"), filas = corridas.querySelectorAll(".fila-ses");
+    DS.animar.logro({ pasado: Date.now() - l.t0, desde: l.desde, llena: l.llena, anillo: semana.querySelector(".plan"),
+      dias: cumplidas.map(([e]) => { const dia = dias[(s.dias || []).findIndex((x) => x.fecha === e.fecha)]; return dia && dia.querySelector(".circ"); }),
+      palomitas: cumplidas.map(([, i]) => filas[i] && filas[i].querySelector(".estado .badge")),
+      logo: $("encabezado") && $("encabezado").querySelector(".marca svg") });
+  };
 }
 
 // --- carrera destacada (últimos 7 días) ---

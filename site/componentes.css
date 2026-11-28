@@ -14,7 +14,8 @@ a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:f
 
 /* Logo */
 .marca { display: inline-flex; align-items: center; gap: 8px; }
-.marca svg { width: 30px; height: 30px; flex: none; }
+.marca svg { width: 30px; height: 30px; flex: none; overflow: visible; }
+.marca rect { transform-box: fill-box; transform-origin: 50% 100%; }   /* brincan desde su base (semana completa) */
 .marca .nombre { font: 600 19px/1 var(--font-sans); letter-spacing: -.01em; white-space: nowrap; }
 
 /* Tarjeta */
@@ -60,10 +61,13 @@ a:focus-visible, summary:focus-visible, .tabla-scroll:focus-visible, .zbar div:f
 
 /* Anillo del plan */
 .plan { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: var(--space-14); }
-.plan svg { width: 72px; height: 72px; display: block; }
+.plan svg { width: 72px; height: 72px; display: block; overflow: visible; }   /* las ondas de la semana completa salen de la caja sin moverla */
 .plan .f { fill: none; stroke: var(--grid); stroke-width: 8; }
 .plan .l { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 36px 36px; }
 .plan text { font: 600 15px var(--font-sans); fill: var(--ink); text-anchor: middle; }
+/* Sesión cumplida (DS.animar.logro): las ondas en reposo no se ven; la palomita dibujada cabe en la insignia */
+.plan .logro-onda { fill: none; stroke: var(--accent); stroke-width: 3; opacity: 0; transform-origin: 36px 36px; }
+.badge .logro-marca { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .prog-t { font: 600 13.5px/19px var(--font-sans); font-variant-numeric: tabular-nums; }
 
 /* Calendario */
@@ -615,7 +619,7 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 
 /* Animaciones (G5): entrada de Hoy y cambio de tema. El estado final es el de siempre; con reduced-motion no hay nada. */
 @media (prefers-reduced-motion: no-preference) {
-  html.anim-entrada #vista-hoy .plan .l { animation: anim-anillo 600ms ease-out backwards; }
+  html.anim-entrada #vista-hoy .plan:not(.logro) .l { animation: anim-anillo 600ms ease-out backwards; }
   html.anim-entrada .sem-barra i { transform-origin: left center; animation: anim-ancho 600ms ease-out backwards; }
   html.anim-entrada #vista-hoy .graf .serie { transform-box: fill-box; transform-origin: bottom; animation: anim-alto 500ms ease-out backwards; }
   html.anim-entrada #vista-hoy .graf .serie:nth-of-type(2n) { animation-delay: 40ms; }

@@ -3,7 +3,7 @@
 Vigentes:
 
 - `PLAN_LIMPIEZA.md`: plan de limpieza del código y los docs (en curso).
-- `PLAN_ANIMACIONES.md`: estados vacíos, primeros pasos y animaciones (fases A1 a A5).
+- `PLAN_ANIMACIONES.md`: estados vacíos, primeros pasos y animaciones (fases A1 a A5, construidas).
 - `DUDAS.md`: decisiones y hallazgos por versión.
 - `REQUISITOS_V5.md` y `PLAN_V5.md`: la web Ahí la Llevas (cuentas, repos-tubo, coach).
 - `INVESTIGACION_PLANES.md`: reglas de seguridad y base científica del motor de planes v6.

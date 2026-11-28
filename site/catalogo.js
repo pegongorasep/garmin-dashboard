@@ -227,6 +227,23 @@ def("Datos", "Animaciones", "DS.animar.tema() · DS.animar.entrada()", "Cambio d
   DS.tarjeta({ titulo: "Probar" }, DS.boton("Cambiar tema", { onclick: (e) => DS.animar.tema(() => { const r = document.documentElement; r.setAttribute("data-theme", r.getAttribute("data-theme") === "light" ? "dark" : "light"); }, e.currentTarget) })));
 def("Datos", "Anillo del plan", "DS.anilloPlan()", "Avance de la semana contra el plan.",
   DS.tarjeta({ titulo: "Esta semana" }, DS.anilloPlan({ pct: 62, titulo: "56 / 90 min · 62 %", texto: "Plan: 1 de 3 sesiones" })));
+/** Sesión cumplida con su botón: cada vez arma las piezas con el estado final y corre la celebración desde el anterior. */
+const logroDemo = (boton, { desde, pct, titulo, texto, llena }) => {
+  const caja = h("div", {});
+  const armar = () => {
+    const marca = DS.marca(), anillo = DS.anilloPlan({ pct, titulo, texto }), circulo = h("span", { class: "circ" }, "26");
+    const cal = DS.calendario(["lun", "mar", "mié", "jue", "vie", "sáb", "dom"].map((nombre, i) => DS.diaCal({ nombre, numero: 23 + i,
+      numeroEnMarca: i === 3, titulo: `${nombre} ${23 + i}`, hijos: i === 3 ? [circulo] : [] })));
+    const fila = DS.filaSesion({ nombre: "Z2 #2", minutos: 25, estado: { clase: "ok", simbolo: "✓", texto: "Hecha" } });
+    caja.replaceChildren(DS.tarjeta({}, marca, anillo, cal, fila));
+    return { desde, llena, anillo, dias: [circulo], palomitas: [fila.querySelector(".badge")], logo: marca.querySelector("svg") };
+  };
+  armar();
+  return h("div", {}, caja, DS.boton(boton, { variante: "sec", chico: true, onclick: () => DS.animar.logro(armar()) }));
+};
+def("Datos", "Sesión cumplida", "DS.animar.logro()", "Una sola vez, al ver en Hoy una sesión hecha nueva: el anillo avanza, se llena el día y se dibuja la palomita; con la semana completa, además dos ondas y brinca el logo. Con «reducir movimiento», nada se mueve.",
+  logroDemo("Cumplir una sesión", { desde: 28, pct: 56, titulo: "50 / 90 min · 56 %", texto: "Plan: 2 de 3 sesiones" }),
+  logroDemo("Completar la semana", { desde: 56, pct: 100, titulo: "90 / 90 min · 100 %", texto: "Plan: 3 de 3 sesiones", llena: true }));
 def("Datos", "Curva de FC", "DS.curvaFc()", "Frecuencia cardiaca de una actividad: línea simple con rejilla y minutos. Recibe { seg, fc:[lpm] } con ≤120 puntos ya bajados en Python.",
   DS.tarjeta({}, DS.curvaFc({ seg: 1800, fc: [112, 128, 136, 141, 144, 146, 143, 147, 150, 148, 145, 139, 131, 122] })));
 def("Datos", "Calendario", "DS.calendario()", "Los 7 días con la corrida (círculo con los minutos), otras actividades y el día de hoy. Con alTocar cada día es un botón (aria-pressed) y abajo va la tarjeta del día. Elegido = fondo gris (token seleccion) + muesca hacia el detalle, igual que el cuadrito de semana del Plan; con hover: hover, gris más claro (token pasar). Regla de altura: elegir no cambia la altura (la tarjeta del día tiene alto fijo: cabecera + 2 ranuras); solo expandir/colapsar.",
