@@ -206,6 +206,7 @@ def test_regla_de_oro_por_el_tubo(ctx):
                       "garmin_ultima_subida": ultima_subida}, local)
     web["ui"].pop("repo_estado")   # depende de la hora de la última subida; se prueba aparte
     web["ui"].pop("primer_inicio")   # solo la web (E3); se prueba en test_web_primer_inicio
+    web["ui"].pop("vacios", None)   # solo la web (Animaciones A1)
     web["ui"].pop("recordatorio_corrida")
     web["ui"].update(propuesta_url=None, plan_nuevo_url=None, retomar_url=None, retomar_opciones=[])   # solo la web, fuera de la caché (P3)
     assert json.dumps(web, sort_keys=True) == json.dumps(esp, sort_keys=True)
