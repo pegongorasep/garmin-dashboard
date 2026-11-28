@@ -111,8 +111,7 @@ def test_no_admin_recibe_404(web_ctx):
 
 def test_historial_inventado():
     hoy = date(2026, 11, 26)   # jueves
-    assert cuentas_prueba.inventar_historial("vacia", hoy, "a") == ([], {})
-    for nombre in ("empezando", "constante", "crossfit"):
+    for nombre in cuentas_prueba.HISTORIALES:
         acts, detalles = cuentas_prueba.inventar_historial(nombre, hoy, "a@prueba.test")
         assert (acts, detalles) == cuentas_prueba.inventar_historial(nombre, hoy, "a@prueba.test")
         assert len({a["id"] for a in acts}) == len(acts) > 5
@@ -132,8 +131,10 @@ def test_historial_inventado():
 def test_cada_historial_se_ve_en_su_data_json(web_ctx):
     _, cl = admin_listo(web_ctx)
     web_ctx.app.state.reloj = lambda: HOY
-    for nombre in cuentas_prueba.HISTORIALES:
-        r = cl.post("/admin/prueba/crear", data={"csrf": csrf_de(cl.get("/admin").text), "nombre": nombre, "historial": nombre})
+    for nombre in ("vacia", *cuentas_prueba.HISTORIALES):
+        # el selector siempre viaja con el formulario; solo la casilla decide si hay datos
+        campos = {"historial": "constante"} if nombre == "vacia" else {"datos": "1", "historial": nombre}
+        r = cl.post("/admin/prueba/crear", data={"csrf": csrf_de(cl.get("/admin").text), "nombre": nombre, **campos})
         u = cuenta_de(web_ctx, f"{nombre}@prueba.test")
         with web_ctx.sesiones() as db:
             filas = db.query(DatoGarmin).filter(DatoGarmin.usuario_id == u.id).count()
@@ -146,5 +147,5 @@ def test_cada_historial_se_ve_en_su_data_json(web_ctx):
         post(suyo, liga_en(r.text))
         assert suyo.get("/").status_code == 200
         assert suyo.get("/data.json").status_code == 200
-    r = cl.post("/admin/prueba/crear", data={"csrf": csrf_de(cl.get("/admin").text), "nombre": "z", "historial": "otro"})
+    r = cl.post("/admin/prueba/crear", data={"csrf": csrf_de(cl.get("/admin").text), "nombre": "z", "datos": "1", "historial": "otro"})
     assert r.status_code == 422 and cuenta_de(web_ctx, "z@prueba.test") is None

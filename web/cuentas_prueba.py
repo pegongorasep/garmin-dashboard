@@ -1,6 +1,6 @@
 """Cuentas de prueba (`algo@prueba.test`) desde /admin: crear, entrar con una liga y borrar. Solo el admin, y solo sobre
 cuentas `.test`: ninguna de estas rutas toca la cuenta de una persona real (a lo demás, 404). Al crearlas se pueden
-llenar con actividades inventadas (sin sueño, HRV, FC en reposo ni FC por segundo)."""
+llenar, si se marca la casilla, con actividades inventadas (sin sueño, HRV, FC en reposo ni FC por segundo)."""
 import hashlib
 import random
 import re
@@ -20,8 +20,8 @@ from .modelos import Usuario
 DOMINIO = "prueba.test"
 RE_NOMBRE = re.compile(r"[a-z0-9][a-z0-9._-]{0,29}")
 
-# historial que se puede elegir -> persona del simulador de la que salen sus semanas (None = cuenta vacía)
-HISTORIALES = {"vacia": None, "empezando": "novata_trota_camina", "constante": "base_intermedia", "crossfit": "pedro_like"}
+# tipo de datos de prueba que se puede elegir -> persona del simulador de la que salen sus semanas
+HISTORIALES = {"constante": "base_intermedia", "empezando": "novata_trota_camina", "crossfit": "pedro_like"}
 RITMO_TROTE = {"empezando": (8.0, 9.5), "constante": (6.2, 7.2), "crossfit": (5.8, 6.8)}   # min/km
 RITMO_CAMINATA = (11.0, 13.0)
 FC_PROM = {"running": (134, 150), "hiit": (128, 150)}
@@ -32,9 +32,7 @@ router = APIRouter()
 
 def inventar_historial(historial: str, hoy: date, semilla: str) -> tuple[list, dict]:
     """(actividades, detalles) con la forma del paquete del tubo: las últimas 8 semanas más la actual hasta ayer.
-    Misma semilla, mismos datos. Vacío para «vacia»."""
-    if HISTORIALES[historial] is None:
-        return [], {}
+    Misma semilla, mismos datos."""
     persona = simulador.persona_por_id(HISTORIALES[historial])
     semanas = [*persona["historial"], persona["historial"][-1]]   # la última se repite como semana en curso
     base = simulador.actividades_sinteticas({**persona, "historial": semanas}, (lunes(hoy) + timedelta(days=7)).isoformat())
@@ -93,14 +91,14 @@ async def crear(request: Request, usuario=Depends(actual), db: Session = Depends
     correo = f"{nombre}@{DOMINIO}"
     if db.scalar(select(Usuario.id).where(Usuario.correo == correo)) is not None:
         return admin.pagina(request, db, quien, prueba_error=request.state.t("admin.prueba_ya_existe", correo=correo))
-    historial = str(form.get("historial", "") or "vacia")
-    if historial not in HISTORIALES:
+    historial = str(form.get("historial", "")) if form.get("datos") else None   # sin la casilla, la cuenta nace vacía
+    if historial is not None and historial not in HISTORIALES:
         raise HTTPException(422)
     u = Usuario(correo=correo)
     db.add(u)
     db.flush()
-    actividades, detalles = inventar_historial(historial, ajustes_web.hoy_de(request.app.state.reloj, {}), correo)
-    if actividades:
+    if historial:
+        actividades, detalles = inventar_historial(historial, ajustes_web.hoy_de(request.app.state.reloj, {}), correo)
         datos.guardar_paquete(db, u.id, {"archivos": {"activities": actividades, "activity_details": detalles}})
     db.commit()
     return _con_liga(request, db, quien, u, settings)
