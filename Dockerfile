@@ -12,5 +12,8 @@ COPY plan/*.py plan/*.yaml plan/plan.example.json plan/
 COPY site/ site/
 COPY web/ web/
 COPY scripts/ scripts/
+# Si algo personal o de desarrollo entró (ver .dockerignore), la imagen no se construye.
+RUN for f in .env config.yaml data plan/plan.json plan/inbody.json site/data.json web/dev.db gha-creds-*.json; do \
+      if [ -e "$f" ]; then echo "archivo personal en la imagen: $f"; exit 1; fi; done
 # Cloud Run pone $PORT. Las migraciones corren al arrancar (máximo 1 instancia).
 CMD ["sh", "-c", "alembic -c web/alembic.ini upgrade head && exec uvicorn web.app:app --host 0.0.0.0 --port ${PORT:-8080}"]

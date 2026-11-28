@@ -1,6 +1,6 @@
 name: Web
 
-# Despliegue manual de la web (Ahí la Llevas) a Google Cloud Run: pruebas -> imagen -> `gcloud run deploy`.
+# Despliegue manual de la web (Ahí la Llevas) a Google Cloud Run: pruebas e imagen a la vez -> `gcloud run deploy`.
 # Entra a Google con Workload Identity Federation (sin llaves JSON). Variables del repo (no secretos):
 # GCP_PROYECTO, GCP_PROVEEDOR_WIF, GCP_CUENTA_SERVICIO, ADMIN_CORREO (opcional: contacto del aviso de privacidad).
 on:
@@ -15,8 +15,15 @@ env:
   REPOSITORIO: web   # repo de Artifact Registry
 
 jobs:
+  # Dos máquinas a la vez: las pruebas de la web y el resto (entre las dos son todas las de tests/)
   pruebas:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { grupo: web, rutas: "tests/test_web_*.py" }
+          - { grupo: resto, rutas: "tests --ignore-glob=tests/test_web_*.py" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,10 +32,10 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt -r web/requirements.txt -r requirements-dev.txt
       - run: ruff check .
-      - run: python -m pytest -q -n auto
+      - run: python -m pytest -q -n auto --dist worksteal ${{ matrix.rutas }}
 
-  desplegar:
-    needs: pruebas
+  # Se construye mientras corren las pruebas; solo se publica si todo pasa (job desplegar)
+  imagen:
     if: github.repository == 'pegongorasep/garmin-dashboard' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -67,8 +74,24 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max,ignore-error=true
 
+  desplegar:
+    needs: [pruebas, imagen]
+    if: github.repository == 'pegongorasep/garmin-dashboard' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_PROVEEDOR_WIF }}
+          service_account: ${{ vars.GCP_CUENTA_SERVICIO }}
+
       - name: Desplegar en Cloud Run
         run: |
+          IMAGEN="${REGION}-docker.pkg.dev/${{ vars.GCP_PROYECTO }}/${REPOSITORIO}/${SERVICIO}:${GITHUB_SHA}"
+          echo "IMAGEN=${IMAGEN}" >> "$GITHUB_ENV"
           # Entrar con Google: solo si existe la variable del repo GOOGLE_CLIENT_ID (el secreto vive en Secret Manager)
           SECRETOS="SECRET_KEY=SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest,RESEND_API_KEY=RESEND_API_KEY:latest"
           VARS="BASE_URL=https://ahilallevas.com,ADMIN_CORREO=${{ vars.ADMIN_CORREO }}"

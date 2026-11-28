@@ -31,7 +31,7 @@ git tag -f stable <sha> && git push -f origin stable
 
 ## Despliegue y producción
 
-- Deploy de la web: push a `main` y `gh workflow run web.yml` (pruebas → imagen → Cloud Run, Workload Identity Federation); seguirlo con `gh run watch`.
+- Deploy de la web: push a `main` y `gh workflow run web.yml` (pruebas e imagen a la vez → Cloud Run, Workload Identity Federation); seguirlo con `gh run watch`.
 - Admin en producción: Cloud Run Job (`gcloud run jobs execute ahi-cli --args=...`), nunca con la cadena de la base en la compu.
   Única excepción (decidida el 2026-11-27, mientras solo exista producción): `./run_web.sh`, que la tiene solo en memoria y
   nunca la imprime ni la guarda. Claude, al probar ahí, solo mira; para guardar algo usa únicamente la cuenta de Pedro y

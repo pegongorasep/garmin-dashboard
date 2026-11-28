@@ -434,9 +434,15 @@ def test_dockerfile_copia_solo_lo_necesario():
     planas = {x for c in copias for x in c}
     assert not planas & {"data/", ".env", "config.yaml", "plan/plan.json", "plan/inbody.json", "plan/", "."}
     assert {"dashboard/", "site/", "web/", "scripts/"} <= planas
+    # la construcción misma falla si algo personal entró (así se revisa en cada deploy)
+    texto = (ROOT / "Dockerfile").read_text()
+    guarda = texto[texto.index("RUN for f in "):texto.index("; do")]
+    assert {".env", "config.yaml", "data", "plan/plan.json", "plan/inbody.json", "site/data.json"} <= set(guarda.split())
+    assert texto.index("RUN for f in ") > max(texto.rfind("\nCOPY "), 0) and "exit 1" in texto
 
 
 @pytest.mark.skipif(not __import__("shutil").which("docker"), reason="no hay docker")
+@pytest.mark.skipif(bool(__import__("os").environ.get("GITHUB_ACTIONS")), reason="en CI lo revisa el Dockerfile al construir")
 def test_imagen_no_contiene_archivos_personales():
     import subprocess
     try:
