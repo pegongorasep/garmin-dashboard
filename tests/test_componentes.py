@@ -124,7 +124,7 @@ def test_catalogo_no_es_estatico_y_los_nuevos_si():
 
 def test_orden_de_scripts_del_sitio():
     html = (ROOT / "site" / "index.html").read_text()
-    assert re.findall(r'<script src="([^"]+)"', html) == ["base.js", "iconos.js", "charts.js", "componentes.js", "app.js", "vistas.js"]
+    assert re.findall(r'<script src="([^"]+)"', html) == ["base.js", "iconos.js", "charts.js", "componentes.js", "app.js", "vista_comun.js", "vista_plan.js", "vista_progreso.js", "vista_grupo.js", "vistas.js"]
 
 
 def test_filas_de_botones_y_textos_largos_no_desbordan():
@@ -136,7 +136,7 @@ def test_filas_de_botones_y_textos_largos_no_desbordan():
 def _clases_usadas():
     """Clases que arman app.js, vistas.js, componentes.js y charts.js (class: "a b", plantillas con ${}, classList.add) y index.html."""
     usadas = set()
-    for nombre in ("app.js", "vistas.js", "componentes.js", "charts.js", "iconos.js"):
+    for nombre in ("app.js", "vista_comun.js", "vista_plan.js", "vista_progreso.js", "vista_grupo.js", "vistas.js", "componentes.js", "charts.js", "iconos.js"):
         texto = (ROOT / "site" / nombre).read_text()
         for m in re.finditer(r'class(?:Name)?\s*[:=]\s*("([^"]*)"|`([^`]*)`)', texto):
             crudo = m.group(2) if m.group(2) is not None else m.group(3)
@@ -157,7 +157,7 @@ def test_toda_clase_usada_por_el_sitio_tiene_regla():
 
 
 def test_styles_css_no_tiene_reglas_muertas():
-    codigo = "".join((ROOT / "site" / n).read_text() for n in ("app.js", "vistas.js", "componentes.js", "charts.js", "iconos.js", "index.html"))
+    codigo = "".join((ROOT / "site" / n).read_text() for n in ("app.js", "vista_comun.js", "vista_plan.js", "vista_progreso.js", "vista_grupo.js", "vistas.js", "componentes.js", "charts.js", "iconos.js", "index.html"))
     dinamicas = {"g0", "g1", "g2", "g3", "g4", "g5", "z1", "z2", "z3", "z4", "z5", "s1", "s2", "walk", "azul", "aqua", "violeta", "amarillo"}   # se arman con ${…}
     propias = _clases_de((ROOT / "site" / "styles.css").read_text())
     muertas = {c for c in propias if c not in dinamicas and not re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", codigo)}

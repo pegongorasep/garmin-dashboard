@@ -1,9 +1,9 @@
 /* Service worker mínimo: datos, textos y código primero de la red y, sin red, la última copia; fuentes e íconos, primero la copia.
    Nunca toca POST ni /api, /oauth, /mcp, /admin, ni las páginas (llevan datos de la sesión). Sube VERSION con cada cambio del
    sitio: así la app que ya estaba abierta ofrece actualizar. */
-const VERSION = "v83";
+const VERSION = "v84";
 const ESTATICOS = ["/tokens.css", "/componentes.css", "/styles.css", "/base.js", "/app.js", "/charts.js", "/iconos.js",
-  "/componentes.js", "/actualizar.js", "/vistas.js", "/franja.js", "/dibujo-github.svg", "/i18n/es.json", "/i18n/en.json", "/fuentes/Lexend-latin.woff2", "/icono-192.png", "/icono-512.png"];
+  "/componentes.js", "/actualizar.js", "/vista_comun.js", "/vista_plan.js", "/vista_progreso.js", "/vista_grupo.js", "/vistas.js", "/franja.js", "/dibujo-github.svg", "/i18n/es.json", "/i18n/en.json", "/fuentes/Lexend-latin.woff2", "/icono-192.png", "/icono-512.png"];
 const PROHIBIDO = /^\/(api|oauth|mcp|admin)(\/|$)/;
 const FIJOS = /^\/(fuentes\/|icono-)/;
 

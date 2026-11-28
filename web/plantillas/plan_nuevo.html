@@ -110,5 +110,5 @@
 <script type="application/json" id="pn-datos">{{ prev|tojson }}</script>
 {% endif %}
 {% endblock %}
-{% block scripts %}{% if paso == 3 %}{% for f in ("base", "iconos", "charts", "componentes", "app", "vistas") %}<script src="/{{ f }}.js"></script>
+{% block scripts %}{% if paso == 3 %}{% for f in ("base", "iconos", "charts", "componentes", "app", "vista_comun", "vista_plan", "vista_progreso", "vista_grupo", "vistas") %}<script src="/{{ f }}.js"></script>
 {% endfor %}<script src="/estaticos/plan_nuevo.js"></script>{% endif %}{% endblock %}

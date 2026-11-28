@@ -105,7 +105,7 @@ def test_xss_se_guarda_como_texto_y_sale_igual(web_ctx, monkeypatch):
     r = a.get("/api/juntos/comentarios", params={"dueno": ua, "clave": clave})
     assert r.headers["content-type"].startswith("application/json")
     assert r.json()["comentarios"][0]["texto"] == malo        # texto plano: el JS lo pinta con textContent, nunca innerHTML
-    js = (ROOT / "site" / "vistas.js").read_text()
+    js = (ROOT / "site" / "vista_grupo.js").read_text()
     tramo = js[js.index("function feedComentarios"):js.index("function feedFila")]
     assert "innerHTML" not in tramo and "insertAdjacentHTML" not in tramo
 

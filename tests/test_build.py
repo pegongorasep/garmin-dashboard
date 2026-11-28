@@ -1130,7 +1130,7 @@ def test_perfil_sin_actividades_km_del_nivel_y_el_js_pinta_km_est():
     assert v["plan_km"] == 5.0 and v["sessions"][0]["km_est"] == 1.5   # 45/9 y 15/9 (a 0.5): nada del ritmo real
     assert semanal.plan_visible(plan, True)["semanas"][0]["plan_km"] == 3.5
     from pathlib import Path
-    js = (Path(__file__).resolve().parent.parent / "site" / "vistas.js").read_text()
+    js = "".join((Path(__file__).resolve().parent.parent / "site" / n).read_text() for n in ("vista_plan.js", "vista_grupo.js"))
     assert "km_est" in js and "pintarSesiones();" in js and "tarjetaPlan(p.plan" in js   # el perfil usa la tarjeta compartida y la pinta al nacer
 
 

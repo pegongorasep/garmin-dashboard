@@ -28,7 +28,7 @@ SITE = ROOT / "site"
 # Archivos del sitio que se sirven tal cual. `data.json` NO está aquí a propósito: sale de /data.json, por usuario.
 # `catalogo.html` tampoco está aquí: solo sale por /diseno, para el admin.
 ESTATICOS_SITE = {"base.js": "text/javascript", "app.js": "text/javascript", "charts.js": "text/javascript",
-                  "iconos.js": "text/javascript", "componentes.js": "text/javascript", "actualizar.js": "text/javascript", "franja.js": "text/javascript", "vistas.js": "text/javascript",
+                  "iconos.js": "text/javascript", "componentes.js": "text/javascript", "actualizar.js": "text/javascript", "franja.js": "text/javascript", "vista_comun.js": "text/javascript", "vista_plan.js": "text/javascript", "vista_progreso.js": "text/javascript", "vista_grupo.js": "text/javascript", "vistas.js": "text/javascript",
                   "styles.css": "text/css", "tokens.css": "text/css", "componentes.css": "text/css",
                   "sw.js": "text/javascript", "manifest.webmanifest": "application/manifest+json",
                   "icono-192.png": "image/png", "icono-512.png": "image/png", "icono-maskable-512.png": "image/png",

@@ -15,7 +15,7 @@ Garmin Connect
        -> scripts/subir.py   (arma el paquete con dashboard/paquete.py, lista blanca por campo)
   -> web: POST /api/tubo/* (token OIDC de GitHub Actions)  [web/tubo.py -> web/datos.py -> tabla datos_garmin]
   -> web/calculo.py (config + plan + datos de la base) -> dashboard/build.py -> data.json (lista blanca)
-  -> GET /data.json -> site/*.js lo pinta (app.js, vistas.js, componentes.js, charts.js)
+  -> GET /data.json -> site/*.js lo pinta (app.js, vista_*.js, vistas.js, componentes.js, charts.js)
 ```
 
 Local de Pedro: `garmin_connect.py` -> `dashboard/build.py` -> `site/data.json` -> `run_local.sh` lo sirve.
@@ -115,7 +115,7 @@ Páginas varias
 ### `site/` (el JS solo pinta; sin librerías)
 - `index.html`: página del dashboard. `catalogo.html`: catálogo del sistema de diseño (en la web, `/diseno`, solo admin).
 - `base.js`: utilidades compartidas, `T("sitio.clave")` de i18n. `app.js`: Hoy, ayuda, grupo y la navegación.
-- `vistas.js`: vistas Plan y Progreso (Corridas, Cuerpo) y el arranque. `charts.js`: gráficas SVG a mano.
+- `vista_comun.js` (tarjeta con vistas, unidad min/km), `vista_plan.js`, `vista_progreso.js` (Corridas, Cuerpo), `vista_grupo.js` (Juntos) y `vistas.js` (ayuda, tema, rutas, menú y arranque; va al final). Scripts clásicos con globales: el orden de carga es el de `index.html`, `plan_nuevo.html` y `sw.js`. `charts.js`: gráficas SVG a mano.
 - `componentes.js` (objeto `DS`) y `componentes.css`: componentes del sistema de diseño. `styles.css`: layout propio de la app.
 - `franja.js`: franja de sincronización (`window.Franja`). `actualizar.js`: registra el service worker y ofrece la versión nueva.
 - `sw.js`: service worker (`VERSION`, lista `ESTATICOS`). `manifest.webmanifest` e íconos PNG: la PWA.

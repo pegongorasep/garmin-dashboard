@@ -127,7 +127,7 @@ def test_e7_actividad_manual_lleva_marca_y_conserva_reacciones_sin_nota(web_ctx,
     item = ids_feed(b)["items"][0]
     assert item["manual"] is True and secreta not in json.dumps(item)
     assert reaccionar(b, ua, item["clave"]).status_code == 200
-    js = (ROOT / "site" / "vistas.js").read_text(encoding="utf-8")
+    js = (ROOT / "site" / "vista_grupo.js").read_text(encoding="utf-8")
     assert 'it.manual ? T("sitio.dia.a_mano")' in js
 
 
