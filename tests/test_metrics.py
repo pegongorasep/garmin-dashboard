@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from dashboard import metrics as m
+from dashboard.metricas import corridas
 
 CFG = {
     "max_hr": 190, "max_hr_floor": 183, "max_hr_review_above": 200,
@@ -989,7 +990,7 @@ def test_max_hr_prefiere_banda_y_aviso_por_pulso():
 
 
 def test_deriva_solo_con_banda(monkeypatch):
-    monkeypatch.setattr(m, "deriva_de", lambda *_: {"pct": 3.0, "ok": True})
+    monkeypatch.setattr(corridas, "deriva_de", lambda *_: {"pct": 3.0, "ok": True})
     a = act(10, "2026-10-27", "running", dur=2700, distance=5000)
     for pulso, hay in (("banda", True), ("muñeca", False)):
         det = {str(m.id_de(a)): {"pulso": pulso}}

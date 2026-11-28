@@ -34,7 +34,15 @@ Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan im
 
 ### `dashboard/` (motor; funciones puras salvo donde se indica)
 - `build.py`: convierte data/ + plan + config en `data.json` (lista blanca); también escribe `site/i18n/*.json`.
-- `metrics.py`: zonas, carga, semáforo y plan; sin I/O ni reloj.
+- `metrics.py`: fachada que re-exporta `metricas/`; sin I/O ni reloj. El código nuevo importa de `dashboard.metricas.*`.
+  - `metricas/comun.py`: clasificar actividades, `day_of`, `id_de`, `ZONAS`.
+  - `metricas/zonas.py`: zonas de FC, perfil Garmin, minutos por zona, FC máxima.
+  - `metricas/carga.py`: esfuerzo, RPE, carga de sesión/semana, distribución.
+  - `metricas/recuperacion.py`: FC en reposo, HRV, sueño, semáforo, motivos, ayer duro.
+  - `metricas/semana.py`: secuencia de semanas, asignar sesiones, tarjeta de hoy, plan vs real.
+  - `metricas/corridas.py`: detalle, run/walk, ritmos, deriva, progreso, encadenadas.
+  - `metricas/carreras.py`: pruebas, carreras, mejores marcas.
+  - `metricas/inbody.py`: composición y hoja InBody.
 - `semanal.py`: cifras de la semana y del plan (cumplimiento, ritmo, volumen, rachas) para Hoy, Plan y Progreso.
 - `ajustes.py`: lee `config.yaml` + `defaults.yaml` y devuelve el dict plano (`cargar_config`, `normalizar_config`).
 - `defaults.yaml`: valores por defecto del motor (umbrales, categorías, `sin_plan`).
