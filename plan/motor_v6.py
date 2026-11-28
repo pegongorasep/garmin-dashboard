@@ -122,6 +122,21 @@ def _meta(e: dict) -> dict:
     return {"tipo": tipo, "km": m.get("km") or m.get("distancia_km"), "fecha": m.get("fecha"), "semanas_hasta": m.get("semanas_hasta")}
 
 
+def _calidad_desde(v):
+    """`calidad_desde`: "auto" (falta: la regla de desbloqueo de siempre), None (la persona no quiere calidad) o la semana (>= 2) donde empieza."""
+    if v == "auto":
+        return "auto"
+    if v is None or v is False:
+        return None
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        raise ValueError("calidad_desde debe ser una semana (2 o más) o None") from None
+    if n < 2:
+        raise ValueError("la calidad no puede empezar antes de la semana 2")
+    return n
+
+
 def normalizar_entrada(entrada: dict) -> dict:
     """Entrada con todos sus valores por defecto (una clave que falte nunca rompe) y validada."""
     u, e = UMBRALES, dict(entrada)
@@ -143,6 +158,7 @@ def normalizar_entrada(entrada: dict) -> dict:
         "meta": meta, "objetivo": objetivo, "inicio": inicio, "evidencia": ev, "permitir_mas": bool(e.get("permitir_mas", False)),
         "zonas": e.get("zonas"), "edad": int(e.get("edad") or 35), "semanas": int(e.get("semanas") or u["semanas_defecto"]),
         "inicio_minutos": e.get("inicio_minutos"),
+        "calidad_desde": _calidad_desde(e.get("calidad_desde", "auto")),
     }
 
 
@@ -348,13 +364,13 @@ def sesion_calidad(tipo: str, minutos: int, trabajo: int, id_: str = "calidad"):
     return s
 
 
-def calidad_de_la_semana(n: int, ciclo: int, e: dict, minutos: int, semana_total: int, intensos_altos: bool):
+def calidad_de_la_semana(n: int, ciclo: int, e: dict, minutos: int, semana_total: int, intensos_altos: bool, n0: int = 1):
     """Elige la calidad de la semana n (§3.4): escalera según `objetivo`, un peldaño nuevo por bloque; con 3+ días intensos baja un renglón;
     el trabajo en Z3+ no pasa del tope del tipo ni del nivel. Si el tipo no cabe en la sesión baja al anterior; lo último son aceleraciones
-    (Z2, sin Z3). Devuelve (tipo, sesión o None); None = aceleraciones."""
+    (Z2, sin Z3). `n0` = semana donde arrancó la escalera (1 sin `calidad_desde`). Devuelve (tipo, sesión o None); None = aceleraciones."""
     u = UMBRALES
     escalera = u["calidad_escalera"][e["objetivo"]]
-    etapa = u["calidad_etapa_inicial"][e["nivel"]] + (n - 1) // ciclo
+    etapa = u["calidad_etapa_inicial"][e["nivel"]] + (n - n0) // ciclo
     if intensos_altos and u["calidad_menos_un_renglon"]:
         etapa -= 1
     etapa = min(max(etapa, 0), len(escalera) - 1)
@@ -513,19 +529,28 @@ def porques_de(e: dict, inicio: int, ciclo: int, calidad: bool, carrera: dict | 
 def generar_v6(entrada: dict) -> dict:
     """Plan v6. `entrada`: nivel (empezando|base|corredor), dias (2–5), dias_intensos (lunes = 0), meta (None|"ninguna"|"base"|"velocidad"|
     {"km", "fecha" | "semanas_hasta"}), objetivo (base|velocidad|carrera; define la calidad), inicio (lunes ISO), evidencia (la de nivel.py),
-    inicio_minutos (semana 1), permitir_mas, zonas (no se usa: las zonas las pone el sitio con las de Garmin), edad, semanas (sin carrera)."""
+    inicio_minutos (semana 1), calidad_desde (semana >= 2 donde empieza la calidad, o None = sin calidad; si falta rige `calidad_desbloqueada`), permitir_mas, zonas (no se usa: las zonas las pone el sitio con las de Garmin), edad, semanas (sin carrera)."""
     e = normalizar_entrada(entrada)
     u, ev, nivel = UMBRALES, e["evidencia"], e["nivel"]
     hasta = _semanas_hasta_carrera(e)
     carrera = _carrera(e, hasta)
     n_semanas = hasta if carrera else e["semanas"]
-    base = calidad_desbloqueada(nivel, ev)            # ¿tiene base para la calidad?
-    calidad = base and not ev.get("desentrenamiento")   # y no viene de una pausa
+    cd = e["calidad_desde"]
+    if cd == "auto":
+        base = calidad_desbloqueada(nivel, ev)            # ¿tiene base para la calidad?
+        calidad = base and not ev.get("desentrenamiento")   # y no viene de una pausa
+        n0 = 1
+    else:   # la persona decide: Empezando nunca; Base/Corredor desde la semana elegida (la semana 1 nunca), ni siquiera tras una pausa
+        base = calidad = cd is not None and nivel != "empezando"
+        n0 = None
     dias, dias_aviso = dias_efectivos(nivel, e["dias"], base)
     ciclo = ciclo_descarga(e["edad"], e["dias_intensos"])
     intensos_altos = len(e["dias_intensos"]) >= u["intensos_dias"]
     taper = u["taper"][carrera["km"]] if carrera else []
     tipos = esqueleto(n_semanas, ciclo, len(taper))
+    if n0 is None:   # primera semana de carga desde `calidad_desde`; si no hay ninguna, no hay calidad
+        n0 = next((k for k, t in enumerate(tipos, 1) if k >= (cd or 2) and t == "carga"), None) if calidad else None
+        calidad = n0 is not None
     pct_sube = u["progresion_mas_pct"] if e["permitir_mas"] else u["progresion_pct"]
     pct_descarga = u["descarga_pct_mayor"] if ciclo == u["ciclo_mayor"] else u["descarga_pct"]
     prom = ev.get("minutos_sem_prom")
@@ -537,10 +562,12 @@ def generar_v6(entrada: dict) -> dict:
     e0 = escalon_de_entrada(float(ev.get("trote_continuo_min", 0))) if nivel == "empezando" else None
     hist_max = float(ev.get("sesion_max_30d", 0))
 
-    semanas, maximos, totales, ultima_carga = [], [], [], inicio
+    semanas, maximos, totales, ultima_carga, tope_alcanzado = [], [], [], inicio, False
     for n, kind in enumerate(tipos, 1):
         if kind == "carga":
             T = inicio if n == 1 else volumen_carga(ultima_carga, tipos[n - 2] == "descarga", tope_vol, pct_sube)
+            if n > 1 and tipos[n - 2] != "descarga" and int(ultima_carga * (1 + pct_sube)) > tope_vol:
+                tope_alcanzado = True   # esta semana quedó limitada por el máximo del nivel
         elif kind == "descarga":
             T = volumen_descarga(ultima_carga, pct_descarga)
         else:   # taper / carrera: fracción del pico (la semana más alta hasta 2 semanas antes de la carrera, como mide el simulador)
@@ -556,7 +583,7 @@ def generar_v6(entrada: dict) -> dict:
             d = min(dias - (kind == "carrera"), max(d, math.ceil(T / ts)))
         minutos = _carrera_semana(T, d, ts) if kind == "carrera" else repartir(T, d, ts, tope_lg)
         esc = u["escalera"][escalon_en(n, tipos, e0, dias)] if nivel == "empezando" else None
-        sesiones = _armar_semana(n, kind, minutos, esc, e, calidad, ciclo, intensos_altos, carrera, T)
+        sesiones = _armar_semana(n, kind, minutos, esc, e, calidad, ciclo, intensos_altos, carrera, T, n0 or 1)
         w = {"n": n, "block": (n - 1) // u["ciclo"] + 1, "kind": "carga" if kind == "carga" else "descarga", "focus": "", "sessions": sesiones}
         if kind in ("carrera", "taper"):
             w["evento"] = "carrera" if kind == "carrera" else "descarga_carrera"
@@ -568,7 +595,7 @@ def generar_v6(entrada: dict) -> dict:
         if kind == "carga":
             ultima_carga = totales[-1]
     meta = {"motor": "v6", "nivel": nivel, "dias": dias, "objetivo": e["objetivo"], "ciclo": ciclo, "calidad": calidad,
-            "semanas": n_semanas, "inicio_minutos": inicio, "avisos": avisos_de(e, base, n_semanas, carrera, dias_aviso),
+            "tope_alcanzado": tope_alcanzado, "semanas": n_semanas, "inicio_minutos": inicio, "avisos": avisos_de(e, base, n_semanas, carrera, dias_aviso),
             "porque": porques_de(e, inicio, ciclo, calidad, carrera, n_semanas),
             "entrada": e}   # la entrada ya normalizada: con ella `con_carrera` rehace la cola del plan al agregar o quitar una carrera
     if carrera:
@@ -584,16 +611,16 @@ def _carrera_semana(T: int, d: int, ts: int | None) -> list:
     return [base + (1 if i < resto else 0) for i in range(d)]
 
 
-def _armar_semana(n, kind, minutos, escalon, e, calidad, ciclo, intensos_altos, carrera, T) -> list:
+def _armar_semana(n, kind, minutos, escalon, e, calidad, ciclo, intensos_altos, carrera, T, n0=1) -> list:
     """Sesiones de la semana: fáciles, la calidad (solo en carga, desde la semana 2, con 3+ días) y la larga. `minutos` = [larga, fáciles…]
     (la semana de la carrera no lleva larga). La calidad ocupa el lugar de la segunda fácil; si toca la etapa de aceleraciones, esa fácil lleva la nota."""
     racing = kind == "carrera"
     larga = None if racing else minutos[0]
     faciles = list(minutos if racing else minutos[1:])
-    pos_cal = min(1, len(faciles) - 1) if (kind == "carga" and calidad and n > 1 and len(minutos) >= 3) else None
+    pos_cal = min(1, len(faciles) - 1) if (kind == "carga" and calidad and n > 1 and n >= n0 and len(minutos) >= 3) else None
     cal = None
     if pos_cal is not None:
-        _, cal = calidad_de_la_semana(n, ciclo, e, faciles[pos_cal], T, intensos_altos)   # None = aceleraciones
+        _, cal = calidad_de_la_semana(n, ciclo, e, faciles[pos_cal], T, intensos_altos, n0)   # None = aceleraciones
     sesiones, roles, letras, z2 = [], [], iter(LETRAS), 0
     for i, m in enumerate(faciles):
         if cal is not None and i == pos_cal:
@@ -635,7 +662,7 @@ def con_carrera(plan: dict, desde: int, carrera: dict | None, semanas: int | Non
     if desde > len(nuevo["weeks"]):
         raise ValueError("la carrera queda antes de la semana en curso")
     nuevo["weeks"] = [w for w in plan["weeks"] if w["n"] < desde] + [w for w in nuevo["weeks"] if w["n"] >= desde]
-    nuevo["meta"].update({k: meta[k] for k in ("nivel_calculado", "dolor", "tiempo_carrera") if k in meta})
+    nuevo["meta"].update({k: meta[k] for k in ("nivel_calculado", "dolor", "tiempo_carrera", "ajuste_pct") if k in meta})
     try:
         verificar(nuevo)
     except AssertionError as ex:

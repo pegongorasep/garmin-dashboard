@@ -2,10 +2,10 @@
 {% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso, tarjeta, pasos as barra_pasos %}
 {% block titulo %}{{ t("pn.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
-{% macro ocultos(v) %}
+{% macro ocultos(v, salvo="") %}
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="nivel" value="{{ nivel }}">
-  {% for k, val in v.items() if k != "nivel" %}{% if val is string %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% else %}{% for x in val %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% endif %}{% endfor %}
+  {% for k, val in v.items() if k != "nivel" and k != salvo %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
 {% endmacro %}
 {% block contenido %}
 {% include "_nav.html" %}
@@ -21,16 +21,11 @@
 <form class="pila" method="post" action="{{ pref }}/plan/nuevo/preguntas">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   {% if preset %}<input type="hidden" name="carrera" value="1"><input type="hidden" name="fecha" value="{{ preset.fecha }}">{% if preset.km %}<input type="hidden" name="km" value="{{ preset.km }}">{% endif %}{% endif %}
-  {% if nivel_previo is defined %}{% for k, val in v.items() if k not in ("nivel", "frecuencia_actual", "corrida_larga") %}{% if val is string %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% else %}{% for x in val %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% endif %}{% endfor %}{% endif %}
-  {% if sin_garmin %}
-    {{ campo(t("pn.frecuencia_actual"), "frecuencia_actual", tipo="number", valor=v.frecuencia_actual, requerido=True, extra={"min": "1", "max": "7"}) }}
-    {{ campo(t("pn.corrida_larga"), "corrida_larga", tipo="number", valor=v.corrida_larga, requerido=True, extra={"min": "1", "max": "1440"}) }}
-  {% endif %}
+  {% if nivel_previo is defined %}{% for k, val in v.items() if k != "nivel" %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}{% endif %}
   <h2 class="pag-h">{{ t("pn.nivel_t") }}</h2>
-  <p class="pag-s">{{ t("pn.nivel_a") }}</p>
+  <p class="pag-s">{{ t("pn.nivel_a_sin" if sin_garmin else "pn.nivel_a") }}</p>
   {% call opciones(t("pn.nivel_t")) %}
-    {% if sin_garmin %}{{ opcion("nivel", t("pn.automatico"), valor="automatico", tipo="radio", marcado=(nivel_previo is not defined)) }}{% endif %}
-    {% for n in niveles %}{{ opcion("nivel", t("pn.nivel." ~ n), valor=n, nota=t("pn.nivel_x." ~ n), tipo="radio", marcado=((not sin_garmin or nivel_previo is defined) and n == nivel)) }}{% endfor %}
+    {% for n in niveles %}{{ opcion("nivel", t("pn.nivel." ~ n), valor=n, nota=t(("pn.nivel_s." if sin_garmin else "pn.nivel_x.") ~ n), tipo="radio", marcado=(n == nivel)) }}{% endfor %}
   {% endcall %}
   {% if not sin_garmin %}<p class="pag-s pn-reserva">{{ t("pn.nivel_calculado", nivel=t("pn.nivel." ~ calculado.nivel)) }}</p>{% endif %}
   <div class="acciones">{{ boton(t("pn.continuar"), tipo="submit") }}</div>
@@ -41,22 +36,22 @@
 <form class="pila" method="post" action="{{ pref }}/plan/nuevo/vista">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="nivel" value="{{ nivel }}">
-  <input type="hidden" name="frecuencia_actual" value="{{ v.frecuencia_actual }}">
-  <input type="hidden" name="corrida_larga" value="{{ v.corrida_larga }}">
   <h2 class="pag-h">{{ t("pn.q_t") }}</h2>
   <p class="pag-s">{{ t("pn.q_nivel", nivel=t("pn.nivel." ~ nivel)) }} <button class="boton texto chico" type="submit" formaction="{{ pref }}/plan/nuevo/nivel" formnovalidate>{{ t("pn.cambiar_nivel") }}</button></p>
   {% for a in avisos_nivel %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
   {% if "dias" in campos %}{{ seleccion(t("pn.dias"), "dias", [("2", "2"), ("3", "3"), ("4", "4"), ("5", "5")], v.dias, ayuda=t("pn.dias_a"), error=errores.get("dias")) }}{% endif %}
-  {% if "pierna" in campos %}{% call opciones(t("pn.pierna"), t("pn.pierna_n")) %}
-    {% for clave, nombre in dias %}{{ opcion("pierna", t('dia.' ~ clave), valor=clave, marcado=clave in v.pierna) }}{% endfor %}
-  {% endcall %}{% endif %}
-  {% if "dolor" in campos %}{% call opciones(t("pn.dolor")) %}
-    {{ opcion("dolor", t("pn.dolor_no"), valor="no", tipo="radio", marcado=v.dolor != "si") }}
-    {{ opcion("dolor", t("pn.dolor_si"), valor="si", tipo="radio", marcado=v.dolor == "si") }}
-  {% endcall %}{% endif %}
+  {% if "intensos" in campos %}{{ seleccion(t("pn.intensos"), "intensos", [("0", "0"), ("1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5")], v.intensos, ayuda=t("pn.intensos_a"), error=errores.get("intensos")) }}{% endif %}
+  {% if "frecuencia_actual" in campos %}
+    {{ campo(t("pn.frecuencia_actual"), "frecuencia_actual", tipo="number", valor=v.frecuencia_actual, requerido=True, error=errores.get("frecuencia_actual"), extra={"min": "1", "max": "7"}) }}
+    {{ campo(t("pn.corrida_larga"), "corrida_larga", tipo="number", valor=v.corrida_larga, requerido=True, error=errores.get("corrida_larga"), extra={"min": "1", "max": "1440"}) }}
+  {% endif %}
   {% if "objetivo" in campos %}{% call opciones(t("pn.objetivo")) %}
     {% for o in objetivos %}{{ opcion("objetivo", t("pn.o_" ~ o), valor=o, tipo="radio", marcado=(o == v.objetivo)) }}{% endfor %}
   {% endcall %}{% endif %}
+  {% if "calidad" in campos %}
+    {% set sem_op = [("no", t("pn.calidad_no"))] %}{% for n in calidad_semanas %}{% set _ = sem_op.append((n|string, t("pn.calidad_sem", n=n))) %}{% endfor %}
+    {{ seleccion(t("pn.calidad"), "calidad_desde", sem_op, v.calidad_desde, ayuda=t("pn.calidad_a"), error=errores.get("calidad_desde")) }}
+  {% endif %}
   {% if "carrera" in campos %}
     <h3 class="pag-h">{{ t("pn.carrera_t") }}</h3>
     <p class="pag-s">{{ t("pn.carrera_a") }}</p>
@@ -78,9 +73,17 @@
 {% set total = prev.semanas|length %}
 <h2 class="pag-h">{{ t("pn.prev_t") }}</h2>
 <p class="pag-s">{{ t("pn.prev_a", n=total, inicio=v.inicio) }}</p>
-{% if v.dolor == "si" %}{% call aviso("warn") %}{{ t("pn.prev_dolor") }}{% endcall %}{% endif %}
 {% for a in avisos_nivel %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
 {% for a in prev.avisos %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
+{% if prev.volumen %}{% set vol = prev.volumen %}
+<form class="pn-volumen" method="post" action="{{ pref }}/plan/nuevo/vista">
+  {{ ocultos(v, "ajuste_pct") }}
+  <span class="pn-volumen-t">{{ vol.texto }}</span>
+  {{ boton(t("pn.ajuste_menos"), "sec", chico=True, tipo="submit", deshabilitado=vol.menos is none, nombre="ajuste_pct", valor=vol.menos) }}
+  {{ boton(t("pn.ajuste_mas"), "sec", chico=True, tipo="submit", deshabilitado=vol.mas is none, nombre="ajuste_pct", valor=vol.mas) }}
+</form>
+<div class="pn-ranura">{% for a in vol.avisos %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}</div>
+{% endif %}
 {% call tarjeta(t("pn.barras_t")) %}
   <ol class="pn-barras">
     {% for s in prev.semanas %}<li class="pn-barra {{ s.kind }}">

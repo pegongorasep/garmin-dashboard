@@ -32,10 +32,10 @@ def test_ventana_y_volumen_manual():
 def test_formulario_respuestas_nivel_y_espera(web_ctx):
     uid, cl = nueva(web_ctx)
     r = cl.get('/plan/nuevo')
-    valores = {"csrf": csrf_de(r.text), "nivel": "automatico", "frecuencia_actual": "3", "corrida_larga": "31"}
+    valores = {"csrf": csrf_de(r.text), "nivel": "base", "frecuencia_actual": "3", "corrida_larga": "31"}
     r = cl.post('/plan/nuevo/preguntas', data=valores)
     assert r.status_code == 200 and 'name="nivel" value="base"' in r.text
-    assert 'name="corrida_larga" value="31"' in r.text
+    assert 'name="corrida_larga"' in r.text and 'name="frecuencia_actual"' in r.text
     regreso = cl.post('/plan/nuevo/nivel', data={**respuestas(dias='4'), **valores, 'nivel': 'base'})
     assert 'name="corrida_larga" value="31"' in regreso.text
     assert 'name="dias" value="4"' in regreso.text

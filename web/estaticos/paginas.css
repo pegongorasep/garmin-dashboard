@@ -90,6 +90,9 @@ details.sim-sem.falla > summary { background: var(--bad-bg); }
 .pn-min { overflow-wrap: anywhere; }
 .pn-lista { margin: 0; }
 .pn-reserva { min-height: 1lh; }
+.pn-volumen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
+.pn-volumen-t { flex: 1 1 14em; }
+.pn-ranura { min-height: 6lh; }
 @media (max-width: 640px) { .pn-barra { grid-template-columns: 3.5em minmax(0, 1fr); } .pn-min { grid-column: 2; } }
 
 /* Guía nueva (GitHub App): estado de la comprobación con altura reservada */

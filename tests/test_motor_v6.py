@@ -364,3 +364,79 @@ def test_regresa_tras_pausa_arranca_del_promedio_previo_a_la_pausa():
     nv = sim.persona_por_id("regresa_tras_pausa")["nivel"]
     assert nv["evidencia"]["desentrenamiento"] == "leve" and nv["evidencia"]["minutos_sem_pre_pausa"] >= 100
     assert 70 <= nv["inicio_minutos"] <= 80                                  # ~75 % del previo (antes 20' por promediar los ceros)
+
+
+# --- calidad_desde: la persona decide cuándo empieza la calidad ---
+
+def semanas_calidad(plan):
+    """Semanas con calidad: una sesión de calidad o la nota de aceleraciones (etapa 1)."""
+    return [w["n"] for w in plan["weeks"] if any(s["tipo"] == "calidad" or s.get("nota") == v6.NOTA_ACELERACIONES for s in w["sessions"])]
+
+
+def tipo_en(plan, n):
+    return next((s["calidad_tipo"] for s in plan["weeks"][n - 1]["sessions"] if s["tipo"] == "calidad"), None)
+
+
+def test_calidad_desde_ausente_es_igual_que_antes():
+    """Una entrada vieja (sin calidad_desde) se comporta como siempre: regla de desbloqueo."""
+    e = entrada(semanas=12)
+    a, b = v6.generar_v6(e), v6.generar_v6({**e, "calidad_desde": "auto"})
+    assert a["weeks"] == b["weeks"] and a["meta"]["calidad"] is True
+    sin = v6.generar_v6(entrada(semanas=12, evidencia={**EV_BASE, "semanas_consistentes": 1}))
+    assert sin["meta"]["calidad"] is False and semanas_calidad(sin) == []
+
+
+def test_calidad_desde_none_no_hay_calidad_aunque_este_desbloqueada():
+    p = v6.generar_v6(entrada(semanas=12, calidad_desde=None))
+    assert p["meta"]["calidad"] is False and semanas_calidad(p) == []
+
+
+def test_calidad_desde_empieza_en_la_semana_elegida_nunca_en_la_1():
+    with pytest.raises(ValueError):
+        v6.generar_v6(entrada(calidad_desde=1))
+    ev = {**EV_BASE, "semanas_consistentes": 0, "trote_continuo_min": 10}   # sin desbloqueo automático: manda la persona
+    p = v6.generar_v6(entrada(semanas=12, calidad_desde=3, evidencia=ev, dias=3))
+    sem = semanas_calidad(p)
+    assert p["meta"]["calidad"] is True and sem and sem[0] == 3 and all(p["weeks"][n - 1]["kind"] == "carga" for n in sem)
+
+
+def test_calidad_desde_en_semana_de_descarga_empieza_en_la_siguiente_de_carga():
+    p = v6.generar_v6(entrada(semanas=12, calidad_desde=4, dias=3))   # ciclo 4: la semana 4 es descarga
+    assert p["weeks"][3]["kind"] == "descarga"
+    assert semanas_calidad(p)[0] == 5
+
+
+def test_escalera_de_calidad_cuenta_desde_la_semana_de_inicio():
+    ev = {**EV_BASE, "trote_continuo_min": 40}
+    cor = v6.generar_v6(entrada(nivel="corredor", semanas=24, calidad_desde=6, dias=4, inicio_minutos=120, evidencia=ev))
+    sem = semanas_calidad(cor)
+    assert sem[0] == 6 and tipo_en(cor, 6) == "fartlek"   # Corredor arranca en fartlek, no en la etapa que tocaría por la semana 6
+    # un bloque (4 semanas) después de la semana de inicio sube un peldaño
+    despues = [n for n in sem if n >= 10]
+    assert despues and tipo_en(cor, despues[0]) != "fartlek"
+    # Base arranca en aceleraciones: la primera semana de calidad no tiene sesión de calidad con Z3
+    base = v6.generar_v6(entrada(semanas=24, calidad_desde=6, dias=4, evidencia={**EV_BASE, "semanas_consistentes": 0}))
+    assert semanas_calidad(base)[0] == 6 and tipo_en(base, 6) is None
+
+
+def test_calidad_elegida_en_base_libera_dias_y_larga():
+    ev = {**EV_BASE, "semanas_consistentes": 0, "trote_continuo_min": 20}
+    sin = v6.generar_v6(entrada(dias=5, calidad_desde=None, evidencia=ev))
+    con = v6.generar_v6(entrada(dias=5, calidad_desde=3, evidencia=ev))
+    assert sin["meta"]["dias"] == 4 and con["meta"]["dias"] == 5
+    larga = lambda p: max(s["minutes"] for w in p["weeks"] for s in w["sessions"] if s["tipo"] == "larga")
+    assert larga(con) >= larga(sin)
+
+
+def test_calidad_desde_se_ignora_en_empezando_y_sobrevive_a_con_carrera():
+    p = v6.generar_v6(entrada(nivel="empezando", calidad_desde=2, inicio_minutos=45, evidencia={"trote_continuo_min": 0}))
+    assert p["meta"]["calidad"] is False
+    q = v6.generar_v6(entrada(semanas=12, calidad_desde=5, evidencia={**EV_BASE, "semanas_consistentes": 0}))
+    assert v6.con_carrera(q, 6, {"km": 10, "fecha": "2027-03-01"})["meta"]["entrada"]["calidad_desde"] == 5
+    q["meta"]["ajuste_pct"] = 10
+    assert v6.con_carrera(q, 6, None)["meta"]["ajuste_pct"] == 10
+
+
+def test_tope_alcanzado_se_marca_en_meta():
+    assert v6.generar_v6(entrada(semanas=30, inicio_minutos=140))["meta"]["tope_alcanzado"] is True
+    assert v6.generar_v6(entrada(semanas=3, inicio_minutos=100))["meta"]["tope_alcanzado"] is False
