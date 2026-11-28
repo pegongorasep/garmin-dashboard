@@ -24,10 +24,10 @@ jobs:
       id-token: write   # token OIDC para hablar con la web
     steps:
       # 1. El repo de quien llama, en la raíz: es el directorio de usuario (config.yaml, plan/, data/).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 2. El código del motor.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: pegongorasep/garmin-dashboard
           ref: ${{ inputs.motor_ref }}

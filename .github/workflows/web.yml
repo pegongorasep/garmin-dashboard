@@ -25,7 +25,7 @@ jobs:
           - { grupo: web, rutas: "tests/test_web_*.py" }
           - { grupo: resto, rutas: "tests --ignore-glob=tests/test_web_*.py" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -44,7 +44,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: auth
         uses: google-github-actions/auth@v2
