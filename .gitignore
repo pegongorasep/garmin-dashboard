@@ -7,3 +7,4 @@ site/data.json
 .pytest_cache/
 .DS_Store
 web/dev.db
+.claude/worktrees/
