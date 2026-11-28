@@ -49,7 +49,7 @@ def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
         "plan_url": config.get("plan_url") or None,   # solo en la web: url del plan (botón «Ajustar mi plan»; null = sin botón
         "cuerpo_nuevo": config.get("cuerpo_nuevo") or None,   # solo en la web: url de «Agregar medición»; null = sin botón
         "coach": None,   # solo en la web: {nombre, volver} cuando un coach ve a su atleta (la web lo pone al servir; nunca en la caché)
-        "grupos": int(config.get("grupos") or 0),   # solo en la web: en cuántos grupos está la persona (0 = sin pestaña Grupo)
+        "grupos": int(config.get("grupos") or 0),   # solo en la web: en cuántos grupos está la persona (la pestaña Grupos la pone ui.vacios.grupos, que agrega la web)
         "editar_manual": {},   # solo en la web: {"m<id>": ruta} para editar cada actividad a mano (la pone calculo.calcular, fuera de la caché; solo si puede editar)
         "editar_urls": {str(k): str(v) for k, v in (config.get("editar_urls") or {}).items()},   # solo en la web: {"<n>/<id>": url} de las sesiones editables
         "menu": [{"texto": i["texto"], "url": i["url"]} for i in config.get("menu") or []],   # solo en la web: [{texto, url relativa}]

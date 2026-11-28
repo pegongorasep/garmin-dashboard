@@ -1,7 +1,8 @@
 """L1 «Sin plan»: la pregunta del onboarding, el modo sin plan, los interruptores de Ajustes y un data.json válido sin plan."""
 from dashboard import validar
+from web import primer_inicio
 from web.modelos import Ajustes, Usuario
-from ayudas import crear_usuario, csrf_de, entrar, nuevo, token_cuerpo as token
+from ayudas import crear_usuario, csrf_de, dar, entrar, listo, nuevo, token_cuerpo as token
 
 
 def vincular(ctx, uid):
@@ -75,3 +76,30 @@ def test_quitar_mi_plan_conserva_el_plan_y_con_plan_no_cambia_nada(web_ctx):
     r = cl.post("/ajustes/plan", data={"csrf": csrf_de(pagina.text), "accion": "quiero"})
     assert r.headers["location"] == "/plan/nuevo"   # el plan se arma ahí; hasta confirmarlo sigue sin plan
     assert 'href="/plan/nuevo"' in pagina.text
+
+
+def test_ui_vacios_plan_sin_plan_esperando_y_con_plan(web_ctx):
+    uid, cl = nuevo(web_ctx)
+    sin_plan(web_ctx, uid)
+    plan = lambda: cl.get("/data.json").json()["ui"]["vacios"]["plan"]   # noqa: E731
+    assert plan() == {"estado": "sin_plan", "armar": "/plan/nuevo"}
+    vincular(web_ctx, uid)
+    with web_ctx.sesiones() as db:
+        db.get(Usuario, uid).historial_pendiente = True
+        db.commit()
+    assert plan() == {"estado": "esperando", "armar": "/plan/nuevo"}
+    con = crear_usuario(web_ctx, "p@x.com", con_ajustes=True)
+    d = entrar(web_ctx, web_ctx.cliente(), "p@x.com").get("/data.json").json()
+    assert con and d["ui"]["vacios"]["plan"] is None
+
+
+def test_ui_vacios_del_coach_lleva_prefijo_sin_grupos_y_sin_permiso_no_hay_boton(web_ctx):
+    uid, atl = listo(web_ctx, "atl@x.com")
+    sin_plan(web_ctx, uid)
+    _, coach = listo(web_ctx, "coach@x.com", con_plan=False)
+    dar(atl, "coach@x.com")
+    d = coach.get(f"/a/{uid}/data.json").json()
+    assert d["ui"]["vacios"] == {"plan": {"estado": "sin_plan", "armar": f"/a/{uid}/plan/nuevo"}, "grupos": None}
+    with web_ctx.sesiones() as db:
+        v = primer_inicio.vacios(db, db.get(Usuario, uid), True, f"/a/{uid}", editable=False)
+    assert v == {"plan": {"estado": "sin_plan", "armar": None}, "grupos": None}

@@ -197,6 +197,7 @@ def calcular(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, p
     coach = {"nombre": usuario.apodo or usuario.correo, "volver": "/coach"} if pref else None
     salida = {**base, "ui": {**base["ui"], "repo_estado": estado_repo(db, usuario, ahora_naive, base.get("idioma") or "es"),
                              "grupos": n_grupos, "coach": coach, "editar_manual": editar_manual(db, usuario, pref, editable), "primer_inicio": primer_inicio.de(db, usuario, pref, editable),
+                             "vacios": primer_inicio.vacios(db, usuario, base["ui"]["sin_plan"], pref, editable),
                              **({"sync": sync} if sync is not None and not pref else {})}}
     recordatorio = None
     if editable and not usuario.repo_id:

@@ -195,7 +195,7 @@ function pintarFeed(sec, error) {
   const f = feedCache, aviso = h("div", { "aria-live": "polite" });
   const mas = f.siguiente ? h("div", { class: "feed-mas" }, DS.boton(T("sitio.gr.feed_mas"), { variante: "sec", chico: true, onclick: (e) => feedMas(sec, e.currentTarget) })) : null;
   const cuerpo = f.items.length ? [aviso, ...f.items.map((it) => feedFila(it, aviso)), mas]
-    : f.listo ? [DS.estadoVacio({ icono: "personas", titulo: T("sitio.gr.feed_vacio_t"), texto: T("sitio.gr.feed_vacio"), accion: { texto: T("sitio.gr.feed_vacio_acc"), href: "/grupos/nuevo" } })]
+    : f.listo ? [DS.estadoVacio({ icono: "personas", titulo: T("sitio.gr.feed_vacio_t"), texto: T("sitio.gr.feed_vacio"), accion: { texto: T("sitio.gr.feed_vacio_acc"), href: ((ui().vacios || {}).grupos || {}).invitar || "/grupos" } })]
     : error ? [DS.errorCarga({ titulo: T("sitio.gr.err_t"), texto: T("sitio.gr.feed_err"), detalle: error, onReintentar: () => feedRefrescar() })]
     : [DS.cargando(T("sitio.gr.cargando"))];
   sec.replaceChildren(h("h3", {}, T("sitio.gr.feed")), ...cuerpo.filter(Boolean));
@@ -284,9 +284,18 @@ const grupoPintarCache = (id) => {
   return true;
 };
 
-/** Entrar a la pestaña: pinta la caché al instante (sin cargador) y refresca en silencio; sin caché, baja con cargador. */
+/** Sin ningún grupo: solo el estado vacío. */
+function pintarSinGrupos() {
+  const v = (ui().vacios || {}).grupos || {};
+  $("vista-grupo").replaceChildren(DS.tarjeta({ clase: "ancha" }, DS.estadoVacio({ icono: "personas", titulo: T("sitio.gr.sin_t"), texto: T("sitio.gr.sin_x"),
+    accion: { texto: T("sitio.gr.sin_acc"), href: v.crear || "/grupos/nuevo" } })));
+}
+
+/** Entrar a la pestaña: pinta la caché al instante (sin cargador) y refresca en silencio; sin caché, baja con cargador.
+ *  Con 0 grupos no se pide nada (ni lista, ni feed, ni «visto»). */
 async function cargarGrupo(id) {
   const turno = ++grupoTurno, raiz = $("vista-grupo");
+  if (!(nGrupos() > 0)) { pintarSinGrupos(); return; }
   if (!id) juntosVisto();
   let pintado = grupoPintarCache(id);
   const antes = pintado ? JSON.stringify([grupoCache.lista, id ? grupoCache.grupos[id] : null]) : "";

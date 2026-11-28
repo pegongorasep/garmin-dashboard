@@ -28,16 +28,21 @@ function tarjetaTipos(d) {
   return c;
 }
 
+/** Plan sin plan. Python decide (ui.vacios.plan) si espera el historial y si hay botón y a dónde lleva (`armar`, con /a/<id> para el coach). */
+function planVacio() {
+  const v = (ui().vacios || {}).plan || {}, espera = v.estado === "esperando";   // esperando: el botón va deshabilitado en la misma ranura
+  const accion = !v.armar ? null : espera ? { texto: T("sitio.sync.espera"), deshabilitado: true } : { texto: T("sitio.sl.armar"), href: v.armar };
+  return DS.tarjeta({ clase: "ancha" }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.sin_plan_t"), texto: T(espera ? "sitio.sl.sin_plan_espera" : "sitio.sl.sin_plan_x"), accion }));
+}
+
 function renderPlan(d) {
   PINTAR.plan = [];
   const det = d.detalles || {};
   const acciones = ui().plan_acciones || [];
   const guardado = new URLSearchParams(location.search).get("ok") === "plan";   // viene de guardar un formulario del plan
   if (guardado) history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
-  if (ui().sin_plan) {   // sin plan: la pestaña no existe, pero la ruta #plan puede abrirse a mano
-    const espera = !!(ui().sync || {}).historial_pendiente;   // sin historial aún: el botón de armar el plan espera (misma ranura)
-    const accion = (ui().menu || []).length ? (espera ? { texto: T("sitio.sync.espera"), deshabilitado: true } : { texto: T("sitio.sl.quiero"), href: "/plan/nuevo" }) : null;
-    $("vista-plan").replaceChildren(DS.tarjeta({ titulo: T("sitio.sl.sin_plan_t") }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.sin_plan_t"), texto: T("sitio.sl.sin_plan_x"), accion })));
+  if (ui().sin_plan) {
+    $("vista-plan").replaceChildren(planVacio());
     return;
   }
   $("vista-plan").replaceChildren(...[

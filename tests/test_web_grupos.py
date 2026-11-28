@@ -288,6 +288,17 @@ def test_ui_grupos_0_1_2(web_ctx):
     assert n() == 2
 
 
+def test_ui_vacios_grupos_crear_e_invitar(web_ctx):
+    crear_usuario(web_ctx, "a@x.com", con_ajustes=True)
+    a = entrar(web_ctx, web_ctx.cliente(), "a@x.com")
+    v = lambda: a.get("/data.json").json()["ui"]["vacios"]["grupos"]   # noqa: E731
+    assert v() == {"crear": "/grupos/nuevo", "invitar": "/grupos"}   # sin grupos la pestaña va igual
+    gid = crear(a)
+    assert v()["invitar"] == f"/grupos/{gid}"
+    crear(a, "Otro")
+    assert v()["invitar"] == "/grupos"   # con varios, a la lista
+
+
 def test_pagina_trae_data_grupos_y_el_coach_no(web_ctx):
     crear_usuario(web_ctx, "a@x.com", con_ajustes=True)
     a = entrar(web_ctx, web_ctx.cliente(), "a@x.com")
@@ -304,7 +315,8 @@ def test_pagina_trae_data_grupos_y_el_coach_no(web_ctx):
     uid_c, coach = listo(web_ctx, "coach@x.com", con_plan=False)
     dar(atl, "coach@x.com")
     assert "data-grupos" not in coach.get(f"/a/{uid_a}/").text
-    assert coach.get(f"/a/{uid_a}/data.json").json()["ui"]["grupos"] == 0
+    ui = coach.get(f"/a/{uid_a}/data.json").json()["ui"]
+    assert ui["grupos"] == 0 and ui["vacios"]["grupos"] is None
 
 
 # ---------- Social S1: privacidad por persona ----------

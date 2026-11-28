@@ -98,10 +98,13 @@ const ALIAS_RUTA = { cuerpo: "progreso/cuerpo", detalles: "plan" };
 
 // Cuántos grupos hay: con data.json, el suyo; antes, el que la web puso en <main data-grupos> (sin atributo: 0).
 const nGrupos = () => datos && ui().grupos != null ? ui().grupos : parseInt(($("app") && $("app").dataset.grupos) || "0", 10) || 0;
+// ¿Va la pestaña Grupos? Solo en la web propia, también con 0 grupos: lo dice Python con ui.vacios.grupos (null al coach; el build local no lo trae).
+// Antes de data.json, la web marca la página propia con <main data-grupos>. Sin la clave nueva, como antes: solo con algún grupo.
+const hayGrupos = () => (datos ? !ui().coach && (!!(ui().vacios || {}).grupos || nGrupos() > 0) : !!$("app") && $("app").dataset.grupos != null);
 const tabsDef = () => [{ id: "hoy", texto: T("sitio.tab.hoy"), icono: "hoy", href: "#hoy" },
-  ...(ui().sin_plan ? [] : [{ id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" }]),   // sin plan: no hay pestaña Plan (L2 la reemplaza por una tarjeta)
+  { id: "plan", texto: T("sitio.tab.plan"), icono: "plan", href: "#plan" },
   { id: "progreso", texto: T("sitio.tab.progreso"), icono: "progreso", href: "#progreso" },
-  ...(nGrupos() > 0 ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#juntos", punto: true, nuevo: juntosNuevo }] : [])];   // solo en la web y con al menos un grupo
+  ...(hayGrupos() ? [{ id: "grupo", texto: T("sitio.tab.grupo"), icono: "personas", href: "#juntos", punto: true, nuevo: juntosNuevo }] : [])];
 let juntosNuevo = false;   // ¿hay algo nuevo en Juntos desde la última vez que se abrió? (lo decide el servidor)
 const pintarPuntoJuntos = () => { const a = document.querySelector('#tabs [data-tab="grupo"]'); if (a) a.dataset.nuevo = String(juntosNuevo); };
 const selBotonMenu = () => `#encabezado [aria-label="${T("sitio.ds.menu")}"]`;
@@ -219,7 +222,7 @@ function mostrarVista() {
   const [nombre0, sub, sub2] = (ALIAS_RUTA[ruta] || ruta.replace(/^grupo(?=\/|$)/, "juntos")).split("/");   // #grupo y #grupo/<id> (viejos) valen como #juntos
   const nombre = nombre0 === "juntos" ? "grupo" : nombre0;
   if (/^grupo(\/|$)/.test(ruta)) history.replaceState(null, "", `#${ruta.replace(/^grupo/, "juntos")}`);
-  const v = nombre === "grupo" && !(nGrupos() > 0) ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
+  const v = nombre === "grupo" && !hayGrupos() ? "hoy" : VISTAS.includes(nombre) ? nombre : "hoy";
   subProgreso = v === "progreso" && sub === "cuerpo" ? "cuerpo" : "corridas";
   if (v === "grupo" && sub === "persona" && !/^#juntos\/persona\//.test(rutaPrevia)) personaVolver = /^#juntos(\/\d+)?$/.test(rutaPrevia) ? rutaPrevia : "#juntos";   // el «volver» del perfil; sin historial, a Juntos
   if (v !== "ayuda") rutaPrevia = `#${ruta.replace(/^grupo(?=\/|$)/, "juntos") || "hoy"}`;
@@ -231,7 +234,7 @@ function mostrarVista() {
   }
   mostrarSubvista();
   REDIBUJAR[v]();
-  if (v === "grupo") { if (sub === "persona" && /^\d+$/.test(sub2 || "")) cargarPersona(sub2); else cargarGrupo(sub && sub !== "persona" ? sub : null); }
+  if (v === "grupo") { if (nGrupos() > 0 && sub === "persona" && /^\d+$/.test(sub2 || "")) cargarPersona(sub2); else cargarGrupo(sub && sub !== "persona" ? sub : null); }
   window.scrollTo(0, 0);
   if (datos && /[?&]abrir\b/.test(location.hash)) {   // para capturas: ?abrir despliega sesiones y "Ver todos los tipos"
     document.querySelectorAll(`#vista-${v} details.fila-ses, #vista-${v} details.todos-tipos`).forEach((x) => { x.open = true; });
