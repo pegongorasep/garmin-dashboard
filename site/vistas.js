@@ -281,7 +281,6 @@ function tarjetaPlan(plan, { editarUrls = {}, textoDescarga = "", sel = null, al
     h("p", { class: "nota" }, T("sitio.plan.nota", { d: textoDescarga || T("sitio.plan.descarga_nota") })),
     h("h3", { class: "titular" }, T("sitio.plan.titulo_sem", { n: w.n, b: w.block, k: tipoSemana(w.kind) })),
     h("p", { class: "nota" }, w.focus || ""),
-    ...(w.ajuste_texto ? [h("p", { class: "nota" }, w.ajuste_texto)] : []),   // append(null) escribiría «null»
     ...(actual === w.n && plan.faltan ? [h("p", { class: "nota" }, plan.faltan)] : []),
     filas,
     ...((plan.semanas_repetidas || []).length ? [h("p", { class: "nota" }, T("sitio.plan.repetidas", { l: plan.semanas_repetidas.join(", ") }))] : []),

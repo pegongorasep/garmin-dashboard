@@ -174,7 +174,7 @@ def convert_session(s: dict, zonas: list) -> dict:
 def convert_week(w: dict, zonas: list) -> dict:
     extra = {"evento": w["evento"]} if w.get("evento") else {}   # semana que un viaje o una carrera cambió (solo la web)
     return {"n": w["n"], "block": w["block"], "kind": w["kind"], "etiqueta": w["kind"] if w["kind"] == "descarga" else "carga",
-            "focus": plan_i18n.focus(w["focus"]), **extra, **({"ajuste_texto": w["ajuste_texto"]} if w.get("ajuste_texto") else {}),
+            "focus": plan_i18n.focus(w["focus"]), **extra,
             "sessions": [convert_session(s, zonas) for s in w["sessions"]]}
 
 
@@ -591,8 +591,7 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
             "plan": {"total": c["total"], "hechas": c["hechas"], "incompletas": c["incompletas"], "pct": semanal.pct(c["hechas"], c["total"]),
                      "plan_min": semanal.minutos_plan(semana),
                      "min_pct": semanal.pct(stats_s["minutos"], semanal.minutos_plan(semana)),
-                     **({"faltan": m.faltan_texto(sesiones)} if not pasada and ini <= hoy and m.faltan_texto(sesiones) else {}),
-                     **({"ajuste_texto": semana["ajuste_texto"]} if semana.get("ajuste_texto") else {})} if semana else None,
+                     **({"faltan": m.faltan_texto(sesiones)} if not pasada and ini <= hoy and m.faltan_texto(sesiones) else {})} if semana else None,
             "anterior": {k: previas[k] for k in ("minutos", "km", "min_trote")},
             "dias": dias, "sesiones": sesiones, "extras": extras,
             "intensidad": intensidad_semana(data["activities"], ini)}
@@ -1069,7 +1068,6 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     # Una sesión grabada en varias partes seguidas (fuerza + hiit) es UNA para todo lo que cuenta sesiones.
     data = {**data, "activities": m.unir_encadenadas(data["activities"], config)}
     hoy = ahora.date()
-    plan = semanal.ajustar_plan(plan, data, config, hoy)   # planes v6: la semana en curso según lo corrido la anterior
     ayer = hoy - timedelta(days=1)
     rhr = m.rhr_7d(data["daily_summaries"], hoy) or 60
     # Las zonas son las que Garmin dice (running, o DEFAULT); sin ellas, las calculadas con Karvonen como siempre.

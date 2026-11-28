@@ -331,7 +331,6 @@ function tarjetaEstaSemana(d, s) {
   const c = DS.tarjeta({ titulo: tituloSemana(d, s), clase: "ancha" }, lineaSemana(st, T(s.estado === "futura" ? "sitio.aun_no" : "sitio.sin_corridas")), intensidadCompacta(s));
   const p = s.plan;
   if (p) {
-    if (p.ajuste_texto) c.append(h("p", { class: "nota" }, p.ajuste_texto));
     if (p.faltan) c.append(h("p", { class: "nota" }, p.faltan));
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, T("sitio.plan.futura", { t: p.total, m: fmt(p.plan_min, 0) })));
     else {

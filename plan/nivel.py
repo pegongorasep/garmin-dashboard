@@ -18,7 +18,7 @@ import metrics  # noqa: E402
 
 NIVELES = ("empezando", "base", "corredor")
 
-# Piso de minutos por semana de cada nivel: ni el arranque del plan ni el ajuste semanal (motor_v6 `ajuste_piso`) bajan de aquí.
+# Piso de minutos por semana de cada nivel: el arranque del plan (motor_v6 `ajuste_piso`) no baja de aquí.
 PISO_NIVEL = {"empezando": 45, "base": 60, "corredor": 90}   # 3 × 15' para Empezando
 
 # Ritmo fácil genérico (min/km) por nivel: estima los km del plan sin ritmo personal, o cuando no se puede mostrar el real.

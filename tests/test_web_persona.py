@@ -93,7 +93,7 @@ def test_matriz_de_interruptores(web_ctx, monkeypatch):
         db.commit()
     p = get(b, ua).json()
     assert p["actividades"] is None and p["plan"] is not None
-    PRIVADOS = {"progreso", "cumplimiento", "estados", "minutos", "km", "ajuste_texto", "marcas_det"}   # sin avance si no comparte actividades
+    PRIVADOS = {"progreso", "cumplimiento", "estados", "minutos", "km", "marcas_det"}   # sin avance si no comparte actividades
     assert not any(PRIVADOS & set(w) for w in p["plan"]["semanas"])
     assert not ({"estado_sesiones", "faltan", "eventos", "semanas_repetidas", "ui", "editar_urls"} & set(p["plan"]))
     assert b.get("/api/juntos/feed", params={"persona": ua}).json()["items"] == []   # el feed tampoco la muestra
@@ -204,7 +204,7 @@ def test_plan_visible_matriz():
             "semanas_repetidas": [1], "estado_sesiones": [{"id": "a", "estado": "hecha", "ajustada": False, "corrida": {"fecha": "x"}}],
             "semanas": [{"n": 1, "block": 1, "kind": "carga", "etiqueta": "carga", "focus": "f", "sessions": [{"id": "a", "minutes": 20}], "plan_min": 20,
                          "progreso": {"hechas": 1, "total": 1}, "cumplimiento": "completa", "estados": [], "minutos": 21.0, "km": 3.0, "marca": "viaje",
-                         "marcas": ["viaje", "carrera"], "marcas_det": {"viaje": {}}, "ajuste_texto": "t"},
+                         "marcas": ["viaje", "carrera"], "marcas_det": {"viaje": {}}},
                         {"n": 2, "block": 1, "kind": "carga", "sessions": [], "plan_min": 0}]}
     assert semanal.plan_visible(None, True) is None and semanal.plan_visible({"semanas": []}, True) is None
     con, sin = semanal.plan_visible(plan, True), semanal.plan_visible(plan, False)
@@ -212,7 +212,7 @@ def test_plan_visible_matriz():
     assert con["semanas"][0]["marca"] == "carrera" and "marcas" not in con["semanas"][0]
     for p in (con, sin):
         assert not ({"eventos", "semanas_repetidas", "ui", "editar_urls"} & set(p))
-        assert not any({"ajuste_texto", "marcas_det"} & set(w) for w in p["semanas"])
+        assert not any({"marcas_det"} & set(w) for w in p["semanas"])
     assert not ({"estado_sesiones", "faltan"} & set(sin))
     assert not any({"progreso", "cumplimiento", "estados", "minutos", "km"} & set(w) for w in sin["semanas"])
     assert sin["semanas"][0]["plan_min"] == 20

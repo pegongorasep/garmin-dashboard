@@ -274,29 +274,10 @@ def analizar(persona: dict, plan: dict, motor_nombre: str = "?") -> dict:
             "nivel": persona["nivel"], "motor": motor_nombre, "sin_base": not desbloqueado(inicial), "semanas": filas, "reglas": reglas, "resumen": cuenta}
 
 
-def aplicar_ajuste(persona: dict, plan: dict) -> dict:
-    """El plan tal como se vive con el ajuste semanal: la semana n se topa a lo que de verdad se hizo la n−1 y a 110 % de la sesión más larga hecha
-    en las últimas 4 semanas (hecho = planeado × adherencia, igual que en `analizar`). La semana 1 no se ajusta (su tope es `inicio_real`)."""
-    semanas, real_prev, real_normal, ceros = [], None, None, 0
-    linea = [list(h["sesiones"]) for h in persona["historial"]]   # sesiones hechas por semana (historial + plan)
-    for w in plan["weeks"]:
-        mayor = max((m for sem in linea[-UMBRALES["ventana_semanas"]:] for m in sem), default=0)
-        w2 = motor_v6.ajustar_semana({**plan, "weeks": semanas + [w]}, w["n"], real_prev, mayor or None, real_normal, ceros) if semanas else w
-        semanas.append(w2)
-        f = fraccion(persona, w["n"])
-        hechas = [_escalar(s["minutes"], f) for s in w2["sessions"]] if f > 0 else []
-        linea.append(hechas)
-        real_prev = sum(hechas)
-        ceros = ceros + 1 if real_prev == 0 else 0
-        if w2["kind"] != "descarga":
-            real_normal = real_prev
-    return {**plan, "weeks": semanas}
-
-
 def simular(persona: dict) -> dict:
-    """Genera el plan de `persona` con el motor v6, le aplica el ajuste semanal y lo analiza."""
+    """Genera el plan de `persona` con el motor v6, lo analiza tal cual (plan fijo, sin ajuste semanal)."""
     p = _completa(persona)
-    return analizar(p, aplicar_ajuste(p, generar(p)), "v6")
+    return analizar(p, generar(p), "v6")
 
 
 def simular_todas() -> list:
@@ -341,6 +322,8 @@ def r_sube_real_10(c):
     """Nunca se planea SUBIR por encima de lo que se hizo. Con ≥ 90 % de lo planeado la semana anterior: ≤ 110 % de lo hecho; con 50–90 %: se
     permite repetir (≤ lo planeado esa semana); con < 50 %: ≤ máx(110 % de lo hecho, 70 % de lo planeado); tras ≥ 2 semanas en 0: ≤ el arranque
     de la persona. En todos los casos se permite el piso del nivel. (El «≤ 110 % de lo hecho» a secas empujaba al plan a encogerse cada semana.)"""
+    if (c["plan"].get("meta") or {}).get("motor") == "v6":
+        return None, [], "No aplica al plan v6: es fijo y no persigue lo hecho (para eso están Repetir y Retomar)."
     u, fallan, mal = UMBRALES, [], []
     filas, piso = c["filas"], _piso(c)
     arranque = (c["persona"].get("nivel") or {}).get("inicio_minutos", 0)
@@ -380,8 +363,7 @@ def r_sin_espiral(c):
     for i, r in enumerate(filas):
         if i == 0 or r["kind"] != "carga":
             continue
-        original = (c["plan"]["weeks"][i].get("ajuste") or {}).get("planeado", r["min"])
-        if r["min"] < min(piso, original):
+        if r["min"] < piso:
             fallan.append(r["n"])
             mal.append(f"sem {r['n']}: {r['min']}' está bajo el piso de {piso}'")
         prev = filas[i - 1]
@@ -395,6 +377,8 @@ def r_sin_espiral(c):
 def r_sesion_110(c):
     """Ninguna sesión pasa de 110 % de la más larga de 30 días. Excepción (solo v6): el piso del nivel dividido entre las sesiones de la semana,
     para que el piso (el mínimo seguro) se pueda cumplir aunque lo hecho haya sido poco."""
+    if (c["plan"].get("meta") or {}).get("motor") == "v6":
+        return None, [], "No aplica al plan v6: es fijo y no persigue lo hecho (para eso están Repetir y Retomar)."
     fallan, mal, piso = [], [], _piso(c)
     for r in c["filas"]:
         tope = r["tope_sesion"]

@@ -95,18 +95,6 @@ def test_zonas_del_plan_solo_con_rangos_reales():
     assert any(p['lpm'] for p in pasos(con))
 
 
-def test_lunes_ajusta_con_y_sin_volumen_manual():
-    plan = plan_v6()
-    cfg = _cfg(plan)
-    lunes = date.fromisoformat(plan['start']) + timedelta(days=7)
-    sin = semanal.ajustar_plan(plan, {'activities': []}, cfg, lunes)
-    manuales = [{**a, 'manual': True} for a in _acts({0: 60})]
-    con = semanal.ajustar_plan(plan, {'activities': manuales}, cfg, lunes)
-    assert sin['weeks'][1]['ajuste']['real_prev'] == 0
-    assert con['weeks'][1]['ajuste']['real_prev'] == 60
-    assert sin['weeks'][1]['ajuste']['minutos'] < con['weeks'][1]['ajuste']['minutos']
-
-
 def test_recordatorio_se_oculta_a_coach_sin_edicion_y_con_garmin(web_ctx):
     uid, _ = nueva(web_ctx)
     plan = plan_v6()

@@ -1,4 +1,4 @@
-"""Motor v6 (plan/motor_v6.py): reglas del motor, personas del simulador, ajuste semanal y compatibilidad con el resto de la app
+"""Motor v6 (plan/motor_v6.py): reglas del motor, personas del simulador y compatibilidad con el resto de la app
 (entrenamientos del reloj en simulación, asignación de sesiones, semana de carrera con 2–5 sesiones)."""
 import copy
 import sys
@@ -47,7 +47,7 @@ def z3(s):
 # --- el simulador con v6: la matriz de reglas ---
 
 def test_v6_cumple_todas_las_reglas_en_las_personas():
-    """Sin excepciones: ninguna regla falla (✓ o «no aplica») con el ajuste semanal."""
+    """Sin excepciones: ninguna regla falla (✓ o «no aplica»)."""
     resultados = sim.simular_todas()
     assert len(resultados) == 9
     for r in resultados:
@@ -59,7 +59,7 @@ def test_v6_cumple_todas_las_reglas_en_las_personas():
 @pytest.mark.parametrize("adherencia", [1.0, 0.8, 0.6])
 def test_v6_reglas_con_2_a_5_dias_y_adherencias(dias, adherencia):
     """Con otros números de sesiones por semana y con adherencia baja las reglas siguen cumpliéndose (la de la carrera con adherencia baja
-    no aplica: el plan se encoge solo con el ajuste y la «semana de carrera» ya no es un taper contra el pico)."""
+    no aplica: la «semana de carrera» ya no es un taper contra el pico)."""
     for p in sim.cargar_personas():
         q = {**p, "dias_semana": dias, "adherencia": {"base": adherencia, "huecos": p["adherencia"]["huecos"]}}
         r = sim.simular(q)
@@ -69,14 +69,6 @@ def test_v6_reglas_con_2_a_5_dias_y_adherencias(dias, adherencia):
 
 def test_v6_es_determinista_y_esta_registrado():
     assert sim.simular_todas() == sim.simular_todas()
-
-
-def test_sin_ajuste_el_plan_v6_no_cumple_sube_real_con_adherencia_baja():
-    """El ajuste es lo que hace cumplir `sube_real_10`: el plan crudo de una persona que cumple 60 % no la cumple."""
-    p = sim.persona_por_id("cumple_60")
-    crudo = sim.analizar(p, sim.generar(p), "v6")
-    assert next(x for x in crudo["reglas"] if x["clave"] == "sube_real_10")["ok"] is False
-    assert next(x for x in sim.simular(p)["reglas"] if x["clave"] == "sube_real_10")["ok"] is True
 
 
 # --- el plan: esquema y forma ---
@@ -290,41 +282,6 @@ def plan_plano(*semanas):
     return {"start": LUNES, "weeks": ws}
 
 
-def test_ajustar_sube_topa_a_110_de_lo_real():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))      # 100 y 110
-    w = v6.ajustar_semana(plan, 2, 95)                                       # 95 % de lo planeado: sube, pero a 110 % de lo hecho
-    assert w["ajuste"]["razon"] == "sube" and w["ajuste"]["tope"] == 104 and minutos(w) <= 104 and w["ajuste"]["ajustada"] and w["ajuste"]["planeado"] == 110
-    assert next(s for s in w["sessions"] if s["tipo"] == "larga")["minutes"] <= 0.4 * minutos(w) + 1
-    for s in w["sessions"]:
-        assert pasos.suma(s["steps"]) == s["minutes"] == pasos.suma(s["easy"]["steps"]) or s["easy"]["minutes"] <= s["minutes"]
-
-
-def test_ajustar_repite_y_baja_sin_perseguir_al_plan():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    rep = v6.ajustar_semana(plan, 2, 60)                                     # 60 %: repite la semana (100), no 66
-    assert rep["ajuste"]["razon"] == "repite" and 98 <= minutos(rep) <= 100 and rep["ajuste"]["objetivo_prev"] == 100
-    baja = v6.ajustar_semana(plan, 2, 30)                                    # 30 %: un paso atrás (70 % del objetivo), no 33
-    assert baja["ajuste"]["razon"] == "baja" and 68 <= minutos(baja) <= 70
-
-
-def test_ajustar_reinicia_tras_2_semanas_en_cero():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    plan["meta"] = {"motor": "v6", "nivel": "base", "inicio_minutos": 75}
-    w = v6.ajustar_semana(plan, 2, 0, semanas_en_cero=2)
-    assert w["ajuste"]["razon"] == "reinicia" and w["ajuste"]["tope"] == 75 and minutos(w) <= 75
-    assert v6.ajustar_semana(plan, 2, 0)["ajuste"]["razon"] == "baja"        # 1 semana en cero: paso atrás
-
-
-def test_ajustar_piso_duro_por_nivel(monkeypatch):
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    for nivel, piso in v6.UMBRALES["ajuste_piso"].items():
-        plan["meta"] = {"motor": "v6", "nivel": nivel, "inicio_minutos": 10}
-        w = v6.ajustar_semana(plan, 2, 5, semanas_en_cero=2)
-        assert w["ajuste"]["tope"] == piso and piso - 3 <= minutos(w) <= min(piso, 110), (nivel, minutos(w))
-    chico = plan_plano(("carga", [10, 10, 12]), ("carga", [10, 10, 12]))     # nunca más que lo planeado
-    assert minutos(v6.ajustar_semana(chico, 2, 3)) == 32
-
-
 def test_adherencia_constante_de_60_hace_meseta_no_colapso():
     """Con 60 % fijo el plan v6 llega al piso del nivel y se queda ahí (antes se encogía ~35 % por semana hasta 1')."""
     for p in sim.cargar_personas():
@@ -335,88 +292,6 @@ def test_adherencia_constante_de_60_hace_meseta_no_colapso():
         assert min(cargas) >= min(piso, tot[0]) - 3, (p["id"], tot)
         assert tot[-1] >= 0.5 * min(piso, tot[0]), (p["id"], tot)
         assert next(x for x in r["reglas"] if x["clave"] == "sin_espiral")["ok"] is not False
-
-
-def test_taper_con_adherencia_baja_se_mide_contra_el_pico_ajustado():
-    p = {**sim.persona_por_id("pedro_like"), "adherencia": {"base": 0.6, "huecos": []}}
-    r = sim.simular(p)
-    assert next(x for x in r["reglas"] if x["clave"] == "taper")["ok"] is True
-
-
-def test_ajustar_no_cambia_si_ya_cabe_ni_sube_nunca():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    w = v6.ajustar_semana(plan, 2, 100)
-    assert minutos(w) == 110 and w["ajuste"]["ajustada"] is False and w["ajuste"]["tope"] == 110
-    w = v6.ajustar_semana(plan, 2, 500)
-    assert minutos(w) == 110                                                 # hacer de más no sube lo planeado
-
-
-def test_ajustar_sin_dato_o_semana_1_devuelve_la_semana_igual():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    assert v6.ajustar_semana(plan, 2, None) == plan["weeks"][1]
-    assert v6.ajustar_semana(plan, 1, 50) == plan["weeks"][0]
-
-
-def test_ajustar_es_pura():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    copia = copy.deepcopy(plan)
-    v6.ajustar_semana(plan, 2, 20)
-    assert plan == copia
-
-
-def test_ajustar_tras_hueco_una_sesion_de_regreso():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    w = v6.ajustar_semana(plan, 2, 0)
-    assert w["ajuste"]["razon"] == "baja" and minutos(w) <= 0.7 * 100 + 1
-
-
-def test_ajustar_junta_las_sesiones_de_menos_de_10(monkeypatch):
-    monkeypatch.setitem(v6.UMBRALES, "ajuste_piso", {"empezando": 0, "base": 0, "corredor": 0})
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [33, 33, 44]))
-    plan["meta"] = {"motor": "v6", "nivel": "base", "inicio_minutos": 22}
-    w = v6.ajustar_semana(plan, 2, 0, semanas_en_cero=2)                     # reinicia a 22': tres sesiones serían de 7
-    assert len(w["sessions"]) < 3 and all(s["minutes"] >= 10 for s in w["sessions"]) and minutos(w) <= 22
-    assert any(s["tipo"] == "larga" for s in w["sessions"])                  # la larga se queda
-
-
-def test_ajustar_topa_la_sesion_a_110_de_la_mas_larga_real():
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [30, 30, 44]))
-    w = v6.ajustar_semana(plan, 2, 100, max_sesion_real_min=30)
-    assert max(s["minutes"] for s in w["sessions"]) <= 33
-
-
-def test_ajustar_tras_descarga_no_frena_el_regreso():
-    plan = plan_plano(("carga", [30, 30, 40]), ("descarga", [20, 20, 28]), ("carga", [30, 30, 40]))
-    # lo real de la descarga (68 planeados × 0.9 = 61) equivale a 89 en una semana normal: ≈ 89 % → repite la semana de 100
-    w = v6.ajustar_semana(plan, 3, 61)
-    assert w["ajuste"]["objetivo_prev"] == 100 and 98 <= minutos(w) <= 100
-    w2 = v6.ajustar_semana(plan, 3, 61, real_normal_min=90)                  # con lo real de la semana normal: sube a int(90 × 1.1) = 99
-    assert w2["ajuste"]["razon"] == "sube" and 95 <= minutos(w2) <= 99
-    w3 = v6.ajustar_semana(plan, 3, 20, real_normal_min=40)                  # 40 % de la semana normal: paso atrás (70 %)
-    assert w3["ajuste"]["razon"] == "baja" and minutos(w3) <= 70
-
-
-def test_ajustar_no_rebota_sobre_una_semana_ya_ajustada(monkeypatch):
-    """Si la semana anterior se planeó más baja (ya ajustada), esta no pasa de 110 % de ella aunque el plan original diga más."""
-    monkeypatch.setitem(v6.UMBRALES, "ajuste_piso", {"empezando": 0, "base": 0, "corredor": 0})
-    plan = plan_plano(("carga", [30, 30, 40]), ("carga", [10, 10, 12]), ("carga", [40, 40, 50]))
-    w = v6.ajustar_semana(plan, 3, 500)
-    assert minutos(w) <= int(32 * 1.1)
-
-
-def test_ajustar_calidad_que_no_cabe_pasa_a_z2():
-    plan = v6.generar_v6(entrada(objetivo="velocidad", evidencia={**EV_BASE, "semanas_consistentes": 8}))
-    n = next(w["n"] for w in plan["weeks"] if any(s["tipo"] == "calidad" for s in w["sessions"]))
-    w = v6.ajustar_semana(plan, n, minutos(plan["weeks"][n - 2]) * 0.4)
-    assert not any(s["tipo"] == "calidad" for s in w["sessions"]) or all(z3(s) <= 6 for s in w["sessions"])
-    assert len({s["id"] for s in w["sessions"]}) == len(w["sessions"])
-
-
-def test_foco_se_actualiza_al_ajustar():
-    plan = v6.generar_v6(entrada())
-    w = v6.ajustar_semana(plan, 2, 50)
-    larga = next(s for s in w["sessions"] if s["tipo"] == "larga")
-    assert f"Larga {larga['minutes']}'" in w["focus"]
 
 
 # --- el resto de la app con 2, 4 y 5 sesiones ---

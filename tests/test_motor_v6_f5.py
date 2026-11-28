@@ -1,10 +1,9 @@
-"""Motor v6 F5: carreras construidas dentro del plan (`en_plan`), eventos sobre planes v6 y ajuste semanal en build."""
+"""Motor v6 F5: carreras construidas dentro del plan (`en_plan`), eventos sobre planes v6 y plan fijo en build (sin ajuste semanal)."""
 import copy
 from datetime import date, timedelta
 
 import build
 import motor_v6
-import semanal
 from ajustes import normalizar_config
 from web import plan_vivo
 
@@ -89,20 +88,20 @@ def _cfg(plan):
             **{k: v for k, v in normalizar_config(crudo_de(plan)).items()}}
 
 
-def test_ajuste_semanal_baja_la_semana_en_curso_y_solo_esa():
+def test_plan_fijo_la_semana_en_curso_sale_igual_aunque_la_anterior_se_corriera_poco():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from test_build import fixture
     plan = plan_v6()
-    cfg = _cfg(plan)
-    hoy = INICIO + timedelta(weeks=1, days=2)
-    sube = semanal.ajustar_plan(plan, {"activities": _acts({0: 60})}, cfg, hoy)
-    poco = semanal.ajustar_plan(plan, {"activities": _acts({0: 20})}, cfg, hoy)
-    assert sum(s["minutes"] for s in poco["weeks"][1]["sessions"]) < sum(s["minutes"] for s in plan["weeks"][1]["sessions"])
-    assert poco["weeks"][1]["ajuste_texto"] and poco["weeks"][0] == plan["weeks"][0] and poco["weeks"][2] == plan["weeks"][2]
-    assert semanal.ajustar_plan(plan, {"activities": _acts({0: 20})}, cfg, hoy) == poco   # determinista
-    assert sube["weeks"][1].get("ajuste_texto") in (None, "") or "ajustada" in sube["weeks"][1]["ajuste_texto"]
-    # plan viejo (sin meta v6) y sin actividades: sin cambios
-    viejo = {k: v for k, v in plan.items() if k != "meta"}
-    assert semanal.ajustar_plan(viejo, {"activities": _acts({0: 20})}, cfg, hoy) is viejo
-    assert semanal.ajustar_plan(plan, {"activities": []}, cfg, hoy)["weeks"][1]["ajuste"]["real_prev"] == 0
+    cfg = {**_cfg(plan), "modo": "web"}
+    ahora = datetime.combine(INICIO + timedelta(weeks=1, days=2), datetime.min.time(), tzinfo=ZoneInfo("America/Merida")).replace(hour=12)
+    datos = fixture()
+
+    def minutos_sem2(acts):
+        out = build.build({**datos, "activities": acts}, plan, cfg, ahora)
+        return [[s["minutes"] for s in w["sessions"]] for w in out["plan"]["semanas"] if w["n"] == 2]
+    guardado = [[s["minutes"] for s in plan["weeks"][1]["sessions"]]]
+    assert minutos_sem2([]) == minutos_sem2(_acts({0: 5})) == minutos_sem2(_acts({0: 200})) == guardado
 
 
 def test_sesiones_faciles_dicen_z2_o_platicar():

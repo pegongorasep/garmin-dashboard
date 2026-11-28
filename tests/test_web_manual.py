@@ -144,19 +144,6 @@ def test_garmin_y_a_mano_el_mismo_dia_no_se_juntan(web_ctx):
         assert len(metrics.unir_encadenadas(d["activities"], cfg)) == 2
 
 
-def test_cuenta_en_ajustar_semana_real_prev():
-    plan = plan_v6()
-    cfg = _cfg(plan)
-    hoy = INICIO + timedelta(weeks=1, days=2)
-    garmin = _acts({0: 60})
-    a_mano = [{"id": f"m{k}", "manual": True, "startTimeLocal": f"{INICIO + timedelta(days=2 * k)}T12:00:00", "duration": 20 * 60,
-               "activityType": {"typeKey": "running"}} for k in range(3)]
-    con = semanal.ajustar_plan(plan, {"activities": a_mano}, cfg, hoy)
-    ref = semanal.ajustar_plan(plan, {"activities": garmin}, cfg, hoy)
-    assert con["weeks"][1]["ajuste"]["real_prev"] == ref["weeks"][1]["ajuste"]["real_prev"] == 60
-    assert semanal.ajustar_plan(plan, {"activities": []}, cfg, hoy)["weeks"][1]["ajuste"]["real_prev"] == 0
-
-
 def test_tarjeta_del_grupo_cuenta_la_manual(web_ctx, monkeypatch):
     original = calculo.calcular   # reloj fijo: la tarjeta calcula «ahora» con el miércoles de AHORA_UTC
     monkeypatch.setattr(calculo, "calcular", lambda db, u, ahora_utc=None, *a, **k: original(db, u, AHORA_UTC, *a, **k))
