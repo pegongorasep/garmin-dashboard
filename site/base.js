@@ -25,7 +25,7 @@ function idiomaInicial() {
 async function cargarIdioma(idioma) {
   idioma = idiomaDe(idioma);
   try {
-    const r = await fetch(`i18n/${idioma}.json`);
+    const r = await fetch(`${window.RUTA_I18N || ""}i18n/${idioma}.json`);   // RUTA_I18N = "/" en las páginas de la web que no cuelgan de la raíz
     if (r.ok) TEXTOS = await r.json();
   } catch (e) {}
   IDIOMA = idioma;

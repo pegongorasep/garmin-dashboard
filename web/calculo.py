@@ -260,20 +260,24 @@ def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None
     return salida
 
 
-def calcular_propuesta(db: Session, usuario: Usuario, crudo_nuevo: dict, ahora_utc: datetime | None = None, idioma: str | None = None) -> dict:
-    """data.json que tendría la persona con `crudo_nuevo` en lugar de sus ajustes: no lee ni escribe la caché ni la base."""
+def calcular_propuesta(db: Session, usuario: Usuario, crudo_nuevo: dict, ahora_utc: datetime | None = None, idioma: str | None = None,
+                       plan: dict | None = None, editable: bool = True) -> dict:
+    """data.json que tendría la persona con `crudo_nuevo` en lugar de sus ajustes: no lee ni escribe la caché ni la base.
+    Con `plan` (uno propuesto, sin guardar) se usa ese en vez del guardado y la persona cuenta como con plan; `editable=False` quita las ligas de editar."""
     cfg = config_de(db, usuario, idioma=idioma, crudo_nuevo=crudo_nuevo)
+    if plan is not None:
+        cfg = {**cfg, "sin_plan": False}
     local = (ahora_utc.replace(tzinfo=ZoneInfo("UTC")) if ahora_utc else datetime.now(ZoneInfo("UTC"))).astimezone(ZoneInfo(cfg["timezone"]))
-    return _armar(db, usuario, crudo_nuevo, cfg, local, True)
+    return _armar(db, usuario, crudo_nuevo, cfg, local, editable, plan)
 
 
-def _armar(db: Session, usuario: Usuario, crudo: dict, cfg: dict, local: datetime, con_ajustes: bool) -> dict:
+def _armar(db: Session, usuario: Usuario, crudo: dict, cfg: dict, local: datetime, con_ajustes: bool, plan_propuesto: dict | None = None) -> dict:
     """El motor con la config y el plan (más los datos) de la persona; pasa por la lista blanca. Compartido por la caché y la propuesta."""
     cfg = plan_vivo.con_pausas(cfg, local.date())
     if cfg["sin_plan"]:   # sin plan: el motor corre con un plan vacío (nadie edita sesiones que no hay)
         plan = {"start": cfg["plan_start"], "weeks": []}
     else:
-        plan = plan_vivo.plan_efectivo(plan_de(db, usuario), cfg)
+        plan = plan_vivo.plan_efectivo(plan_propuesto if plan_propuesto is not None else plan_de(db, usuario), cfg)
     ultima = tubo.ultima_subida(db, usuario.id)
     cfg = {**cfg, "editar_urls": editar_urls(plan) if con_ajustes else {},
            "garmin_conectado": bool(usuario.repo_id), "garmin_ultima_subida": ultima if usuario.repo_id else None,

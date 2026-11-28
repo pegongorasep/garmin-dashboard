@@ -1071,7 +1071,7 @@ function juntosVisto() {
   juntosNuevo = false; pintarPuntoJuntos();
   fetch("/api/juntos/visto", { method: "POST", headers: { Accept: "application/json" }, body: new URLSearchParams({ csrf: $("app").dataset.csrf || "" }) }).catch(() => {});
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden) juntosRevisar(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && $("app")) juntosRevisar(); });
 
 /** Precarga en segundo plano (tras data.json, con al menos un grupo). Los errores se ignoran: al entrar se reintenta. */
 function precargarGrupo() {
@@ -1434,9 +1434,13 @@ async function recargarDatos() {
     repintarVistas();
   } catch (e) { console.error("recargarDatos:", e); }
 }
+// Otras páginas de la web (p. ej. la vista previa de «Quiero un plan») cargan estos scripts solo para pintar piezas (tarjetaPlan): sin #app no arranca nada.
+const ES_SITIO = !!$("app");
+if (ES_SITIO) {
 window.addEventListener("franja:lista", recargarDatos);
 window.addEventListener("franja:sin_app", (ev) => { ev.preventDefault(); recargarDatos(); });   // desinstalaron la app: el encabezado vuelve a ofrecer autorizar
 window.addEventListener("franja:estado", (ev) => { const b = $("sync-btn"); if (b && b.tagName === "BUTTON") b.disabled = !!(ev.detail && ev.detail.viva); });
+}
 
 /** Pinta todas las vistas con `datos` (al arrancar y cuando cambia algo local, como dar un aviso por «Entendido»). */
 function repintarVistas() {
@@ -1447,4 +1451,4 @@ function repintarVistas() {
   mostrarVista();
 }
 
-iniciar();
+if (ES_SITIO) iniciar();

@@ -2,6 +2,7 @@
 {% from "componentes.html" import boton, campo, seleccion, opciones, opcion, aviso, tarjeta, pasos as barra_pasos %}
 {% block titulo %}{{ t("pn.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
+{% block estilos %}{% if paso == 3 %}<link rel="stylesheet" href="/styles.css">{% endif %}{% endblock %}
 {% macro ocultos(v, salvo="") %}
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="nivel" value="{{ nivel }}">
@@ -52,59 +53,62 @@
     {% set sem_op = [("no", t("pn.calidad_no"))] %}{% for n in calidad_semanas %}{% set _ = sem_op.append((n|string, t("pn.calidad_sem", n=n))) %}{% endfor %}
     {{ seleccion(t("pn.calidad"), "calidad_desde", sem_op, v.calidad_desde, ayuda=t("pn.calidad_a"), error=errores.get("calidad_desde")) }}
   {% endif %}
-  {% if "carrera" in campos %}
+  {% if "carrera" in campos %}{# solo se ve con «Una carrera» elegida (CSS :has en paginas.css; el servidor ignora km y fecha con otro objetivo) #}
+  <div class="pn-carrera">
     <h3 class="pag-h">{{ t("pn.carrera_t") }}</h3>
-    <p class="pag-s">{{ t("pn.carrera_a") }}</p>
     {{ seleccion(t("pn.km"), "km", opciones_km, v.km, error=errores.get("km")) }}
     {{ campo(t("pn.fecha"), "fecha", tipo="date", valor=v.fecha, error=errores.get("fecha")) }}
+  </div>
   {% endif %}
-  {% if "tiempo" in campos %}{{ campo(t("pn.tiempo"), "tiempo", valor=v.tiempo, opcional=t("comun.opcional"), corto=True, ayuda=t("pn.tiempo_a"), error=errores.get("tiempo"), extra={"placeholder": "52:30"}) }}{% endif %}
   {{ campo(t("pn.inicio"), "inicio", tipo="date", valor=v.inicio, requerido=True, ayuda=t("pn.inicio_a"), error=errores.get("inicio")) }}
-  {{ campo(t("pn.edad"), "edad", tipo="number", valor=v.edad, corto=True, ayuda=t("pn.edad_a"), error=errores.get("edad"), extra={"min": "10", "max": "99"}) }}
+  {{ campo(t("pn.edad"), "edad", tipo="number", valor=v.edad, corto=True, ayuda=t("pn.edad_a"), requerido=("zona" in campos), error=errores.get("edad"), extra={"min": "10", "max": "99"}) }}
   {% if "zona" in campos %}
     {% set zonas_op = [] %}{% for z in zonas %}{% set _ = zonas_op.append((z, z)) %}{% endfor %}
     {{ seleccion(t("pn.zona"), "zona", zonas_op, v.zona) }}
-    {{ campo(t("pn.fc_max"), "fc_max", tipo="number", valor=v.fc_max, opcional=t("comun.opcional"), corto=True, error=errores.get("fc_max"), extra={"min": "120", "max": "230"}) }}
   {% endif %}
   <div class="acciones">{{ boton(t("pn.ver_previa"), tipo="submit") }}</div>
 </form>
 
 {% else %}
 {% set total = prev.semanas|length %}
+<div id="pn-prev" class="pn-prev" data-url="{{ pref }}/plan/nuevo/vista.json">
 <h2 class="pag-h">{{ t("pn.prev_t") }}</h2>
 <p class="pag-s">{{ t("pn.prev_a", n=total, inicio=v.inicio) }}</p>
 {% for a in avisos_nivel %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
 {% for a in prev.avisos %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}
-{% if prev.volumen %}{% set vol = prev.volumen %}
-<form class="pn-volumen" method="post" action="{{ pref }}/plan/nuevo/vista">
+{% set vol = prev.volumen %}
+<div class="pn-vol">
+<form class="pn-volumen" id="pn-volumen" method="post" action="{{ pref }}/plan/nuevo/vista">
   {{ ocultos(v, "ajuste_pct") }}
-  <span class="pn-volumen-t">{{ vol.texto }}</span>
-  {{ boton(t("pn.ajuste_menos"), "sec", chico=True, tipo="submit", deshabilitado=vol.menos is none, nombre="ajuste_pct", valor=vol.menos) }}
-  {{ boton(t("pn.ajuste_mas"), "sec", chico=True, tipo="submit", deshabilitado=vol.mas is none, nombre="ajuste_pct", valor=vol.mas) }}
+  <span class="pn-volumen-t" id="pn-vol-t">{{ vol.texto }}</span>
+  {{ boton(vol.menos.etiqueta if vol.menos else vol.etiqueta_menos, "sec", chico=True, tipo="submit", deshabilitado=vol.menos is none, nombre="ajuste_pct", valor=vol.menos.valor if vol.menos else None) }}
+  {{ boton(vol.mas.etiqueta if vol.mas else vol.etiqueta_mas, "sec", chico=True, tipo="submit", deshabilitado=vol.mas is none, nombre="ajuste_pct", valor=vol.mas.valor if vol.mas else None) }}
 </form>
-<div class="pn-ranura">{% for a in vol.avisos %}{% call aviso("warn") %}{{ a }}{% endcall %}{% endfor %}</div>
-{% endif %}
+<div class="pn-ranura" id="pn-ranura" aria-live="polite">
+  {% if vol.recomendacion.clase == "warn" %}{% call aviso("warn") %}{{ vol.recomendacion.texto }}{% endcall %}{% else %}<p class="nota">{{ vol.recomendacion.texto }}</p>{% endif %}
+  {% if vol.maximo %}<p class="nota">{{ vol.maximo }}</p>{% endif %}
+</div>
+</div>
 {% call tarjeta(t("pn.barras_t")) %}
-  <ol class="pn-barras">
+  <ol class="pn-barras" id="pn-barras">
     {% for s in prev.semanas %}<li class="pn-barra {{ s.kind }}">
-      <span class="pn-sem">{{ t("pn.barra_sem", n=s.n) }}</span>
+      <span class="pn-sem">{{ s.etiqueta }}</span>
       <progress max="{{ prev.tope }}" value="{{ s.min }}">{{ s.min }}</progress>
-      <span class="pn-min">{{ t("pn.barra_min", min=s.min) }}{% if s.evento == "carrera" %} · {{ t("pn.semana_carrera") }}{% elif s.kind == "descarga" %} · {{ t("pn.semana_descarga") }}{% endif %}</span>
+      <span class="pn-min">{{ s.texto }}</span>
     </li>{% endfor %}
   </ol>
 {% endcall %}
-{% call tarjeta(t("pn.detalle_t")) %}
-  {% for w in prev.detalle %}
-    <h3 class="pag-h">{{ t("pn.detalle_sem", n=w.n) }}</h3>
-    <ul class="texto pn-lista">{% for s in w.sesiones %}<li>{% if s.dia %}{{ t('dia.' ~ s.dia) }} · {% endif %}{{ t("pn.sesion", nombre=s.nombre, min=s.min) }}</li>{% endfor %}</ul>
-  {% endfor %}
-{% endcall %}
+{% if prev.plan %}<div id="pn-plan" data-titulo="{{ t('pn.plan_completo') }}"></div>{% endif %}
 {% call tarjeta(t("pn.porque_t")) %}
-  <ul class="texto pn-lista">{% for p in prev.porques %}<li>{{ p }}</li>{% endfor %}</ul>
+  <ul class="texto pn-lista" id="pn-porques">{% for p in prev.porques %}<li>{{ p }}</li>{% endfor %}</ul>
 {% endcall %}
 <div class="acciones">
   <form method="post" action="{{ pref }}/plan/nuevo/confirmar">{{ ocultos(v) }}{{ boton(t("pn.confirmar"), tipo="submit") }}</form>
   <form method="post" action="{{ pref }}/plan/nuevo/preguntas">{{ ocultos(v) }}{{ boton(t("pn.cambiar"), "sec", tipo="submit") }}</form>
 </div>
+</div>
+<script type="application/json" id="pn-datos">{{ prev|tojson }}</script>
 {% endif %}
 {% endblock %}
+{% block scripts %}{% if paso == 3 %}{% for f in ("base", "iconos", "charts", "componentes", "app", "vistas") %}<script src="/{{ f }}.js"></script>
+{% endfor %}<script src="/estaticos/plan_nuevo.js"></script>{% endif %}{% endblock %}

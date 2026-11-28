@@ -92,7 +92,14 @@ details.sim-sem.falla > summary { background: var(--bad-bg); }
 .pn-reserva { min-height: 1lh; }
 .pn-volumen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
 .pn-volumen-t { flex: 1 1 14em; }
-.pn-ranura { min-height: 6lh; }
+/* Ranura de la recomendación de volumen: alto fijo (recomendación o aviso + a veces el máximo), apretar botones no mueve nada */
+.pn-ranura { min-height: 5.5lh; display: grid; align-content: start; gap: var(--space-4); }
+.pn-prev { display: grid; gap: var(--space-16); min-width: 0; }
+.pn-prev > * { min-width: 0; }
+.pn-vol { display: grid; gap: var(--space-4); }   /* fila de volumen y su ranura, pegadas */
+/* «Tu carrera» solo se ve con «Una carrera» elegida (la altura sí cambia aquí: excepción acordada). Sin JS también funciona. */
+.pn-carrera { display: none; }
+form:has(input[name="objetivo"][value="carrera"]:checked) .pn-carrera { display: grid; gap: var(--space-12); }
 @media (max-width: 640px) { .pn-barra { grid-template-columns: 3.5em minmax(0, 1fr); } .pn-min { grid-column: 2; } }
 
 /* Guía nueva (GitHub App): estado de la comprobación con altura reservada */

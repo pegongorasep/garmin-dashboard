@@ -1,12 +1,13 @@
 """Motor v6 F4: «Quiero un plan» (/plan/nuevo): nivel desde Garmin, preguntas por nivel, vista previa, confirmar, coach y CSRF."""
 import re
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 from plan import motor_v6
 
 from dashboard import validar
 from test_web_cuentas import crear_usuario, csrf_de, entrar
-from web.modelos import Ajustes, Cambio, Coach, DatoGarmin, Plan, Usuario
+from web.modelos import Ajustes, CacheData, Cambio, Coach, DatoGarmin, Plan, Usuario
 
 
 def lunes_siguiente() -> date:
@@ -83,9 +84,9 @@ def test_preguntas_segun_el_nivel(web_ctx):
     assert 'value="mas_tiempo"' not in base and 'name="tiempo"' not in base
     assert 'name="calidad_desde"' in base and 'option value="4" selected' in base and "Todavía no" in base
     cor = preguntas(cl, "corredor").text
-    assert 'value="velocidad"' in cor and 'name="tiempo"' in cor and 'value="mas_tiempo"' not in cor
+    assert 'value="velocidad"' in cor and 'name="tiempo"' not in cor and 'value="mas_tiempo"' not in cor
     assert 'option value="2" selected' in cor
-    assert 'name="zona"' in emp and 'name="fc_max"' in emp   # sin ajustes todavía: se piden aquí
+    assert 'name="zona"' in emp and 'name="fc_max"' not in emp and "FC máxima" not in emp   # sin ajustes todavía: zona y edad; la FC máx ya no se pide
     sel = cor.split('name="calidad_desde"')[1].split("</select>")[0]
     assert '<option value="2"' in sel and '<option value="8"' in sel and 'option value="9"' not in sel and 'option value="1"' not in sel
 
@@ -104,7 +105,7 @@ def test_vista_previa_empezando_no_guarda_y_avisa_de_dias(web_ctx):
     r = vista(cl, "empezando", dias="5", intensos="2")
     assert r.status_code == 200 and "<progress" in r.text and "Nada se guarda hasta que confirmes" in r.text
     assert "lo más seguro son 3 días" in r.text and "consulta a un profesional" not in r.text
-    assert "Por qué así" in r.text and "Sube como máximo 10 % por semana" in r.text and "Tus dos primeras semanas" in r.text
+    assert "Por qué así" in r.text and "Sube como máximo 10 % por semana" in r.text and "Ver el plan completo" in r.text and "Tus dos primeras semanas" not in r.text
     assert "Confirmar mi plan" in r.text and "Cambiar respuestas" in r.text
     with web_ctx.sesiones() as db:
         assert db.get(Plan, uid) is None and db.get(Ajustes, uid) is None
@@ -131,11 +132,11 @@ def test_carrera_guarda_la_fecha_en_el_plan_y_no_en_metas(web_ctx):
     uid, cl = nueva(web_ctx)
     sembrar(web_ctx, uid)
     fecha = (lunes_siguiente() + timedelta(weeks=11, days=5)).isoformat()
-    r = confirmar(cl, "corredor", objetivo="carrera", km="10", fecha=fecha, tiempo="52:30", dias="4")
+    r = confirmar(cl, "corredor", objetivo="carrera", km="10", fecha=fecha, tiempo="52:30", dias="4")   # tiempo ya no existe: se ignora
     assert r.status_code == 303
     with web_ctx.sesiones() as db:
         p, a = db.get(Plan, uid), db.get(Ajustes, uid)
-        assert p.plan["meta"]["carrera"]["km"] == 10 and len(p.plan["weeks"]) == 12 and p.plan["meta"]["tiempo_carrera"] == "52:30"
+        assert p.plan["meta"]["carrera"]["km"] == 10 and len(p.plan["weeks"]) == 12 and "tiempo_carrera" not in p.plan["meta"]
         assert not (a.config["corrida"].get("carreras") or a.config.get("metas"))
 
 
@@ -152,11 +153,11 @@ def test_errores_vuelven_a_las_preguntas_con_400(web_ctx):
     for extra, msg in ((dict(objetivo="carrera", fecha="", km="10"), "Escribe una fecha válida"),
                        (dict(objetivo="carrera", fecha=cerca, km="7"), "Elige 5, 10, 21 o 42"),
                        (dict(inicio="2001-01-01"), "antes de esta semana"),
-                       (dict(edad="", fc_max=""), "edad o tu FC"),
+                       (dict(edad="", fc_max="190"), "Escribe tu edad"),
                        (dict(dias="9"), "entre 2 y 5")):
         r = vista(cl, "base", **extra)
         assert r.status_code == 400 and msg in r.text and 'name="dias"' in r.text, (extra, r.text[:200])
-    assert vista(cl, "corredor", tiempo="rápido").status_code == 400
+    assert vista(cl, "corredor", tiempo="rápido").status_code == 200   # el tiempo de carrera ya no se pregunta ni se valida
 
 
 def test_cambiar_respuestas_conserva_lo_escrito(web_ctx):
@@ -379,3 +380,213 @@ def test_ajuste_confirmar_regenera_el_mismo_plan_de_la_vista(web_ctx):
     assert confirmar(cl, "base", **kw).status_code == 303
     p = plan_de(web_ctx, uid)
     assert vistas and [motor_v6.minutos_semana(w) for w in p["weeks"]] == vistas
+
+
+# ───────────────────────────── ronda 2: carrera solo si se elige, sin FC máx, volumen que sí cambia, plan completo ─────────────────────────────
+
+def datos_json(cl, nivel, pref="", **extra):
+    """POST a vista.json con las mismas respuestas que la vista."""
+    r = preguntas(cl, nivel, pref)
+    return cl.post(f"{pref}/plan/nuevo/vista.json", data={"csrf": csrf_de(r.text), "nivel": nivel, **respuestas(**extra)})
+
+
+def incrusto(r):
+    import json
+    return json.loads(r.text.split('<script type="application/json" id="pn-datos">')[1].split("</script>")[0].replace("\\u0026", "&").replace("\\u003c", "<").replace("\\u003e", ">").replace("\\u0027", "'"))
+
+
+def test_carrera_solo_se_ve_con_objetivo_carrera(web_ctx):
+    uid, cl = nueva(web_ctx)
+    base = preguntas(cl, "base").text
+    assert 'class="pn-carrera"' in base and 'name="km"' in base and 'name="fecha"' in base      # los campos existen (sin JS el servidor los ignora)
+    assert 'value="carrera" checked' not in base                                                 # y no están elegidos
+    css = (Path(__file__).parent.parent / "web" / "estaticos" / "paginas.css").read_text(encoding="utf-8")
+    assert ".pn-carrera { display: none; }" in css and 'input[name="objetivo"][value="carrera"]:checked) .pn-carrera' in css
+    cor = preguntas(cl, "corredor").text
+    assert 'class="pn-carrera"' in cor
+    assert 'class="pn-carrera"' not in preguntas(cl, "empezando").text                         # Empezando no tiene objetivo
+    # otro objetivo con km/fecha basura: se ignoran; carrera sin fecha: error en el campo
+    assert vista(cl, "base", objetivo="base", km="7", fecha="no es fecha", corrida_larga="30").status_code == 200
+    r = vista(cl, "base", objetivo="carrera", km="10", fecha="", corrida_larga="30")
+    assert r.status_code == 400 and "Escribe una fecha válida" in r.text and 'name="fecha"' in r.text
+    # la carrera del preset llega marcada
+    fecha = (lunes_siguiente() + timedelta(weeks=12)).isoformat()
+    r = cl.post("/plan/nuevo/preguntas", data={"csrf": csrf_de(cl.get("/plan/nuevo").text), "nivel": "base", "carrera": "1", "fecha": fecha, "km": "10"})
+    assert 'value="carrera" checked' in r.text
+
+
+def test_sin_fc_max_ni_tiempo_y_edad_obligatoria_sin_ajustes(web_ctx):
+    uid, cl = nueva(web_ctx)
+    for nivel in ("empezando", "base", "corredor"):
+        h = preguntas(cl, nivel).text
+        assert 'name="fc_max"' not in h and 'name="tiempo"' not in h and "FC máxima" not in h
+        assert re.search(r'name="edad"[^>]*required', h)
+    r = vista(cl, "empezando", edad="")
+    assert r.status_code == 400 and "Escribe tu edad" in r.text
+    assert vista(cl, "empezando", edad="30", fc_max="150").status_code == 200   # un fc_max viejo en el POST se ignora
+    assert confirmar(cl, "empezando", edad="30", fc_max="150").status_code == 303
+    with web_ctx.sesiones() as db:
+        assert "fc_max" not in db.get(Ajustes, uid).config["perfil"] and db.get(Ajustes, uid).config["perfil"]["edad"] == 30
+    # con ajustes: edad opcional y su fc_max guardada se conserva
+    uid2 = crear_usuario(web_ctx, "fc@x.com", con_ajustes=True)
+    cl2 = entrar(web_ctx, web_ctx.cliente(), "fc@x.com")
+    with web_ctx.sesiones() as db:
+        db.get(Ajustes, uid2).config = {**db.get(Ajustes, uid2).config, "perfil": {**db.get(Ajustes, uid2).config["perfil"], "fc_max": 187}}
+        db.get(Usuario, uid2).sin_plan = True
+        db.commit()
+    assert 'name="edad"' in preguntas(cl2, "base").text and not re.search(r'name="edad"[^>]*required', preguntas(cl2, "base").text)
+    assert confirmar(cl2, "base", edad="").status_code == 303
+    with web_ctx.sesiones() as db:
+        assert db.get(Ajustes, uid2).config["perfil"]["fc_max"] == 187
+
+
+def test_planes_viejos_con_tiempo_carrera_y_fc_max_siguen_funcionando(web_ctx):
+    uid = crear_usuario(web_ctx, "viejo@x.com", con_ajustes=True)
+    cl = entrar(web_ctx, web_ctx.cliente(), "viejo@x.com")
+    with web_ctx.sesiones() as db:
+        a = db.get(Ajustes, uid)
+        a.config = {**a.config, "perfil": {**a.config["perfil"], "fc_max": 181}, "corrida": {**a.config["corrida"], "tiempo_carrera": "50:00"}}
+        db.add(Plan(usuario_id=uid, plan={**motor_v6.generar_v6(entrada_v6_de(45)), "meta": {**motor_v6.generar_v6(entrada_v6_de(45))["meta"], "tiempo_carrera": "52:30"}}))
+        db.commit()
+    assert validar.problemas(cl.get("/data.json").json()) == [] and cl.get("/plan/nuevo").status_code == 200
+
+
+def entrada_v6_de(inicio_minutos):
+    from web import plan_nuevo
+    ev = {"corridas_sem_4": 0, "minutos_sem_prom": 0, "trote_continuo_min": 0, "semanas_activas": 0}
+    v = {"dias": "3", "intensos": "0", "objetivo": "base", "km": "10", "fecha": "", "calidad_desde": "", "inicio": lunes_siguiente().isoformat(), "edad": "35"}
+    return plan_nuevo.entrada_v6(v, "empezando", ev, inicio_minutos)
+
+
+def paquete(r):
+    assert r.status_code == 200, r.text[:300]
+    return r.json()
+
+
+def test_mas_salta_hasta_un_valor_que_cambia_la_semana_1_empezando_45(web_ctx):
+    uid, cl = nueva(web_ctx)
+    r = vista(cl, "empezando")
+    inicio, _ = volumen_texto(r)
+    assert inicio == 45
+    d = incrusto(r)
+    mas = d["volumen"]["mas"]
+    assert mas and mas["valor"] > 5                                    # +5 % seguiría en 45: salta más lejos
+    assert mas["etiqueta"] == f"+ {mas['valor']} %"                   # la etiqueta muestra el salto real
+    p = paquete(datos_json(cl, "empezando", ajuste_pct=str(mas["valor"])))
+    assert p["ajuste_pct"] == mas["valor"] and int(re.search(r"(\d+) min/semana", p["volumen"]["texto"]).group(1)) > 45
+    assert p["semanas"][0]["min"] > 45 and p["volumen"]["menos"]["valor"] < mas["valor"] and p["volumen"]["menos"]["etiqueta"] == f"− {mas['valor'] - p['volumen']['menos']['valor']} %"
+
+
+def subir_hasta_el_tope(cl, nivel, **kw):
+    """Aprieta «+» (a donde lleve) hasta que se desactiva; devuelve (paquete, saltos)."""
+    pct, saltos = 0, []
+    for _ in range(12):
+        p = paquete(datos_json(cl, nivel, ajuste_pct=str(pct), **kw))
+        if p["volumen"]["mas"] is None:
+            return p, saltos
+        assert p["volumen"]["mas"]["valor"] > pct
+        pct = p["volumen"]["mas"]["valor"]
+        saltos.append(pct)
+    raise AssertionError("el botón + nunca se desactivó")
+
+
+def test_mas_se_desactiva_con_mensaje_cuando_no_sube_base_2_dias(web_ctx):
+    uid, cl = nueva(web_ctx)
+    # Base sin calidad con 2 días y 3 × 40 min: la semana 1 no pasa de 100 min (tope por sesión) aunque se pida +30 %
+    kw = dict(frecuencia_actual="3", corrida_larga="40", calidad_desde="no")
+    p, saltos = subir_hasta_el_tope(cl, "base", dias="2", **kw)
+    assert p["semanas"][0]["min"] == 100 and p["volumen"]["maximo"] == "Con 2 días por semana no sube más; con más días sí." and saltos[0] == 5
+    r = vista(cl, "base", dias="2", ajuste_pct=str(p["ajuste_pct"]), **kw)
+    assert "Con 2 días por semana no sube más" in r.text and "disabled" in fila_volumen(r) and volumen_texto(r)[0] == 100
+    # con 5 días la semana 1 sí sube hasta +30 %; ahí el tope ya es el del nivel
+    p5, _ = subir_hasta_el_tope(cl, "base", dias="5", **kw)
+    assert p5["semanas"][0]["min"] == 125 and p5["volumen"]["maximo"] == "Llegaste al máximo de tu nivel."
+
+
+def test_el_texto_usa_los_minutos_reales_de_la_semana_1(web_ctx):
+    uid, cl = nueva(web_ctx)
+    kw = dict(frecuencia_actual="3", corrida_larga="40", dias="2")
+    for pct in ("0", "10", "20", "30"):
+        r = vista(cl, "base", ajuste_pct=pct, **kw)
+        d = incrusto(r)
+        assert volumen_texto(r)[0] == d["semanas"][0]["min"], pct
+    kw = dict(frecuencia_actual="3", corrida_larga="40")
+    r = vista(cl, "base", ajuste_pct="20", **kw)
+    assert volumen_texto(r)[0] == incrusto(r)["semanas"][0]["min"]
+
+
+def test_recomendacion_siempre_visible_y_aviso_desde_15(web_ctx):
+    uid, cl = nueva(web_ctx)
+    kw = dict(frecuencia_actual="3", corrida_larga="40")
+    d0 = incrusto(vista(cl, "base", **kw))["volumen"]["recomendacion"]
+    assert d0["clase"] == "nota" and "Recomendado: no subir más de 10–20 %" in d0["texto"]
+    assert "Recomendado: no subir más de 10–20 %" in vista(cl, "base", **kw).text
+    assert incrusto(vista(cl, "base", ajuste_pct="10", **kw))["volumen"]["recomendacion"]["clase"] == "nota"
+    d15 = incrusto(vista(cl, "base", ajuste_pct="15", **kw))["volumen"]["recomendacion"]
+    assert d15["clase"] == "warn" and "no pasar de +20 %" not in d15["texto"]
+    d25 = incrusto(vista(cl, "base", ajuste_pct="25", **kw))["volumen"]["recomendacion"]
+    assert d25["clase"] == "warn" and "no pasar de +20 %" in d25["texto"]
+
+
+def test_vista_previa_orden_y_plan_completo(web_ctx):
+    uid, cl = nueva(web_ctx)
+    r = vista(cl, "base", frecuencia_actual="3", corrida_larga="40")
+    t = r.text
+    pos = [t.index(x) for x in ('id="pn-volumen"', 'id="pn-ranura"', 'id="pn-barras"', 'id="pn-plan"', 'id="pn-porques"', "Confirmar mi plan")]
+    assert pos == sorted(pos) and "Tus dos primeras semanas" not in t
+    assert 'data-titulo="Ver el plan completo"' in t and "/estaticos/plan_nuevo.js" in t and '/vistas.js' in t
+    d = incrusto(r)
+    plan = d["plan"]
+    assert plan and plan["semanas"] and len(plan["semanas"]) == len(d["semanas"]) and plan["largo"] == len(d["semanas"])
+    assert not any("editar" in str(k) for k in plan)                 # solo lectura
+    with web_ctx.sesiones() as db:
+        assert db.get(Plan, uid) is None and db.get(Ajustes, uid) is None and db.get(CacheData, uid) is None
+
+
+def test_vista_json_permisos_csrf_y_no_guarda(web_ctx):
+    uid_a = crear_usuario(web_ctx, "atleta2@x.com")
+    uid_c = crear_usuario(web_ctx, "coach2@x.com")
+    crear_usuario(web_ctx, "otro2@x.com")
+    with web_ctx.sesiones() as db:
+        db.add(Coach(atleta_id=uid_a, coach_id=uid_c))
+        db.commit()
+    anonimo = web_ctx.cliente()
+    tok = csrf_de(anonimo.get("/entrar").text)
+    r = anonimo.post("/plan/nuevo/vista.json", data={"csrf": tok, "nivel": "base", **respuestas()}, follow_redirects=False)
+    assert r.status_code in (303, 302) and r.headers["location"] == "/entrar"
+    otro = entrar(web_ctx, web_ctx.cliente(), "otro2@x.com")
+    tok = csrf_de(otro.get("/plan/nuevo").text)
+    assert otro.post(f"/a/{uid_a}/plan/nuevo/vista.json", data={"csrf": tok, "nivel": "base", **respuestas()}).status_code == 404
+    assert otro.post("/plan/nuevo/vista.json", data={"nivel": "base", **respuestas()}).status_code == 403   # sin CSRF
+    coach = entrar(web_ctx, web_ctx.cliente(), "coach2@x.com")
+    r = datos_json(coach, "base", pref=f"/a/{uid_a}")
+    assert r.status_code == 200 and r.json()["plan"]["semanas"]
+    # error de respuestas: 400 con texto
+    e = datos_json(coach, "base", pref=f"/a/{uid_a}", dias="9")
+    assert e.status_code == 400 and "entre 2 y 5" in e.json()["error"]
+    with web_ctx.sesiones() as db:
+        assert db.get(Plan, uid_a) is None and db.get(Ajustes, uid_a) is None and db.get(CacheData, uid_a) is None
+        assert db.query(Cambio).filter_by(atleta_id=uid_a).count() == 0
+
+
+def test_vista_json_pasa_la_lista_blanca_y_confirmar_guarda_lo_que_se_ve(web_ctx):
+    uid, cl = nueva(web_ctx)
+    sembrar(web_ctx, uid, semanas=6, por_semana=3, minutos=25)
+    kw = dict(corrida_larga="30")
+    p = paquete(datos_json(cl, "base", ajuste_pct="10", **kw))
+    from dashboard import validar as v
+    texto_json = str(p["plan"])
+    assert "activityType" not in texto_json and "startTimeLocal" not in texto_json
+    assert p["plan"]["semanas"] and v.problemas({"plan": p["plan"]}) is not None
+    visto = [s["min"] for s in p["semanas"]]
+    assert confirmar(cl, "base", ajuste_pct=str(p["ajuste_pct"]), **kw).status_code == 303
+    guardado = plan_de(web_ctx, uid)
+    assert [motor_v6.minutos_semana(w) for w in guardado["weeks"]] == visto and guardado["meta"]["ajuste_pct"] == p["ajuste_pct"]
+    assert motor_v6.minutos_semana(guardado["weeks"][0]) == int(re.search(r"(\d+) min/semana", p["volumen"]["texto"]).group(1))
+
+
+def test_la_pagina_del_sitio_sigue_arrancando_sin_la_vista_previa():
+    sitio = Path(__file__).parent.parent / "site"
+    v = (sitio / "vistas.js").read_text(encoding="utf-8")
+    assert 'const ES_SITIO = !!$("app");' in v and "if (ES_SITIO) iniciar();" in v and "if (ES_SITIO) {" in v
+    assert '<script src="vistas.js"></script>' in (sitio / "index.html").read_text(encoding="utf-8") and 'id="app"' in (sitio / "index.html").read_text(encoding="utf-8")

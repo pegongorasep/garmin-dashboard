@@ -29,3 +29,19 @@ Un solo commit. Archivos: `web/plan_nuevo.py`, `web/plantillas/plan_nuevo.html`,
 
 ## Fuera de alcance
 - Simulador (`plan/simulador.py`): no es criterio; revisión en Fase 2.
+
+## Ronda 2
+- «Tu carrera» (distancia y fecha) solo se ve con «Una carrera» elegida (CSS `:has()` en `paginas.css`, sin JS; aquí la altura sí cambia, excepción acordada).
+  El servidor sigue ignorando km y fecha con otro objetivo; carrera sin fecha da error en el campo.
+- Se quitan la FC máxima (`fc_max`) y el tiempo de carrera (`tiempo`) del formulario. La edad es obligatoria sin ajustes; con ajustes sigue opcional y se
+  conserva su `fc_max`. Los planes y configs viejos con `fc_max` o `meta.tiempo_carrera` no se tocan. Se quitan las claves i18n sin uso.
+- Botones de volumen: cada uno salta al siguiente `ajuste_pct` (múltiplo de 5, dentro de piso del nivel…+30 %) cuyo plan tiene otros minutos en la semana 1
+  (`saltos_volumen`, genera un plan por candidato). La etiqueta muestra el salto real («+ 10 %»). Sin valor, el botón se desactiva; el de subir muestra
+  «Llegaste al máximo de tu nivel» o, si más días por semana sí subirían, «Con N días por semana no sube más; con más días sí».
+  El texto «Volumen de inicio» usa los minutos reales de la semana 1.
+- Ranura bajo el volumen más chica (5.5lh): recomendación siempre visible («Recomendado: no subir más de 10–20 %»), aviso amarillo desde +15 %, texto fuerte desde +25 %.
+- Vista previa: volumen, gráfica «Minutos por semana» (igual), desplegable «Ver el plan completo» (la misma `tarjetaPlan` de la pestaña Plan, solo lectura),
+  «Por qué», Confirmar / Cambiar respuestas. Los datos salen de `calculo.calcular_propuesta(plan=…, editable=False)` (build + lista blanca, sin guardar nada).
+- `POST …/plan/nuevo/vista.json` (CSRF, mismos permisos) devuelve lo que pinta el paso 3; `web/estaticos/plan_nuevo.js` repinta fila, ranura, gráfica, «Por qué»
+  y tarjeta conservando la semana vista y si el desplegable estaba abierto. Sin JS, los botones siguen siendo un POST normal.
+- `site/vistas.js` solo arranca (`iniciar()`) si existe `#app`; `base.js` acepta `window.RUTA_I18N`. `sw.js` VERSION v83.

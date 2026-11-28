@@ -4,16 +4,14 @@ Todo se decide en Python (qué preguntas, validación, plan); las plantillas sol
 y al confirmar el plan se vuelve a generar (es determinista), así que lo que se guarda es lo que se vio.
 Cada ruta pasa por `ajustes_web.resolver` (`puede_editar`; 404 si no hay acceso) y todo POST lleva CSRF (`formulario`)."""
 import copy
-import re
+import logging
 import secrets
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import Depends, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
-import i18n
 import motor_v6
-import plan_i18n
 from ajustes import ConfigError, crudo_desde_respuestas, normalizar_config
 from nivel import NIVELES as NIVELES_V6, PISO_NIVEL, UMBRALES as UMBRALES_NIVEL, hay_corrida_garmin, nivel_desde_datos, nivel_sin_reloj
 
@@ -31,7 +29,7 @@ CALIDAD_SEMANAS = tuple(range(2, 9))
 CALIDAD_LARGA_MIN = 20          # con calidad elegida y una corrida más larga que esto, aviso
 AJUSTE_PASO, AJUSTE_MAX = 5, 30   # el volumen de inicio se mueve de 5 en 5 % hasta +30 %
 AJUSTE_AVISO_1, AJUSTE_AVISO_2 = 15, 25
-RE_TIEMPO = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
+log = logging.getLogger("web.plan_nuevo")
 AVISOS_CON_TEXTO = ("dias_limitados", "carrera_no_recomendada", "carrera_poco_tiempo", "carrera_cerca", "pausa")
 PORQUES_CON_TEXTO = ("inicio", "sube", "descarga", "calidad_si", "calidad_no", "escalera", "carrera")
 # TODO(F4+): «1 o 2 sesiones de calidad» (2 solo con >= 4 días y < 3 días intensos). Hoy motor_v6.verificar permite a lo más una
@@ -49,21 +47,18 @@ def campos_de(nivel: str, tiene_ajustes: bool, sin_garmin: bool = False) -> list
     campos = ["dias", "intensos"]
     if nivel in ("base", "corredor"):
         campos += (["frecuencia_actual", "corrida_larga"] if sin_garmin else []) + ["objetivo", "carrera", "calidad"]
-    if nivel == "corredor":
-        campos += ["tiempo"]
     campos += ["inicio", "edad"]
     if not tiene_ajustes:
-        campos += ["zona", "fc_max"]
+        campos += ["zona"]
     return campos
 
 
 def valores_iniciales(nivel: str, ev: dict, crudo: dict | None, hoy: date) -> dict:
     perfil = (crudo or {}).get("perfil") or {}
     return {"nivel": nivel, "frecuencia_actual": "", "corrida_larga": "", "dias": "3", "intensos": str(min(len(ev.get("dias_intensos", [])), 5)),
-            "objetivo": OBJETIVOS[nivel][0] if OBJETIVOS[nivel] else "", "km": "10", "fecha": "", "tiempo": "",
+            "objetivo": OBJETIVOS[nivel][0] if OBJETIVOS[nivel] else "", "km": "10", "fecha": "",
             "calidad_desde": CALIDAD_DESDE_DEFECTO.get(nivel, ""), "ajuste_pct": "0",
-            "inicio": proximo_lunes(hoy).isoformat(), "edad": str(perfil.get("edad") or ""), "zona": perfil.get("zona_horaria") or "America/Merida",
-            "fc_max": str(perfil.get("fc_max") or "")}
+            "inicio": proximo_lunes(hoy).isoformat(), "edad": str(perfil.get("edad") or ""), "zona": perfil.get("zona_horaria") or "America/Merida"}
 
 
 def preset_carrera(params, hoy: date) -> dict:
@@ -113,13 +108,12 @@ def leer_respuestas(form, nivel: str, campos: list[str], hoy: date) -> dict:
     objetivo = "base" if objetivo == "mas_tiempo" else objetivo
     v["objetivo"] = objetivo if objetivo in OBJETIVOS[nivel] else (OBJETIVOS[nivel][0] if OBJETIVOS[nivel] else "")
     v["km"], v["fecha"] = str(form.get("km", "10")), str(form.get("fecha", "")).strip()
-    v["tiempo"] = str(form.get("tiempo", "")).strip()
     cd = str(form.get("calidad_desde", "")).strip()
     v["calidad_desde"] = ("" if "calidad" not in campos else
                           "no" if cd == "no" else str(_entero(cd or CALIDAD_DESDE_DEFECTO[nivel], "calidad_desde", CALIDAD_SEMANAS[0], CALIDAD_SEMANAS[-1])))
     v["ajuste_pct"] = str(form.get("ajuste_pct", "0")).strip()
     v["inicio"] = str(form.get("inicio", "")).strip()
-    v["edad"], v["zona"], v["fc_max"] = (str(form.get(k, "")).strip() for k in ("edad", "zona", "fc_max"))
+    v["edad"], v["zona"] = (str(form.get(k, "")).strip() for k in ("edad", "zona"))
     d_inicio = _fecha(v["inicio"], "inicio")
     if lunes(d_inicio) < lunes(hoy):
         raise ErrorT("err.pn_inicio_pasado", "inicio")
@@ -132,14 +126,10 @@ def leer_respuestas(form, nivel: str, campos: list[str], hoy: date) -> dict:
             raise ErrorT("err.pn_carrera_cerca", "fecha", n=MIN_SEMANAS_CARRERA)
         if semanas > MAX_SEMANAS_CARRERA:
             raise ErrorT("err.pn_carrera_lejos", "fecha", n=MAX_SEMANAS_CARRERA)
-    if "tiempo" in campos and v["tiempo"] and not RE_TIEMPO.match(v["tiempo"]):
-        raise ErrorT("err.pn_tiempo", "tiempo")
     if v["edad"]:
         _entero(v["edad"], "edad", 10, 99)
-    if v["fc_max"]:
-        _entero(v["fc_max"], "fc_max", 120, 230)
-    if "edad" in campos and "zona" in campos and not v["edad"] and not v["fc_max"]:
-        raise ErrorT("err.edad_o_fc", "edad")
+    if "edad" in campos and "zona" in campos and not v["edad"]:   # sin ajustes la edad es obligatoria (con ajustes ya hay perfil)
+        raise ErrorT("err.pn_edad", "edad")
     return v
 
 
@@ -178,7 +168,7 @@ def rango_ajuste(base: int, nivel: str) -> tuple[int, int]:
 
 
 def armar_plan(v: dict, nivel: str, calculado: dict) -> dict:
-    """Plan v6 con lo que la vista previa y el historial necesitan en `meta` (nivel calculado, tiempo de carrera, ajuste y calidad elegidos)."""
+    """Plan v6 con lo que la vista previa y el historial necesitan en `meta` (nivel calculado, ajuste y calidad elegidos)."""
     pct = int(v.get("ajuste_pct") or 0)
     try:
         plan = motor_v6.generar_v6(entrada_v6(v, nivel, calculado["evidencia"], inicio_ajustado(calculado["inicio_minutos"], pct)))
@@ -188,8 +178,6 @@ def armar_plan(v: dict, nivel: str, calculado: dict) -> dict:
     plan["meta"]["ajuste_pct"] = pct
     if nivel in ("base", "corredor"):
         plan["meta"]["calidad_desde"] = None if v["calidad_desde"] == "no" else int(v["calidad_desde"])
-    if v.get("tiempo"):
-        plan["meta"]["tiempo_carrera"] = v["tiempo"]   # guardado; el motor aún no lo usa
     return plan
 
 
@@ -200,7 +188,7 @@ def crudo_nuevo(crudo: dict | None, plan: dict, v: dict, sensor: str | None) -> 
     semanas = max(len(plan["weeks"]), 1)
     if crudo is None:
         nuevo = crudo_desde_respuestas(plan["start"], edad=int(v["edad"]) if v["edad"] else None,
-                                       fc_max=int(v["fc_max"]) if v["fc_max"] else None, zona=v["zona"] or "America/Merida")
+                                       zona=v["zona"] or "America/Merida")
         nuevo["perfil"]["sensor"] = sensor or "banda"
     else:
         nuevo = copy.deepcopy(crudo)
@@ -235,15 +223,15 @@ def evidencia_en_palabras(calculado: dict, t) -> list[str]:
     return lineas
 
 
-def vista_previa(plan: dict, t, idioma: str, ajuste: dict | None = None) -> dict:
-    """Lo que pinta el paso 3: barras de minutos por semana, semanas 1 y 2 en detalle, por qué y avisos (en el idioma de la persona)."""
+def vista_previa(plan: dict, t, ajuste: dict | None = None) -> dict:
+    """Lo que pinta el paso 3 (y el JSON que repinta los botones de volumen): barras de minutos por semana, por qué, avisos y la fila de volumen."""
     meta = plan["meta"]
-    semanas = [{"n": w["n"], "min": motor_v6.minutos_semana(w), "kind": w["kind"], "evento": w.get("evento", "")} for w in plan["weeks"]]
+    semanas = []
+    for w in plan["weeks"]:
+        m = motor_v6.minutos_semana(w)
+        marca = (" · " + t("pn.semana_carrera")) if w.get("evento") == "carrera" else (" · " + t("pn.semana_descarga")) if w["kind"] == "descarga" else ""
+        semanas.append({"n": w["n"], "min": m, "kind": w["kind"], "etiqueta": t("pn.barra_sem", n=w["n"]), "texto": t("pn.barra_min", min=m) + marca})
     tope = max(s["min"] for s in semanas) or 1
-    with i18n.usar(idioma):
-        detalle = [{"n": w["n"], "sesiones": [{"nombre": plan_i18n.nombre(s["name"]), "min": s["minutes"]}
-                                               for s in w["sessions"]]}
-                   for w in plan["weeks"][:2]]
     avisos = [t("pn.av." + a["clave"], **{k: val for k, val in a.items() if k not in ("clave", "texto")}) if a["clave"] in AVISOS_CON_TEXTO else a["texto"]
               for a in meta["avisos"]]
     porques = []
@@ -259,23 +247,61 @@ def vista_previa(plan: dict, t, idioma: str, ajuste: dict | None = None) -> dict
         if "promedio" in pr and pr["promedio"]:
             pr["promedio"] = f"{pr['promedio']:g}"
         porques.append(t("pn.por." + clave, **pr))
-    return {"semanas": semanas, "tope": tope, "detalle": detalle, "avisos": avisos, "porques": porques, "meta": meta,
+    return {"semanas": semanas, "tope": tope, "avisos": avisos, "porques": porques,
             "volumen": volumen_en_palabras(plan, ajuste, t) if ajuste else None}
 
 
+def minutos_inicio(plan: dict) -> int:
+    """Los minutos REALES de la semana 1 del plan generado (el inicio pedido puede quedar topado por el piso o por las sesiones)."""
+    return motor_v6.minutos_semana(plan["weeks"][0])
+
+
+def saltos_volumen(v: dict, nivel: str, calculado: dict, pct: int, lo: int, hi: int, actual: int) -> dict:
+    """A qué `ajuste_pct` lleva cada botón: el siguiente múltiplo de 5 (dentro de [lo, hi]) cuyo plan tiene otros minutos en la semana 1
+    (un paso de 5 % a veces no cambia nada: topes por sesión o por nivel). Con `razon` cuando no se puede subir: "dias" si más días
+    por semana sí darían más minutos, "nivel" si es el máximo del nivel. Genera un plan por candidato (barato)."""
+    def distintos(c: int, dias: int | None = None) -> bool:
+        try:
+            w = {**v, "ajuste_pct": str(c), **({"dias": str(dias)} if dias else {})}
+            return minutos_inicio(armar_plan(w, nivel, calculado)) != actual
+        except ErrorT:
+            return False
+
+    def buscar(paso: int) -> int | None:
+        c = pct + paso
+        while lo <= c <= hi:
+            if distintos(c):
+                return c
+            c += paso
+        return None
+    menos, mas = buscar(-AJUSTE_PASO), buscar(AJUSTE_PASO)
+    razon = None
+    if mas is None:
+        dias = int(v["dias"])
+        razon = "dias" if dias < 5 and distintos(hi, dias + 1) else "nivel"
+    return {"menos": menos, "mas": mas, "razon": razon}
+
+
 def volumen_en_palabras(plan: dict, ajuste: dict, t) -> dict:
-    """Fila «Volumen de inicio» de la vista previa: texto, botones (valor nuevo o None si está en el límite) y avisos de la ranura reservada."""
+    """Fila «Volumen de inicio» de la vista previa: texto con los minutos reales de la semana 1, botones (con el salto real, o None si no hay),
+    la recomendación siempre visible (aviso desde +15 %, fuerte desde +25 %) y el máximo cuando no se puede subir."""
     pct = ajuste["pct"]
     signo = "0 %" if pct == 0 else (f"+{pct} %" if pct > 0 else f"−{-pct} %")
-    avisos = []
     if pct >= AJUSTE_AVISO_2:
-        avisos.append(t("pn.ajuste_fuerte"))
+        reco = {"clase": "warn", "texto": t("pn.ajuste_fuerte")}
     elif pct >= AJUSTE_AVISO_1:
-        avisos.append(t("pn.ajuste_aviso"))
-    if pct > 0 and plan["meta"].get("tope_alcanzado"):
-        avisos.append(t("pn.ajuste_tope"))
-    return {"texto": t("pn.volumen", min=plan["meta"]["inicio_minutos"], pct=signo), "menos": pct - AJUSTE_PASO if pct > ajuste["lo"] else None,
-            "mas": pct + AJUSTE_PASO if pct < ajuste["hi"] else None, "avisos": avisos}
+        reco = {"clase": "warn", "texto": t("pn.ajuste_aviso")}
+    else:
+        reco = {"clase": "nota", "texto": t("pn.ajuste_reco")}
+    menos, mas = ajuste["menos"], ajuste["mas"]
+    maximo = None
+    if mas is None:
+        maximo = t("pn.ajuste_max_dias", dias=plan["meta"]["dias"]) if ajuste.get("razon") == "dias" else t("pn.ajuste_tope")
+    return {"texto": t("pn.volumen", min=minutos_inicio(plan), pct=signo),
+            "menos": {"valor": menos, "etiqueta": t("pn.ajuste_menos", n=pct - menos)} if menos is not None else None,
+            "mas": {"valor": mas, "etiqueta": t("pn.ajuste_mas", n=mas - pct)} if mas is not None else None,
+            "etiqueta_menos": t("pn.ajuste_menos", n=AJUSTE_PASO), "etiqueta_mas": t("pn.ajuste_mas", n=AJUSTE_PASO),
+            "recomendacion": reco, "maximo": maximo}
 
 
 def nivel_indicado(calculado: dict, frecuencia: int, larga: int) -> dict:
@@ -383,8 +409,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return pantalla(request, ctx, 2, nivel, v)
     doble("post", "/plan/nuevo/preguntas", paso2)
 
-    def generar_o_error(request, ctx, form):
-        """(nivel, respuestas, plan) o lanza ErrorT/ConfigError. También deja en `ctx["ajuste"]` el ajuste de volumen y su rango."""
+    def generar_o_error(request, ctx, form, con_saltos=False):
+        """(nivel, respuestas, plan) o lanza ErrorT/ConfigError. Con `con_saltos` también deja en `ctx["ajuste"]` el ajuste de volumen,
+        su rango y a dónde lleva cada botón (solo la vista previa lo necesita; confirmar no)."""
         nivel = elegido(form, ctx["calculado"])
         aplicar_respuestas(ctx, form, nivel)
         base = max(ctx["calculado"]["inicio_minutos"], PISO_NIVEL[nivel])
@@ -397,14 +424,32 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             pct = 0
         pct = min(max(pct - pct % AJUSTE_PASO, lo), hi)   # múltiplo de 5 dentro del rango
         v["ajuste_pct"] = str(pct)
-        ctx["ajuste"] = {"pct": pct, "lo": lo, "hi": hi}
-        return nivel, v, armar_plan(v, nivel, ctx["calculado"])
+        plan = armar_plan(v, nivel, ctx["calculado"])
+        if con_saltos:
+            ctx["ajuste"] = {"pct": pct, "lo": lo, "hi": hi, **saltos_volumen(v, nivel, ctx["calculado"], pct, lo, hi, minutos_inicio(plan))}
+        return nivel, v, plan
 
     def avisos_calidad(nivel, v, ctx, t) -> list[str]:
         if nivel == "empezando" or v["calidad_desde"] in ("", "no"):
             return []
         larga = float(v["corrida_larga"]) if ctx["sin_garmin"] and v["corrida_larga"] else ctx["calculado"]["evidencia"].get("trote_continuo_min", 0)
         return [t("pn.av_calidad_larga", min=CALIDAD_LARGA_MIN)] if larga < CALIDAD_LARGA_MIN else []
+
+    def tarjeta_del_plan(request, db, atleta, ctx, plan, v):
+        """Lo que la pestaña Plan pintaría con este plan (mismo build y lista blanca que el sitio), sin guardar nada; solo lectura.
+        None si algo falla: la vista previa sigue sin el plan completo."""
+        try:
+            nuevo = crudo_nuevo(ctx["crudo"], plan, v, atleta.sensor)
+            ahora_utc = app.state.reloj().astimezone(timezone.utc).replace(tzinfo=None)
+            return calculo.calcular_propuesta(db, atleta, nuevo, ahora_utc, request.state.idioma, plan=plan, editable=False)["plan"]
+        except (ConfigError, calculo.DataInvalido):
+            log.exception("plan completo de la vista previa")
+            return None
+
+    def paquete(request, db, atleta, ctx, plan, v) -> dict:
+        """Todo lo que pinta el paso 3 y lo que repinta el JS al mover el volumen (el mismo dict en la página y en vista.json)."""
+        prev = vista_previa(plan, request.state.t, ctx["ajuste"])
+        return {**prev, "ajuste_pct": ctx["ajuste"]["pct"], "plan": tarjeta_del_plan(request, db, atleta, ctx, plan, v)}
 
     async def vista(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         """Paso 3: la vista previa. No guarda nada."""
@@ -414,16 +459,29 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return ctx
         t = request.state.t
         try:
-            nivel, v, plan = generar_o_error(request, ctx, form)
+            nivel, v, plan = generar_o_error(request, ctx, form, con_saltos=True)
         except ConfigError as ex:
             nivel = elegido(form, ctx["calculado"])
             campo = getattr(ex, "campo", None)
             vals = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
             vals.update({k: str(form.get(k, "")) for k in vals if k != "nivel" and k in form})
             return pantalla(request, ctx, 2, nivel, vals, status=400, **({"errores": {campo: texto(ex, t)}} if campo else {"error": texto(ex, t)}))
-        return pantalla(request, ctx, 3, nivel, v, prev=vista_previa(plan, t, request.state.idioma, ctx["ajuste"]),
-                        avisos_extra=avisos_calidad(nivel, v, ctx, t))
+        return pantalla(request, ctx, 3, nivel, v, prev=paquete(request, db, atleta, ctx, plan, v), avisos_extra=avisos_calidad(nivel, v, ctx, t))
     doble("post", "/plan/nuevo/vista", vista)
+
+    async def vista_json(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
+        """Los botones de volumen sin recargar: lo mismo que pinta el paso 3 para otro `ajuste_pct`. No guarda nada (ni caché ni base)."""
+        form = await formulario(request)
+        atleta, ctx = contexto(request, db, usuario, atleta_id)
+        if atleta is None:
+            return ctx
+        sin_cache = {"Cache-Control": "no-store"}
+        try:
+            nivel, v, plan = generar_o_error(request, ctx, form, con_saltos=True)
+        except ConfigError as ex:
+            return JSONResponse({"error": texto(ex, request.state.t)}, status_code=400, headers=sin_cache)
+        return JSONResponse(paquete(request, db, atleta, ctx, plan, v), headers=sin_cache)
+    doble("post", "/plan/nuevo/vista.json", vista_json)
 
     async def confirmar(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
         """Guarda el plan como el plan vivo (queda en el historial, se puede deshacer) y manda a la pestaña Plan."""
