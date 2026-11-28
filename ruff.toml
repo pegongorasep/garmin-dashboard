@@ -1,0 +1,8 @@
+extend-exclude = [".venv", ".claude", "data", "web/alembic/versions"]
+
+[lint]
+select = ["F", "E9"]
+
+[lint.per-file-ignores]
+# Las pruebas importan fixtures y ayudantes de otras pruebas por nombre (pytest los resuelve así).
+"tests/*" = ["F401", "F811", "F841"]

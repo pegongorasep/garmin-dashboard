@@ -1,6 +1,5 @@
 """Alembic: la URL sale de DATABASE_URL (o de `-x url=...`); nunca está en el repo."""
 from alembic import context
-from sqlalchemy import pool
 
 from web.config import desde_entorno
 from web.db import crear_motor

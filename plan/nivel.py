@@ -8,7 +8,7 @@ Ventanas: se cuentan hacia atrás desde `hoy` (semana 1 = los 7 días anteriores
 """
 import statistics
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).parent.parent

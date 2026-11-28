@@ -7,7 +7,7 @@ import argparse
 import hashlib
 import json
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -114,13 +114,13 @@ def rachas_de(steps: list, zonas: list) -> list:
                 planos.append(p)
     aplanar(steps)
     out = []
-    for p, (m, zs, *_) in zip(planos, tipos.silueta_de(planos)):
+    for p, (mins, zs, *_) in zip(planos, tipos.silueta_de(planos)):
         if out and out[-1]["_zs"] == zs:
-            out[-1]["min"] += m
+            out[-1]["min"] += mins
             out[-1]["_zonas"].add(tipos.zona_unica(p))
             out[-1]["opcional"] = out[-1]["opcional"] and bool(p.get("optional"))
         else:
-            out.append({"min": m, "_zs": zs, "_zonas": {tipos.zona_unica(p)}, "opcional": bool(p.get("optional"))})
+            out.append({"min": mins, "_zs": zs, "_zonas": {tipos.zona_unica(p)}, "opcional": bool(p.get("optional"))})
     for r in out:
         zona = r["_zonas"].pop() if len(r["_zonas"]) == 1 else r["_zs"]
         r.update({"zona": zona, "lpm": lpm_range(zona, zonas)})

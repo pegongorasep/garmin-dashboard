@@ -1,7 +1,7 @@
 """Tarjetas de avance de los miembros de un grupo: solo campos de lista blanca, calculados del data.json de cada quien
 (el mismo que usa Hoy: `calculo.calcular`, así «hecha» y «no hecha» salen de la misma lógica)."""
 import logging
-from datetime import date, timedelta
+from datetime import date
 
 from sqlalchemy.orm import Session
 

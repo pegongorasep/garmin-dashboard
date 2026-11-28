@@ -284,11 +284,6 @@ def simular_todas() -> list:
     return [simular(p) for p in cargar_personas()]
 
 
-def matriz(resultados: list) -> list:
-    """[{"persona": id, "celdas": {clave: True|False|None}}] en el orden de REGLAS."""
-    return [{"persona": r["persona"]["id"], "celdas": {x["clave"]: x["ok"] for x in r["reglas"]}} for r in resultados]
-
-
 # --- reglas: cada una devuelve (ok True|False|None=no aplica, semanas que fallan, detalle) ---
 
 def _veredicto(fallan: list, mal: list, bien: str) -> tuple:

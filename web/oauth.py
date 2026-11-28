@@ -9,7 +9,7 @@ from datetime import timedelta
 from urllib.parse import urlencode, urlsplit
 
 from fastapi import Depends, Request
-from fastapi.responses import JSONResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

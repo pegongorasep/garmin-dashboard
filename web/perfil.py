@@ -11,7 +11,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
 from . import onboarding, permisos
-from .modelos import Ajustes, Consentimiento, FotoPerfil, Usuario, ahora
+from .modelos import Ajustes, Consentimiento, FotoPerfil, ahora
 from .privacidad import VERSION_AVISO
 
 MAX_BYTES = 5 * 1024 * 1024
@@ -37,10 +37,6 @@ def iniciales(u) -> str:
 def color_de(usuario_id: int) -> int:
     """Color estable (0..COLORES-1) derivado del id."""
     return usuario_id % COLORES
-
-
-def nombre_completo(u) -> str:
-    return " ".join(p for p in ((u.nombre or "").strip(), (u.apellido or "").strip()) if p)
 
 
 def tiene_foto(db: Session, usuario_id: int) -> bool:

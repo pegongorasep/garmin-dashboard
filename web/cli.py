@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from . import ROOT, auth, cambios, importar, tubo
+from . import auth, cambios, importar, tubo
 from .config import desde_entorno
 from .db import crear_motor, crear_sesiones
 from .modelos import Ajustes, CacheData, Cambio, Plan, Usuario

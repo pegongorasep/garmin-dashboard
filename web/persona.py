@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 import semanal
 
-from . import calculo, feed, grupos, grupos_resumen, permisos, semana_plan
+from . import calculo, feed, grupos, permisos, semana_plan
 from .modelos import Grupo, MiembroGrupo, Plan, Usuario
 
 log = logging.getLogger("web.persona")

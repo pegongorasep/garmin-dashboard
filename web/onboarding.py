@@ -9,8 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-from . import importar, tubo
-from .modelos import Ajustes, Cambio, Consentimiento, Usuario
+from . import tubo
+from .modelos import Ajustes, Consentimiento, Usuario
 from .privacidad import VERSION_AVISO
 
 PASOS = ["GitHub", "Tu copia", "Tu key", "Actívalo", "Tus datos", "Tu plan"]

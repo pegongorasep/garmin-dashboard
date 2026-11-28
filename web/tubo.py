@@ -4,7 +4,6 @@ Verificación: firma RS256 con el JWKS de GitHub (caché 1 h), `iss`, `aud` (= O
 llamado sea `motor.yml` del repo de Pedro en `stable` o `main`. El repositorio debe estar vinculado antes mediante
 la GitHub App."""
 import gzip
-import hashlib
 import json
 import logging
 import time
@@ -13,7 +12,7 @@ from datetime import timedelta
 
 import httpx
 import jwt
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session

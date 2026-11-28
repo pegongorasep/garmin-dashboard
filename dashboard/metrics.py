@@ -924,16 +924,6 @@ def progress_summary(rows: list, hoy: date, semanas: int, fc_ref: int = None) ->
     return (" · ".join(partes))[0].upper() + (" · ".join(partes))[1:]
 
 
-def _grupo_mejora(filas: list, ini: date, fin: date, semanas: int):
-    """Corridas y minutos por semana y % trote promedio de las corridas con ini <= fecha < fin; None si no hay corridas."""
-    g = [f for f in filas if ini <= date.fromisoformat(f["fecha"]) < fin]
-    if not g:
-        return None
-    return {"corridas": len(g) / semanas, "minutos": sum(f["minutos"] for f in g) / semanas,
-            "pct_trote": promedio([f.get("pct_trote") for f in g]),
-            "ritmo_ref": promedio([f.get("ritmo_ref_s") for f in g])}
-
-
 ENCADENADA_MIN = 30   # minutos máximos entre el fin de una actividad y el inicio de la siguiente para contarlas como una sesión
 
 

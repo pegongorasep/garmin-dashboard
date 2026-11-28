@@ -10,9 +10,7 @@ que dice de dónde sale. Orden de lectura: `generar_v6` -> `esqueleto` -> `volum
 Qué NO hace: no calcula zonas de FC (los pasos dicen Z1/Z2/…; el sitio las traduce con las zonas de Garmin) ni mira
 cuánto hizo la persona: el plan es fijo y no se ajusta cada semana.
 """
-import copy
 import math
-import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path

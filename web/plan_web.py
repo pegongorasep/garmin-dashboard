@@ -194,7 +194,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     # rutas con id en la ruta: se registran aparte para leer el parámetro
     def con_id(sufijo, que, descripcion, con_plan=False):
         async def ruta(request: Request, ident: str, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
-            form = await formulario(request)
+            form = await formulario(request)  # noqa: F841 -- se llama por efecto (valida el CSRF)
             atleta, redir = aw.resolver(db, usuario, atleta_id)
             if redir:
                 return redir

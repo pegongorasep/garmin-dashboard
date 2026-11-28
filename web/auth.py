@@ -193,11 +193,6 @@ def cerrar_sesion(db: Session, valor: str | None) -> None:
             db.commit()
 
 
-def cerrar_sesiones_de(db: Session, usuario_id: int) -> None:
-    db.execute(Sesion.__table__.delete().where(Sesion.usuario_id == usuario_id))
-    db.commit()
-
-
 # --- CSRF (cookie aleatoria + campo = HMAC de la cookie con la SECRET_KEY) ---
 
 def campo_csrf(secret_key: str, cookie: str) -> str:
