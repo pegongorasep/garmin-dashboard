@@ -57,6 +57,18 @@ function opcionesPeriodo(d) {
   return ops && ops.length ? ops : [4, 8, 12].map((n) => ({ n, todo: false }));
 }
 
+/** Corridas sin una sola corrida. Lo decide Python (ui.vacios.progreso = {estado, conectar, registrar}): la gráfica de ejemplo y las ligas
+ *  que vengan (sin `conectar`, registrar es el botón). `esperando` (llega el historial): la gráfica se redibuja. Sin la clave, la tarjeta de antes. */
+function progresoVacio() {
+  const v = (ui().vacios || {}).progreso;
+  if (!v) return DS.tarjeta({ titulo: T("sitio.cp.titulo"), clase: "ancha" }, DS.estadoVacio({ icono: null, titulo: T("sitio.cp.vacio_t"), texto: T("sitio.cp.vacio_x") }));
+  const espera = v.estado === "esperando";
+  const conectar = v.conectar ? { texto: T("sitio.prog.conectar"), href: v.conectar } : null;
+  const registrar = v.registrar ? { texto: T("sitio.prog.registrar"), href: v.registrar } : null;
+  return DS.tarjeta({ clase: "ancha" }, DS.estadoVacio({ arte: ARTE.grafica({ espera }), titulo: T(`sitio.prog.${v.estado}_t`), texto: T(`sitio.prog.${v.estado}_x`),
+    accion: conectar || registrar, secundaria: conectar ? registrar : null, espera, unaVez: espera ? null : "progreso" }));
+}
+
 function renderProgreso(d) {
   const ops = opcionesPeriodo(d);
   if (periodoTodo && !ops.some((p) => p.todo)) periodoTodo = false;   // ya no hay plan
@@ -68,8 +80,7 @@ function renderProgreso(d) {
   const prog = d.progreso || {};
   const hayCorridas = (prog.corridas || []).length || (prog.semanas || []).some((x) => (x.minutos || 0) > 0);
   raiz.replaceChildren(selectorProgreso(),
-    h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...(!hayCorridas ? [   // sin una sola corrida: un estado vacío que dice cómo llenarlo
-      DS.tarjeta({ titulo: T("sitio.cp.titulo"), clase: "ancha" }, DS.estadoVacio({ icono: null, titulo: T("sitio.cp.vacio_t"), texto: T("sitio.cp.vacio_x") }))] : [
+    h("div", { class: "sub", id: "prog-corridas", hidden: subProgreso !== "corridas" }, ...(!hayCorridas ? [progresoVacio()] : [   // sin una sola corrida: un estado vacío que dice cómo llenarlo
       DS.segmento({ etiqueta: T("sitio.prog.periodo"), modo: "grupo", clase: "ancha", activo: periodoTodo ? "todo" : periodo, opciones: opcionesPeriodo(d).map((p) => ({ id: p.todo ? "todo" : p.n, texto: p.todo ? T("sitio.prog.todo") : T("sitio.prog.n_sem", { n: p.n }) })),
         onCambio: (n) => { periodoTodo = n === "todo"; periodo = periodoTodo ? periodo : Number(n); renderProgreso(d); mostrarSubvista(); REDIBUJAR.progreso(); } }),
       filaNumeros(d),

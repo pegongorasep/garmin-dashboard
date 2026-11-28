@@ -708,6 +708,8 @@ function primerInicio() {
     const quitar = async () => {
       try { const r = await post(g.ocultar, { id: "garmin", huella: "0" }); if (!r.ok) return; } catch (e) { return; }
       app.dataset.avisosOcultos = JSON.stringify({ ...ocultos, garmin: "0" });
+      const prog = (ui().vacios || {}).progreso;
+      if (prog && prog.conectar) { prog.conectar = null; renderProgreso(datos); }   // saltado: Progreso ya solo ofrece registrar
       ranura.classList.add("cerrada");
       setTimeout(() => ranura.remove(), 400);
     };

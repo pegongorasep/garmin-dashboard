@@ -78,7 +78,10 @@ def("Contenedores", "Estado vacío con dibujo", "DS.estadoVacio({ arte }) · ART
   DS.tarjeta({}, DS.estadoVacio({ arte: ARTE.anillo({ espera: true }), espera: true, titulo: "Tu plan empieza aquí",
     texto: "Para armarlo a tu medida esperamos a que llegue tu historial.", accion: { texto: "Esperando tu historial…", deshabilitado: true } })),
   conRepetir(DS.estadoVacio({ arte: ARTE.personas({ libres: true }), titulo: "Entrena con tu gente", texto: "Arma un grupo, o abre la liga que te mandaron.", accion: { texto: "Crear un grupo", href: "#" } })),
-  conRepetir(DS.estadoVacio({ arte: ARTE.personas(), titulo: "Tu grupo está listo", texto: "Aquí aparecerá lo que entrenen. Invita a quien ya tiene cuenta.", accion: { texto: "Crear liga de invitación", href: "#" } })));
+  conRepetir(DS.estadoVacio({ arte: ARTE.personas(), titulo: "Tu grupo está listo", texto: "Aquí aparecerá lo que entrenen. Invita a quien ya tiene cuenta.", accion: { texto: "Crear liga de invitación", href: "#" } })),
+  conRepetir(DS.estadoVacio({ arte: ARTE.grafica(), titulo: "Aquí vas a ver cómo avanzas", texto: "Con tus corridas aparecen tus ritmos, tu volumen y tu intensidad.",
+    accion: { texto: "Conectar Garmin", href: "#" }, secundaria: { texto: "Registrar una corrida", href: "#" } })),
+  DS.tarjeta({}, DS.estadoVacio({ arte: ARTE.grafica({ espera: true }), espera: true, titulo: "Tu historial viene en camino", texto: "En cuanto llegue, aquí aparecen tus gráficas." })));
 def("Contenedores", "Íconos de evento del Plan", "DS.ico()", "Esquina de cada cuadrito de semana: carrera, viaje, enfermedad y prueba.",
   DS.tarjeta({}, h("div", { class: "leyenda" }, ["medalla", "avion", "termometro", "cronometro"].map((n) => h("span", {}, DS.ico(n), n)))));
 def("Contenedores", "Fila de ayuda con muestra", "DS.filaMuestra()", "Muestra visual a la izquierda y texto a la derecha; se usa en el «?» de las 12 semanas.",

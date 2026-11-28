@@ -99,7 +99,7 @@ def test_ui_vacios_del_coach_lleva_prefijo_sin_grupos_y_sin_permiso_no_hay_boton
     _, coach = listo(web_ctx, "coach@x.com", con_plan=False)
     dar(atl, "coach@x.com")
     d = coach.get(f"/a/{uid}/data.json").json()
-    assert d["ui"]["vacios"] == {"plan": {"estado": "sin_plan", "armar": f"/a/{uid}/plan/nuevo"}, "grupos": None}
+    assert d["ui"]["vacios"]["plan"] == {"estado": "sin_plan", "armar": f"/a/{uid}/plan/nuevo"} and d["ui"]["vacios"]["grupos"] is None
     with web_ctx.sesiones() as db:
         v = primer_inicio.vacios(db, db.get(Usuario, uid), True, f"/a/{uid}", editable=False)
-    assert v == {"plan": {"estado": "sin_plan", "armar": None}, "grupos": None}
+    assert v["plan"] == {"estado": "sin_plan", "armar": None} and v["grupos"] is None

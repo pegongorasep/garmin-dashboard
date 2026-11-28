@@ -439,6 +439,9 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .vacio.con-arte > .boton { min-width: min(220px, 100%); }
 .vacio .vc-sec { display: grid; place-items: center; min-height: 44px; }
 .arte .a-pop { transform-box: fill-box; transform-origin: 50% 50%; }
+.arte .a-sube { transform-box: fill-box; transform-origin: 50% 100%; }
+.arte .a-linea { --largo: 210; }   /* lo que mide la línea de la gráfica de ejemplo */
+.arte .a-rotulo { font: 600 12px/1 var(--font-sans); }
 /* El reposo es el final: sin la clase `anim` (o con «reducir movimiento») todo se ve completo. `anim` es de una sola vez; `espera` se repite. */
 @media (prefers-reduced-motion: no-preference) {
   .anim .a-trazo { animation: ahi-trazo 1.4s ease-out backwards; }
@@ -446,8 +449,10 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
   .anim .a-aparece { animation: ahi-aparece .5s ease-out backwards; }
   .anim .a-flota { animation: ahi-flota 3.2s ease-in-out 1.6s; }
   .anim .a-late { animation: ahi-late 1.8s ease-in-out 1.1s; }
-  .anim .a-d3 { animation-delay: .3s; } .anim .a-d5 { animation-delay: .55s; }
-  .anim .a-d6 { animation-delay: .75s; } .anim .a-d7 { animation-delay: .95s; }
+  .anim .a-sube { animation: ahi-barra .7s cubic-bezier(.3, 1.4, .5, 1) backwards; }
+  .anim .a-d1 { animation-delay: .1s; } .anim .a-d2 { animation-delay: .2s; }
+  .anim .a-d3 { animation-delay: .3s; } .anim .a-d4 { animation-delay: .4s; } .anim .a-d5 { animation-delay: .55s; }
+  .anim .a-d6 { animation-delay: .75s; } .anim .a-d7 { animation-delay: .95s; } .anim .a-d8 { animation-delay: 1.15s; }
   .vacio.anim .vc-t { animation: ahi-aparece .5s ease-out .4s backwards; }
   .vacio.anim .vc-x { animation: ahi-aparece .5s ease-out .55s backwards; }
   .vacio.anim > .boton { animation: ahi-aparece .5s ease-out .75s backwards; }
@@ -462,6 +467,7 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 @keyframes ahi-aparece { from { opacity: 0; transform: translateY(8px); } }
 @keyframes ahi-flota { 50% { transform: translateY(-5px); } }
 @keyframes ahi-late { 50% { opacity: .35; } }
+@keyframes ahi-barra { from { transform: scaleY(0); } }
 
 /* Formulario: grupos de campos */
 .formulario { display: grid; gap: var(--space-16); }

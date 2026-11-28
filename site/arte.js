@@ -1,5 +1,5 @@
 // Dibujos de los estados vacíos y de espera: SVG a mano en una caja de 240 × 180. Aquí van solo las formas; los colores salen de
-// tokens.css y el movimiento (clases a-*) de componentes.css, que en reposo deja el dibujo completo. Necesita base.js (sv) e iconos.js.
+// tokens.css y el movimiento (clases a-*) de componentes.css, que en reposo deja el dibujo completo. Necesita base.js (sv, T) e iconos.js.
 const ARTE = (() => {
   const lienzo = (...hijos) => sv("svg", { class: "arte", viewBox: "0 0 240 180", "aria-hidden": "true", focusable: "false" }, ...hijos);
   const g = (clase, ...hijos) => sv("g", { class: clase }, ...hijos);
@@ -40,5 +40,18 @@ const ARTE = (() => {
     return lienzo([...OTRAS, YO].map((p, i) => g("a-flota", g(`a-pop ${["", ...retardo][i]}`, persona(p)))));
   };
 
-  return { anillo, personas };
+  /** [x, y, retardo] de las barras de la gráfica de ejemplo; todas llegan a la línea de base (y = 160). */
+  const BARRAS = [[22, 128, ""], [58, 114, "a-d1"], [94, 120, "a-d2"], [130, 96, "a-d3"], [166, 82, "a-d4"], [202, 66, "a-d5"]];
+
+  /** Progreso: una gráfica inventada (por eso dice «Ejemplo»): barras que suben, una línea que se traza y su último punto.
+   *  Con `espera` la línea se vuelve a trazar sin parar y no hay punto. */
+  const grafica = ({ espera = false } = {}) => lienzo(
+    sv("path", { d: "M12 40H228 M12 80H228 M12 120H228 M12 160H228", fill: "none", stroke: "var(--grid)", "stroke-width": 1 }),
+    sv("g", { fill: "var(--z2)", opacity: ".28" }, BARRAS.map(([x, y, d]) => sv("rect", { class: `a-sube ${d}`, x, y, width: 18, height: 160 - y, rx: 4 }))),
+    sv("path", { class: `a-linea ${espera ? "a-espera" : "a-trazo a-d4"}`, d: "M31 112L67 96L103 102L139 74L175 58L211 36", fill: "none", stroke: "var(--accent)",
+      "stroke-width": 3, "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-dasharray": "206 412" }),
+    espera ? null : circulo(211, 36, 6, { class: "a-pop a-d8", fill: "var(--accent)" }),
+    sv("text", { class: "a-rotulo", x: 12, y: 20, fill: "var(--muted)" }, T("sitio.arte.ejemplo")));
+
+  return { anillo, grafica, personas };
 })();

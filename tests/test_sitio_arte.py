@@ -40,12 +40,16 @@ def test_dibujos_en_su_caja_y_con_colores_de_tokens():
     r = _node("""
 const ver = (s) => ({ caja: s.attrs.viewBox, clase: s.attrs.class, clases: todos(s).flatMap((n) => ((n.attrs || {}).class || "").split(" ")),
   colores: todos(s).flatMap((n) => [(n.attrs || {}).fill, (n.attrs || {}).stroke]).filter(Boolean) });
-console.log(JSON.stringify([ARTE.anillo(), ARTE.anillo({ espera: true }), ARTE.personas({ libres: true }), ARTE.personas()].map(ver)));
+console.log(JSON.stringify([ARTE.anillo(), ARTE.anillo({ espera: true }), ARTE.personas({ libres: true }), ARTE.personas(),
+  ARTE.grafica(), ARTE.grafica({ espera: true })].map(ver)));
 """)
     for d in r:
         assert d["caja"] == "0 0 240 180" and d["clase"] == "arte"
         assert all(c in ("none", "currentColor") or c.startswith("var(--") for c in d["colores"]), d["colores"]
-    anillo, espera, libres, grupo = (d["clases"] for d in r)
+    anillo, espera, libres, grupo, grafica, redibuja = (d["clases"] for d in r)
+    assert grafica.count("a-sube") == 6 and "a-trazo" in grafica and "a-pop" in grafica and "a-espera" not in grafica
+    assert "a-espera" in redibuja and "a-trazo" not in redibuja and "a-pop" not in redibuja   # en espera: sin punto final
+    assert "a-rotulo" in grafica and "a-rotulo" in redibuja   # siempre dice «Ejemplo»
     assert "a-trazo" in anillo and "a-espera" not in anillo
     assert "a-espera" in espera and "a-trazo" not in espera
     assert libres.count("a-late") == 2 and "a-flota" not in libres   # tú y dos lugares libres
@@ -112,7 +116,10 @@ def test_lo_animado_respeta_reducir_movimiento():
     for archivo in ("componentes.css", "styles.css"):
         css = re.sub(r"/\*.*?\*/", "", (SITE / archivo).read_text(encoding="utf-8"), flags=re.S)
         fuera = re.sub(r"@media \(prefers-reduced-motion: no-preference\) \{(?:[^{}]*\{[^{}]*\})*\s*\}", "", css)
-        usos = re.findall(r"animation:\s*(ahi-(?:trazo|redibuja|pop|aparece|flota|late)|anim-anillo)\b", fuera)
+        usos = re.findall(r"animation:\s*(ahi-(?:trazo|redibuja|pop|aparece|flota|late|barra)|anim-anillo)\b", fuera)
         assert not usos, (archivo, usos)
+    css = "".join((SITE / a).read_text(encoding="utf-8") for a in ("componentes.css", "styles.css"))
+    nombres = re.findall(r"@keyframes ([\w-]+)", css)
+    assert len(nombres) == len(set(nombres)), nombres   # un nombre repetido pisaría la animación anterior (p. ej. la del logo)
     html = (SITE / "index.html").read_text(encoding="utf-8")
     assert html.index("componentes.js") < html.index("arte.js") < html.index("vistas.js")
