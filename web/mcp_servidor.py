@@ -16,7 +16,7 @@ import build
 
 from . import ajustes_web as aw
 from . import calculo, cambios, oauth, plan_vivo
-from .modelos import Coach, Usuario
+from .modelos import Cambio, Coach, Usuario
 from .permisos import puede_editar, puede_ver
 from .plan_web import _fecha
 
@@ -103,8 +103,10 @@ def ver_ajustes(db, actor, atleta, ahora) -> dict:
 
 def historial(db, actor, atleta, ahora) -> dict:
     a = resolver(db, actor, atleta)
+    crudo = aw.crudo_de(db, a)
+    hoy = _hoy(ahora, crudo)
     return {"cambios": [{"id": c.id, "fecha": c.fecha.isoformat(timespec="minutes"), "quien": cambios.autor_texto(db, c),
-                         "via": c.via, "descripcion": c.descripcion, "se_puede_deshacer": cambios.puede_deshacer(c)}
+                         "via": c.via, "descripcion": c.descripcion, "se_puede_deshacer": cambios.puede_deshacer(c, crudo, hoy)}
                         for c in cambios.historial(db, a.id, 30)]}
 
 
@@ -252,7 +254,9 @@ def registrar_inbody(db, actor, ahora, atleta, *, fecha: str, peso_kg: float, mm
 def deshacer(db, actor, ahora, atleta, *, cambio_id: int) -> dict:
     """Deshace un cambio (el `cambio_id` viene en la respuesta de cada escritura o en `historial`)."""
     try:
-        nuevo = cambios.deshacer(db, actor, cambio_id, via="ia")
+        c = db.get(Cambio, cambio_id)
+        hoy = _hoy(ahora, aw.crudo_de(db, db.get(Usuario, c.atleta_id))) if c is not None else None
+        nuevo = cambios.deshacer(db, actor, cambio_id, via="ia", hoy=hoy)
     except cambios.SinPermiso:
         raise Rechazo("No encontré ese cambio o no tienes permiso.") from None
     except cambios.NoSeDeshace as ex:

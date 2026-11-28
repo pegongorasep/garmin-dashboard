@@ -244,9 +244,9 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return await guardar_ajustes(request, usuario, db, atleta_id)
 
     # ---------- historial ----------
-    def fila_historial(db, c, tz):
+    def fila_historial(db, c, tz, crudo, hoy):
         return {"c": c, "quien": cambios.autor_texto(db, c), "cuando": c.fecha.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).strftime("%d/%m/%Y %H:%M"),
-                "puede": cambios.puede_deshacer(c), "via": c.via, "resumen": cambios.resumen(c)}
+                "puede": cambios.puede_deshacer(c, crudo, hoy), "via": c.via, "resumen": cambios.resumen(c)}
 
     def pantalla_historial(request, usuario, db, atleta_id, **extra):
         atleta, redir = resolver(db, usuario, atleta_id)
@@ -254,7 +254,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return redir
         crudo = crudo_de(db, atleta) or {}
         tz = ZoneInfo((crudo.get("perfil") or {}).get("zona_horaria") or "America/Merida")
-        filas = [fila_historial(db, c, tz) for c in cambios.historial(db, atleta.id)]
+        hoy = hoy_de(app.state.reloj, crudo)
+        filas = [fila_historial(db, c, tz, crudo, hoy) for c in cambios.historial(db, atleta.id)]
         return render(request, "historial.html", atleta=atleta, pref=prefijo(usuario, atleta), filas=filas,
                       es_atleta=usuario.id == atleta.id, **extra)
 
@@ -277,7 +278,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                 cambios.marcar_vistos(db, atleta.id, cambio_id)
             return RedirectResponse(f"{pref}/historial?ok=visto", 303)
         try:
-            cambios.deshacer(db, usuario, cambio_id)
+            cambios.deshacer(db, usuario, cambio_id, hoy=hoy_de(app.state.reloj, crudo_de(db, atleta)))
         except cambios.SinPermiso:
             raise HTTPException(404) from None
         except cambios.NoSeDeshace as ex:

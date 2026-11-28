@@ -81,6 +81,9 @@ def test_post_retomar_crea_cambio_y_se_deshace(web_ctx):
     assert cl.post("/plan/retomar", data={"csrf": tok(cl), "semana": "9"}).status_code == 400
     assert cl.post("/plan/retomar", data={"csrf": tok(cl)}).status_code == 400
     assert cl.post("/plan/retomar", data={"semana": "1"}).status_code in (400, 403)   # sin CSRF
+    with web_ctx.sesiones() as db:   # el cambio se fecha con el reloj real: se alinea con el de la prueba
+        db.get(Cambio, c.id).fecha = HOY.replace(tzinfo=None)
+        db.commit()
     cl.post(f"/historial/{c.id}/deshacer", data={"csrf": tok(cl)})
     assert crudo(web_ctx, uid) == CONFIG
 

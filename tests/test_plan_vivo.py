@@ -182,6 +182,9 @@ def test_repetir_semana_y_deshacer_por_el_historial(web_ctx):
         assert c.descripcion == "Repitió la semana 3"
     d = cl.get("/data.json").json()
     assert d["plan"]["semana_actual"] == 3 and len(d["semanas_hoy"]) == 13
+    with web_ctx.sesiones() as db:   # el cambio se fecha con el reloj real: se alinea con el de la prueba
+        db.get(Cambio, c.id).fecha = HOY.replace(tzinfo=None)
+        db.commit()
     cl.post(f"/historial/{c.id}/deshacer", data={"csrf": tok(cl)})
     assert crudo(web_ctx, uid) == CONFIG
 

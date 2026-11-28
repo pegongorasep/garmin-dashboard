@@ -1,6 +1,8 @@
 """Historial de cambios. TODA escritura a `ajustes`, `planes` o `inbody` pasa por `aplicar_cambio`: guarda quién, por qué
 vía y el antes/después, y permite deshacer (el `antes` se aplica como un cambio nuevo)."""
 import copy
+from datetime import date, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -90,9 +92,35 @@ def via_de(actor: Usuario, atleta: Usuario) -> str:
     return "web" if actor.id == atleta.id else "coach"
 
 
-def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None) -> Cambio:
+def _saltos(ajustes) -> list:
+    return ((ajustes or {}).get("corrida") or {}).get("saltos") or []
+
+
+def _lunes(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def _salto_fijo(c: Cambio, actuales: dict | None, hoy: date | None) -> bool:
+    """True si deshacer `c` cambiaría los saltos (repetir / retomar) y ya pasó la semana en que se hizo (lunes a domingo,
+    en la zona horaria de la persona). `hoy` es la fecha local de la persona; sin ella no se limita (uso de sistema)."""
+    if hoy is None or "ajustes" not in (c.antes or {}):
+        return False
+    if _saltos(c.antes["ajustes"]) == _saltos(actuales):
+        return False
+    tz = ZoneInfo(((actuales or {}).get("perfil") or {}).get("zona_horaria") or "America/Merida")
+    hecho = c.fecha.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).date()
+    return _lunes(hecho) != _lunes(hoy)
+
+
+def _actuales(db: Session, atleta_id: int) -> dict | None:
+    fila = db.get(Ajustes, atleta_id)
+    return fila.config if fila else None
+
+
+def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None, hoy: date | None = None) -> Cambio:
     """Aplica el `antes` de un cambio como un cambio nuevo y marca el original. Truena con SinPermiso (el actor no puede
-    editar a ese atleta o el cambio no existe: se trata igual para no confirmar nada) o NoSeDeshace."""
+    editar a ese atleta o el cambio no existe: se trata igual para no confirmar nada) o NoSeDeshace. `hoy` (fecha local de
+    la persona) activa la regla de que repetir / retomar solo se deshace la misma semana."""
     c = db.get(Cambio, cambio_id)
     if c is None or not puede_editar(db, actor, c.atleta_id):
         raise SinPermiso()
@@ -102,6 +130,8 @@ def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None
         raise NoSeDeshace("err.visto")
     if not c.antes or any(v is None for v in c.antes.values()):
         raise NoSeDeshace("err.creado")
+    if _salto_fijo(c, _actuales(db, c.atleta_id), hoy):
+        raise NoSeDeshace("err.salto_fijo")
     atleta = db.get(Usuario, c.atleta_id)
     nuevo = aplicar_cambio(db, atleta, actor, via or via_de(actor, atleta), f"Deshacer: {c.descripcion}", c.antes)
     c.deshecho_por, c.visto = nuevo.id, True
@@ -114,9 +144,10 @@ def _visto_de_ia(c: Cambio) -> bool:
     return c.via in ("ia", "coach") and bool(c.visto)
 
 
-def puede_deshacer(c: Cambio) -> bool:
+def puede_deshacer(c: Cambio, actuales: dict | None = None, hoy: date | None = None) -> bool:
+    """`actuales`: los ajustes crudos de hoy del atleta; `hoy`: su fecha local (para la regla de los saltos)."""
     return c.deshecho_por is None and not _visto_de_ia(c) and bool(c.antes) and all(v is not None for v in c.antes.values()) \
-        and not c.descripcion.startswith("Deshacer:")
+        and not c.descripcion.startswith("Deshacer:") and not _salto_fijo(c, actuales, hoy)
 
 
 def historial(db: Session, atleta_id: int, limite: int = 100) -> list[Cambio]:
