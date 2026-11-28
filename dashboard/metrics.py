@@ -623,7 +623,7 @@ def today_card(day: date, light: dict, status: list, activities: list, config: d
 
 def opciones_hoy(version: str | None, sesion: dict | None) -> list[str]:
     """Versiones que se pueden elegir hoy, en orden. Sin versión suave en el plan no hay nada que elegir."""
-    if version not in ("normal", "suave", "descanso") or not sesion or not sesion.get("easy"):
+    if version not in ("normal", "suave", "descanso") or not sesion or not sesion.get("easy") or sesion.get("carrera"):
         return []
     return ["descanso", "suave", "normal"] if version == "descanso" else ["suave", "normal"]
 

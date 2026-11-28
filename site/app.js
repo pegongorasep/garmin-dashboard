@@ -198,6 +198,19 @@ function accionRepetir(t) {
   return { texto: T("sitio.hoy.repetir"), onclick: () => abrirRepetirRetomar({ accion: "repetir" }) };
 }
 
+/** «Llevas N días sin correr»: retomar (misma vista previa de repetir/retomar) o crear un plan nuevo. Nada se aplica solo. */
+function avisoRetomar(d) {
+  const r = d.hoy && d.hoy.retomar;
+  if (!r) return null;
+  const app = $("app"), u = ui(), nuevo = u.propuesta_url ? u.propuesta_url.replace(/\/plan\/propuesta\.json.*$/, "/plan/nuevo") : (u.plan_url || "/plan/nuevo");
+  const puede = u.propuesta_url && app.dataset.csrf;
+  const botones = h("div", { class: "botones" },
+    puede ? DS.boton(r.accion === "repetir" ? T("sitio.hoy.retomar_repetir") : T("sitio.hoy.retomar", { x: r.semana }), { variante: "sec",
+      onclick: () => abrirRepetirRetomar(r.accion === "repetir" ? { accion: "repetir" } : { accion: "retomar", semana: r.semana }) }) : null,
+    DS.boton(T("sitio.hoy.retomar_nuevo"), { variante: "sec", href: nuevo }));
+  return avisoCerrable("retomar", { clase: "warn", simbolo: "!", extra: "ancha", texto: [h("strong", {}, T("sitio.hoy.retomar_t", { n: r.dias })), botones] });
+}
+
 const nombrePrueba = (tipo) => T(`sitio.prueba.${tipo}`);
 
 /** "7:42 /km", "93 % de trote" o "25:00" según la prueba. */
@@ -758,6 +771,7 @@ function renderHoy(d) {
     d.hoy.semaforo.repetir_semana
       ? avisoCerrable("repetir", { clase: "bad", simbolo: "✕", extra: "ancha", texto: [h("strong", {}, T("sitio.rep.t")), T("sitio.rep.d")] })
       : null,
+    avisoRetomar(d),
     tarjetaPlanTerminado(d), resumenSemanaPasada(d), h("div", { id: "hoy-semana" }),
     d.aviso_zonas ? avisoCerrable("zonas", { clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
   pintarSemana(d);

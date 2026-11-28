@@ -155,7 +155,7 @@ def estructura_calidad(s: dict) -> str:
 
 def convert_session(s: dict, zonas: list) -> dict:
     easy = s["easy"]
-    extra = {k: s[k] for k in ("nota", "calidad_tipo", "variada_tipo") if k in s}
+    extra = {k: s[k] for k in ("nota", "calidad_tipo", "variada_tipo", "carrera") if k in s}
     if "nota" in extra:
         extra["nota"] = plan_i18n.nota(extra["nota"])
     if "objetivo" in s:
@@ -992,7 +992,8 @@ def huella(contenido) -> str:
     return hashlib.sha1(str(contenido).encode("utf-8")).hexdigest()[:10]
 
 
-def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n, sugerencia=None, semana_inicio=None, sugerir_zonas=False) -> dict:
+def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, semana_n, sugerencia=None, semana_inicio=None, sugerir_zonas=False,
+                   retomar=None) -> dict:
     """{id: huella} de los avisos que hoy están activos (los que el sitio puede cerrar con «Entendido»). Sin aviso, sin clave."""
     out = {}
     if tarjeta.get("aviso"):
@@ -1005,9 +1006,35 @@ def huellas_avisos(tarjeta: dict, aviso_zonas, fc_max: dict, semaforo: dict, sem
         out["fcmax"] = huella(round(fc_max["estimacion"]))
     if semaforo.get("repetir_semana"):
         out["repetir"] = huella(semana_n)
+    if retomar:   # la última corrida cambia la huella: otra racha sin correr vuelve a avisar
+        out["retomar"] = huella(f"retomar|{retomar.get('ultima')}")
     if sugerencia and sugerencia.get("tipo") != "sigue":   # «sigue así» no es aviso: no se cierra
         out["sugerencia"] = huella(f"{sugerencia['tipo']}|{semana_inicio}")   # tipo + semana, no el texto: en la web y en el sitio el texto cambia de forma
     return out
+
+
+DIAS_SIN_CORRER = 14
+
+
+def retomar_sugerido(hoy: date, data: dict, config: dict, plan: dict, semanas_hoy: list, n_actual, pausa: bool):
+    """Hoy sugiere «Retomar desde la semana X» si hay plan en curso y pasaron ≥ 14 días sin correr (Garmin o a mano; si nunca,
+    desde el inicio del plan). X = la última semana con todas sus sesiones hechas (tope: la actual − 1; si no hay, 1).
+    {"semana", "dias", "accion": "retomar"|"repetir", "ultima"} o None (sin plan, en pausa, enfermedad/lesión, plan terminado)."""
+    if config.get("sin_plan") or pausa or n_actual is None or plan_terminado(hoy, config, plan):
+        return None
+    for e in config.get("eventos") or []:
+        if e["tipo"] in ("enfermedad", "lesion") and date.fromisoformat(str(e["desde"])) <= hoy <= date.fromisoformat(str(e.get("hasta") or e["desde"])):
+            return None
+    dias_corridos = [m.day_of(a) for a in historial_corridas(data, config) + [a for a in data["activities"] if m.classify(a, config) == "run"]]
+    ultima = max((d for d in dias_corridos if d <= hoy), default=None)
+    desde = ultima or date.fromisoformat(config["plan_start"])
+    dias = (hoy - desde).days
+    if dias < DIAS_SIN_CORRER:
+        return None
+    completas = [s["n"] for s in semanas_hoy if s["estado"] == "pasada" and s.get("n") and s.get("plan")
+                 and s["plan"]["total"] and s["plan"]["hechas"] == s["plan"]["total"] and s["n"] <= n_actual - 1]
+    x = max(completas, default=1)
+    return {"semana": x, "dias": dias, "accion": "repetir" if n_actual == 1 else "retomar", "ultima": ultima.isoformat() if ultima else None}
 
 
 def etiqueta_sesion(ses: dict, suave: bool = False) -> str:
@@ -1127,6 +1154,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     mejora = build_mejora(hoy, filas, zonas, data, config, plan)
     racha_json = semanal.racha_semanas(semanas_hoy, semana_hoy_idx, hoy, data, config, libre=bool(config.get("sin_plan")))
     sem_pasada = resumen_semana_pasada(hoy, data, config, plan, semanas_hoy)
+    retomar = retomar_sugerido(hoy, data, config, plan, semanas_hoy, n, m.en_pausa(hoy, config))
     return {
         "generado": ahora.isoformat(timespec="minutes"),
         "datos_al": datos_al,
@@ -1135,7 +1163,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "aviso_zonas": m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
         "hoy": {"semaforo": luz, "señales": signals_list(sigs), "ayer": ayer_dato, "tarjeta": tarjeta,
                 "titular": titular_hoy(tarjeta, (semana_plan or {}).get("sessions"), manana_id),
-                "semana_pasada": sem_pasada},
+                "semana_pasada": sem_pasada, "retomar": retomar},
         "ultima_corrida": last_run(data, config, plan),
         "semana": build_week(hoy, data, config, estado, plan),
         "semanas_hoy": semanas_hoy, "semana_hoy_idx": semana_hoy_idx,
@@ -1164,7 +1192,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         "composicion": m.composicion(data.get("inbody") if config.get("inbody", True) else None),
         "ui": {**build_ui(config, plan, categorias_presentes(config, data)), "zonas_origen": zonas_origen, "avisos": huellas_avisos(
             tarjeta, m.max_hr_above_watch(fc_max["estimacion"], reloj, fc_max.get("pulso_pico") or "banda", fc_max.get("pico")),
-            fc_max, luz, n, (sem_pasada or {}).get("sugerencia"), (sem_pasada or {}).get("inicio"), sugerir_zonas)},
+            fc_max, luz, n, (sem_pasada or {}).get("sugerencia"), (sem_pasada or {}).get("inicio"), sugerir_zonas, retomar)},
         "idioma": i18n.actual(),   # el sitio pinta en el mismo idioma que los textos del motor
         "ayuda": armar_ayuda(config, plan, zonas, m.fc_referencia(zonas)),
         "tipos": tipos.catalogo_json({tipos.forma_de(x) for w in plan["weeks"] for x in w["sessions"]}),
