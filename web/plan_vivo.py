@@ -80,26 +80,51 @@ def _z2_cortas(w: dict, cuantas: int) -> list:
              "steps": copy.deepcopy(base["steps"]), "easy": copy.deepcopy(base)} for i in range(cuantas)]
 
 
+def _sesion_carrera(w: dict, meta: dict) -> dict:
+    """La semana `w` con su sesión larga (si no hay, la de más minutos) cambiada por la carrera: mismo `id` y tipo `larga`, así las corridas
+    de la semana se asignan igual (la más larga que alcance la meta cuenta como la carrera). Con km, los minutos son los de correrlos
+    a 5 min/km (nunca más que la sesión que reemplaza); sin versión suave propia (la «suave» es la misma carrera)."""
+    ses = w["sessions"]
+    reemplazada = next((s for s in ses if s.get("tipo") == "larga"), None) or max(ses, key=lambda s: s["minutes"])
+    km = meta.get("distancia_km")
+    minutos = min(reemplazada["minutes"], max(5, round(km * 5))) if km else reemplazada["minutes"]
+    pasos = [ps.paso(minutos)]
+    nueva = {"id": reemplazada["id"], "tipo": "larga", "name": f"Carrera: {meta['nombre']}", "minutes": minutos, "steps": pasos,
+             "easy": {"name": "Suave", "minutes": minutos, "steps": copy.deepcopy(pasos)}, "carrera": True,
+             **({"km": km} if km else {})}
+    return {**w, "sessions": [nueva if s is reemplazada else s for s in ses]}
+
+
 def plan_efectivo(plan: dict, cfg: dict) -> dict:
-    """El plan guardado con los viajes aplicados a sus semanas (las carreras ya vienen dentro del plan v6). `cfg` ya trae `pausas`.
-    Sin viajes que cambien semanas devuelve el mismo plan (idéntico)."""
-    if not any(e["tipo"] == "viaje" and e["modo"] != "pausa" for e in cfg["eventos"]):
+    """El plan guardado con los viajes y las carreras de paso aplicados a sus semanas, por fecha y sobre la secuencia ya con saltos y pausas
+    (las carreras de un plan v6 ya vienen dentro del plan). `cfg` ya trae `pausas`. El plan guardado no se toca: sin viajes ni carreras de
+    paso devuelve el mismo plan (idéntico). Una carrera de paso reemplaza la larga de su semana; si esa semana está en pausa o la fecha cae
+    fuera del plan, solo sale como evento."""
+    viajes = [e for e in cfg["eventos"] if e["tipo"] == "viaje" and e["modo"] != "pausa"]
+    de_paso = [x for x in cfg.get("metas", []) if x.get("de_paso")]
+    if not viajes and not de_paso:
         return plan
     inicio = date.fromisoformat(cfg["plan_start"])
     sec = m.secuencia_de(cfg)
     ligera, igual = set(), set()   # n de semanas de viaje con correr menos / «sigo igual» (solo se marca)
-    for e in cfg["eventos"]:
-        if e["tipo"] == "viaje" and e["modo"] != "pausa":
-            for d in semanas_de(e, date.fromisoformat(e["hasta"])):
-                i = (d - inicio).days // 7
-                if 0 <= i < len(sec) and sec[i] is not None:
-                    (ligera if e["modo"] == "menos" else igual).add(sec[i])
+    for e in viajes:
+        for d in semanas_de(e, date.fromisoformat(e["hasta"])):
+            i = (d - inicio).days // 7
+            if 0 <= i < len(sec) and sec[i] is not None:
+                (ligera if e["modo"] == "menos" else igual).add(sec[i])
+    carreras: dict[int, dict] = {}   # n de semana -> carrera de paso (la primera por fecha)
+    for x in de_paso:
+        i = (lunes(date.fromisoformat(x["fecha"])) - lunes(inicio)).days // 7
+        if 0 <= i < len(sec) and sec[i] is not None:
+            carreras.setdefault(sec[i], x)
     semanas = []
     for w in plan["weeks"]:
         if w["n"] in ligera:
             w = {**w, "kind": "descarga", "evento": "viaje", "focus": "Viaje · 2 Z2 cortas", "sessions": _z2_cortas(w, 2)}
         elif w["n"] in igual:
             w = {**w, "evento": "viaje_igual"}
+        if w["n"] in carreras and w["sessions"]:
+            w = _sesion_carrera(w, carreras[w["n"]])
         semanas.append(w)
     return {**plan, "weeks": semanas}
 
@@ -122,42 +147,16 @@ def _id_nuevo() -> str:
 
 
 def agregar_carrera(crudo: dict, fecha: str, distancia_km, nombre: str) -> dict:
+    """Carrera de paso: solo una meta con fecha (`de_paso`); no rehace el plan ni toca sus semanas."""
     nuevo, c = _corrida(crudo)
-    c["metas"] = list(c.get("metas") or []) + [{"id": _id_nuevo(), "tipo": "carrera", "fecha": fecha,
+    c["metas"] = list(c.get("metas") or []) + [{"id": _id_nuevo(), "tipo": "carrera", "fecha": fecha, "de_paso": True,
                                                "distancia_km": distancia_km or None, "nombre": (nombre or "Carrera").strip()}]
     return _validado(nuevo)
 
 
-def agregar_carrera_en_plan(crudo: dict, plan: dict | None, cfg: dict, fecha: str, km, nombre: str, hoy: date) -> tuple[dict, dict | None]:
-    """(ajustes, plan nuevo o None). En un plan v6 la carrera se construye dentro del plan (semanas de taper y de carrera con `motor_v6`)
-    desde la semana en curso y su meta queda con `en_plan: true`. Si el plan ya está armado para otra carrera, ErrorT (mensaje claro). Si no
-    se puede (distancia que no es 5/10/21/42, la fecha cae en una pausa o antes de la semana en curso), queda solo la meta (cuenta regresiva)."""
-    if plan and motor_v6.es_v6(plan) and (plan.get("meta") or {}).get("carrera"):
-        raise ErrorT("err.carrera_otra")
-    nuevo = agregar_carrera(crudo, fecha, km, nombre)
-    if not plan or not motor_v6.es_v6(plan):
-        return nuevo, None
-    try:
-        distancia = int(float(km))
-        if distancia not in motor_v6.UMBRALES["taper"]:
-            raise ValueError("distancia sin taper")
-        inicio = date.fromisoformat(cfg["plan_start"])
-        sec = m.secuencia_de({**cfg, "plan_semanas": 60})
-        i = (lunes(date.fromisoformat(fecha)) - lunes(inicio)).days // 7
-        if not 0 <= i < len(sec) or sec[i] is None:
-            raise ValueError("la fecha cae fuera del plan o en una pausa")
-        desde = semana_tope(cfg, hoy)
-        plan_nuevo = motor_v6.con_carrera(plan, desde, {"km": distancia, "fecha": fecha, "semanas_hasta": sec[i]})
-    except (ValueError, TypeError):
-        return nuevo, None
-    corrida = nuevo["corrida"]
-    corrida["metas"][-1]["en_plan"] = True
-    corrida["semanas"] = len(plan_nuevo["weeks"])
-    return _validado(nuevo), plan_nuevo
-
-
 def quitar_meta_en_plan(crudo: dict, plan: dict | None, cfg: dict, meta_id: str, hoy: date) -> tuple[dict, dict | None]:
-    """(ajustes, plan nuevo o None). Quitar una carrera construida dentro de un plan v6 rehace la cola del plan sin ella (misma duración)."""
+    """(ajustes, plan nuevo o None). Una carrera de paso solo se quita de las metas. Solo las metas viejas con `en_plan` (carrera construida
+    dentro de un plan v6 por la versión anterior) rehacen la cola del plan sin ella (misma duración)."""
     nuevo = quitar_meta(crudo, meta_id)
     meta = next((x for x in cfg["metas"] if x["id"] == meta_id), None)
     if not meta or not meta.get("en_plan") or not plan or not motor_v6.es_v6(plan) or not (plan.get("meta") or {}).get("carrera"):

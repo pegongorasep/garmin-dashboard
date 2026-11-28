@@ -137,8 +137,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             raise ErrorT("err.fecha_carrera")
         km = str(f.get("distancia_km", "")).strip().replace(",", ".")
         nombre = str(f.get("nombre", "")).strip() or "Carrera"
-        nuevo, plan_nuevo = plan_vivo.agregar_carrera_en_plan(crudo, plan, cfg, fecha, km or None, nombre, hoy)
-        return nuevo, plan_nuevo, f"Agregó la carrera «{nombre}» el {lindo(fecha)}" + ("; el plan se rehízo con su taper" if plan_nuevo else "")
+        nuevo = plan_vivo.agregar_carrera(crudo, fecha, km or None, nombre)   # carrera de paso: el plan no cambia
+        return nuevo, None, f"Agregó la carrera de paso «{nombre}» el {lindo(fecha)}"
 
     def quitadas(info) -> str:
         return f"; se quitaron las semanas {', '.join(map(str, info['quita']))}" if info["quita"] else ""

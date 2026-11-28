@@ -60,6 +60,27 @@ def valores_iniciales(nivel: str, ev: dict, crudo: dict | None, hoy: date) -> di
             "fc_max": str(perfil.get("fc_max") or "")}
 
 
+def preset_carrera(params, hoy: date) -> dict:
+    """«Entrenar para esta carrera» (`?carrera=1&fecha=…&km=…`): {km, fecha} válidos o {} (lo que no sirve se ignora, nunca da error)."""
+    if str(params.get("carrera", "")) != "1":
+        return {}
+    try:
+        fecha = date.fromisoformat(str(params.get("fecha", "")).strip())
+    except ValueError:
+        return {}
+    km = str(params.get("km", "")).strip()
+    if fecha < hoy:
+        return {}
+    return {"fecha": fecha.isoformat(), **({"km": km} if km.isdigit() and int(km) in DISTANCIAS else {})}
+
+
+def con_preset(v: dict, preset: dict, nivel: str) -> dict:
+    """Las respuestas con la carrera del preset puesta como objetivo (solo si el nivel ofrece «carrera»)."""
+    if preset and "carrera" in OBJETIVOS[nivel]:
+        v.update({"objetivo": "carrera", **preset})
+    return v
+
+
 def _entero(v, campo: str, lo: int, hi: int, clave: str = "err.pn_rango") -> int:
     try:
         n = int(str(v).strip())
@@ -267,7 +288,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         atleta, ctx = contexto(request, db, usuario, atleta_id)
         if atleta is None:
             return ctx
-        return pantalla(request, ctx, 1)
+        return pantalla(request, ctx, 1, preset=preset_carrera(request.query_params, ctx["hoy"]))
     doble("get", "/plan/nuevo", paso1)
 
     async def volver_nivel(request: Request, atleta_id: int | None = None, usuario=Depends(actual), db=Depends(get_db)):
@@ -293,12 +314,15 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         except ConfigError as ex:
             v = valores_iniciales(ctx["calculado"]["nivel"], ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
             v.update({k: str(form.get(k, "")) for k in ("frecuencia_actual", "corrida_larga")})
-            return pantalla(request, ctx, 1, valores=v, status=400, error=texto(ex, request.state.t))
+            return pantalla(request, ctx, 1, valores=v, status=400, error=texto(ex, request.state.t),
+                            preset=preset_carrera(form, ctx["hoy"]))
         nivel = elegido(form, ctx["calculado"])
         v = valores_iniciales(nivel, ctx["calculado"]["evidencia"], ctx["crudo"], ctx["hoy"])
         v.update({k: str(form.get(k, "")) for k in ("frecuencia_actual", "corrida_larga")})
         if "dias" in form:   # vuelve de la vista previa: se conservan sus respuestas
             v.update({k: (form.getlist(k) if k == "pierna" else str(form.get(k, ""))) for k in v if k != "nivel" and (k in form or k == "pierna")})
+        else:
+            con_preset(v, preset_carrera(form, ctx["hoy"]), nivel)
         return pantalla(request, ctx, 2, nivel, v)
     doble("post", "/plan/nuevo/preguntas", paso2)
 

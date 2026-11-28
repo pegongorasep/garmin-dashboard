@@ -347,7 +347,7 @@ def test_viaje_enfermedad_carrera_por_la_web_con_historial_y_deshacer(web_ctx):
     assert cl.post("/plan/evento/nada/quitar", data={"csrf": tok(cl)}).status_code == 400
     with web_ctx.sesiones() as db:
         descs = [x.descripcion for x in db.query(Cambio).order_by(Cambio.id)]
-    assert descs[0].startswith("Agregó un viaje del 01/12/2026 al 06/12/2026") and any("la carrera «10K»" in x for x in descs)
+    assert descs[0].startswith("Agregó un viaje del 01/12/2026 al 06/12/2026") and any("la carrera de paso «10K»" in x for x in descs)
     # deshacer todo, de atrás para adelante
     with web_ctx.sesiones() as db:
         ids = [x.id for x in db.query(Cambio).order_by(Cambio.id.desc())]
@@ -446,18 +446,3 @@ def test_solo_el_modo_menos_vuelve_descarga_la_semana_5_pegada_a_la_4():
         assert tipos_["menos"] == ("descarga", "descarga")
 
 
-def test_una_meta_ya_no_cambia_semanas_del_plan_v6():
-    """Las carreras entran al plan con `motor_v6.con_carrera`; `plan_efectivo` ya no las pinta encima."""
-    cfg, base = cfg_de(plan_vivo.agregar_carrera(CONFIG, fecha_semana(6, 5), 10, "10K")), plan_base()
-    assert plan_vivo.plan_efectivo(base, cfg) is base
-
-
-def test_una_segunda_carrera_en_un_plan_con_carrera_da_un_mensaje_claro():
-    import motor_v6
-    from web.errores import ErrorT
-    plan = motor_v6.generar_v6({"nivel": "base", "dias": 3, "inicio": "2026-11-09", "evidencia": planes_v6.EVIDENCIA["base"], "inicio_minutos": 100,
-                                "meta": {"tipo": "carrera", "km": 10, "semanas_hasta": 12}})
-    assert (plan["meta"].get("carrera") or {}).get("km") == 10
-    cfg = cfg_de(CONFIG)
-    with pytest.raises(ErrorT, match="otra carrera"):
-        plan_vivo.agregar_carrera_en_plan(CONFIG, plan, cfg, fecha_semana(8, 5), 5, "5K", HOY_D)

@@ -34,33 +34,20 @@ def test_meta_en_plan_no_se_aplica_dos_veces():
     assert normalizar_config(crudo)["metas"][0]["en_plan"] is False   # por defecto: false
 
 
-def test_carrera_agregada_despues_rehace_el_plan_desde_la_semana_en_curso():
+def test_quitar_una_meta_vieja_en_plan_rehace_la_cola():
+    """Las metas viejas con `en_plan` (carrera construida dentro del plan) se quitan como antes; las de paso no rehacen nada (test_planes_carrera_paso)."""
     plan = plan_v6()
     hoy = INICIO + timedelta(weeks=2, days=1)
     fecha = (INICIO + timedelta(weeks=9, days=5)).isoformat()
-    crudo = crudo_de(plan)
-    nuevo, plan_n = plan_vivo.agregar_carrera_en_plan(crudo, plan, cfg_de(crudo, hoy), fecha, "10", "Mi 10K", hoy)
-    assert plan_n is not None and len(plan_n["weeks"]) == 10 and plan_n["weeks"][-1].get("evento") == "carrera"
-    assert nuevo["corrida"]["metas"][-1]["en_plan"] is True and nuevo["corrida"]["semanas"] == 10
+    plan_n = motor_v6.con_carrera(plan, 3, {"km": 10, "fecha": fecha, "semanas_hasta": 10})
+    nuevo = crudo_de(plan_n, metas=[{"id": "a", "tipo": "carrera", "fecha": fecha, "distancia_km": 10, "en_plan": True}])
+    assert len(plan_n["weeks"]) == 10 and plan_n["weeks"][-1].get("evento") == "carrera"
     assert plan_n["weeks"][:2] == plan["weeks"][:2]   # las ya pasadas no cambian
     cfg = cfg_de(nuevo, hoy)
     assert plan_vivo.plan_efectivo(plan_n, cfg) is plan_n
-    # quitarla rehace la cola sin carrera
-    mid = nuevo["corrida"]["metas"][-1]["id"]
-    sin, plan_s = plan_vivo.quitar_meta_en_plan(nuevo, plan_n, cfg, mid, hoy)
+    sin, plan_s = plan_vivo.quitar_meta_en_plan(nuevo, plan_n, cfg, "a", hoy)
     assert not sin["corrida"]["metas"] and plan_s is not None and not plan_s["meta"].get("carrera")
     assert all(w.get("evento") != "carrera" for w in plan_s["weeks"])
-
-
-def test_carrera_en_plan_viejo_o_con_otra_distancia_usa_la_superposicion():
-    plan = plan_v6()
-    hoy = INICIO + timedelta(days=1)
-    crudo = crudo_de(plan)
-    fecha = (INICIO + timedelta(weeks=5, days=5)).isoformat()
-    nuevo, plan_n = plan_vivo.agregar_carrera_en_plan(crudo, plan, cfg_de(crudo, hoy), fecha, "15", "15K", hoy)
-    assert plan_n is None and not nuevo["corrida"]["metas"][-1].get("en_plan")
-    viejo = {k: v for k, v in plan.items() if k != "meta"}
-    assert plan_vivo.agregar_carrera_en_plan(crudo, viejo, cfg_de(crudo, hoy), fecha, "10", "x", hoy)[1] is None
 
 
 def test_viaje_sobre_plan_v6_sigue_funcionando():

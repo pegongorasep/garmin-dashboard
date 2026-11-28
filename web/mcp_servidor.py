@@ -158,20 +158,18 @@ def _hoy(ahora, crudo) -> date:
 
 
 def agregar_carrera(db, actor, ahora, atleta, *, fecha: str, nombre: str = "Carrera", distancia_km: float | None = None) -> dict:
-    """Agrega una carrera objetivo (fecha AAAA-MM-DD, hoy o después)."""
-    a, crudo, plan, _ = _editable(db, actor, atleta)
+    """Agrega una carrera de paso (fecha AAAA-MM-DD, hoy o después; `distancia_km` opcional): la persona sigue con su plan y esa semana la
+    carrera es su sesión larga. No cambia ni rehace el plan. No sirve para «quiero entrenar para esta carrera»: eso es un plan nuevo y lo
+    arma la persona en la web (Plan › Agregar carrera)."""
+    a, crudo, _, _ = _editable(db, actor, atleta)
     try:
         f = _fecha(fecha, "fecha de la carrera")
         if f < _hoy(ahora, crudo).isoformat():
             raise ConfigError("fecha de la carrera: debe ser hoy o después")
-        hoy = _hoy(ahora, crudo)
-        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
-        nuevo, plan_nuevo = plan_vivo.agregar_carrera_en_plan(crudo, plan, cfg, f, str(distancia_km) if distancia_km else None,
-                                                              nombre.strip() or "Carrera", hoy)
+        nuevo = plan_vivo.agregar_carrera(crudo, f, distancia_km or None, nombre.strip() or "Carrera")
     except (ConfigError, ValueError) as ex:
         raise Rechazo(str(ex)) from None
-    return _guardar(db, actor, a, f"Agregó la carrera «{nombre.strip() or 'Carrera'}» el {f} (IA)",
-                    {"ajustes": nuevo, **({"plan": plan_nuevo} if plan_nuevo is not None else {})})
+    return _guardar(db, actor, a, f"Agregó la carrera de paso «{nombre.strip() or 'Carrera'}» el {f} (IA)", {"ajustes": nuevo})
 
 
 def agregar_evento(db, actor, ahora, atleta, *, tipo: str, desde: str, hasta: str | None = None, modo: str | None = None) -> dict:

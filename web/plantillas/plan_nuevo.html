@@ -20,6 +20,7 @@
 {% if espera_historial %}{% call aviso("warn") %}{{ t("pn.espera_historial") }}{% endcall %}{% else %}
 <form class="pila" method="post" action="{{ pref }}/plan/nuevo/preguntas">
   <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% if preset %}<input type="hidden" name="carrera" value="1"><input type="hidden" name="fecha" value="{{ preset.fecha }}">{% if preset.km %}<input type="hidden" name="km" value="{{ preset.km }}">{% endif %}{% endif %}
   {% if nivel_previo is defined %}{% for k, val in v.items() if k not in ("nivel", "frecuencia_actual", "corrida_larga") %}{% if val is string %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% else %}{% for x in val %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% endif %}{% endfor %}{% endif %}
   {% if sin_garmin %}
     {{ campo(t("pn.frecuencia_actual"), "frecuencia_actual", tipo="number", valor=v.frecuencia_actual, requerido=True, extra={"min": "1", "max": "7"}) }}

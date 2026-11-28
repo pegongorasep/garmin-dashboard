@@ -128,7 +128,8 @@ def _metas(brutas: list) -> list:
             raise ConfigError(f"corrida.metas: la distancia de la meta {i + 1} debe estar entre 0 y 400 km")
         out.append({"id": str(x.get("id") or f"m{i + 1}"), "tipo": "carrera", "fecha": _fecha(_requerido(x, "fecha", "corrida.metas"), "corrida.metas"),
                     "distancia_km": km, "nombre": str(x.get("nombre") or "Carrera")[:60],
-                    "en_plan": bool(x.get("en_plan", False))})   # en_plan: la semana de carrera ya está construida dentro de un plan v6
+                    "en_plan": bool(x.get("en_plan", False)),   # en_plan (metas viejas): la semana de carrera ya está construida dentro de un plan v6
+                    "de_paso": bool(x.get("de_paso", False))})   # de_paso: la carrera reemplaza la larga de su semana; el plan no cambia
     return sorted(out, key=lambda x: x["fecha"])
 
 
