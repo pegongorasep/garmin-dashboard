@@ -81,6 +81,7 @@ Cuentas y entrada
 - `onboarding.py`: guía de Garmin `/bienvenida`. Rutas. `primer_inicio.py`: lo que Hoy ofrece a quien llega sin nada. Lógica.
 - `perfil.py`: nombre, apellido y foto. Rutas. `privacidad.py`: versión del aviso y rutas públicas. Constantes.
 - `cuenta.py`: descargar mis datos (ZIP) y borrar cuenta. Rutas. `admin.py`: `/admin` (invitaciones; solo admin). Rutas.
+- `cuentas_prueba.py`: `/admin/prueba/*`: cuentas `@prueba.test` sin correo real (crear, liga de entrada, borrar; solo admin y solo `.test`). Rutas.
 - `cli.py`: `python -m web.cli crear-admin|invitar|importar`. `importar.py`: carga los archivos personales de una carpeta a la base.
 
 Conexión con Garmin y GitHub

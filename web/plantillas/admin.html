@@ -27,6 +27,32 @@
 {% else %}<p>{{ t("admin.no_pend") }}</p>{% endif %}
 {% endcall %}
 
+{% call tarjeta(t("admin.prueba_titulo"), id="prueba") %}
+<p>{{ t("admin.prueba_nota") }}</p>
+{% if prueba_liga %}{% call aviso("ok") %}{{ t("admin.prueba_liga_nueva", correo=prueba_para) }}<br><code>{{ prueba_liga }}</code>{% endcall %}{% endif %}
+{% if prueba_error %}{% call aviso("warn") %}{{ prueba_error }}{% endcall %}{% endif %}
+<form class="pila" method="post" action="/admin/prueba/crear">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ campo(t("admin.prueba_nombre"), "nombre", ayuda=t("admin.prueba_nombre_ayuda"), requerido=True, extra={"maxlength": "30", "autocomplete": "off", "autocapitalize": "none"}) }}
+  <div class="acciones">{{ boton(t("admin.prueba_crear"), tipo="submit") }}</div>
+</form>
+{% for u in usuarios if u.prueba %}
+<div class="acciones">
+  <span>{{ u.correo }}</span>
+  <form method="post" action="/admin/prueba/liga">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="id" value="{{ u.id }}">
+    {{ boton(t("admin.prueba_entrar"), "texto", chico=True, tipo="submit") }}
+  </form>
+  <form method="post" action="/admin/prueba/borrar" data-confirmar="{{ t('admin.prueba_confirmar', correo=u.correo) }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="id" value="{{ u.id }}">
+    {{ boton(t("comun.borrar"), "texto", chico=True, tipo="submit") }}
+  </form>
+</div>
+{% endfor %}
+{% endcall %}
+
 {% call tarjeta(t("sim.titulo")) %}
 <p>{{ t("admin.simulador_nota") }}</p>
 <div class="acciones">{{ boton(t("sim.abrir"), "texto", chico=True, href="/admin/simulador") }}</div>
@@ -45,4 +71,5 @@
   </tbody>
 </table></div>
 {% endcall %}
+<script src="/estaticos/confirmar.js"></script>
 {% endblock %}

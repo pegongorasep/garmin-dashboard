@@ -72,6 +72,11 @@ def aceptar_invitacion(db: Session, token: str, correo: str) -> Usuario | None:
     return usuario
 
 
+def es_correo_prueba(correo: str) -> bool:
+    """Cuenta de prueba: dominio terminado en `.test`, reservado (RFC 2606); nunca puede ser el correo de alguien."""
+    return normalizar_correo(correo).partition("@")[2].endswith(".test")
+
+
 def buscar_por_correo(db: Session, correo: str) -> Usuario | None:
     return db.scalar(select(Usuario).where(Usuario.correo == normalizar_correo(correo), Usuario.borrado.is_(None)))
 
@@ -89,11 +94,11 @@ def crear_admin(db: Session, correo: str) -> Usuario:
 
 # --- liga de entrada ---
 
-def crear_liga(db: Session, usuario: Usuario) -> str | None:
-    """Token de liga (15 min, un uso). None si ya pidió 5 en la última hora."""
+def crear_liga(db: Session, usuario: Usuario, limitar: bool = True) -> str | None:
+    """Token de liga (15 min, un uso). None si ya pidió 5 en la última hora (`limitar=False`: ligas de prueba del admin)."""
     pedidas = db.scalar(select(func.count()).select_from(LigaLogin).where(
         LigaLogin.usuario_id == usuario.id, LigaLogin.creada > ahora() - timedelta(hours=1)))
-    if pedidas >= LIGAS_POR_HORA:
+    if limitar and pedidas >= LIGAS_POR_HORA:
         return None
     token = nuevo_token()
     db.add(LigaLogin(token_hash=hash_token(token), usuario_id=usuario.id, expira=ahora() + timedelta(minutes=MIN_LIGA)))

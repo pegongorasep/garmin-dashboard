@@ -22,7 +22,7 @@ def es_admin(usuario: Usuario | None, settings) -> bool:
 
 
 def usuarios_de(db: Session, admin: Usuario) -> list[dict]:
-    """Solo las columnas del panel: correo, apodo, repo, última subida, versión del motor, atrasado."""
+    """Solo las columnas del panel: correo, apodo, repo, última subida, versión del motor, atrasado (y si es de prueba)."""
     subidas = db.scalars(select(Subida).where(Subida.ok.is_(True)).order_by(Subida.fecha.desc(), Subida.id.desc())).all()
     ultima: dict[int, Subida] = {}
     for s in subidas:
@@ -36,6 +36,7 @@ def usuarios_de(db: Session, admin: Usuario) -> list[dict]:
         filas.append({"id": u.id, "correo": u.correo, "apodo": u.apodo, "repo": u.repo,
                       "ultima_subida": s.fecha.strftime("%Y-%m-%d %H:%M") if s else None,
                       "motor": s.motor if s else None, "atrasado": atrasado,
+                      "prueba": auth.es_correo_prueba(u.correo) and not u.es_admin,
                       "liga": f"/a/{u.id}/ajustes" if permisos.puede_ver(db, admin, u.id) and u.id != admin.id else None})
     return filas
 

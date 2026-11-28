@@ -8,8 +8,8 @@ from fastapi.templating import Jinja2Templates
 
 from dashboard import i18n
 
-from . import (actividad_web, admin, aprende, ajustes_web, auth, coach, conexion, correo, cuenta, entrada, feed, garmin_key, google,
-               grupos, mcp_servidor, oauth, onboarding, perfil, persona, plan_nuevo, plan_web, sitio, sync_web, tubo)
+from . import (actividad_web, admin, aprende, ajustes_web, auth, coach, conexion, correo, cuenta, cuentas_prueba, entrada, feed,
+               garmin_key, google, grupos, mcp_servidor, oauth, onboarding, perfil, persona, plan_nuevo, plan_web, sitio, sync_web, tubo)
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
 
@@ -65,7 +65,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
 
     # El orden importa: /plan/nuevo antes de /plan/{...}; el sitio (`/{archivo}`) siempre al final.
     for modulo in (entrada, tubo, onboarding, ajustes_web, actividad_web, plan_nuevo, plan_web, coach, oauth, perfil, grupos, feed,
-                   persona, aprende, cuenta, admin, google, conexion, sync_web, garmin_key):
+                   persona, aprende, cuenta, admin, cuentas_prueba, google, conexion, sync_web, garmin_key):
         app.include_router(modulo.router)
     mcp_servidor.montar_mcp(app, settings)
     app.include_router(sitio.router)
