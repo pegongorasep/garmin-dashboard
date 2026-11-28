@@ -1249,7 +1249,8 @@ function accionSync(u) {
   if (sy.puede || sy.url_autorizar) {
     const viva = !!(window.Franja && window.Franja.viva());
     return h("button", { id: "sync-btn", class: "enlace-boton", type: "button", disabled: sy.puede && viva,
-      onclick: () => { if (sy.puede) { if (window.Franja) window.Franja.empezar("normal"); } else dialogoAutorizar(sy.url_autorizar); } }, T("sitio.sync.boton"));
+      onclick: () => { if (sy.puede) { if (window.Franja) window.Franja.empezar("normal"); } else dialogoAutorizar(sy.url_autorizar); } },
+      T(sy.puede ? "sitio.sync.boton" : "sitio.sync.autorizar"));
   }
   return u.acciones_url ? h("a", { id: "acciones-link", href: u.acciones_url, target: "_blank", rel: "noopener", title: T("sitio.enc.acciones_tip") }, T("sitio.enc.jalar")) : null;
 }
@@ -1278,7 +1279,7 @@ function pintarEncabezado() {
   // Avisos de cambios del coach o de tu IA (data.avisos, solo en la web): ver y deshacer en el historial.
   const av = $("avisos-web"), lista = (datos && datos.avisos) || [];
   av.hidden = !lista.length;
-  av.replaceChildren(...lista.map((a) => DS.bannerCambio({ texto: a.texto, verHref: a.url, verTexto: T("sitio.enc.ver_deshacer") })));
+  av.replaceChildren(...lista.map((a) => DS.bannerCambio({ texto: a.texto, verHref: a.url, verTexto: T("sitio.ds.ver") })));
 }
 
 function actualizarEncabezado() {

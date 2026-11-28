@@ -175,7 +175,7 @@ def test_el_coach_edita_y_el_atleta_ve_aviso_con_deshacer(web_ctx):
         assert c.via == "coach" and c.autor_id == uid_c and c.atleta_id == uid_a and not c.visto
     d = cl_a.get("/data.json").json()
     assert validar.problemas(d) == []
-    assert len(d["avisos"]) == 1 and d["avisos"][0]["texto"].startswith("Pedro cambió:") and d["avisos"][0]["url"] == "/historial"
+    assert len(d["avisos"]) == 1 and d["avisos"][0]["texto"] == "Pedro cambió tus ajustes" and d["avisos"][0]["url"] == f"/historial#c{d['avisos'][0]['id']}"
     assert "avisos" not in cl_c.get("/data.json").json()
     # el atleta deshace desde el historial
     cl_a.post(f"/historial/{d['avisos'][0]['id']}/deshacer", data={"csrf": tok(cl_a)})
@@ -199,7 +199,7 @@ def test_avisos_de_la_ia_los_ve_el_atleta(web_ctx):
         u = db.get(Usuario, uid)
         cambios.aplicar_cambio(db, u, u, "ia", "Agregó un viaje", {"ajustes": {**CONFIG, "perfil": {**CONFIG["perfil"], "titulo": "IA"}}})
     d = cl.get("/data.json").json()
-    assert d["avisos"][0]["texto"] == "Tu IA cambió: Agregó un viaje"
+    assert d["avisos"][0]["texto"] == "Tu IA cambió tus ajustes"
 
 
 # --- InBody ---
@@ -355,3 +355,36 @@ def test_avisos_entendido_requiere_csrf_y_sesion_y_se_guarda_por_cuenta(web_ctx)
     assert 'data-avisos-ocultos="{}"' in otra.get("/").text
     # el coach que mira /a/<id>/ no recibe botón ni mapa
     assert "data-csrf" not in cl.get(f"/a/{uid}/").text
+
+
+def test_resumen_del_plan_ajustes_e_inbody_sin_ids_internos():
+    from types import SimpleNamespace
+    ses = lambda m, **x: {"id": "z2b", "tipo": "z2", "name": "Z2 #2", "minutes": m, "steps": [{"kind": "run", "minutes": m, "zone": "Z2"}], **x}  # noqa: E731
+    plan = lambda m: {"weeks": [{"n": 2, "sessions": [ses(m)]}]}
+    c = SimpleNamespace(antes={"plan": plan(30)}, despues={"plan": plan(40)})
+    r = cambios.resumen(c)
+    assert r[0] == "Semana 2 · Z2 #2: minutos 30 → 40" and not any("z2b" in x for x in r)
+    c = SimpleNamespace(antes={"ajustes": {"perfil": {"edad": 40}}}, despues={"ajustes": {"perfil": {"edad": 41}}})
+    assert cambios.resumen(c) == ["la edad: 40 → 41"]
+    c = SimpleNamespace(antes={"inbody": []}, despues={"inbody": [{"fecha": "2026-11-20", "peso_kg": 80}]})
+    assert cambios.resumen(c) == ["InBody 2026-11-20: se agregó"]
+    grande = {"weeks": [{"n": 1, "sessions": [{**ses(10), "id": f"s{i}", "name": f"S{i}"} for i in range(9)]}]}
+    r = cambios.resumen(SimpleNamespace(antes={"plan": {"weeks": [{"n": 1, "sessions": []}]}}, despues={"plan": grande}))
+    assert len(r) == 6 and r[-1] == "y 4 más"
+    assert cambios.resumen(SimpleNamespace(antes=None, despues=None)) == []
+
+
+def test_entendido_marca_solo_ese_y_lo_visto_de_la_ia_no_se_deshace(web_ctx):
+    uid, cl = listo(web_ctx)
+    with web_ctx.sesiones() as db:
+        u = db.get(Usuario, uid)
+        c1 = cambios.aplicar_cambio(db, u, u, "ia", "Uno", {"ajustes": {**CONFIG, "perfil": {**CONFIG["perfil"], "titulo": "A"}}}).id
+        c2 = cambios.aplicar_cambio(db, u, u, "ia", "Dos", {"ajustes": {**CONFIG, "perfil": {**CONFIG["perfil"], "titulo": "B"}}}).id
+    h = cl.get("/historial")
+    assert f'id="c{c1}"' in h.text and "Entendido" in h.text and "Marcar todo" not in h.text
+    assert cl.post(f"/historial/{c1}/visto", data={"csrf": tok(cl)}).status_code == 303
+    with web_ctx.sesiones() as db:
+        assert db.get(Cambio, c1).visto and not db.get(Cambio, c2).visto
+        assert not cambios.puede_deshacer(db.get(Cambio, c1)) and cambios.puede_deshacer(db.get(Cambio, c2))
+        with pytest.raises(cambios.NoSeDeshace):
+            cambios.deshacer(db, db.get(Usuario, uid), c1)

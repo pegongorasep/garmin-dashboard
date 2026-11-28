@@ -208,7 +208,8 @@ def editar_sesion(db, actor, ahora, atleta, *, semana: int, sesion_id: str, fila
                                         plan_vivo.pasos_de_filas(filas, {int(k): int(x) for k, x in (veces or {}).items()}))
     except (ConfigError, ValueError, KeyError, TypeError) as ex:
         raise Rechazo(str(ex) if not isinstance(ex, KeyError) else "Faltan datos.") from None
-    return _guardar(db, actor, a, f"Cambió la sesión {sesion_id} de la semana {semana} (IA)", {"plan": nuevo})
+    ses = next((x for w in plan.get("weeks") or [] if w.get("n") == semana for x in w.get("sessions") or [] if x.get("id") == sesion_id), None)
+    return _guardar(db, actor, a, f"Cambió la sesión {(ses or {}).get('name') or 'de entreno'} de la semana {semana} (IA)", {"plan": nuevo})
 
 
 def repetir_semana(db, actor, ahora, atleta) -> dict:

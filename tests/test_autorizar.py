@@ -91,9 +91,9 @@ def test_los_tres_lugares_abren_el_dialogo_y_el_sw_sube_version():
     vistas = (SITE / "vistas.js").read_text(encoding="utf-8")
     app = (SITE / "app.js").read_text(encoding="utf-8")
     assert "else dialogoAutorizar(sy.url_autorizar)" in vistas and "location.href = sy.url_autorizar" not in vistas
-    assert 'dialogoAutorizar(s.url_autorizar || "/conectar/github?para=conectado")' in app
+    assert "avisoMigrar" not in app   # el aviso rojo se fue: el botón del encabezado autoriza
     sw = (SITE / "sw.js").read_text(encoding="utf-8")
-    assert 'VERSION = "v78"' in sw and "/dibujo-github.svg" in sw
+    assert 'VERSION = "v79"' in sw and "/dibujo-github.svg" in sw
 
 
 def test_ruta_estatica_del_dibujo(ctx):

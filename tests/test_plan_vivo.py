@@ -374,7 +374,7 @@ def test_el_coach_agrega_un_viaje_y_el_atleta_se_entera(web_ctx):
     assert "Modo coach · Viendo a" in cl_c.get(f"/a/{uid_a}/plan/acciones").text
     assert crudo(web_ctx, uid_a)["corrida"]["eventos"][0]["modo"] == "menos"
     d = cl_a.get("/data.json").json()
-    assert "Agregó un viaje" in d["avisos"][0]["texto"]
+    assert d["avisos"][0]["texto"].endswith("cambió tus ajustes") and d["avisos"][0]["url"].startswith("/historial#c")
     assert cl_a.get("/plan/acciones").status_code == 200
 
 

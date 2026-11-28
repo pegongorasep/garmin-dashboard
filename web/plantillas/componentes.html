@@ -71,8 +71,8 @@
 {%- endmacro %}
 
 {# Tarjeta con título opcional; el contenido va en {% call tarjeta("Título") %}…{% endcall %}. #}
-{% macro tarjeta(titulo=None, clase="") -%}
-<section class="card{% if clase %} {{ clase }}{% endif %}">
+{% macro tarjeta(titulo=None, clase="", id=None) -%}
+<section{% if id %} id="{{ id }}"{% endif %} class="card{% if clase %} {{ clase }}{% endif %}">
   {%- if titulo %}<h3 class="card-t">{{ titulo }}</h3>{% endif %}
   {{ caller() if caller else "" }}
 </section>

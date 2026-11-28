@@ -182,10 +182,11 @@ def test_sync_ui_migrar_y_prioridad(ctx, gh):
     assert sync_web.sync_ui(ctx.settings, u2)["migrar"] is False        # sin copia
 
 
-def test_aviso_migrar_en_app_js_gana_key_rechazada():
+def test_sin_aviso_migrar_y_boton_autorizar_en_el_encabezado():
     js = (SITE / "app.js").read_text(encoding="utf-8")
-    assert "if (!s.migrar || s.key_rechazada) return null;" in js
-    assert js.count("avisoMigrar(),") == 2 and "sitio.migrar.aviso" in js
+    assert "avisoMigrar" not in js and "sitio.migrar.aviso" not in js
+    vistas = (SITE / "vistas.js").read_text(encoding="utf-8")
+    assert 'T(sy.puede ? "sitio.sync.boton" : "sitio.sync.autorizar")' in vistas
 
 
 def test_sync_ui_migrar_app_apagada(ctx):

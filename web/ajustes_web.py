@@ -246,7 +246,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     # ---------- historial ----------
     def fila_historial(db, c, tz):
         return {"c": c, "quien": cambios.autor_texto(db, c), "cuando": c.fecha.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).strftime("%d/%m/%Y %H:%M"),
-                "puede": cambios.puede_deshacer(c), "via": c.via}
+                "puede": cambios.puede_deshacer(c), "via": c.via, "resumen": cambios.resumen(c)}
 
     def pantalla_historial(request, usuario, db, atleta_id, **extra):
         atleta, redir = resolver(db, usuario, atleta_id)
@@ -256,7 +256,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         tz = ZoneInfo((crudo.get("perfil") or {}).get("zona_horaria") or "America/Merida")
         filas = [fila_historial(db, c, tz) for c in cambios.historial(db, atleta.id)]
         return render(request, "historial.html", atleta=atleta, pref=prefijo(usuario, atleta), filas=filas,
-                      hay_nuevos=any(not f["c"].visto for f in filas), **extra)
+                      es_atleta=usuario.id == atleta.id, **extra)
 
     @app.get("/historial")
     def historial_get(request: Request, usuario=Depends(actual), db=Depends(get_db)):
@@ -266,7 +266,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     def historial_get_atleta(request: Request, atleta_id: int, usuario=Depends(actual), db=Depends(get_db)):
         return pantalla_historial(request, usuario, db, atleta_id, ok=request.query_params.get("ok"))
 
-    async def historial_accion(request: Request, usuario, db, atleta_id, accion: str, cambio_id: int | None = None):
+    async def historial_accion(request: Request, usuario, db, atleta_id, accion: str, cambio_id: int | None = None):   # accion: visto | deshacer
         await formulario(request)
         atleta, redir = resolver(db, usuario, atleta_id)
         if redir:
@@ -274,7 +274,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         pref = prefijo(usuario, atleta)
         if accion == "visto":
             if usuario.id == atleta.id:   # el coach no consume los avisos del atleta
-                cambios.marcar_vistos(db, atleta.id)
+                cambios.marcar_vistos(db, atleta.id, cambio_id)
             return RedirectResponse(f"{pref}/historial?ok=visto", 303)
         try:
             cambios.deshacer(db, usuario, cambio_id)
@@ -287,6 +287,14 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
     @app.post("/historial/visto")
     async def historial_visto(request: Request, usuario=Depends(actual), db=Depends(get_db)):
         return await historial_accion(request, usuario, db, None, "visto")
+
+    @app.post("/historial/{cambio_id}/visto")
+    async def historial_visto_uno(request: Request, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
+        return await historial_accion(request, usuario, db, None, "visto", cambio_id)
+
+    @app.post("/a/{atleta_id}/historial/{cambio_id}/visto")
+    async def historial_visto_uno_atleta(request: Request, atleta_id: int, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):
+        return await historial_accion(request, usuario, db, atleta_id, "visto", cambio_id)
 
     @app.post("/historial/{cambio_id}/deshacer")
     async def historial_deshacer(request: Request, cambio_id: int, usuario=Depends(actual), db=Depends(get_db)):

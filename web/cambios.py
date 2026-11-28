@@ -98,6 +98,8 @@ def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None
         raise SinPermiso()
     if c.deshecho_por is not None:
         raise NoSeDeshace("err.ya_deshecho")
+    if _visto_de_ia(c):
+        raise NoSeDeshace("err.visto")
     if not c.antes or any(v is None for v in c.antes.values()):
         raise NoSeDeshace("err.creado")
     atleta = db.get(Usuario, c.atleta_id)
@@ -107,8 +109,13 @@ def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None
     return nuevo
 
 
+def _visto_de_ia(c: Cambio) -> bool:
+    """Un cambio de la IA o del coach que la persona ya marcó como visto («Entendido») se queda."""
+    return c.via in ("ia", "coach") and bool(c.visto)
+
+
 def puede_deshacer(c: Cambio) -> bool:
-    return c.deshecho_por is None and bool(c.antes) and all(v is not None for v in c.antes.values()) \
+    return c.deshecho_por is None and not _visto_de_ia(c) and bool(c.antes) and all(v is not None for v in c.antes.values()) \
         and not c.descripcion.startswith("Deshacer:")
 
 
@@ -137,12 +144,14 @@ def avisos_de(db: Session, atleta_id: int) -> list[dict]:
     filas = db.scalars(select(Cambio).where(Cambio.atleta_id == atleta_id, Cambio.visto.is_(False),
                                             Cambio.via.in_(("coach", "ia")), Cambio.deshecho_por.is_(None))
                        .order_by(Cambio.fecha.desc(), Cambio.id.desc()).limit(MAX_AVISOS))
+    import i18n
     out = []
     for c in filas:
         quien = "Tu IA" if c.via == "ia" and c.autor_id == atleta_id else (
             f"La IA de {nombre_de(db, c.autor_id)}" if c.via == "ia" else nombre_de(db, c.autor_id))
-        out.append({"id": c.id, "texto": f"{quien} cambió: {c.descripcion}", "fecha": c.fecha.date().isoformat(),
-                    "url": "/historial"})
+        que = [i18n.t(f"cambios.de_{k}", "es") for k in CAMPOS if k in (c.despues or {})]
+        out.append({"id": c.id, "texto": i18n.t("cambios.aviso", "es", quien=quien, que=" y ".join(que) or i18n.t("cambios.de_algo", "es")),
+                    "fecha": c.fecha.date().isoformat(), "url": f"/historial#c{c.id}"})
     return out
 
 
@@ -151,3 +160,122 @@ def marcar_vistos(db: Session, atleta_id: int, cambio_id: int | None = None) -> 
         if cambio_id is None or c.id == cambio_id:
             c.visto = True
     db.commit()
+
+
+# --- resumen en palabras (antes -> después) ---
+
+MAX_LINEAS = 6
+ETIQ_AJUSTE = {"perfil.titulo": "el título", "perfil.zona_horaria": "la zona horaria", "perfil.edad": "la edad",
+               "perfil.fc_max": "la FC máxima", "perfil.sensor": "el sensor", "inbody": "InBody",
+               "corrida.inicio": "el inicio del plan", "corrida.nivel": "el nivel", "corrida.dias": "los días de corrida"}
+ETIQ_CAMPO = {"peso_kg": "peso (kg)", "mme_kg": "masa muscular (kg)", "pgc": "% de grasa", "grasa_kg": "grasa (kg)"}
+NOMBRE_PASO = {"run": "trote", "walk": "caminata"}
+
+
+def _pasos_texto(pasos) -> str:
+    out = []
+    for p in pasos or []:
+        if p.get("kind") == "repeat":
+            out.append(f"{p.get('times')}× ({_pasos_texto(p.get('steps'))})")
+        else:
+            out.append(f"{NOMBRE_PASO.get(p.get('kind'), p.get('kind'))} {p.get('minutes')}' {p.get('zone')}")
+    return ", ".join(out)
+
+
+def _valor(v) -> str:
+    if v is None or v == "":
+        return "vacío"
+    if v is True:
+        return "sí"
+    if v is False:
+        return "no"
+    if isinstance(v, list):
+        return f"{len(v)} elementos"
+    return str(v)
+
+
+def _sesiones(plan) -> dict:
+    return {(w.get("n"), s.get("id")): s for w in (plan or {}).get("weeks") or [] for s in w.get("sessions") or []}
+
+
+def _resumen_plan(antes, despues) -> list[str]:
+    a, b = _sesiones(antes), _sesiones(despues)
+    out = []
+    for k in sorted(set(a) | set(b), key=lambda x: (x[0] or 0, str(x[1]))):
+        sa, sb = a.get(k), b.get(k)
+        pref = f"Semana {k[0]} · {(sb or sa).get('name') or 'sesión'}"
+        if sa is None:
+            out.append(f"{pref}: se agregó")
+        elif sb is None:
+            out.append(f"{pref}: se quitó")
+        else:
+            if sa.get("name") != sb.get("name"):
+                out.append(f"Semana {k[0]} · nombre: {sa.get('name')} → {sb.get('name')}")
+            if sa.get("minutes") != sb.get("minutes"):
+                out.append(f"{pref}: minutos {sa.get('minutes')} → {sb.get('minutes')}")
+            if sa.get("tipo") != sb.get("tipo"):
+                out.append(f"{pref}: tipo {sa.get('tipo')} → {sb.get('tipo')}")
+            if sa.get("distance_km") != sb.get("distance_km") and (sa.get("distance_km") or sb.get("distance_km")):
+                out.append(f"{pref}: distancia {_valor(sa.get('distance_km'))} → {_valor(sb.get('distance_km'))} km")
+            if sa.get("steps") != sb.get("steps"):
+                out.append(f"{pref}: pasos {_pasos_texto(sa.get('steps'))} → {_pasos_texto(sb.get('steps'))}")
+    return out
+
+
+def _planas(d, pref="") -> dict:
+    out = {}
+    for k, v in (d or {}).items():
+        ruta = f"{pref}.{k}" if pref else str(k)
+        if isinstance(v, dict):
+            out.update(_planas(v, ruta))
+        else:
+            out[ruta] = v
+    return out
+
+
+def _resumen_ajustes(antes, despues) -> list[str]:
+    a, b = _planas(antes), _planas(despues)
+    out = []
+    for k in sorted(set(a) | set(b)):
+        if a.get(k) != b.get(k):
+            etiqueta = ETIQ_AJUSTE.get(k) or k.split(".")[-1].replace("_", " ")
+            if isinstance(a.get(k), list) or isinstance(b.get(k), list):
+                out.append(f"{etiqueta}: {len(a.get(k) or [])} → {len(b.get(k) or [])}")
+            else:
+                out.append(f"{etiqueta}: {_valor(a.get(k))} → {_valor(b.get(k))}")
+    return out
+
+
+def _resumen_inbody(antes, despues) -> list[str]:
+    a = {m.get("fecha"): m for m in antes or []}
+    b = {m.get("fecha"): m for m in despues or []}
+    out = []
+    for f in sorted(set(a) | set(b), key=str):
+        if f not in a:
+            out.append(f"InBody {f}: se agregó")
+        elif f not in b:
+            out.append(f"InBody {f}: se quitó")
+        elif a[f] != b[f]:
+            for k in sorted(set(a[f]) | set(b[f])):
+                if a[f].get(k) != b[f].get(k) and k not in ("fecha", "hora"):
+                    out.append(f"InBody {f} · {ETIQ_CAMPO.get(k, k)}: {_valor(a[f].get(k))} → {_valor(b[f].get(k))}")
+    return out
+
+
+def resumen(c: Cambio) -> list[str]:
+    """Líneas en palabras de lo que cambió (antes → después), hasta MAX_LINEAS con «y N más». [] si no se puede resumir."""
+    try:
+        antes, despues = c.antes or {}, c.despues or {}
+        lineas = []
+        if "plan" in despues:
+            lineas += _resumen_plan(antes.get("plan"), despues.get("plan"))
+        if "ajustes" in despues:
+            lineas += _resumen_ajustes(antes.get("ajustes"), despues.get("ajustes"))
+        if "inbody" in despues:
+            lineas += _resumen_inbody(antes.get("inbody"), despues.get("inbody"))
+    except (AttributeError, TypeError, ValueError):
+        return []
+    if len(lineas) > MAX_LINEAS:
+        resto = len(lineas) - (MAX_LINEAS - 1)
+        lineas = lineas[:MAX_LINEAS - 1] + [f"y {resto} más"]
+    return lineas
