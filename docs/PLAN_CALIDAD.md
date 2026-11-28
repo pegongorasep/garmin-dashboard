@@ -1,5 +1,7 @@
 # Plan de calidad (2026-11-28)
 
+**Estado:** C1–C6 hechas y desplegadas el 2026-11-28. Solo `/mcp` conserva montaje explícito (`montar_mcp`: sub-app ASGI).
+
 Sigue a `PLAN_LIMPIEZA.md` (cerrado). Sin cambios de comportamiento visibles; un commit `Calidad C<n>: …` por fase,
 `ruff check .` y `.venv/bin/python -m pytest -q -n auto` en verde. Fuera de alcance: el `TODO(F4+)` de `web/plan_nuevo.py`.
 
