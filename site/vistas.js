@@ -1328,7 +1328,18 @@ function pintarEncabezado() {
   // Avisos de cambios del coach o de tu IA (data.avisos, solo en la web): ver y deshacer en el historial.
   const av = $("avisos-web"), lista = (datos && datos.avisos) || [];
   av.hidden = !lista.length;
-  av.replaceChildren(...lista.map((a) => DS.bannerCambio({ texto: a.texto, verHref: a.url, verTexto: T("sitio.ds.ver") })));
+  const csrf = $("app").dataset.csrf;
+  const cerrar = (a) => async (caja) => {   // ✕ «Entendido»: solo InBody (lo decide Python con `cerrable`)
+    try {
+      const r = await fetch(`/historial/${a.id}/visto`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ csrf }) });
+      if (!r.ok) return;
+    } catch (e) { return; }
+    caja.style.height = `${caja.offsetHeight}px`;   // colapsa suave: alto → 0, luego se quita
+    caja.classList.add("cerrando");
+    requestAnimationFrame(() => { caja.style.height = "0px"; });
+    setTimeout(() => { caja.remove(); av.hidden = !av.children.length; }, 300);
+  };
+  av.replaceChildren(...lista.map((a) => DS.bannerCambio({ texto: a.texto, verHref: a.url, verTexto: T("sitio.ds.ver"), onCerrar: a.cerrable && csrf ? cerrar(a) : undefined })));
 }
 
 function actualizarEncabezado() {

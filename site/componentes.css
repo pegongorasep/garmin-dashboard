@@ -410,6 +410,9 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .banner-cambio .bc-t b { font-weight: 600; }
 .banner-cambio .bc-acc { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-left: auto; }
 .banner-cambio .boton { min-height: 36px; }
+.banner-cambio .bc-x { width: 36px; height: 36px; font-size: 14px; }
+.banner-cambio.cerrando { overflow: hidden; padding-block: 0; opacity: 0; transition: height .25s ease, padding .25s ease, opacity .2s ease; }
+@media (prefers-reduced-motion: reduce) { .banner-cambio.cerrando { transition: none; } }
 
 /* FilaHistorial */
 .historial { list-style: none; margin: 0; padding: 0; display: grid; }

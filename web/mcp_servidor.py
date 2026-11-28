@@ -105,8 +105,10 @@ def historial(db, actor, atleta, ahora) -> dict:
     a = resolver(db, actor, atleta)
     crudo = aw.crudo_de(db, a)
     hoy = _hoy(ahora, crudo)
+    snaps = cambios.instantanea(db, a.id, cambios.CAMPOS)
     return {"cambios": [{"id": c.id, "fecha": c.fecha.isoformat(timespec="minutes"), "quien": cambios.autor_texto(db, c),
-                         "via": c.via, "descripcion": c.descripcion, "se_puede_deshacer": cambios.puede_deshacer(c, crudo, hoy)}
+                         "via": c.via, "descripcion": c.descripcion, "nota": c.nota,
+                         "se_puede_deshacer": cambios.puede_deshacer(c, crudo, hoy, snaps)}
                         for c in cambios.historial(db, a.id, 30)]}
 
 
@@ -142,22 +144,25 @@ def _editable(db, actor, atleta) -> tuple[Usuario, dict, dict | None, date]:
         raise Rechazo("Esa persona aún no tiene ajustes ni plan.")
     return a, crudo, aw.plan_guardado(db, a), None
 
+RESUMEN = ("Siempre manda `resumen`: explica a la persona en lenguaje normal qué cambiaste y por qué; corto si se puede, "
+           "tan largo como haga falta para describir todo.")
 
-def _guardar(db, actor, a, desc, paquete) -> dict:
+
+def _guardar(db, actor, a, desc, paquete, resumen=None) -> dict:
     try:
-        c = cambios.aplicar_cambio(db, a, actor, "ia", desc, paquete)
+        c = cambios.aplicar_cambio(db, a, actor, "ia", desc, paquete, nota=resumen)
     except cambios.SinPermiso:
         raise Rechazo("No tienes permiso para cambiar a esa persona.")
     return {"hecho": desc, "cambio_id": c.id,
             "para_deshacer": f"Llama a la herramienta `deshacer` con cambio_id={c.id}" +
-                             ("" if cambios.puede_deshacer(c) else " (este cambio no se puede deshacer: avísale a la persona)")}
+                             ("" if cambios.puede_deshacer(c, snaps=cambios.instantanea(db, a.id, cambios.CAMPOS)) else " (este cambio no se puede deshacer: avísale a la persona)")}
 
 
 def _hoy(ahora, crudo) -> date:
     return aw.hoy_de(lambda: ahora.replace(tzinfo=timezone.utc), crudo)
 
 
-def agregar_carrera(db, actor, ahora, atleta, *, fecha: str, nombre: str = "Carrera", distancia_km: float | None = None) -> dict:
+def agregar_carrera(db, actor, ahora, atleta, *, fecha: str, nombre: str = "Carrera", distancia_km: float | None = None, resumen: str | None = None) -> dict:
     """Agrega una carrera de paso (fecha AAAA-MM-DD, hoy o después; `distancia_km` opcional): la persona sigue con su plan y esa semana la
     carrera es su sesión larga. No cambia ni rehace el plan. No sirve para «quiero entrenar para esta carrera»: eso es un plan nuevo y lo
     arma la persona en la web (Plan › Agregar carrera)."""
@@ -169,10 +174,10 @@ def agregar_carrera(db, actor, ahora, atleta, *, fecha: str, nombre: str = "Carr
         nuevo = plan_vivo.agregar_carrera(crudo, f, distancia_km or None, nombre.strip() or "Carrera")
     except (ConfigError, ValueError) as ex:
         raise Rechazo(str(ex)) from None
-    return _guardar(db, actor, a, f"Agregó la carrera de paso «{nombre.strip() or 'Carrera'}» el {f} (IA)", {"ajustes": nuevo})
+    return _guardar(db, actor, a, f"Agregó la carrera de paso «{nombre.strip() or 'Carrera'}» el {f} (IA)", {"ajustes": nuevo}, resumen)
 
 
-def agregar_evento(db, actor, ahora, atleta, *, tipo: str, desde: str, hasta: str | None = None, modo: str | None = None) -> dict:
+def agregar_evento(db, actor, ahora, atleta, *, tipo: str, desde: str, hasta: str | None = None, modo: str | None = None, resumen: str | None = None) -> dict:
     """Agrega un evento al plan: tipo `viaje`, `enfermedad` o `lesion`. Para viaje, `modo`: `pausa` (sin correr, el plan espera),
     `menos` (semana ligera) o `igual` (sigue entrenando igual; es lo que se usa si la persona dice que va a seguir entrenando).
     Enfermedad y lesión siempre pausan el plan; sin `hasta` queda abierto hasta que la persona esté bien."""
@@ -194,10 +199,10 @@ def agregar_evento(db, actor, ahora, atleta, *, tipo: str, desde: str, hasta: st
     except (ConfigError, ValueError) as ex:
         raise Rechazo(str(ex)) from None
     return _guardar(db, actor, a, f"Agregó {tipo} desde {d}" + (f" hasta {h}" if h else "") + (f" (modo {modo})" if modo else "") + " (IA)",
-                    {"ajustes": nuevo})
+                    {"ajustes": nuevo}, resumen)
 
 
-def editar_sesion(db, actor, ahora, atleta, *, semana: int, sesion_id: str, filas: list[dict], veces: dict[str, int] | None = None) -> dict:
+def editar_sesion(db, actor, ahora, atleta, *, semana: int, sesion_id: str, filas: list[dict], veces: dict[str, int] | None = None, resumen: str | None = None) -> dict:
     """Reemplaza los pasos de una sesión Z2, larga o variada. Cada fila: {tipo: trote|caminata, min, zona: Z1..Z5, grupo: 0-4,
     nota, opcional}. Las filas con el mismo `grupo` (1-4) se repiten `veces[grupo]` veces."""
     a, crudo, plan, _ = _editable(db, actor, atleta)
@@ -209,10 +214,10 @@ def editar_sesion(db, actor, ahora, atleta, *, semana: int, sesion_id: str, fila
     except (ConfigError, ValueError, KeyError, TypeError) as ex:
         raise Rechazo(str(ex) if not isinstance(ex, KeyError) else "Faltan datos.") from None
     ses = next((x for w in plan.get("weeks") or [] if w.get("n") == semana for x in w.get("sessions") or [] if x.get("id") == sesion_id), None)
-    return _guardar(db, actor, a, f"Cambió la sesión {(ses or {}).get('name') or 'de entreno'} de la semana {semana} (IA)", {"plan": nuevo})
+    return _guardar(db, actor, a, f"Cambió la sesión {(ses or {}).get('name') or 'de entreno'} de la semana {semana} (IA)", {"plan": nuevo}, resumen)
 
 
-def repetir_semana(db, actor, ahora, atleta, *, semana: int | None = None) -> dict:
+def repetir_semana(db, actor, ahora, atleta, *, semana: int | None = None, resumen: str | None = None) -> dict:
     """Repite la semana del plan en curso (el plan se recorre una semana). Con `semana` (de la 1 a la actual) retoma desde esa
     semana: el plan vuelve a ella y el resto se recorre. Con carrera objetivo se quitan semanas de carga para que la carrera siga en su fecha."""
     a, crudo, plan, _ = _editable(db, actor, atleta)
@@ -230,11 +235,11 @@ def repetir_semana(db, actor, ahora, atleta, *, semana: int | None = None) -> di
         raise Rechazo(str(ex)) from None
     quita = f"; se quitaron las semanas {', '.join(map(str, info['quita']))}" if info["quita"] else ""
     desc = f"Repitió la semana {n}" if semana is None else f"Retomó desde la semana {semana}"
-    return _guardar(db, actor, a, f"{desc}{quita} (IA)", {"ajustes": nuevo})
+    return _guardar(db, actor, a, f"{desc}{quita} (IA)", {"ajustes": nuevo}, resumen)
 
 
 def registrar_inbody(db, actor, ahora, atleta, *, fecha: str, peso_kg: float, mme_kg: float | None = None,
-                     pgc: float | None = None, grasa_kg: float | None = None) -> dict:
+                     pgc: float | None = None, grasa_kg: float | None = None, resumen: str | None = None) -> dict:
     """Agrega o reemplaza la medición InBody de un día (peso, masa muscular esquelética, % de grasa)."""
     a, crudo, plan, _ = _editable(db, actor, atleta)
     campos = {"fecha": fecha, "peso_kg": peso_kg, "mme_kg": mme_kg, "pgc": pgc, "grasa_kg": grasa_kg}
@@ -246,15 +251,15 @@ def registrar_inbody(db, actor, ahora, atleta, *, fecha: str, peso_kg: float, mm
     except (ConfigError, ValueError) as ex:
         raise Rechazo(str(ex)) from None
     nuevas = sorted([x for x in meds if x["fecha"] != med["fecha"]] + [med], key=lambda x: x["fecha"])
-    return _guardar(db, actor, a, f"{'Editó' if previa else 'Agregó'} la medición InBody del {med['fecha']} (IA)", {"inbody": nuevas})
+    return _guardar(db, actor, a, f"{'Editó' if previa else 'Agregó'} la medición InBody del {med['fecha']} (IA)", {"inbody": nuevas}, resumen)
 
 
-def deshacer(db, actor, ahora, atleta, *, cambio_id: int) -> dict:
+def deshacer(db, actor, ahora, atleta, *, cambio_id: int, resumen: str | None = None) -> dict:
     """Deshace un cambio (el `cambio_id` viene en la respuesta de cada escritura o en `historial`)."""
     try:
         c = db.get(Cambio, cambio_id)
         hoy = _hoy(ahora, aw.crudo_de(db, db.get(Usuario, c.atleta_id))) if c is not None else None
-        nuevo = cambios.deshacer(db, actor, cambio_id, via="ia", hoy=hoy)
+        nuevo = cambios.deshacer(db, actor, cambio_id, via="ia", hoy=hoy, nota=resumen)
     except cambios.SinPermiso:
         raise Rechazo("No encontré ese cambio o no tienes permiso.") from None
     except cambios.NoSeDeshace as ex:
@@ -304,7 +309,7 @@ def construir(app):
         herramienta.__name__ = nombre
         doc = " ".join((fn.__doc__ or "").split())
         srv.add_tool(herramienta, name=nombre, description=f"{doc} Devuelve qué cambió y cómo deshacerlo. `atleta` (opcional): "
-                     f"id de otra persona a la que entrenas. {REGLAS}")
+                     f"id de otra persona a la que entrenas. {RESUMEN} {REGLAS}")
 
     for n, f, d in LECTURAS:
         registrar(n, f, d)

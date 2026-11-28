@@ -7,24 +7,37 @@
 <h1 class="pag-t">{{ t("hist.titulo") }}</h1>
 {% if ok == "deshecho" %}{% call aviso("ok") %}{{ t("hist.deshecho") }}{% endcall %}{% endif %}
 {% if ok == "visto" %}{% call aviso("ok") %}{{ t("hist.visto") }}{% endcall %}{% endif %}
+{% if ok == "orden_visto" %}{% call aviso("warn") %}{{ t("hist.orden_visto") }}{% endcall %}{% endif %}
 {% if error %}{% call aviso("bad", rol="alert") %}{{ error }}{% endcall %}{% endif %}
 {% if not filas %}<p class="pag-s">{{ t("hist.ninguno") }}</p>{% endif %}
 {% for f in filas %}
   {% call tarjeta(id="c" ~ f.c.id, clase=("nuevo" if not f.c.visto else "") ~ (" deshecho" if f.c.deshecho_por else "")) %}
     <p><strong>{{ f.quien }}</strong> · {{ f.cuando }} · <span class="pag-s">{{ t('hist.via_' ~ f.via) }}</span></p>
     <p>{{ f.c.descripcion }}{% if f.c.deshecho_por %} <em class="pag-s">{{ t("hist.deshecho_marca") }}</em>{% endif %}</p>
-    {% if f.resumen %}<ul class="pag-s">{% for l in f.resumen %}<li>{{ l }}</li>{% endfor %}</ul>{% endif %}
-    {% set entendido = es_atleta and not f.c.visto and not f.c.deshecho_por and f.via in ("ia", "coach") %}
-    {% if f.puede or entendido %}
+    {% macro detalle() %}{% if f.resumen %}<details class="hist-detalle"><summary><span class="cerrado">{{ t("hist.ver_detalle") }}</span><span class="abierto">{{ t("hist.ocultar_detalle") }}</span></summary>
+      <ul class="pag-s">{% for l in f.resumen %}<li>{{ l }}</li>{% endfor %}</ul></details>{% endif %}{% endmacro %}
+    {% if f.c.nota %}
+    {% set largo = f.lineas_nota > 5 or f.c.nota|length > 300 %}
+    <div class="hist-nota">
+      {% if largo %}<input type="checkbox" class="nota-chk" id="nota{{ f.c.id }}">{% endif %}
+      <div class="nota-txt{{ ' corta' if largo else '' }}">{{ f.c.nota }}</div>
+      {% if largo %}<label class="nota-mas" for="nota{{ f.c.id }}"><span class="cerrado">{{ t("hist.ver_mas") }}</span><span class="abierto">{{ t("hist.ver_menos") }}</span></label>{% endif %}
+      {{ detalle() }}
+    </div>
+    {% else %}{{ detalle() }}{% endif %}
+    {% set entendido = es_atleta and f.pendiente %}
+    {% if f.puede or entendido or f.espera_deshacer %}
     <div class="acciones">
     {% if entendido %}
+    {% if f.puede_aceptar %}
     <form method="post" action="{{ pref }}/historial/{{ f.c.id }}/visto"><input type="hidden" name="csrf" value="{{ csrf }}">
       {{ boton(t("hist.entendido"), "sec", chico=True, tipo="submit") }}</form>
+    {% else %}<span class="pag-s">{{ t("hist.espera_aceptar") }}</span>{% endif %}
     {% endif %}
     {% if f.puede %}
     <form method="post" action="{{ pref }}/historial/{{ f.c.id }}/deshacer"><input type="hidden" name="csrf" value="{{ csrf }}">
       {{ boton(t("hist.deshacer"), "sec", chico=True, tipo="submit") }}</form>
-    {% endif %}
+    {% elif f.espera_deshacer %}<span class="pag-s">{{ t("hist.espera_deshacer") }}</span>{% endif %}
     </div>
     {% endif %}
   {% endcall %}

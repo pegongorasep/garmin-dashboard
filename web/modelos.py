@@ -259,6 +259,7 @@ class Cambio(Base):
     fecha: Mapped[datetime] = mapped_column(default=ahora)
     visto: Mapped[bool] = mapped_column(default=False)
     deshecho_por: Mapped[int | None] = mapped_column()
+    nota: Mapped[str | None] = mapped_column(sa.Text)   # resumen en lenguaje normal que escribe la IA
 
 
 class Coach(Base):

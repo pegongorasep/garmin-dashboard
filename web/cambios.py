@@ -64,7 +64,8 @@ def _escribir(db: Session, atleta_id: int, campo: str, valor) -> None:
             db.add(InBody(usuario_id=atleta_id, fecha=med["fecha"], valores=med))
 
 
-def aplicar_cambio(db: Session, atleta: Usuario, autor: Usuario | None, via: str, descripcion: str, nuevo: dict) -> Cambio:
+def aplicar_cambio(db: Session, atleta: Usuario, autor: Usuario | None, via: str, descripcion: str, nuevo: dict,
+                   nota: str | None = None) -> Cambio:
     """Escribe `nuevo` ({"ajustes"?, "plan"?, "inbody"?}) y registra el cambio. `autor` None solo con via "sistema".
     Truena con SinPermiso si el autor no puede editar al atleta. Hace commit."""
     if via not in VIAS:
@@ -82,7 +83,7 @@ def aplicar_cambio(db: Session, atleta: Usuario, autor: Usuario | None, via: str
         _escribir(db, atleta.id, c, despues[c])
     propio = autor is not None and autor.id == atleta.id and via == "web"
     cambio = Cambio(atleta_id=atleta.id, autor_id=autor.id if autor else None, via=via, descripcion=descripcion,
-                    antes=antes, despues=despues, visto=propio or via == "sistema")
+                    antes=antes, despues=despues, nota=(nota or "").strip() or None, visto=propio or via == "sistema")
     db.add(cambio)
     db.commit()
     return cambio
@@ -117,7 +118,8 @@ def _actuales(db: Session, atleta_id: int) -> dict | None:
     return fila.config if fila else None
 
 
-def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None, hoy: date | None = None) -> Cambio:
+def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None, hoy: date | None = None,
+             nota: str | None = None) -> Cambio:
     """Aplica el `antes` de un cambio como un cambio nuevo y marca el original. Truena con SinPermiso (el actor no puede
     editar a ese atleta o el cambio no existe: se trata igual para no confirmar nada) o NoSeDeshace. `hoy` (fecha local de
     la persona) activa la regla de que repetir / retomar solo se deshace la misma semana."""
@@ -132,8 +134,10 @@ def deshacer(db: Session, actor: Usuario, cambio_id: int, via: str | None = None
         raise NoSeDeshace("err.creado")
     if _salto_fijo(c, _actuales(db, c.atleta_id), hoy):
         raise NoSeDeshace("err.salto_fijo")
+    if not orden_ok(c, instantanea(db, c.atleta_id, areas(c))):
+        raise NoSeDeshace("err.orden_deshacer")
     atleta = db.get(Usuario, c.atleta_id)
-    nuevo = aplicar_cambio(db, atleta, actor, via or via_de(actor, atleta), f"Deshacer: {c.descripcion}", c.antes)
+    nuevo = aplicar_cambio(db, atleta, actor, via or via_de(actor, atleta), f"Deshacer: {c.descripcion}", c.antes, nota=nota)
     c.deshecho_por, c.visto = nuevo.id, True
     db.commit()
     return nuevo
@@ -144,10 +148,52 @@ def _visto_de_ia(c: Cambio) -> bool:
     return c.via in ("ia", "coach") and bool(c.visto)
 
 
-def puede_deshacer(c: Cambio, actuales: dict | None = None, hoy: date | None = None) -> bool:
-    """`actuales`: los ajustes crudos de hoy del atleta; `hoy`: su fecha local (para la regla de los saltos)."""
+def areas(c: Cambio) -> list[str]:
+    """Las áreas (plan, ajustes, inbody) que tocó un cambio: las claves de su `despues`."""
+    return [k for k in CAMPOS if k in (c.despues or {})]
+
+
+def _igual(area: str, a, b) -> bool:
+    if area == "inbody":   # la lista se guarda ordenada por fecha; el orden en que se mandó no cuenta
+        a, b = [sorted(x or [], key=lambda m: str(m.get("fecha"))) for x in (a, b)]
+    return a == b
+
+
+def orden_ok(c: Cambio, snaps: dict) -> bool:
+    """Regla de orden para deshacer: lo guardado hoy de cada área que tocó es justo lo que dejó este cambio.
+    `snaps`: `instantanea` actual del atleta (al menos de las áreas del cambio)."""
+    return all(_igual(a, snaps.get(a), c.despues[a]) for a in areas(c))
+
+
+def puede_deshacer(c: Cambio, actuales: dict | None = None, hoy: date | None = None, snaps: dict | None = None) -> bool:
+    """`actuales`: los ajustes crudos de hoy del atleta; `hoy`: su fecha local (regla de los saltos); `snaps`: la
+    instantánea actual de las tres áreas (regla de orden; sin ella no se revisa el orden)."""
+    return puede_deshacer_base(c, actuales, hoy) and (snaps is None or orden_ok(c, snaps))
+
+
+def puede_deshacer_base(c: Cambio, actuales: dict | None = None, hoy: date | None = None) -> bool:
+    """Las reglas de deshacer que no dependen del orden."""
     return c.deshecho_por is None and not _visto_de_ia(c) and bool(c.antes) and all(v is not None for v in c.antes.values()) \
         and not c.descripcion.startswith("Deshacer:") and not _salto_fijo(c, actuales, hoy)
+
+
+def pendientes_de(db: Session, atleta_id: int) -> list[Cambio]:
+    """Cambios de la IA o del coach sin aceptar ni deshacer, del más viejo al más nuevo."""
+    return list(db.scalars(select(Cambio).where(Cambio.atleta_id == atleta_id, Cambio.visto.is_(False),
+                                                Cambio.via.in_(("coach", "ia")), Cambio.deshecho_por.is_(None))
+                           .order_by(Cambio.fecha, Cambio.id)))
+
+
+def es_pendiente(c: Cambio) -> bool:
+    return c.via in ("ia", "coach") and not c.visto and c.deshecho_por is None
+
+
+def puede_aceptar(c: Cambio, pendientes: list[Cambio]) -> bool:
+    """Solo el pendiente más viejo de cada una de sus áreas. `pendientes`: de `pendientes_de`."""
+    if not es_pendiente(c):
+        return False
+    mias = set(areas(c))
+    return not any((p.fecha, p.id) < (c.fecha, c.id) and mias & set(areas(p)) for p in pendientes if p.id != c.id)
 
 
 def historial(db: Session, atleta_id: int, limite: int = 100) -> list[Cambio]:
@@ -171,19 +217,31 @@ def autor_texto(db: Session, c: Cambio) -> str:
 
 
 def avisos_de(db: Session, atleta_id: int) -> list[dict]:
-    """Cambios del coach o de la IA que el atleta aún no marca como vistos y siguen vigentes (para el banner del dashboard)."""
-    filas = db.scalars(select(Cambio).where(Cambio.atleta_id == atleta_id, Cambio.visto.is_(False),
-                                            Cambio.via.in_(("coach", "ia")), Cambio.deshecho_por.is_(None))
-                       .order_by(Cambio.fecha.desc(), Cambio.id.desc()).limit(MAX_AVISOS))
+    """Cambios del coach o de la IA que el atleta aún no marca como vistos y siguen vigentes (para el banner del dashboard).
+    `cerrable` (solo si es verdad): un cambio que solo toca InBody y se puede aceptar ya (la ✕ del banner)."""
     import i18n
+    pend = pendientes_de(db, atleta_id)
     out = []
-    for c in filas:
+    for c in list(reversed(pend))[:MAX_AVISOS]:
         quien = "Tu IA" if c.via == "ia" and c.autor_id == atleta_id else (
             f"La IA de {nombre_de(db, c.autor_id)}" if c.via == "ia" else nombre_de(db, c.autor_id))
-        que = [i18n.t(f"cambios.de_{k}", "es") for k in CAMPOS if k in (c.despues or {})]
-        out.append({"id": c.id, "texto": i18n.t("cambios.aviso", "es", quien=quien, que=" y ".join(que) or i18n.t("cambios.de_algo", "es")),
-                    "fecha": c.fecha.date().isoformat(), "url": f"/historial#c{c.id}"})
+        que = [i18n.t(f"cambios.de_{k}", "es") for k in areas(c)]
+        aviso = {"id": c.id, "texto": i18n.t("cambios.aviso", "es", quien=quien, que=" y ".join(que) or i18n.t("cambios.de_algo", "es")),
+                 "fecha": c.fecha.date().isoformat(), "url": f"/historial#c{c.id}"}
+        if areas(c) == ["inbody"] and puede_aceptar(c, pend):
+            aviso["cerrable"] = True
+        out.append(aviso)
     return out
+
+
+def aceptar(db: Session, atleta_id: int, cambio_id: int) -> bool:
+    """«Entendido» a un solo cambio, solo si le toca (el pendiente más viejo de sus áreas). False si no se marcó."""
+    c = db.get(Cambio, cambio_id)
+    if c is None or c.atleta_id != atleta_id or not puede_aceptar(c, pendientes_de(db, atleta_id)):
+        return False
+    c.visto = True
+    db.commit()
+    return True
 
 
 def marcar_vistos(db: Session, atleta_id: int, cambio_id: int | None = None) -> None:
@@ -293,8 +351,9 @@ def _resumen_inbody(antes, despues) -> list[str]:
     return out
 
 
-def resumen(c: Cambio) -> list[str]:
-    """Líneas en palabras de lo que cambió (antes → después), hasta MAX_LINEAS con «y N más». [] si no se puede resumir."""
+def resumen(c: Cambio, tope: int | None = MAX_LINEAS) -> list[str]:
+    """Líneas en palabras de lo que cambió (antes → después), hasta `tope` (MAX_LINEAS) con «y N más»; sin tope, todas.
+    [] si no se puede resumir."""
     try:
         antes, despues = c.antes or {}, c.despues or {}
         lineas = []
@@ -306,7 +365,7 @@ def resumen(c: Cambio) -> list[str]:
             lineas += _resumen_inbody(antes.get("inbody"), despues.get("inbody"))
     except (AttributeError, TypeError, ValueError):
         return []
-    if len(lineas) > MAX_LINEAS:
-        resto = len(lineas) - (MAX_LINEAS - 1)
-        lineas = lineas[:MAX_LINEAS - 1] + [f"y {resto} más"]
+    if tope and len(lineas) > tope:
+        resto = len(lineas) - (tope - 1)
+        lineas = lineas[:tope - 1] + [f"y {resto} más"]
     return lineas

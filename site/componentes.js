@@ -92,12 +92,16 @@ const DS = (() => {
       h("div", { class: "botones" }, boton(confirmar, { variante: "peligro", onclick: onConfirmar }), boton(cancelar, { variante: "sec", onclick: onCancelar })));
   };
 
-  /** Banner «alguien más cambió tu plan». Recibe { quien, texto, cuando, verHref, verTexto, onDeshacer } (sin onDeshacer no hay botón). */
-  const bannerCambio = ({ quien, texto, cuando, verHref = "#", verTexto = T("sitio.ds.ver"), onDeshacer } = {}) =>
-    h("div", { class: "banner-cambio", role: "status" },
+  /** Banner «alguien más cambió tu plan». Recibe { quien, texto, cuando, verHref, verTexto, onDeshacer, onCerrar } (sin onDeshacer no hay botón;
+   *  con onCerrar hay una ✕ «Entendido» que recibe el banner para colapsarlo). */
+  const bannerCambio = ({ quien, texto, cuando, verHref = "#", verTexto = T("sitio.ds.ver"), onDeshacer, onCerrar } = {}) => {
+    const caja = h("div", { class: "banner-cambio", role: "status" },
       h("span", { class: "bc-t" }, quien ? h("b", {}, quien) : null, `${quien ? " " : ""}${texto}${cuando ? ` · ${cuando}` : ""}`),
       h("span", { class: "bc-acc" }, h("a", { class: "boton texto chico", href: verHref }, verTexto),
-        onDeshacer ? boton(T("sitio.ds.deshacer"), { variante: "sec", chico: true, ico: "deshacer", onclick: onDeshacer }) : null));
+        onDeshacer ? boton(T("sitio.ds.deshacer"), { variante: "sec", chico: true, ico: "deshacer", onclick: onDeshacer }) : null,
+        onCerrar ? h("button", { class: "boton-ico bc-x", type: "button", "aria-label": T("sitio.ds.entendido"), onclick: () => onCerrar(caja) }, "✕") : null));
+    return caja;
+  };
 
   /** Lista de cambios del plan. Recibe [{ quien, cuando, origen, texto, nuevo, deshecho, onDeshacer }]. */
   const filaHistorial = (items = []) => h("ul", { class: "historial" }, items.map((it) =>

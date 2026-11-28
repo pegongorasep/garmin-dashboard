@@ -244,9 +244,13 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         return await guardar_ajustes(request, usuario, db, atleta_id)
 
     # ---------- historial ----------
-    def fila_historial(db, c, tz, crudo, hoy):
+    def fila_historial(db, c, tz, crudo, hoy, snaps, pendientes):
+        base = cambios.puede_deshacer_base(c, crudo, hoy)
+        orden = cambios.orden_ok(c, snaps)
         return {"c": c, "quien": cambios.autor_texto(db, c), "cuando": c.fecha.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).strftime("%d/%m/%Y %H:%M"),
-                "puede": cambios.puede_deshacer(c, crudo, hoy), "via": c.via, "resumen": cambios.resumen(c)}
+                "puede": base and orden, "espera_deshacer": base and not orden, "via": c.via,
+                "pendiente": cambios.es_pendiente(c), "puede_aceptar": cambios.puede_aceptar(c, pendientes),
+                "resumen": cambios.resumen(c, tope=None), "lineas_nota": len((c.nota or "").splitlines())}
 
     def pantalla_historial(request, usuario, db, atleta_id, **extra):
         atleta, redir = resolver(db, usuario, atleta_id)
@@ -255,7 +259,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         crudo = crudo_de(db, atleta) or {}
         tz = ZoneInfo((crudo.get("perfil") or {}).get("zona_horaria") or "America/Merida")
         hoy = hoy_de(app.state.reloj, crudo)
-        filas = [fila_historial(db, c, tz, crudo, hoy) for c in cambios.historial(db, atleta.id)]
+        snaps, pendientes = cambios.instantanea(db, atleta.id, cambios.CAMPOS), cambios.pendientes_de(db, atleta.id)
+        filas = [fila_historial(db, c, tz, crudo, hoy, snaps, pendientes) for c in cambios.historial(db, atleta.id)]
         return render(request, "historial.html", atleta=atleta, pref=prefijo(usuario, atleta), filas=filas,
                       es_atleta=usuario.id == atleta.id, **extra)
 
@@ -274,8 +279,12 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             return redir
         pref = prefijo(usuario, atleta)
         if accion == "visto":
-            if usuario.id == atleta.id:   # el coach no consume los avisos del atleta
-                cambios.marcar_vistos(db, atleta.id, cambio_id)
+            if usuario.id != atleta.id:   # el coach no consume los avisos del atleta
+                return RedirectResponse(f"{pref}/historial?ok=visto", 303)
+            if cambio_id is None:
+                cambios.marcar_vistos(db, atleta.id)
+            elif not cambios.aceptar(db, atleta.id, cambio_id):
+                return RedirectResponse(f"{pref}/historial?ok=orden_visto#c{cambio_id}", 303)
             return RedirectResponse(f"{pref}/historial?ok=visto", 303)
         try:
             cambios.deshacer(db, usuario, cambio_id, hoy=hoy_de(app.state.reloj, crudo_de(db, atleta)))

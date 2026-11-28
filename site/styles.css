@@ -8,6 +8,10 @@ body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el con
 .enc-caja { position: relative; }
 .menu-pop { position: absolute; right: 0; top: calc(100% - 4px); z-index: 30; }
 
+/* Avisos de cambios: misma separación que entre las tarjetas del inicio */
+#avisos-web { display: grid; gap: var(--space-12); }
+@media (min-width: 900px) { #avisos-web { gap: 14px; } }
+
 /* Vistas: una columna en teléfono; con ≥ 900 px, dos columnas y lo `.ancha` ocupa las dos */
 .vista { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-12); margin-top: var(--space-12); align-content: start; }
 #app .vista > *, #app .vista #hoy-semana > *, #app .vista .sub > * { margin: 0; min-width: 0; }
