@@ -5,13 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
 <meta name="robots" content="noindex">
-<script>
-(function () {
-  var t = "dark";
-  try { var g = localStorage.getItem("tema"); if (g === "light" || g === "dark") t = g; } catch (e) {}
-  document.documentElement.setAttribute("data-theme", t);
-})();
-</script>
+<script src="/estaticos/tema.js"></script>
 <title>{% block titulo %}{{ t("base.titulo") }}{% endblock %}</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">

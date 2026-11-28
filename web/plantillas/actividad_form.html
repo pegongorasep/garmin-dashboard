@@ -67,23 +67,10 @@
   </div>
 </form>
 {% if editando %}
-<form method="post" action="{{ pref }}/actividad/{{ fila.id }}/borrar" onsubmit="return confirm('{{ t('web.manual.borrar_confirmar') }}')">
+<form method="post" action="{{ pref }}/actividad/{{ fila.id }}/borrar" data-confirmar="{{ t('web.manual.borrar_confirmar') }}">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   {{ boton(t("comun.borrar"), "sec", chico=True, tipo="submit") }}
 </form>
 {% endif %}
-<script>
-(function () {   // solo muestra u oculta (el espacio se queda) y cambia la unidad; la lógica vive en el servidor
-  var f = document.getElementById("act-form"), sel = f.elements.otro;
-  function ver() {
-    var r = f.querySelector('input[name="tipo"]:checked'), u = r ? r.dataset.unidad : "km";
-    document.getElementById("act-otro").classList.toggle("oculta", u !== "lista");
-    if (u === "lista") u = sel.selectedOptions[0].dataset.unidad;
-    document.getElementById("act-dist").classList.toggle("oculta", u === "oculta");
-    if (u !== "oculta") document.getElementById("act-unidad").textContent = u === "m" ? f.dataset.m : f.dataset.km;
-  }
-  f.addEventListener("change", ver);
-  ver();
-})();
-</script>
+<script src="/estaticos/actividad_form.js"></script>
 {% endblock %}

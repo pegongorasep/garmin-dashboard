@@ -19,7 +19,7 @@ def test_pantallas_con_app_encendida(ctx, gh):
     for n in range(4):
         r = cl.get(f"/bienvenida?paso={n}")
         assert r.status_code == 200 and "bv.g" not in r.text
-        assert "/bienvenida/liga" in r.text
+        assert "bienvenida_celular.js" in r.text
     # sin instalación no se salta a la pantalla 4; la cookie recuerda la pantalla
     assert "Pon tu key" not in cl.get("/bienvenida?paso=4").text
     cl.get("/bienvenida?paso=2")

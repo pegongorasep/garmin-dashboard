@@ -9,7 +9,7 @@ from ayudas import crear_usuario, entrar
 
 ROOT = Path(__file__).resolve().parent.parent
 CSS = (ROOT / "site" / "componentes.css").read_text()
-CATALOGO = (ROOT / "site" / "catalogo.html").read_text()
+CATALOGO = (ROOT / "site" / "catalogo.html").read_text() + (ROOT / "site" / "catalogo.js").read_text()   # página + su código
 COMPONENTES_JS = (ROOT / "site" / "componentes.js").read_text()
 
 # Componentes del sistema: carpeta del diseño -> (clase CSS de su bloque, función de DS que lo arma)
@@ -99,7 +99,7 @@ def test_cada_componente_tiene_bloque_y_ejemplo_en_el_catalogo():
 def test_catalogo_solo_carga_tokens_y_componentes():
     assert 'href="tokens.css"' in CATALOGO and 'href="componentes.css"' in CATALOGO and "styles.css" not in CATALOGO
     scripts = re.findall(r'<script src="([^"]+)"', CATALOGO)
-    assert scripts == ["base.js", "iconos.js", "charts.js", "componentes.js"]
+    assert scripts == ["tema.js", "base.js", "iconos.js", "charts.js", "componentes.js"]
     assert "Sistema de diseño" in CATALOGO and "data-theme" in CATALOGO
 
 
@@ -113,7 +113,7 @@ def test_diseno_solo_para_admin(web_ctx):
         db.get(Usuario, admin).es_admin = True
         db.commit()
     r = entrar(web_ctx, web_ctx.cliente(), "admin@x.com").get("/diseno")
-    assert r.status_code == 200 and "Sistema de diseño" in r.text and "DS.boton(" in r.text
+    assert r.status_code == 200 and "Sistema de diseño" in r.text and "catalogo.js" in r.text
 
 
 def test_catalogo_no_es_estatico_y_los_nuevos_si():
@@ -124,7 +124,7 @@ def test_catalogo_no_es_estatico_y_los_nuevos_si():
 
 def test_orden_de_scripts_del_sitio():
     html = (ROOT / "site" / "index.html").read_text()
-    assert re.findall(r'<script src="([^"]+)"', html) == ["base.js", "iconos.js", "charts.js", "componentes.js", "app.js", "vista_comun.js", "vista_plan.js", "vista_progreso.js", "vista_grupo.js", "vistas.js"]
+    assert re.findall(r'<script src="([^"]+)"', html) == ["tema.js", "base.js", "iconos.js", "charts.js", "componentes.js", "app.js", "vista_comun.js", "vista_plan.js", "vista_progreso.js", "vista_grupo.js", "vistas.js"]
 
 
 def test_filas_de_botones_y_textos_largos_no_desbordan():

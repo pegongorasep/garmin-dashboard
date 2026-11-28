@@ -3,7 +3,7 @@
 {% block titulo %}{{ t("plan.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
-<script>document.documentElement.classList.add("js")</script>
+<script src="/estaticos/js.js"></script>
 {% include "_nav.html" %}
 <h1 class="pag-t">{{ t("plan.titulo") }}</h1>
 {% if ok == "1" %}{% call aviso("ok") %}{{ t("plan.ok", liga=pref ~ "/historial")|safe }}{% endcall %}{% endif %}

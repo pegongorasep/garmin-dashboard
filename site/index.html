@@ -4,19 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
-<script>
-/* Tema antes de pintar: lo guardado, o oscuro por defecto. ?tema=claro|oscuro fuerza uno solo para capturas (no se guarda). */
-(function () {
-  var t = "dark";
-  try {
-    var q = /[?&]tema=(claro|oscuro)/.exec(location.search);
-    var g = localStorage.getItem("tema");
-    if (q) t = q[1] === "claro" ? "light" : "dark"; else if (g === "light" || g === "dark") t = g;
-  } catch (e) {}
-  document.documentElement.setAttribute("data-theme", t);
-  document.querySelector('meta[name="color-scheme"]').setAttribute("content", t);
-})();
-</script>
+<script src="tema.js"></script>
 <title>Garmin · Mi entreno</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">

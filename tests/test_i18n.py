@@ -197,7 +197,7 @@ def test_sin_texto_en_espanol_fuera_del_catalogo():
     """Plantillas de la web y JS del sitio: todo texto visible sale del catálogo i18n (el catálogo de diseño es del admin y va en español)."""
     from pathlib import Path
     raiz = Path(__file__).parent.parent
-    archivos = [*(raiz / "web" / "plantillas").glob("*.html"), *(raiz / "site").glob("*.js")]
+    archivos = [*(raiz / "web" / "plantillas").glob("*.html"), *(f for f in (raiz / "site").glob("*.js") if f.name != "catalogo.js")]   # catalogo.js es del admin, en español
     hallazgos = {f.name: [c for c in _literales_con_espanol(f) if c not in PERMITIDAS_ESPANOL] for f in archivos}
     hallazgos = {k: v for k, v in hallazgos.items() if v}
     assert not hallazgos, f"texto en español fuera de i18n/*.yaml: {hallazgos}"
