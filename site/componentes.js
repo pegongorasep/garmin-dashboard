@@ -21,6 +21,16 @@ const DS = (() => {
   const logo = (clase) => sv("svg", { viewBox: "0 0 64 64", "aria-hidden": "true", class: clase || null },
     BARRAS_LOGO.map(([x, y, alto, fill]) => sv("rect", { x, y, width: 8, height: alto, rx: 4, fill })));
 
+  /** Las 5 barras del logo como primeros pasos. `hechos` van encendidas, de izquierda a derecha, sobre las apagadas; las que van de
+   *  `desde` en adelante son nuevas y suben. `sigue`: la que falta se asoma. `brinca`: brincan todas. `espera`: se arman las 5 sin parar. */
+  const barrasPasos = ({ hechos = 0, desde = hechos, sigue = false, brinca = false, espera = false, etiqueta } = {}) =>
+    sv("svg", { class: "pi-barras", viewBox: "0 0 64 60", role: "img", "aria-label": etiqueta }, BARRAS_LOGO.map(([x, y, alto, color], i) => {
+      const barra = (clase, fill = color) => sv("rect", { class: clase, x, y, width: 8, height: alto, rx: 4, fill });
+      if (espera) return sv("g", {}, barra("a-arma"));
+      return sv("g", { class: brinca ? "a-brinca" : null }, barra(null, "var(--grid)"),
+        i < hechos ? barra(i >= desde ? `a-sube a-d${i + 1}` : null) : sigue && i === hechos ? barra("a-asoma") : null);
+    }));
+
   const fragmento = (...hijos) => {
     const f = document.createDocumentFragment();
     f.append(...hijos.flat().filter((n) => n !== null && n !== undefined && n !== false));
@@ -61,6 +71,25 @@ const DS = (() => {
       arte || (nombre === null ? null : ico(nombre || "punto")), h("p", { class: "vc-t" }, titulo), texto ? h("p", { class: "vc-x" }, texto) : null,
       accion ? (accion.deshabilitado ? h("button", { class: "boton", type: "button", disabled: true }, accion.texto) : h("a", { class: "boton", href: accion.href }, accion.texto)) : null,
       arte || secundaria ? h("div", { class: "vc-sec" }, secundaria ? boton(secundaria.texto, { variante: "texto", href: secundaria.href, onclick: secundaria.onclick }) : null) : null);
+
+  /** Los pasos que faltan, como lista de ligas. Recibe [{ texto, href }]. */
+  const listaPasos = (items = []) => h("div", { class: "pi-lista" },
+    items.map((p) => h("a", { class: "pi-paso", href: p.href }, p.texto, h("span", { "aria-hidden": "true" }, "\u203a"))));
+
+  /** Primeros pasos con barras. Recibe { vista: "garmin" | "historial" (grandes y centradas) | "compacta" | "completa" (altura fija:
+   *  barras chicas, una línea y la fila del botón), barras (lo de barrasPasos), cuenta (línea chica bajo las barras), titulo (en las
+   *  chicas, la línea), texto, acciones: [nodos], nota (nodo con su ranura), mientras (rótulo de la lista), lista: [{ texto, href }] }.
+   *  Se anima cuando el nodo o uno de arriba tiene `anim`. */
+  const primerosPasos = ({ vista = "compacta", barras = {}, cuenta, titulo, texto, acciones = [], nota, mientras, lista = [] } = {}) => {
+    const dibujo = barrasPasos({ ...barras, espera: vista === "historial", brinca: vista === "completa" });
+    if (vista !== "garmin" && vista !== "historial") return tarjeta({ clase: "pi-tarjeta pi-compacta" },
+      h("div", { class: "pi-fila" }, dibujo, h("p", { class: "pi-linea" }, titulo)), h("div", { class: "pi-acciones" }, acciones));
+    return tarjeta({ clase: `pi-tarjeta pi-grande${vista === "historial" ? " pi-espera" : ""}` }, dibujo,
+      cuenta ? h("p", { class: "pi-cuenta" }, cuenta) : null,
+      h("h3", { class: "pi-t a-aparece a-d2" }, titulo), h("p", { class: "pi-x a-aparece a-d3" }, texto),
+      acciones.length ? h("div", { class: "pi-botones a-aparece a-d4" }, acciones) : null, nota || null,
+      lista.length && mientras ? h("p", { class: "pi-mientras" }, mientras) : null, lista.length ? listaPasos(lista) : null);
+  };
 
   /** Avatar: foto (`foto` = url) o iniciales con color estable. Recibe { iniciales, color (0..5), foto, grande }. */
   const avatar = ({ iniciales = "?", color = 0, foto, grande = false } = {}) =>
@@ -499,7 +528,7 @@ const DS = (() => {
   /** Animaciones (todas se apagan con prefers-reduced-motion). `tema(aplicar, boton)`: cambio de tema con un círculo que
    *  nace en el botón (sin la API, cambia al instante). `entrada()`: la primera vez que se pinta Hoy, anillo y barras se
    *  llenan (clase en <html> que se quita sola); las repintadas posteriores no animan. `unaVez()`: lo que lleva `data-una-vez="<pantalla>"`
-   *  se anima (clase `anim`) la primera vez que está a la vista en esta apertura de la app; al volver a la pestaña o repintar sale quieto.
+   *  se anima (clase `anim`) la primera vez que está a la vista en esta apertura de la app (y entonces se llama su `alVerse()`, si lo trae); al volver a la pestaña o repintar sale quieto.
    *  Se llama al cambiar de vista y al pintar algo que llega tarde. */
   const animar = (() => {
     const sinMov = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -533,7 +562,7 @@ const DS = (() => {
       unaVez() {
         for (const el of document.querySelectorAll("[data-una-vez]")) {
           if (el.closest("[hidden]")) el.classList.remove("anim");   // al esconderse la pierde: si no, el CSS la repetiría al volver
-          else if (!yaAnimadas.has(el.dataset.unaVez)) { yaAnimadas.add(el.dataset.unaVez); el.classList.add("anim"); }
+          else if (!yaAnimadas.has(el.dataset.unaVez)) { yaAnimadas.add(el.dataset.unaVez); el.classList.add("anim"); if (el.alVerse) el.alVerse(); }
         }
       },
     };
@@ -689,7 +718,7 @@ const DS = (() => {
     segmento({ etiqueta, modo: "grupo", clase: "unidad", activo, opciones: [{ id: "min", texto: textos.min }, { id: "km", texto: textos.km }], onCambio });
 
   return {
-    animar, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, dialogoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
+    animar, barrasPasos, listaPasos, primerosPasos, ico, logo, marca, avatar, tarjeta, pie, cargando, errorCarga, estadoVacio, aviso, dialogoVersion, avisoCoach, confirmacion, bannerCambio, filaHistorial,
     boton, botonIco, dialogo, filaMuestra, burbuja, campo, opciones, chip, copiar, formulario, filaCampos, insignia, punto, estado,
     encabezado, menu, pasos, segmento, desplegable, senales, tabla, ranking, hojaInBody, filaSesion, barraTroteCaminata,
     leyenda, graficaLinea, graficaBarras, tabs, selectorSemana, anilloPlan, diaCal, calendario, curvaFc, tile, tiles, barraZonas, ibGrupo, ibPuntuacion,

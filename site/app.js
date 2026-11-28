@@ -685,50 +685,71 @@ function avisoKeyRechazada() {
     accion: { texto: T("sitio.key.cambiarla"), onclick: () => { location.href = "/garmin/key"; } } });
 }
 
-/** Primer inicio (lo decide Python: ui.primer_inicio = {garmin, registrar, pasos}). La tarjeta de Garmin se cierra colapsando su ranura
- *  (la altura baja suave, nada salta); «+ Registrar actividad» no se va nunca; cada primer paso se va solo al cumplirse. Sin la clave, nada. */
+/** Cuántas barras encendidas vio ya este teléfono de esa cuenta (null: nunca, o sin almacenamiento). */
+function barrasVistas(llave) {
+  try { const n = parseInt(localStorage.getItem(`pasos-${llave}`), 10); return Number.isNaN(n) ? null : n; } catch (e) { return null; }
+}
+function guardarBarrasVistas(llave, n) {
+  try { localStorage.setItem(`pasos-${llave}`, String(n)); } catch (e) { /* sin almacenamiento: no se recuerda */ }
+}
+
+/** Las 5 barras de los primeros pasos (ui.primer_inicio.barras: Python decide vista, hechos, siguiente, lista y ligas). Lo único del
+ *  sitio es recordar cuántas se vieron: las nuevas se encienden una vez, y con 5 de 5 brincan y la tarjeta se va, solo si aquí se
+ *  había visto incompleta (con «reducir movimiento» ya no sale). «Saltar» y «No tengo Garmin» vuelven a pedir data.json. */
+function tarjetaPasos(b) {
+  const { vista, hechos: n, llave } = b, antes = barrasVistas(llave), completa = vista === "completa";
+  if (completa) {
+    if (antes === null || antes >= n) return null;
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { guardarBarrasVistas(llave, n); return null; }
+  }
+  const csrf = $("app").dataset.csrf || "", paso = b.pasos.find((p) => p.id === b.siguiente);
+  const post = (url, extra = {}) => fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ csrf, ...extra }) });
+  const saltar = (texto) => {
+    if (!csrf) return null;
+    const boton = DS.boton(texto, { variante: "texto", onclick: async () => {
+      boton.disabled = true;
+      try { if ((await post(b.ocultar, { id: paso.saltar, huella: "0" })).ok) await recargarDatos(); } catch (e) { /* sin red: todo sigue igual */ }
+      boton.disabled = false;
+    } });
+    return boton;
+  };
+  const props = { vista, barras: { hechos: n, desde: antes ?? 0, sigue: vista !== "historial", etiqueta: T(vista === "historial" ? "sitio.pi.barras_espera" : "sitio.pi.barras", { n }) },
+    lista: b.lista.map((id) => ({ texto: T(`sitio.pi.paso_${id}`), href: b.pasos.find((p) => p.id === id).url })) };
+  if (vista === "garmin") {
+    const msg = h("p", { class: "pi-msg", role: "status" }, "\u00a0");   // ranura reservada: el resultado de «Enviarme la guía» no empuja nada
+    const mandar = async () => {
+      let clave = "liga_error";
+      try { const r = await post(b.liga); if (r.ok) clave = /liga=limite/.test(r.url) ? "liga_limite" : "liga_ok"; } catch (e) { /* queda el error */ }
+      msg.textContent = T(`sitio.pi.${clave}`);
+    };
+    Object.assign(props, { cuenta: T("sitio.pi.cuenta", { n }), titulo: T("sitio.pi.garmin_t"), texto: T("sitio.pi.garmin_x"), nota: csrf ? msg : null,
+      acciones: [DS.boton(T("sitio.pi.conectar"), { href: paso.url }), csrf ? DS.boton(T("sitio.pi.liga"), { variante: "sec", onclick: mandar }) : null,
+        saltar(T("sitio.pi.sin_garmin"))].filter(Boolean) });
+  } else if (vista === "historial") {
+    Object.assign(props, { titulo: T("sitio.pi.historial_t"), texto: T("sitio.pi.historial_x"), mientras: T("sitio.pi.mientras") });
+  } else if (paso) {
+    Object.assign(props, { titulo: T("sitio.pi.compacta", { n, paso: T(`sitio.pi.sigue_${paso.id}`) }),
+      acciones: [DS.boton(T(`sitio.pi.paso_${paso.id}`), { href: paso.url }), saltar(T("sitio.pi.saltar"))].filter(Boolean) });
+  } else props.titulo = T("sitio.pi.n_de", { n });
+  const ranura = h("div", { class: "pi-ranura ancha", "data-una-vez": `pasos-${llave}-${vista}-${n}` }, h("div", { class: "pi-colapsa" }, DS.primerosPasos(props)));
+  ranura.alVerse = () => {   // mientras llega el historial las barras no muestran cuántas van: no se dan por vistas
+    guardarBarrasVistas(llave, vista === "historial" ? Math.min(antes ?? 0, n) : n);
+    if (completa) setTimeout(() => { ranura.classList.add("cerrada"); setTimeout(() => ranura.remove(), 400); }, 2200);
+  };
+  return ranura;
+}
+
+/** Primer inicio (lo decide Python, ui.primer_inicio): en tu cuenta, las barras (`barras`); al coach, la lista «Primeros pasos»
+ *  (`pasos`). «+ Registrar actividad» no se va nunca. Sin la clave, nada. */
 function primerInicio() {
   const pi = ui().primer_inicio;
   if (!pi) return [];
-  const app = $("app"), csrf = app.dataset.csrf || "";
-  let ocultos = {};
-  try { ocultos = JSON.parse(app.dataset.avisosOcultos || "{}"); } catch (e) { /* sin mapa: nada oculto */ }
-  const out = [];
-  const g = pi.garmin;
-  if (g && !ocultos.garmin) {
-    const msg = h("p", { class: "pi-msg nota", role: "status" }, "\u00a0");   // ranura reservada: el resultado de «Mandarme la liga» no empuja nada
-    const ranura = h("div", { class: "pi-ranura ancha" });
-    const post = (url, extra = {}) => fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ csrf, ...extra }) });
-    const mandar = async () => {
-      let clave = "liga_error";
-      try { const r = await post(g.liga); if (r.ok) clave = /liga=limite/.test(r.url) ? "liga_limite" : "liga_ok"; } catch (e) { /* queda el error */ }
-      msg.textContent = T(`sitio.pi.${clave}`);
-    };
-    const quitar = async () => {
-      try { const r = await post(g.ocultar, { id: "garmin", huella: "0" }); if (!r.ok) return; } catch (e) { return; }
-      app.dataset.avisosOcultos = JSON.stringify({ ...ocultos, garmin: "0" });
-      const prog = (ui().vacios || {}).progreso;
-      if (prog && prog.conectar) { prog.conectar = null; renderProgreso(datos); }   // saltado: Progreso ya solo ofrece registrar
-      ranura.classList.add("cerrada");
-      setTimeout(() => ranura.remove(), 400);
-    };
-    ranura.append(h("div", { class: "pi-colapsa" }, DS.tarjeta({ titulo: T("sitio.pi.garmin_t"), clase: "pi-garmin" },
-      h("p", {}, T("sitio.pi.garmin_x")),
-      h("p", { class: "nota" }, T("sitio.pi.celular")),
-      h("div", { class: "pi-acciones" },
-        DS.boton(T("sitio.pi.conectar"), { href: g.conectar }),
-        csrf ? DS.boton(T("sitio.pi.liga"), { variante: "sec", onclick: mandar }) : null,
-        csrf ? DS.boton(T("sitio.pi.sin_garmin"), { variante: "texto", onclick: quitar }) : null),
-      csrf ? msg : null)));
-    out.push(ranura);
-  }
-  if (pi.registrar) out.push(h("div", { class: "pi-registrar ancha" }, DS.boton(T("sitio.pi.registrar"), { variante: "sec", href: pi.registrar })));
-  if ((pi.pasos || []).length) {
-    out.push(DS.tarjeta({ titulo: T("sitio.pi.pasos_t"), clase: "ancha pi-pasos" },
-      h("div", { class: "pi-lista" }, pi.pasos.map((p) => h("a", { class: "pi-paso", href: p.url }, T(`sitio.pi.paso_${p.id}`), h("span", { "aria-hidden": "true" }, "\u203a"))))));
-  }
-  return out;
+  return [
+    pi.barras ? tarjetaPasos(pi.barras) : null,
+    pi.registrar ? h("div", { class: "pi-registrar ancha" }, DS.boton(T("sitio.pi.registrar"), { variante: "sec", href: pi.registrar })) : null,
+    (pi.pasos || []).length ? DS.tarjeta({ titulo: T("sitio.pi.pasos_t"), clase: "ancha" },
+      DS.listaPasos(pi.pasos.map((p) => ({ texto: T(`sitio.pi.paso_${p.id}`), href: p.url })))) : null].filter(Boolean);
 }
 
 function recordatorioCorrida() {
@@ -744,14 +765,14 @@ function renderHoySinPlan(d) {
     titulo: `${fechaCorta(x.fecha)}: ${x.actividades.length ? x.actividades.map((a) => `${a.nombre} ${T("sitio.min_n", { n: fmt(a.minutos, 0) })}`).join("; ") : T("sitio.dia.sin")}`,
     hijos: x.actividades.length === 1 ? [h("span", { class: "cf" }, DS.ico(x.actividades[0].icono || "punto"), h("span", {}, fmt(x.actividades[0].minutos, 0)))]
       : marcasVarias(x.actividades.map((a) => h("span", { class: "cf" }, DS.ico(a.icono || "punto")))), seleccionado: sel, alTocar: tocar }));
-  const rec = sl.recuperacion;
+  const rec = sl.recuperacion, nada = !!(ui().primer_inicio || {}).sin_actividad;   // sin ni una actividad: fuera las tarjetas vacías
   const racha = sl.racha_semanas || 0;
   $("vista-hoy").replaceChildren(...[
     saludoHoy(d),
     ...primerInicio(),
     recordatorioCorrida(),
     avisoKeyRechazada(),
-    DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
+    nada ? null : DS.tarjeta({ titulo: T("sitio.sl.titulo"), clase: "ancha" },
       sl.actividades ? DS.tiles({ etiqueta: T("sitio.sl.titulo") },
         DS.tile({ k: T("sitio.sl.minutos"), valor: fmt(sl.minutos, 0), unidad: T("sitio.sl.min"), deltas: dif(sl.minutos, sl.promedio_minutos, T("sitio.sl.min")) }),
         DS.tile({ k: T("sitio.sl.km"), valor: fmt(sl.km, 1), unidad: "km", deltas: dif(sl.km, sl.promedio_km, "km") }),
@@ -763,7 +784,7 @@ function renderHoySinPlan(d) {
       rec.hrv_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.hrv")), h("span", {}, `${fmt(rec.hrv_7d, 0)} ms`)) : null,
       rec.rhr_7d != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.rhr")), h("span", {}, `${fmt(rec.rhr_7d, 0)} ${T("sitio.lpm")}`)) : null,
       rec["sueño_7d"] != null ? h("div", { class: "kv" }, h("span", {}, T("sitio.sl.sueno")), h("span", {}, T("sitio.sl.horas", { n: fmt(rec["sueño_7d"], 1) }))) : null)
-      : DS.tarjeta({ titulo: T("sitio.sl.recup") }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.recup_vacia"), texto: T("sitio.sl.recup_vacia_x") })),
+      : nada ? null : DS.tarjeta({ titulo: T("sitio.sl.recup") }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.recup_vacia"), texto: T("sitio.sl.recup_vacia_x") })),
     d.aviso_zonas ? avisoCerrable("zonas", { clase: "warn", simbolo: "!", extra: "ancha", texto: d.aviso_zonas }) : null].filter(Boolean));
 }
 

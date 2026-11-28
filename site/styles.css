@@ -183,15 +183,9 @@ body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el con
 .ib-punt-g { margin-top: var(--space-4); }
 .zonas-fc { display: grid; gap: var(--space-8); }
 
-/* Primer inicio en Hoy: la tarjeta de Garmin vive en una ranura que colapsa su altura al quitarse (nada salta) */
+/* Primer inicio en Hoy: la tarjeta de las barras vive en una ranura que colapsa su altura cuando se despide (nada salta) */
 .pi-ranura { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .3s ease, opacity .3s ease; }
 .pi-ranura.cerrada { grid-template-rows: 0fr; opacity: 0; }
 .pi-colapsa { overflow: hidden; min-height: 0; }
-.pi-garmin p { margin: 0 0 var(--space-8); }
-.pi-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
-.pi-msg { margin: var(--space-8) 0 0; min-height: 1.4em; }
 .pi-registrar > .boton { width: 100%; }
-.pi-lista { display: grid; }
-.pi-paso { display: flex; align-items: center; justify-content: space-between; min-height: 44px; color: var(--ink); text-decoration: none; border-top: 1px solid var(--grid); }
-.pi-paso:first-child { border-top: 0; }
 @media (prefers-reduced-motion: reduce) { .pi-ranura { transition: none; } }

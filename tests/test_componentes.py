@@ -37,6 +37,7 @@ COMPONENTES = {
     "Pasos": ("pasos", "pasos"),
     "Pestanas": ("segmento", "segmento"),
     "Pie": ("pie", "pie"),
+    "PrimerosPasos": ("pi-tarjeta", "primerosPasos"),
     "FilaActividad": ("act-fila", "filaActividad"),
     "CabeceraPersona": ("pers-cab", "cabeceraPersona"),
     "SelectorUnidad": ("unidad", "selectorUnidad"),

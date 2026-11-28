@@ -469,6 +469,38 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 @keyframes ahi-late { 50% { opacity: .35; } }
 @keyframes ahi-barra { from { transform: scaleY(0); } }
 
+/* PrimerosPasos: las 5 barras del logo. Grande (falta Garmin o llega el historial) y compacta de altura fija (45 + 44 px) */
+.pi-barras { display: block; width: 77px; height: 72px; overflow: visible; }
+.pi-barras g, .pi-barras rect { transform-box: fill-box; transform-origin: 50% 100%; }
+.pi-barras g:nth-child(2) { --r: .1s; } .pi-barras g:nth-child(3) { --r: .2s; } .pi-barras g:nth-child(4) { --r: .3s; } .pi-barras g:nth-child(5) { --r: .4s; }
+.pi-barras .a-asoma { opacity: 0; }
+.pi-tarjeta p, .pi-t { margin: 0; overflow-wrap: anywhere; }
+.pi-grande { justify-items: center; text-align: center; gap: var(--space-12); padding-block: var(--space-16); }
+.pi-espera .pi-barras { width: 150px; height: 141px; }
+.pi-cuenta, .pi-mientras { font-size: 12px; line-height: 16px; color: var(--muted); }
+.pi-t { font: 600 18px/24px var(--font-sans); }
+.pi-x { font-size: 14px; line-height: 20px; color: var(--ink-2); max-width: 20em; }
+.pi-botones { display: grid; justify-items: center; gap: var(--space-8); }
+.pi-botones > .boton { min-width: min(220px, 100%); }
+.pi-msg { font-size: 13px; line-height: 18px; min-height: 18px; color: var(--ink-2); }
+.pi-grande > .pi-msg { margin-block: calc(-1 * var(--space-8)); }
+.pi-compacta { grid-template-rows: 45px 44px; }
+.pi-compacta .pi-barras { width: 48px; height: 45px; }
+.pi-fila { display: flex; align-items: center; gap: var(--space-12); min-width: 0; }
+.pi-linea { flex: 1; min-width: 0; max-height: 40px; overflow: hidden; font: 600 14px/20px var(--font-sans); }
+.pi-acciones { display: flex; align-items: center; gap: var(--space-12); min-width: 0; white-space: nowrap; }
+.pi-lista { display: grid; justify-self: stretch; text-align: left; }
+.pi-paso { display: flex; align-items: center; justify-content: space-between; min-height: 44px; color: var(--ink); font-size: 14px; text-decoration: none; border-top: 1px solid var(--grid); }
+.pi-paso:first-child { border-top: 0; }
+/* Entrada (vacío) y barra nueva o 5 de 5 (logro), una vez con `anim`; la espera del historial se repite */
+@media (prefers-reduced-motion: no-preference) {
+  .anim .a-asoma { animation: ahi-asoma 1.6s ease-in-out 1s 2; }
+  .anim .a-brinca { animation: ahi-brinca .6s ease-out 1.1s; }
+  .pi-barras .a-arma { animation: ahi-sube 2.6s cubic-bezier(.3, 1.4, .5, 1) var(--r, 0s) infinite backwards; }
+}
+@keyframes ahi-asoma { 50% { opacity: .55; } }
+@keyframes ahi-brinca { 50% { transform: scaleY(1.35); } }
+
 /* Formulario: grupos de campos */
 .formulario { display: grid; gap: var(--space-16); }
 .formulario fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-12); min-width: 0; }

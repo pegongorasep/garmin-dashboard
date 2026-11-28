@@ -116,7 +116,7 @@ def test_lo_animado_respeta_reducir_movimiento():
     for archivo in ("componentes.css", "styles.css"):
         css = re.sub(r"/\*.*?\*/", "", (SITE / archivo).read_text(encoding="utf-8"), flags=re.S)
         fuera = re.sub(r"@media \(prefers-reduced-motion: no-preference\) \{(?:[^{}]*\{[^{}]*\})*\s*\}", "", css)
-        usos = re.findall(r"animation:\s*(ahi-(?:trazo|redibuja|pop|aparece|flota|late|barra)|anim-anillo)\b", fuera)
+        usos = re.findall(r"animation:\s*(ahi-(?:trazo|redibuja|pop|aparece|flota|late|barra|asoma|brinca)|anim-anillo)\b", fuera)
         assert not usos, (archivo, usos)
     css = "".join((SITE / a).read_text(encoding="utf-8") for a in ("componentes.css", "styles.css"))
     nombres = re.findall(r"@keyframes ([\w-]+)", css)

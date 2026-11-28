@@ -82,6 +82,23 @@ def("Contenedores", "Estado vacío con dibujo", "DS.estadoVacio({ arte }) · ART
   conRepetir(DS.estadoVacio({ arte: ARTE.grafica(), titulo: "Aquí vas a ver cómo avanzas", texto: "Con tus corridas aparecen tus ritmos, tu volumen y tu intensidad.",
     accion: { texto: "Conectar Garmin", href: "#" }, secundaria: { texto: "Registrar una corrida", href: "#" } })),
   DS.tarjeta({}, DS.estadoVacio({ arte: ARTE.grafica({ espera: true }), espera: true, titulo: "Tu historial viene en camino", texto: "En cuanto llegue, aquí aparecen tus gráficas." })));
+/** Los primeros pasos como en Hoy, con su botón para volver a ver la animación. */
+const pasosConRepetir = (props) => {
+  const nodo = h("div", { class: "anim" }, DS.primerosPasos(props));
+  return h("div", {}, nodo, DS.boton("Ver otra vez", { variante: "sec", chico: true, onclick: () => { nodo.classList.remove("anim"); void nodo.offsetWidth; nodo.classList.add("anim"); } }));
+};
+const otrosPasos = [{ texto: "Unirme a un grupo", href: "#" }, { texto: "Agregar mi InBody", href: "#" }];
+def("Contenedores", "Primeros pasos", "DS.primerosPasos() · DS.barrasPasos() · DS.listaPasos()", "Las 5 barras del logo en Hoy: una encendida por paso hecho. Grande mientras falte Garmin o llegue el historial; después, compacta de altura fija. La barra nueva sube una vez y con 5 de 5 brincan. Con «reducir movimiento», todo quieto.",
+  pasosConRepetir({ vista: "garmin", barras: { hechos: 1, desde: 0, sigue: true, etiqueta: "1 de 5 primeros pasos" }, cuenta: "1 de 5 · ya tienes cuenta", titulo: "Conecta tu Garmin",
+    texto: "Tus corridas y tu sueño llegan solos. Necesitas una computadora.",
+    acciones: [DS.boton("Conectar", { href: "#" }), DS.boton("Enviarme la guía por correo", { variante: "sec" }), DS.boton("No tengo Garmin", { variante: "texto" })],
+    nota: h("p", { class: "pi-msg" }, "\u00a0"), lista: [{ texto: "Armar mi plan", href: "#" }, ...otrosPasos] }),
+  DS.primerosPasos({ vista: "historial", barras: { etiqueta: "Las barras se arman mientras llega tu historial" }, titulo: "Estamos trayendo tu último año",
+    texto: "Puedes cerrar la app. Esto sigue solo.", mientras: "Mientras tanto:", lista: otrosPasos }),
+  pasosConRepetir({ vista: "compacta", barras: { hechos: 2, desde: 1, sigue: true, etiqueta: "2 de 5 primeros pasos" }, titulo: "2 de 5 · Sigue: tu plan",
+    acciones: [DS.boton("Armar mi plan", { href: "#" }), DS.boton("Saltar", { variante: "texto" })] }),
+  pasosConRepetir({ vista: "completa", barras: { hechos: 5, desde: 4, etiqueta: "5 de 5 primeros pasos" }, titulo: "5 de 5" }),
+  DS.tarjeta({ titulo: "Primeros pasos (vista de coach)" }, DS.listaPasos([{ texto: "Armar mi plan", href: "#" }, { texto: "Agregar mi InBody", href: "#" }])));
 def("Contenedores", "Íconos de evento del Plan", "DS.ico()", "Esquina de cada cuadrito de semana: carrera, viaje, enfermedad y prueba.",
   DS.tarjeta({}, h("div", { class: "leyenda" }, ["medalla", "avion", "termometro", "cronometro"].map((n) => h("span", {}, DS.ico(n), n)))));
 def("Contenedores", "Fila de ayuda con muestra", "DS.filaMuestra()", "Muestra visual a la izquierda y texto a la derecha; se usa en el «?» de las 12 semanas.",
