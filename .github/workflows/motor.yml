@@ -47,7 +47,7 @@ jobs:
           GARMIN_USER_DIR: ${{ github.workspace }}
 
       # Caché del RPE por actividad: cada corrida guarda una versión nueva.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: data/activity_details.json
           key: activity-details-${{ github.run_id }}
