@@ -1,5 +1,9 @@
 # Plan de limpieza (2026-11-27)
 
+**Estado (2026-11-28):** L1–L8 hechas y desplegadas (`stable` en 9e21e6d). De L8 quedó sin hacer, a propósito, agrupar
+`web/` en subcarpetas: el mapa de AGENTS.md basta por ahora. Las 104 claves iguales en `en.yaml` son marcas, unidades y
+palabras iguales en inglés (no faltan traducciones).
+
 Objetivo: que el código no se vuelva un revoltijo. Sin cambios de comportamiento visibles; cada fase es un commit
 `Limpieza L<n>: …` con las pruebas en verde (`.venv/bin/python -m pytest -q`).
 
