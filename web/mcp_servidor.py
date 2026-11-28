@@ -144,8 +144,10 @@ def _editable(db, actor, atleta) -> tuple[Usuario, dict, dict | None, date]:
         raise Rechazo("Esa persona aún no tiene ajustes ni plan.")
     return a, crudo, aw.plan_guardado(db, a), None
 
-RESUMEN = ("Siempre manda `resumen`: explica a la persona en lenguaje normal qué cambiaste y por qué; corto si se puede, "
-           "tan largo como haga falta para describir todo.")
+RESUMEN = ("Siempre manda `resumen`: una descripción detallada para la persona, en lenguaje normal y en segunda persona. "
+           "Incluye qué cambiaste (semana, día y sesión, con los valores de antes y de después), por qué lo cambiaste "
+           "(lo que te dijo o lo que viste en sus datos) y qué notará en su plan. Sin ids internos. Escribe todo lo que "
+           "haga falta; la web lo muestra colapsado si es largo.")
 
 
 def _guardar(db, actor, a, desc, paquete, resumen=None) -> dict:
