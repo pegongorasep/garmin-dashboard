@@ -683,11 +683,15 @@ def build_semanas(hoy: date, data: dict, config: dict, plan: dict):
     previas = [monday(m.day_of(a)) for a in data["activities"]]
     previas = [x for x in previas if inicio - timedelta(weeks=SEMANAS_ANTES_PLAN) <= x < inicio]
     antes = {min(previas) + timedelta(weeks=i) for i in range((inicio - min(previas)).days // 7)} if previas else set()
+    if monday(hoy) < inicio:
+        antes.add(monday(hoy))   # la semana de hoy, aunque esté vacía, es «antes del plan»
     inicios = sorted({inicio + timedelta(weeks=i) for i in range(total)} | {monday(hoy)} | antes)
-    # Antes de que empiece el plan se muestra la semana 1 como vista previa.
-    mostrar = inicio if hoy < date.fromisoformat(config["plan_start"]) else monday(hoy)
-    semanas = [{**build_semana(i, hoy, data, config, plan), **({"antes_plan": True} if i in antes else {})} for i in inicios]
-    return semanas, inicios.index(mostrar)
+    # Siempre se abre en la semana de hoy; antes de que empiece el plan, esa semana liga a la semana 1.
+    hoy_i = inicios.index(monday(hoy))
+    empieza = {"plan_empieza": {"texto": texto_inicio_plan(inicio), "idx": inicios.index(inicio)}} if monday(hoy) < inicio else {}
+    semanas = [{**build_semana(i, hoy, data, config, plan), **({"antes_plan": True} if i in antes else {}),
+                **(empieza if i == monday(hoy) else {})} for i in inicios]
+    return semanas, hoy_i
 
 
 def session_names(rows_acts: list, data: dict, config: dict, plan: dict) -> dict:

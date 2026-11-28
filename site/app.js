@@ -336,6 +336,10 @@ const flecha = (delta, texto) => `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="}
 function tarjetaEstaSemana(d, s) {
   const st = s.stats || {};
   const c = DS.tarjeta({ titulo: tituloSemana(d, s), clase: "ancha" }, lineaSemana(st, T(s.estado === "futura" ? "sitio.aun_no" : "sitio.sin_corridas")), intensidadCompacta(s));
+  if (s.plan_empieza) {   // antes del plan: la semana de hoy liga a la semana 1
+    const e = s.plan_empieza;
+    c.append(h("p", { class: "nota" }, `${e.texto} · `, DS.boton(T("sitio.sel.ver_s1"), { variante: "texto", chico: true, onclick: () => { semIdx = e.idx; pintarSemana(d); } })));
+  }
   const p = s.plan;
   if (p) {
     if (p.faltan) c.append(h("p", { class: "nota" }, p.faltan));

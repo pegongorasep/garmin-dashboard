@@ -290,8 +290,11 @@ def test_semanas_hoy_fuera_del_plan(salida):
     out = build.build(fixture(), build.load(ROOT / "plan" / "plan.example.json"), CONFIG, AHORA)
     assert len(out["semanas_hoy"]) == 4      # 2 del plan + hoy + 26 oct, ambas antes del plan
     assert [s.get("antes_plan") for s in out["semanas_hoy"]] == [True, True, None, None]
-    # el plan empieza el 9 nov: se abre en la semana 1 como vista previa
-    assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1
+    # el plan empieza el 9 nov: se abre en la semana de hoy, que liga a la semana 1
+    hoy_s = out["semanas_hoy"][out["semana_hoy_idx"]]
+    assert hoy_s["inicio"] == "2026-11-02" and hoy_s["estado"] == "actual"
+    assert hoy_s["plan_empieza"]["texto"] == "Tu plan empieza el lun 9 nov"
+    assert out["semanas_hoy"][hoy_s["plan_empieza"]["idx"]]["n"] == 1
     s = next(x for x in out["semanas_hoy"] if x["inicio"] == "2026-11-02")
     assert s["n"] is None and s["plan"] is None and s["sesiones"] == []
     assert s["inicio"] == "2026-11-02" and s["stats"]["corridas"] == 1 and len(s["extras"]) == 1
@@ -458,7 +461,10 @@ def test_primer_dia_sin_datos_y_plan_futuro():
     assert t["tipo"] == "primera_sync"
     assert t["texto"] == ("Primera sincronización lista. Garmin tarda en mandar el historial; regresa en unas horas. "
                           "Tu plan empieza el lun 7 dic")
-    assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1 and out["semanas_hoy"][out["semana_hoy_idx"]]["estado"] == "futura"
+    hoy_s = out["semanas_hoy"][out["semana_hoy_idx"]]
+    assert hoy_s["n"] is None and hoy_s["estado"] == "actual" and hoy_s.get("antes_plan")
+    s1 = out["semanas_hoy"][hoy_s["plan_empieza"]["idx"]]
+    assert s1["n"] == 1 and s1["estado"] == "futura"
     assert out["ultima_corrida"] is None and out["composicion"] is None
     assert out["progreso"]["mejora"]["modo"] == "trote" and out["hoy"]["semaforo"]["color"] == "sin_datos"
 
