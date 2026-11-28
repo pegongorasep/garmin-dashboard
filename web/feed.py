@@ -11,12 +11,13 @@ import logging
 from datetime import date, timedelta
 
 import sqlalchemy as sa
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import calculo, grupos, grupos_resumen, permisos
+from .deps import actual, formulario, get_db, settings as get_settings
 from .modelos import Comentario, DatoGarmin, MiembroGrupo, ReaccionActividad, Usuario, ahora
 
 log = logging.getLogger("web.feed")
@@ -202,120 +203,129 @@ def feed(db: Session, viewer: Usuario, secret: str, antes: str | None = None, pe
                        "comentarios": ncom.get(x["clave"], 0)})
     return {"items": salida, "siguiente": _cursor(pagina[-1]) if hay_mas else None, "emojis": list(EMOJIS), "yo": viewer.id}
 
-
-def montar(app, get_db, actual, formulario, settings) -> None:
-    @app.get("/api/juntos/feed")
-    def api_feed(antes: str | None = None, persona: int | None = None, usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        return feed(db, usuario, settings.secret_key, antes, persona)
-
-    @app.post("/api/juntos/reaccionar")
-    async def api_reaccionar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        try:
-            dueno_id = int(form.get("dueno", ""))
-        except ValueError:
-            return JSONResponse({"error": "No encontrado."}, status_code=404)
-        clave, emoji = str(form.get("clave", "")), str(form.get("emoji", ""))
-        dueno = next((d for d in duenos_visibles(db, usuario) if d.id == dueno_id), None)
-        if dueno is None:
-            return JSONResponse({"error": "No encontrado."}, status_code=404)
-        mia = next((x for x in actividades_de(db, dueno, settings.secret_key, False) if x["clave"] == clave), None)
-        if mia is None:
-            return JSONResponse({"error": "No encontrado."}, status_code=404)
-        if emoji not in EMOJIS:
-            return JSONResponse({"error": "Emoji no válido."}, status_code=400)
-        previa = db.scalar(select(ReaccionActividad).where(ReaccionActividad.clave == clave, ReaccionActividad.dueno_id == dueno_id,
-                                                           ReaccionActividad.de_id == usuario.id, ReaccionActividad.emoji == emoji))
-        if previa is not None:
-            db.delete(previa)
-        else:
-            recientes = db.scalar(select(sa.func.count()).select_from(ReaccionActividad).where(
-                ReaccionActividad.de_id == usuario.id, ReaccionActividad.creada > ahora() - timedelta(hours=1)))
-            if recientes >= MAX_REACCIONES_HORA:
-                return JSONResponse({"error": "Demasiadas reacciones."}, status_code=429)
-            db.add(ReaccionActividad(clave=clave, dueno_id=dueno_id, de_id=usuario.id, emoji=emoji))
-        db.commit()
-        return {"clave": clave, "reacciones": reacciones_de(db, usuario, [clave]).get(clave, {})}
+router = APIRouter()
 
 
-    def _actividad(db, usuario, dueno_id, clave):
-        """Misma comprobación que las reacciones: la persona es visible para quien mira y esa actividad existe. None = 404."""
-        dueno = next((d for d in duenos_visibles(db, usuario) if d.id == dueno_id), None)
-        if dueno is None:
-            return None
-        return next((x for x in actividades_de(db, dueno, settings.secret_key, False) if x["clave"] == clave), None)
+@router.get("/api/juntos/feed")
+def api_feed(antes: str | None = None, persona: int | None = None, usuario=Depends(actual), db: Session = Depends(get_db),
+             settings=Depends(get_settings)):
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    return feed(db, usuario, settings.secret_key, antes, persona)
 
-    def _no_encontrado():
+
+@router.post("/api/juntos/reaccionar")
+async def api_reaccionar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    form = await formulario(request)
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    try:
+        dueno_id = int(form.get("dueno", ""))
+    except ValueError:
         return JSONResponse({"error": "No encontrado."}, status_code=404)
+    clave, emoji = str(form.get("clave", "")), str(form.get("emoji", ""))
+    dueno = next((d for d in duenos_visibles(db, usuario) if d.id == dueno_id), None)
+    if dueno is None:
+        return JSONResponse({"error": "No encontrado."}, status_code=404)
+    mia = next((x for x in actividades_de(db, dueno, settings.secret_key, False) if x["clave"] == clave), None)
+    if mia is None:
+        return JSONResponse({"error": "No encontrado."}, status_code=404)
+    if emoji not in EMOJIS:
+        return JSONResponse({"error": "Emoji no válido."}, status_code=400)
+    previa = db.scalar(select(ReaccionActividad).where(ReaccionActividad.clave == clave, ReaccionActividad.dueno_id == dueno_id,
+                                                       ReaccionActividad.de_id == usuario.id, ReaccionActividad.emoji == emoji))
+    if previa is not None:
+        db.delete(previa)
+    else:
+        recientes = db.scalar(select(sa.func.count()).select_from(ReaccionActividad).where(
+            ReaccionActividad.de_id == usuario.id, ReaccionActividad.creada > ahora() - timedelta(hours=1)))
+        if recientes >= MAX_REACCIONES_HORA:
+            return JSONResponse({"error": "Demasiadas reacciones."}, status_code=429)
+        db.add(ReaccionActividad(clave=clave, dueno_id=dueno_id, de_id=usuario.id, emoji=emoji))
+    db.commit()
+    return {"clave": clave, "reacciones": reacciones_de(db, usuario, [clave]).get(clave, {})}
 
-    @app.get("/api/juntos/comentarios")
-    def api_comentarios(dueno: int = 0, clave: str = "", usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        if _actividad(db, usuario, dueno, clave) is None:
-            return _no_encontrado()
-        return comentarios_de(db, usuario, dueno, clave)
 
-    @app.post("/api/juntos/comentar")
-    async def api_comentar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        try:
-            dueno_id = int(form.get("dueno", ""))
-        except ValueError:
-            return _no_encontrado()
-        clave = str(form.get("clave", ""))
-        if _actividad(db, usuario, dueno_id, clave) is None:
-            return _no_encontrado()
-        texto = str(form.get("texto", "")).strip()
-        if not texto:
-            return JSONResponse({"error": "Escribe algo."}, status_code=400)
-        if len(texto) > MAX_COMENTARIO:
-            return JSONResponse({"error": "Máximo 280 caracteres."}, status_code=400)
-        recientes = db.scalar(select(sa.func.count()).select_from(Comentario).where(
-            Comentario.autor_id == usuario.id, Comentario.creado > ahora() - VENTANA_COMENTARIOS))
-        if recientes >= MAX_COMENTARIOS_VENTANA:
-            return JSONResponse({"error": "Demasiados comentarios. Espera unos minutos."}, status_code=429)
-        db.add(Comentario(clave=clave, dueno_id=dueno_id, autor_id=usuario.id, texto=texto))
-        db.commit()
-        return comentarios_de(db, usuario, dueno_id, clave)
+def _actividad(db, usuario, dueno_id, clave, settings):
+    """Misma comprobación que las reacciones: la persona es visible para quien mira y esa actividad existe. None = 404."""
+    dueno = next((d for d in duenos_visibles(db, usuario) if d.id == dueno_id), None)
+    if dueno is None:
+        return None
+    return next((x for x in actividades_de(db, dueno, settings.secret_key, False) if x["clave"] == clave), None)
 
-    @app.post("/api/juntos/comentario/borrar")
-    async def api_borrar_comentario(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        try:
-            c = db.get(Comentario, int(form.get("id", "")))
-        except ValueError:
-            c = None
-        if c is None:
-            return _no_encontrado()
-        if not puede_borrar_comentario(db, usuario, c):
-            # quien ni siquiera ve la actividad recibe 404 (no se entera de que el comentario existe); los demás, 403
-            visible = any(d.id == c.dueno_id for d in duenos_visibles(db, usuario))
-            return JSONResponse({"error": "No puedes borrarlo."}, status_code=403) if visible else _no_encontrado()
-        dueno_id, clave = c.dueno_id, c.clave
-        db.delete(c)
-        db.commit()
-        return comentarios_de(db, usuario, dueno_id, clave)
+def _no_encontrado():
+    return JSONResponse({"error": "No encontrado."}, status_code=404)
 
-    @app.get("/api/juntos/nuevo")
-    def api_nuevo(usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        return {"nuevo": hay_nuevo(db, usuario, settings.secret_key)}
 
-    @app.post("/api/juntos/visto")
-    async def api_visto(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        await formulario(request)
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        usuario.juntos_visto = ahora()
-        db.commit()
-        return {"nuevo": False}
+@router.get("/api/juntos/comentarios")
+def api_comentarios(dueno: int = 0, clave: str = "", usuario=Depends(actual), db: Session = Depends(get_db),
+                    settings=Depends(get_settings)):
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    if _actividad(db, usuario, dueno, clave, settings) is None:
+        return _no_encontrado()
+    return comentarios_de(db, usuario, dueno, clave)
+
+
+@router.post("/api/juntos/comentar")
+async def api_comentar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    form = await formulario(request)
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    try:
+        dueno_id = int(form.get("dueno", ""))
+    except ValueError:
+        return _no_encontrado()
+    clave = str(form.get("clave", ""))
+    if _actividad(db, usuario, dueno_id, clave, settings) is None:
+        return _no_encontrado()
+    texto = str(form.get("texto", "")).strip()
+    if not texto:
+        return JSONResponse({"error": "Escribe algo."}, status_code=400)
+    if len(texto) > MAX_COMENTARIO:
+        return JSONResponse({"error": "Máximo 280 caracteres."}, status_code=400)
+    recientes = db.scalar(select(sa.func.count()).select_from(Comentario).where(
+        Comentario.autor_id == usuario.id, Comentario.creado > ahora() - VENTANA_COMENTARIOS))
+    if recientes >= MAX_COMENTARIOS_VENTANA:
+        return JSONResponse({"error": "Demasiados comentarios. Espera unos minutos."}, status_code=429)
+    db.add(Comentario(clave=clave, dueno_id=dueno_id, autor_id=usuario.id, texto=texto))
+    db.commit()
+    return comentarios_de(db, usuario, dueno_id, clave)
+
+
+@router.post("/api/juntos/comentario/borrar")
+async def api_borrar_comentario(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    form = await formulario(request)
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    try:
+        c = db.get(Comentario, int(form.get("id", "")))
+    except ValueError:
+        c = None
+    if c is None:
+        return _no_encontrado()
+    if not puede_borrar_comentario(db, usuario, c):
+        # quien ni siquiera ve la actividad recibe 404 (no se entera de que el comentario existe); los demás, 403
+        visible = any(d.id == c.dueno_id for d in duenos_visibles(db, usuario))
+        return JSONResponse({"error": "No puedes borrarlo."}, status_code=403) if visible else _no_encontrado()
+    dueno_id, clave = c.dueno_id, c.clave
+    db.delete(c)
+    db.commit()
+    return comentarios_de(db, usuario, dueno_id, clave)
+
+
+@router.get("/api/juntos/nuevo")
+def api_nuevo(usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    return {"nuevo": hay_nuevo(db, usuario, settings.secret_key)}
+
+
+@router.post("/api/juntos/visto")
+async def api_visto(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    await formulario(request)
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    usuario.juntos_visto = ahora()
+    db.commit()
+    return {"nuevo": False}

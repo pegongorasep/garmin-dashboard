@@ -8,12 +8,12 @@ from urllib.parse import urlencode
 
 import httpx
 import jwt
-from . import onboarding
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 
-from . import auth, oauth
+from . import auth, oauth, onboarding
+from .deps import actual, get_db, poner_sesion, render, settings as get_settings
 from .modelos import Usuario
 
 AUTORIZAR = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -64,84 +64,87 @@ def verificar_id_token(token: str, settings, jwks: dict, nonce: str) -> dict:
         raise GoogleError("correo sin verificar")
     return c
 
+router = APIRouter()
 
-def montar(app, get_db, actual, render, settings, poner_sesion) -> None:
-    def b64(b: bytes) -> str:
-        return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
 
-    def jwks() -> dict:
-        cache = app.state.__dict__.setdefault("google_jwks_cache", {"t": 0.0, "datos": None})
-        if cache["datos"] is None or time.time() - cache["t"] > JWKS_SEGUNDOS:
-            fetch = getattr(app.state, "google_jwks", None) or jwks_http
-            cache["datos"], cache["t"] = fetch(), time.time()
-        return cache["datos"]
+def b64(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
 
-    def rechazo(request, clave, status=400):
-        return render(request, "mensaje.html", status=status, titulo=request.state.t("google.no_entrar"), texto=request.state.t(clave))
+def jwks(app) -> dict:
+    cache = app.state.__dict__.setdefault("google_jwks_cache", {"t": 0.0, "datos": None})
+    if cache["datos"] is None or time.time() - cache["t"] > JWKS_SEGUNDOS:
+        fetch = getattr(app.state, "google_jwks", None) or jwks_http
+        cache["datos"], cache["t"] = fetch(), time.time()
+    return cache["datos"]
 
-    @app.get("/entrar/google")
-    def empezar(request: Request, inv: str = "", ligar: str = "", usuario=Depends(actual)):
-        if not settings.google_client_id:
+def rechazo(request, clave, status=400):
+    return render(request, "mensaje.html", status=status, titulo=request.state.t("google.no_entrar"), texto=request.state.t(clave))
+
+
+@router.get("/entrar/google")
+def empezar(request: Request, inv: str = "", ligar: str = "", usuario=Depends(actual), settings=Depends(get_settings)):
+    if not settings.google_client_id:
+        return RedirectResponse("/entrar", 303)
+    if ligar and usuario is None:
+        return RedirectResponse("/entrar", 303)
+    estado, nonce, verificador = (secrets.token_urlsafe(24) for _ in range(3))
+    reto = b64(hashlib.sha256(verificador.encode()).digest())
+    url = AUTORIZAR + "?" + urlencode({
+        "client_id": settings.google_client_id, "redirect_uri": f"{settings.base_url}/entrar/google/vuelta",
+        "response_type": "code", "scope": "openid email", "state": estado, "nonce": nonce,
+        "code_challenge": reto, "code_challenge_method": "S256", "prompt": "select_account"})
+    resp = RedirectResponse(url, 303)
+    valor = b64(json.dumps({"s": estado, "n": nonce, "v": verificador, "i": inv, "l": bool(ligar)}).encode())
+    resp.set_cookie(COOKIE, valor, max_age=SEGUNDOS, httponly=True, secure=settings.cookie_segura,
+                    samesite="lax", path="/entrar/google")
+    return resp
+
+
+@router.get("/entrar/google/vuelta")
+def vuelta(request: Request, state: str = "", code: str = "", error: str = "",
+           usuario=Depends(actual), db=Depends(get_db), settings=Depends(get_settings)):
+    crudo = request.cookies.get(COOKIE, "")
+    try:
+        c = json.loads(base64.urlsafe_b64decode(crudo + "=" * (-len(crudo) % 4)))
+    except Exception:
+        c = None
+    if not c or not state or not secrets.compare_digest(str(c.get("s")), state) or error or not code:
+        return rechazo(request, "google.sesion")
+    try:
+        canje = getattr(request.app.state, "google_canje", None) or canje_http
+        claims = verificar_id_token(canje(settings, code, c["v"]), settings, jwks(request.app), c["n"])
+    except (GoogleError, httpx.HTTPError, KeyError):
+        return rechazo(request, "google.verificar")
+    sub, correo = str(claims["sub"]), auth.normalizar_correo(claims["email"])
+    existente = db.scalar(select(Usuario).where(Usuario.google_sub == sub, Usuario.borrado.is_(None)))
+
+    if c.get("l"):   # ligar a la cuenta con sesión
+        if usuario is None:
             return RedirectResponse("/entrar", 303)
-        if ligar and usuario is None:
-            return RedirectResponse("/entrar", 303)
-        estado, nonce, verificador = (secrets.token_urlsafe(24) for _ in range(3))
-        reto = b64(hashlib.sha256(verificador.encode()).digest())
-        url = AUTORIZAR + "?" + urlencode({
-            "client_id": settings.google_client_id, "redirect_uri": f"{settings.base_url}/entrar/google/vuelta",
-            "response_type": "code", "scope": "openid email", "state": estado, "nonce": nonce,
-            "code_challenge": reto, "code_challenge_method": "S256", "prompt": "select_account"})
-        resp = RedirectResponse(url, 303)
-        valor = b64(json.dumps({"s": estado, "n": nonce, "v": verificador, "i": inv, "l": bool(ligar)}).encode())
-        resp.set_cookie(COOKIE, valor, max_age=SEGUNDOS, httponly=True, secure=settings.cookie_segura,
-                        samesite="lax", path="/entrar/google")
-        return resp
-
-    @app.get("/entrar/google/vuelta")
-    def vuelta(request: Request, state: str = "", code: str = "", error: str = "",
-               usuario=Depends(actual), db=Depends(get_db)):
-        crudo = request.cookies.get(COOKIE, "")
-        try:
-            c = json.loads(base64.urlsafe_b64decode(crudo + "=" * (-len(crudo) % 4)))
-        except Exception:
-            c = None
-        if not c or not state or not secrets.compare_digest(str(c.get("s")), state) or error or not code:
-            return rechazo(request, "google.sesion")
-        try:
-            canje = getattr(app.state, "google_canje", None) or canje_http
-            claims = verificar_id_token(canje(settings, code, c["v"]), settings, jwks(), c["n"])
-        except (GoogleError, httpx.HTTPError, KeyError):
-            return rechazo(request, "google.verificar")
-        sub, correo = str(claims["sub"]), auth.normalizar_correo(claims["email"])
-        existente = db.scalar(select(Usuario).where(Usuario.google_sub == sub, Usuario.borrado.is_(None)))
-
-        if c.get("l"):   # ligar a la cuenta con sesión
-            if usuario is None:
-                return RedirectResponse("/entrar", 303)
-            if existente is not None and existente.id != usuario.id:
-                return rechazo(request, "google.ligada_otra")
-            usuario.google_sub = sub
-            db.commit()
-            resp = RedirectResponse("/privacidad/mis-datos", 303)
-            resp.delete_cookie(COOKIE, path="/entrar/google")
-            return resp
-
-        u = existente or auth.buscar_por_correo(db, correo)
-        if u is not None and existente is None:
-            if u.google_sub:   # esa cuenta ya tiene otra cuenta de Google
-                return rechazo(request, "google.cuenta_otra")
-            u.google_sub = sub
-            db.commit()
-        if u is None and c.get("i"):
-            u = auth.aceptar_invitacion(db, c["i"], correo)
-            if u is not None:
-                u.google_sub = sub
-                db.commit()
-        if u is None:
-            return rechazo(request, "google.invitacion", 403)
-
-        resp = RedirectResponse(oauth.destino_login(request.cookies.get(oauth.COOKIE_VOLVER, ""), onboarding.completo(db, u)), 303)
-        poner_sesion(resp, auth.crear_sesion(db, u))
-        resp.delete_cookie(oauth.COOKIE_VOLVER, path="/")
+        if existente is not None and existente.id != usuario.id:
+            return rechazo(request, "google.ligada_otra")
+        usuario.google_sub = sub
+        db.commit()
+        resp = RedirectResponse("/privacidad/mis-datos", 303)
         resp.delete_cookie(COOKIE, path="/entrar/google")
         return resp
+
+    u = existente or auth.buscar_por_correo(db, correo)
+    if u is not None and existente is None:
+        if u.google_sub:   # esa cuenta ya tiene otra cuenta de Google
+            return rechazo(request, "google.cuenta_otra")
+        u.google_sub = sub
+        db.commit()
+    if u is None and c.get("i"):
+        u = auth.aceptar_invitacion(db, c["i"], correo)
+        if u is not None:
+            u.google_sub = sub
+            db.commit()
+    if u is None:
+        return rechazo(request, "google.invitacion", 403)
+
+    resp = RedirectResponse(oauth.destino_login(request.cookies.get(oauth.COOKIE_VOLVER, ""), onboarding.completo(db, u)), 303)
+    poner_sesion(resp, auth.crear_sesion(db, u), settings)
+    resp.delete_cookie(oauth.COOKIE_VOLVER, path="/")
+    resp.delete_cookie(COOKIE, path="/entrar/google")
+    return resp

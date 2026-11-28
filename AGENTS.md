@@ -22,7 +22,7 @@ Local de Pedro: `garmin_connect.py` -> `dashboard/build.py` -> `site/data.json` 
 
 ## 2. Mapa de módulos
 
-Convención: módulos nuevos = `router = APIRouter()` con rutas de primer nivel y dependencias de `web/deps.py` (`get_db`, `actual`, `render`, `formulario`, `settings`; leen `request.app.state`), registrado con `app.include_router(x.router)` en `crear_app()` (ya así: `coach.py`). Los viejos con `montar(app, ...)` (rutas como closures) se están migrando. Sin ninguno de los dos = lógica pura o utilería.
+Convención: módulos nuevos = `router = APIRouter()` con rutas de primer nivel y dependencias de `web/deps.py` (`get_db`, `actual`, `render`, `formulario`, `settings`; leen `request.app.state`), registrado con `app.include_router(x.router)` en `crear_app()` (ya así: `coach.py`, perfil, cuenta, admin, onboarding, garmin_key, aprende, actividad_web, persona, feed, grupos, sync_web, google). Los viejos con `montar(app, ...)` (rutas como closures) se están migrando. Sin ninguno de los dos = lógica pura o utilería.
 
 Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan import pasos`, `from scripts import subir`); nada de `sys.path` ni imports planos. Solo los puntos de entrada que se corren como archivo (`garmin_connect.py`, `reloj.py`, `dashboard/build.py`, `scripts/subir.py`, `scripts/web_local.py`) insertan la raíz del repo en `sys.path` una vez; `pytest` usa `pythonpath = ["."]` (`pyproject.toml`).
 
@@ -76,7 +76,7 @@ Cuentas y entrada
 - `auth.py`: invitaciones, ligas de entrada, sesiones y CSRF (tokens solo como hash). Lógica.
 - `google.py`: login con Google (OIDC + PKCE; sigue exigiendo invitación). Rutas.
 - `correo.py`: envío con Resend. `config.py`: `Settings` desde variables de entorno. `db.py`: motor y sesiones SQLAlchemy.
-- `deps.py`: dependencias de las rutas con `APIRouter` (`get_db`, `actual`, `render`, `formulario`, `settings`) desde `app.state`. `modelos.py`: tablas. `permisos.py`: `puede_ver`/`puede_editar` y permisos sociales. `errores.py`: errores de formulario con clave i18n.
+- `deps.py`: dependencias de las rutas con `APIRouter` (`get_db`, `actual`, `render`, `formulario`, `settings`, `poner_sesion`) desde `app.state`. `modelos.py`: tablas. `permisos.py`: `puede_ver`/`puede_editar` y permisos sociales. `errores.py`: errores de formulario con clave i18n.
 - `onboarding.py`: guía de Garmin `/bienvenida`. Rutas. `primer_inicio.py`: lo que Hoy ofrece a quien llega sin nada. Lógica.
 - `perfil.py`: nombre, apellido y foto. Rutas. `privacidad.py`: versión del aviso y rutas públicas. Constantes.
 - `cuenta.py`: descargar mis datos (ZIP) y borrar cuenta. Rutas. `admin.py`: `/admin` (invitaciones; solo admin). Rutas.

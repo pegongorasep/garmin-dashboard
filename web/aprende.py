@@ -3,10 +3,11 @@ import re
 from functools import lru_cache
 
 import yaml
-from fastapi import Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from . import ROOT
+from .deps import actual, render
 
 CARPETA = ROOT / "aprende"
 SLUG = re.compile(r"[a-z0-9-]+")
@@ -42,20 +43,22 @@ def slugs(idioma: str = IDIOMA_CONTENIDO) -> list[str]:
 def todos(idioma: str = IDIOMA_CONTENIDO) -> list[dict]:
     return [a for a in (articulo(s, idioma) for s in slugs(idioma)) if a]
 
+router = APIRouter()
 
-def montar(app, get_db, actual, render, formulario, settings) -> None:
-    @app.get("/aprende")
-    def aprende(request: Request, usuario=Depends(actual)):
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        return render(request, "aprende.html", atleta=usuario, pref="", articulos=todos())
 
-    @app.get("/aprende/{slug}")
-    def aprende_articulo(request: Request, slug: str, usuario=Depends(actual)):
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        a = articulo(slug)
-        if a is None:
-            raise HTTPException(404, "Artículo no encontrado")
-        return render(request, "aprende_articulo.html", atleta=usuario, pref="", a=a,
-                      en_ingles=request.state.idioma != IDIOMA_CONTENIDO)
+@router.get("/aprende")
+def aprende(request: Request, usuario=Depends(actual)):
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    return render(request, "aprende.html", atleta=usuario, pref="", articulos=todos())
+
+
+@router.get("/aprende/{slug}")
+def aprende_articulo(request: Request, slug: str, usuario=Depends(actual)):
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    a = articulo(slug)
+    if a is None:
+        raise HTTPException(404, "Artículo no encontrado")
+    return render(request, "aprende_articulo.html", atleta=usuario, pref="", a=a,
+                  en_ingles=request.state.idioma != IDIOMA_CONTENIDO)

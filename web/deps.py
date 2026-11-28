@@ -47,3 +47,9 @@ async def formulario(request: Request):
     if not auth.csrf_valido(request.app.state.settings.secret_key, request.cookies.get(auth.COOKIE_CSRF), form.get("csrf")):
         raise HTTPException(403, "Token CSRF inválido")
     return form
+
+
+def poner_sesion(resp: Response, valor: str, cfg) -> None:
+    """Cookie de sesión (misma que `crear_app` pone al entrar por correo)."""
+    resp.set_cookie(auth.COOKIE_SESION, valor, max_age=auth.DIAS_SESION * 86400, httponly=True,
+                    secure=cfg.cookie_segura, samesite="lax", path="/")

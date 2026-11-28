@@ -6,12 +6,13 @@ Aquí NO se muestran datos de entrenamiento: G3 agrega las tarjetas de avance, q
 from datetime import timedelta
 
 import sqlalchemy as sa
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import auth, grupos_resumen, permisos
+from .deps import actual, formulario, get_db, render, settings as get_settings
 from .modelos import Grupo, InvitacionGrupo, MiembroGrupo, Comentario, ReaccionActividad, Usuario, ahora
 
 MAX_MIEMBROS = 12
@@ -77,177 +78,191 @@ def liga_vigente(db: Session, token: str) -> InvitacionGrupo | None:
     inv = db.get(InvitacionGrupo, auth.hash_token(token))
     return inv if inv is not None and inv.expira > ahora() else None
 
+router = APIRouter()
 
-def montar(app, get_db, actual, render, formulario, settings) -> None:
-    def pagina(request, usuario, db, grupo, status=200, liga=None, error=None):
-        miembros = miembros_de(db, grupo.id)
-        yo = next((m for m, u in miembros if u.id == usuario.id), None)
-        res = grupos_resumen.resumen(db, miembros)
-        fotos = {u.id for _, u in miembros if perfil_tiene_foto(db, u.id)}
-        return render(request, "grupo.html", status=status, atleta=usuario, pref="", grupo=grupo, miembros=miembros,
-                      yo=yo, fotos=fotos, por_id={u.id: u for _, u in miembros}, tarjetas=res["tarjetas"], total=res["total"], insignias=res["insignias"], novedades=res["novedades"], liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
-                      error=error, lleno=len(miembros) >= MAX_MIEMBROS)
 
-    def propio(request, usuario, db, gid):
-        """(grupo, mi membresía) o None si no soy miembro (404 igual que si no existe)."""
-        m = db.scalar(select(MiembroGrupo).where(MiembroGrupo.grupo_id == gid, MiembroGrupo.usuario_id == usuario.id))
-        return (db.get(Grupo, gid), m) if m is not None else None
+def pagina(request, usuario, db, grupo, settings, status=200, liga=None, error=None):
+    miembros = miembros_de(db, grupo.id)
+    yo = next((m for m, u in miembros if u.id == usuario.id), None)
+    res = grupos_resumen.resumen(db, miembros)
+    fotos = {u.id for _, u in miembros if perfil_tiene_foto(db, u.id)}
+    return render(request, "grupo.html", status=status, atleta=usuario, pref="", grupo=grupo, miembros=miembros,
+                  yo=yo, fotos=fotos, por_id={u.id: u for _, u in miembros}, tarjetas=res["tarjetas"], total=res["total"], insignias=res["insignias"], novedades=res["novedades"], liga=(f"{settings.base_url.rstrip('/')}/grupos/unirse/{liga}" if liga else None),
+                  error=error, lleno=len(miembros) >= MAX_MIEMBROS)
 
-    def sin_sesion():
-        return RedirectResponse("/entrar", 303)
+def propio(request, usuario, db, gid):
+    """(grupo, mi membresía) o None si no soy miembro (404 igual que si no existe)."""
+    m = db.scalar(select(MiembroGrupo).where(MiembroGrupo.grupo_id == gid, MiembroGrupo.usuario_id == usuario.id))
+    return (db.get(Grupo, gid), m) if m is not None else None
 
-    @app.get("/grupos")
-    def lista(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return sin_sesion()
-        gs = grupos_de(db, usuario.id)
-        cuantos = {g.id: len(miembros_de(db, g.id)) for g in gs}
-        return render(request, "grupos.html", atleta=usuario, pref="", grupos=gs, cuantos=cuantos)
+def sin_sesion():
+    return RedirectResponse("/entrar", 303)
 
-    @app.get("/api/grupos")
-    def api_lista(usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        return [{"id": g.id, "nombre": g.nombre, "miembros_n": len(miembros_de(db, g.id))} for g in grupos_de(db, usuario.id)]
 
-    @app.get("/api/grupos/{gid}")
-    def api_grupo(gid: int, usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        if propio(None, usuario, db, gid) is None:
-            return JSONResponse({"error": "No encontrado."}, status_code=404)
-        miembros = miembros_de(db, gid)
-        res = grupos_resumen.resumen(db, miembros)
-        nombres = {u.id: nombre_de(u) for _, u in miembros}
-        return {"grupo": {"id": gid, "nombre": db.get(Grupo, gid).nombre}, "yo": usuario.id,
-                "miembros": [{"usuario_id": u.id, "nombre": nombres[u.id],
-                              "foto": f"/perfil/foto/{u.id}" if perfil_tiene_foto(db, u.id) else None,
-                              "tarjeta": res["tarjetas"][u.id]}
-                             for m, u in miembros],
-                "total": res["total"], "insignias": res["insignias"], "novedades": res["novedades"],
-                "emoji_cat": grupos_resumen.EMOJI_CATEGORIA, "admin_url": f"/grupos/{gid}"}
+@router.get("/grupos")
+def lista(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    if usuario is None:
+        return sin_sesion()
+    gs = grupos_de(db, usuario.id)
+    cuantos = {g.id: len(miembros_de(db, g.id)) for g in gs}
+    return render(request, "grupos.html", atleta=usuario, pref="", grupos=gs, cuantos=cuantos)
 
-    @app.get("/grupos/nuevo")
-    def nuevo_get(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return sin_sesion()
-        return render(request, "grupo_nuevo.html", atleta=usuario, pref="", error=None, valor="")
 
-    @app.post("/grupos/nuevo")
-    async def nuevo_post(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return sin_sesion()
-        nombre = str(form.get("nombre", "")).strip()[:60]
-        t = request.state.t
-        if not nombre:
-            return render(request, "grupo_nuevo.html", status=400, atleta=usuario, pref="", error=t("grupos.err_nombre"), valor="")
-        if len(grupos_de(db, usuario.id)) >= MAX_GRUPOS:
-            return render(request, "grupo_nuevo.html", status=400, atleta=usuario, pref="",
-                          error=t("grupos.err_muchos", n=MAX_GRUPOS), valor=nombre)
-        g = Grupo(nombre=nombre, creado_por=usuario.id)
-        db.add(g)
-        db.flush()
-        db.add(MiembroGrupo(grupo_id=g.id, usuario_id=usuario.id, rol="admin"))
-        db.commit()
-        return RedirectResponse(f"/grupos/{g.id}", 303)
+@router.get("/api/grupos")
+def api_lista(usuario=Depends(actual), db: Session = Depends(get_db)):
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    return [{"id": g.id, "nombre": g.nombre, "miembros_n": len(miembros_de(db, g.id))} for g in grupos_de(db, usuario.id)]
 
-    @app.get("/grupos/unirse/{token}")
-    def unirse_get(token: str, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return render(request, "grupo_unirse.html", status=401, atleta=None, pref="", estado="sin_sesion", grupo=None, token=token)
-        inv = liga_vigente(db, token)
-        if inv is None:
-            return render(request, "grupo_unirse.html", status=404, atleta=usuario, pref="", estado="invalida", grupo=None, token=token)
-        grupo = db.get(Grupo, inv.grupo_id)
-        if permisos.es_miembro(db, usuario, grupo.id):
-            return RedirectResponse(f"/grupos/{grupo.id}", 303)
-        estado = "ok"
-        return render(request, "grupo_unirse.html", atleta=usuario, pref="", estado=estado, grupo=grupo, token=token)
 
-    @app.post("/grupos/unirse/{token}")
-    async def unirse_post(token: str, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        await formulario(request)
-        if usuario is None:
-            return sin_sesion()
-        inv = liga_vigente(db, token)
-        if inv is None:
-            return render(request, "grupo_unirse.html", status=404, atleta=usuario, pref="", estado="invalida", grupo=None, token=token)
-        grupo = db.get(Grupo, inv.grupo_id)
-        if permisos.es_miembro(db, usuario, grupo.id):
-            return RedirectResponse(f"/grupos/{grupo.id}", 303)
+@router.get("/api/grupos/{gid}")
+def api_grupo(gid: int, usuario=Depends(actual), db: Session = Depends(get_db)):
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    if propio(None, usuario, db, gid) is None:
+        return JSONResponse({"error": "No encontrado."}, status_code=404)
+    miembros = miembros_de(db, gid)
+    res = grupos_resumen.resumen(db, miembros)
+    nombres = {u.id: nombre_de(u) for _, u in miembros}
+    return {"grupo": {"id": gid, "nombre": db.get(Grupo, gid).nombre}, "yo": usuario.id,
+            "miembros": [{"usuario_id": u.id, "nombre": nombres[u.id],
+                          "foto": f"/perfil/foto/{u.id}" if perfil_tiene_foto(db, u.id) else None,
+                          "tarjeta": res["tarjetas"][u.id]}
+                         for m, u in miembros],
+            "total": res["total"], "insignias": res["insignias"], "novedades": res["novedades"],
+            "emoji_cat": grupos_resumen.EMOJI_CATEGORIA, "admin_url": f"/grupos/{gid}"}
 
-        def rechazo(estado):
-            return render(request, "grupo_unirse.html", status=403, atleta=usuario, pref="", estado=estado, grupo=grupo, token=token)
-        if not (usuario.nombre and usuario.apellido):
-            return RedirectResponse("/perfil", 303)
-        if len(miembros_de(db, grupo.id)) >= MAX_MIEMBROS:
-            return rechazo("lleno")
-        if len(grupos_de(db, usuario.id)) >= MAX_GRUPOS:
-            return rechazo("muchos")
-        db.add(MiembroGrupo(grupo_id=grupo.id, usuario_id=usuario.id))
-        db.commit()
+
+@router.get("/grupos/nuevo")
+def nuevo_get(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    if usuario is None:
+        return sin_sesion()
+    return render(request, "grupo_nuevo.html", atleta=usuario, pref="", error=None, valor="")
+
+
+@router.post("/grupos/nuevo")
+async def nuevo_post(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    form = await formulario(request)
+    if usuario is None:
+        return sin_sesion()
+    nombre = str(form.get("nombre", "")).strip()[:60]
+    t = request.state.t
+    if not nombre:
+        return render(request, "grupo_nuevo.html", status=400, atleta=usuario, pref="", error=t("grupos.err_nombre"), valor="")
+    if len(grupos_de(db, usuario.id)) >= MAX_GRUPOS:
+        return render(request, "grupo_nuevo.html", status=400, atleta=usuario, pref="",
+                      error=t("grupos.err_muchos", n=MAX_GRUPOS), valor=nombre)
+    g = Grupo(nombre=nombre, creado_por=usuario.id)
+    db.add(g)
+    db.flush()
+    db.add(MiembroGrupo(grupo_id=g.id, usuario_id=usuario.id, rol="admin"))
+    db.commit()
+    return RedirectResponse(f"/grupos/{g.id}", 303)
+
+
+@router.get("/grupos/unirse/{token}")
+def unirse_get(token: str, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    if usuario is None:
+        return render(request, "grupo_unirse.html", status=401, atleta=None, pref="", estado="sin_sesion", grupo=None, token=token)
+    inv = liga_vigente(db, token)
+    if inv is None:
+        return render(request, "grupo_unirse.html", status=404, atleta=usuario, pref="", estado="invalida", grupo=None, token=token)
+    grupo = db.get(Grupo, inv.grupo_id)
+    if permisos.es_miembro(db, usuario, grupo.id):
+        return RedirectResponse(f"/grupos/{grupo.id}", 303)
+    estado = "ok"
+    return render(request, "grupo_unirse.html", atleta=usuario, pref="", estado=estado, grupo=grupo, token=token)
+
+
+@router.post("/grupos/unirse/{token}")
+async def unirse_post(token: str, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    await formulario(request)
+    if usuario is None:
+        return sin_sesion()
+    inv = liga_vigente(db, token)
+    if inv is None:
+        return render(request, "grupo_unirse.html", status=404, atleta=usuario, pref="", estado="invalida", grupo=None, token=token)
+    grupo = db.get(Grupo, inv.grupo_id)
+    if permisos.es_miembro(db, usuario, grupo.id):
         return RedirectResponse(f"/grupos/{grupo.id}", 303)
 
-    @app.get("/grupos/{gid}")
-    def ver(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return sin_sesion()
-        p = propio(request, usuario, db, gid)
-        if p is None:
-            return Response(status_code=404)
-        return pagina(request, usuario, db, p[0])
+    def rechazo(estado):
+        return render(request, "grupo_unirse.html", status=403, atleta=usuario, pref="", estado=estado, grupo=grupo, token=token)
+    if not (usuario.nombre and usuario.apellido):
+        return RedirectResponse("/perfil", 303)
+    if len(miembros_de(db, grupo.id)) >= MAX_MIEMBROS:
+        return rechazo("lleno")
+    if len(grupos_de(db, usuario.id)) >= MAX_GRUPOS:
+        return rechazo("muchos")
+    db.add(MiembroGrupo(grupo_id=grupo.id, usuario_id=usuario.id))
+    db.commit()
+    return RedirectResponse(f"/grupos/{grupo.id}", 303)
 
-    @app.post("/grupos/{gid}/invitar")
-    async def invitar(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        await formulario(request)
-        if usuario is None:
-            return sin_sesion()
-        p = propio(request, usuario, db, gid)
-        if p is None:
-            return Response(status_code=404)
-        token = nueva_liga(db, gid, usuario.id)
-        db.commit()
-        return pagina(request, usuario, db, p[0], liga=token)
 
-    @app.post("/grupos/{gid}/pausar")
-    async def pausar(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return sin_sesion()
-        p = propio(request, usuario, db, gid)
-        if p is None:
-            return Response(status_code=404)
-        p[1].pausado = form.get("pausado") == "1"
-        db.commit()
-        return RedirectResponse(f"/grupos/{gid}", 303)
+@router.get("/grupos/{gid}")
+def ver(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    if usuario is None:
+        return sin_sesion()
+    p = propio(request, usuario, db, gid)
+    if p is None:
+        return Response(status_code=404)
+    return pagina(request, usuario, db, p[0], settings)
 
-    @app.post("/grupos/{gid}/salir")
-    async def salir(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        await formulario(request)
-        if usuario is None:
-            return sin_sesion()
-        if propio(request, usuario, db, gid) is None:
-            return Response(status_code=404)
-        _salir(db, gid, usuario.id)
-        db.commit()
-        return RedirectResponse("/grupos", 303)
 
-    @app.post("/grupos/{gid}/quitar/{uid}")
-    async def quitar(gid: int, uid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        await formulario(request)
-        if usuario is None:
-            return sin_sesion()
-        p = propio(request, usuario, db, gid)
-        if p is None:
-            return Response(status_code=404)
-        if p[1].rol != "admin":
-            return Response(status_code=403)
-        if uid == usuario.id or not db.scalar(select(MiembroGrupo.id).where(MiembroGrupo.grupo_id == gid, MiembroGrupo.usuario_id == uid)):
-            return Response(status_code=404)
-        _salir(db, gid, uid)
-        db.commit()
-        return RedirectResponse(f"/grupos/{gid}", 303)
+@router.post("/grupos/{gid}/invitar")
+async def invitar(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db),
+                  settings=Depends(get_settings)):
+    await formulario(request)
+    if usuario is None:
+        return sin_sesion()
+    p = propio(request, usuario, db, gid)
+    if p is None:
+        return Response(status_code=404)
+    token = nueva_liga(db, gid, usuario.id)
+    db.commit()
+    return pagina(request, usuario, db, p[0], settings, liga=token)
+
+
+@router.post("/grupos/{gid}/pausar")
+async def pausar(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    form = await formulario(request)
+    if usuario is None:
+        return sin_sesion()
+    p = propio(request, usuario, db, gid)
+    if p is None:
+        return Response(status_code=404)
+    p[1].pausado = form.get("pausado") == "1"
+    db.commit()
+    return RedirectResponse(f"/grupos/{gid}", 303)
+
+
+@router.post("/grupos/{gid}/salir")
+async def salir(gid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    await formulario(request)
+    if usuario is None:
+        return sin_sesion()
+    if propio(request, usuario, db, gid) is None:
+        return Response(status_code=404)
+    _salir(db, gid, usuario.id)
+    db.commit()
+    return RedirectResponse("/grupos", 303)
+
+
+@router.post("/grupos/{gid}/quitar/{uid}")
+async def quitar(gid: int, uid: int, request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    await formulario(request)
+    if usuario is None:
+        return sin_sesion()
+    p = propio(request, usuario, db, gid)
+    if p is None:
+        return Response(status_code=404)
+    if p[1].rol != "admin":
+        return Response(status_code=403)
+    if uid == usuario.id or not db.scalar(select(MiembroGrupo.id).where(MiembroGrupo.grupo_id == gid, MiembroGrupo.usuario_id == uid)):
+        return Response(status_code=404)
+    _salir(db, gid, uid)
+    db.commit()
+    return RedirectResponse(f"/grupos/{gid}", 303)
 
 
 def perfil_tiene_foto(db: Session, uid: int) -> bool:

@@ -3,13 +3,14 @@
 import re
 from datetime import date, timedelta
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
 from . import tubo
+from .deps import actual, formulario, get_db, render, settings as get_settings
 from .modelos import Ajustes, Consentimiento, Usuario
 from .privacidad import VERSION_AVISO
 
@@ -104,69 +105,68 @@ def liga_repo(u: Usuario, settings) -> dict:
             "actions": f"https://github.com/{repo}/actions",
             "key": KEY_GARMIN_URL}
 
+router = APIRouter()
 
-def montar(app, get_db, actual, render, formulario, settings) -> None:
-    def requiere(usuario):
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
 
-    @app.get("/bienvenida")
-    def bienvenida(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        if not completo(db, usuario):
-            return RedirectResponse("/perfil", 303)   # nombre y aviso primero (E1)
-        e = estado(db, usuario)
-        if guia_activa(settings, usuario, e):
-            n = guia_paso(usuario, request.query_params.get("paso"), request.cookies.get(COOKIE_GUIA))
-            resp = render(request, "bienvenida.html", guia=True, paso=n, pasos=PASOS, e=e, u=usuario,
-                          version=VERSION_AVISO, liga=liga_repo(usuario, settings), error=_error_conexion(request),
-                          liga_enviada=request.query_params.get("liga", ""))
-            resp.set_cookie(COOKIE_GUIA, str(n), max_age=30 * 86400, httponly=True, secure=settings.cookie_segura,
-                            samesite="lax", path="/bienvenida")
-            return resp
-        try:
-            pedido = int(request.query_params.get("paso", ""))
-        except ValueError:
-            pedido = paso_inicial(e)
-        paso = max(2, min(pedido, paso_maximo(e)))
-        if paso == 7:   # «Tu plan»: lo arma el asistente del motor v6 (con lo que vio tu Garmin)
-            return RedirectResponse("/plan/nuevo", 303)
-        return render(request, "bienvenida.html", paso=paso, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
-                      liga=liga_repo(usuario, settings),
-                      error=_error_conexion(request))
+@router.get("/bienvenida")
+def bienvenida(request: Request, usuario=Depends(actual), db=Depends(get_db), settings=Depends(get_settings)):
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    if not completo(db, usuario):
+        return RedirectResponse("/perfil", 303)   # nombre y aviso primero (E1)
+    e = estado(db, usuario)
+    if guia_activa(settings, usuario, e):
+        n = guia_paso(usuario, request.query_params.get("paso"), request.cookies.get(COOKIE_GUIA))
+        resp = render(request, "bienvenida.html", guia=True, paso=n, pasos=PASOS, e=e, u=usuario,
+                      version=VERSION_AVISO, liga=liga_repo(usuario, settings), error=_error_conexion(request),
+                      liga_enviada=request.query_params.get("liga", ""))
+        resp.set_cookie(COOKIE_GUIA, str(n), max_age=30 * 86400, httponly=True, secure=settings.cookie_segura,
+                        samesite="lax", path="/bienvenida")
+        return resp
+    try:
+        pedido = int(request.query_params.get("paso", ""))
+    except ValueError:
+        pedido = paso_inicial(e)
+    paso = max(2, min(pedido, paso_maximo(e)))
+    if paso == 7:   # «Tu plan»: lo arma el asistente del motor v6 (con lo que vio tu Garmin)
+        return RedirectResponse("/plan/nuevo", 303)
+    return render(request, "bienvenida.html", paso=paso, pasos=PASOS, e=e, u=usuario, version=VERSION_AVISO,
+                  liga=liga_repo(usuario, settings),
+                  error=_error_conexion(request))
 
-    @app.post("/bienvenida/github")
-    async def github(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        e = estado(db, usuario)
-        if not e["consentimiento"]:
-            raise HTTPException(403, request.state.t("err.primero_aviso"))
-        if usuario.repo_id:
-            return RedirectResponse("/bienvenida?paso=3", 303)   # ya vinculado: el usuario de GitHub ya no se cambia aquí
-        owner = str(form.get("usuario", "")).strip().lstrip("@")
-        error = None
-        if not RE_OWNER.match(owner):
-            error = request.state.t("err.gh_usuario")
-        elif db.scalar(select(Usuario.id).where(Usuario.id != usuario.id, Usuario.borrado.is_(None),
-                                                 Usuario.github_owner.ilike(owner))):
-            error = request.state.t("err.gh_ligado")
-        if error:
-            return render(request, "bienvenida.html", status=400, paso=2, pasos=PASOS, e=e, u=usuario,
-                          version=VERSION_AVISO, liga=liga_repo(usuario, settings), error=error)
-        usuario.github_owner = owner
-        db.commit()
-        return RedirectResponse("/bienvenida?paso=3", 303)
 
-    @app.get("/api/estado")
-    def api_estado(usuario=Depends(actual), db=Depends(get_db)):
-        from fastapi.responses import JSONResponse
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        e = estado(db, usuario)
-        ultima = tubo.ultima_subida(db, usuario.id)
-        return {"vinculado": e["vinculado"], "repo": usuario.repo, "datos": e["datos"],
-                "ultima_subida": ultima.isoformat() + "Z" if ultima else None,
-                "consentimiento": e["consentimiento"], "plan": e["ajustes"]}
+@router.post("/bienvenida/github")
+async def github(request: Request, usuario=Depends(actual), db=Depends(get_db), settings=Depends(get_settings)):
+    form = await formulario(request)
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    e = estado(db, usuario)
+    if not e["consentimiento"]:
+        raise HTTPException(403, request.state.t("err.primero_aviso"))
+    if usuario.repo_id:
+        return RedirectResponse("/bienvenida?paso=3", 303)   # ya vinculado: el usuario de GitHub ya no se cambia aquí
+    owner = str(form.get("usuario", "")).strip().lstrip("@")
+    error = None
+    if not RE_OWNER.match(owner):
+        error = request.state.t("err.gh_usuario")
+    elif db.scalar(select(Usuario.id).where(Usuario.id != usuario.id, Usuario.borrado.is_(None),
+                                             Usuario.github_owner.ilike(owner))):
+        error = request.state.t("err.gh_ligado")
+    if error:
+        return render(request, "bienvenida.html", status=400, paso=2, pasos=PASOS, e=e, u=usuario,
+                      version=VERSION_AVISO, liga=liga_repo(usuario, settings), error=error)
+    usuario.github_owner = owner
+    db.commit()
+    return RedirectResponse("/bienvenida?paso=3", 303)
+
+
+@router.get("/api/estado")
+def api_estado(usuario=Depends(actual), db=Depends(get_db)):
+    from fastapi.responses import JSONResponse
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    e = estado(db, usuario)
+    ultima = tubo.ultima_subida(db, usuario.id)
+    return {"vinculado": e["vinculado"], "repo": usuario.repo, "datos": e["datos"],
+            "ultima_subida": ultima.isoformat() + "Z" if ultima else None,
+            "consentimiento": e["consentimiento"], "plan": e["ajustes"]}

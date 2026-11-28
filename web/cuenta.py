@@ -4,12 +4,13 @@ import json
 import zipfile
 
 import sqlalchemy as sa
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import auth, grupos
+from .deps import actual, formulario, get_db, render
 from .modelos import (ActividadManual, FotoPerfil, Ajustes, CacheData, Cambio, ClienteOAuth, CodigoOAuth, Coach, Consentimiento, DatoGarmin, InBody,
                       CodigoLogin, Invitacion, LigaLogin, Plan, Sesion, CuentaBorrada, Subida, TokenOAuth, Usuario)
 
@@ -82,31 +83,34 @@ def borrar_cuenta(db: Session, u: Usuario) -> None:
     db.add(CuentaBorrada())
     db.commit()
 
+router = APIRouter()
 
-def montar(app, get_db, actual, render, formulario, settings) -> None:
-    @app.get("/privacidad/mis-datos")
-    def mis_datos(request: Request, usuario=Depends(actual)):
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        return render(request, "mis_datos.html", atleta=usuario, pref="", palabra=PALABRA, google_ligada=bool(usuario.google_sub))
 
-    @app.get("/privacidad/mis-datos/descargar")
-    def descargar(usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        return Response(zip_de(db, usuario), media_type="application/zip",
-                        headers={"Content-Disposition": 'attachment; filename="mis-datos-ahi-la-llevas.zip"'})
+@router.get("/privacidad/mis-datos")
+def mis_datos(request: Request, usuario=Depends(actual)):
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    return render(request, "mis_datos.html", atleta=usuario, pref="", palabra=PALABRA, google_ligada=bool(usuario.google_sub))
 
-    @app.post("/privacidad/mis-datos/borrar")
-    async def borrar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        if usuario is None:
-            return RedirectResponse("/entrar", 303)
-        if str(form.get("confirmar", "")).strip() != PALABRA:
-            return render(request, "mis_datos.html", status=400, atleta=usuario, pref="", palabra=PALABRA,
-                          error=request.state.t("err.palabra", palabra=PALABRA))
-        borrar_cuenta(db, usuario)
-        resp = render(request, "cuenta_borrada.html")
-        resp.delete_cookie(auth.COOKIE_SESION, path="/")
-        resp.headers["Clear-Site-Data"] = '"cache"'
-        return resp
+
+@router.get("/privacidad/mis-datos/descargar")
+def descargar(usuario=Depends(actual), db: Session = Depends(get_db)):
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    return Response(zip_de(db, usuario), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="mis-datos-ahi-la-llevas.zip"'})
+
+
+@router.post("/privacidad/mis-datos/borrar")
+async def borrar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
+    form = await formulario(request)
+    if usuario is None:
+        return RedirectResponse("/entrar", 303)
+    if str(form.get("confirmar", "")).strip() != PALABRA:
+        return render(request, "mis_datos.html", status=400, atleta=usuario, pref="", palabra=PALABRA,
+                      error=request.state.t("err.palabra", palabra=PALABRA))
+    borrar_cuenta(db, usuario)
+    resp = render(request, "cuenta_borrada.html")
+    resp.delete_cookie(auth.COOKIE_SESION, path="/")
+    resp.headers["Clear-Site-Data"] = '"cache"'
+    return resp

@@ -9,7 +9,7 @@ sin grupo en común es 404. El perfil propio sale como lo vería un miembro de t
 import logging
 from datetime import date
 
-from fastapi import Depends
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from dashboard import semanal
 
 from . import calculo, feed, grupos, permisos, semana_plan
+from .deps import actual, get_db, settings as get_settings
 from .modelos import Grupo, MiembroGrupo, Plan, Usuario
 
 log = logging.getLogger("web.persona")
@@ -104,13 +105,14 @@ def perfil(db: Session, viewer: Usuario, dueno_id: int, secret: str) -> dict | N
         out["emojis"] = f["emojis"]
     return out
 
+router = APIRouter()
 
-def montar(app, get_db, actual, settings) -> None:
-    @app.get("/api/juntos/persona/{uid}")
-    def api_persona(uid: int, usuario=Depends(actual), db: Session = Depends(get_db)):
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        p = perfil(db, usuario, uid, settings.secret_key)
-        if p is None:
-            return JSONResponse({"error": "No encontrado."}, status_code=404)
-        return {**p, "yo": usuario.id}
+
+@router.get("/api/juntos/persona/{uid}")
+def api_persona(uid: int, usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    p = perfil(db, usuario, uid, settings.secret_key)
+    if p is None:
+        return JSONResponse({"error": "No encontrado."}, status_code=404)
+    return {**p, "yo": usuario.id}

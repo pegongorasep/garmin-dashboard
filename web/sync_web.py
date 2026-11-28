@@ -3,12 +3,13 @@ Reutiliza `conexion.disparar` y `conexion.estado_secreto`; nunca expone sincroni
 import logging
 from datetime import timedelta
 
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import conexion, sincronizar
+from .deps import actual, formulario, get_db, settings as get_settings
 from .github_app import InstalacionPerdida
 from .modelos import Sincronizacion, Usuario, ahora
 
@@ -152,58 +153,59 @@ def _historial_fallido(db: Session, u: Usuario) -> Sincronizacion | None:
                   .order_by(Sincronizacion.id.desc()).limit(1))
     return s if s is not None and s.estado == "error" else None
 
+router = APIRouter()
 
-def montar(app, get_db, actual, settings, formulario) -> None:
-    cache: dict = {}
 
-    @app.get("/api/sync")
-    def api_sync_estado(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        viva = sincronizar.actual(db, usuario.id)
-        if viva is not None:
-            revisar_corrida(app, settings, cache, db, usuario, viva)
-            if not conexion._gh_listo(usuario):   # se soltó la instalación: se responde como sin app
-                return {"sinc": None}
-            db.refresh(viva)
-        s = viva if viva is not None and viva.estado in sincronizar.VIVAS else _reciente(db, usuario.id)
-        if s is None:
-            s = _historial_fallido(db, usuario)
-        return {"sinc": a_json(s, request.state.t) if s is not None else None}
+@router.get("/api/sync")
+def api_sync_estado(request: Request, usuario=Depends(actual), db=Depends(get_db), settings=Depends(get_settings)):
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    viva = sincronizar.actual(db, usuario.id)
+    if viva is not None:
+        cache = request.app.state.__dict__.setdefault("sync_cache", {})   # uno por app
+        revisar_corrida(request.app, settings, cache, db, usuario, viva)
+        if not conexion._gh_listo(usuario):   # se soltó la instalación: se responde como sin app
+            return {"sinc": None}
+        db.refresh(viva)
+    s = viva if viva is not None and viva.estado in sincronizar.VIVAS else _reciente(db, usuario.id)
+    if s is None:
+        s = _historial_fallido(db, usuario)
+    return {"sinc": a_json(s, request.state.t) if s is not None else None}
 
-    @app.post("/api/sync")
-    async def api_sync_pedir(request: Request, usuario=Depends(actual), db=Depends(get_db)):
-        form = await formulario(request)   # CSRF
-        if usuario is None:
-            return JSONResponse({"error": "Entra primero."}, status_code=401)
-        t = request.state.t
-        if not conexion._gh_listo(usuario):
-            return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
-        viva = sincronizar.actual(db, usuario.id)
-        if viva is not None:
-            return {"sinc": a_json(viva, t), "nueva": False}
-        pedido = form.get("tipo")
-        tipo = "treinta" if pedido == "treinta" else "historial" if pedido == "historial" and usuario.historial_pendiente \
-            else "normal"
-        desde = ahora() - timedelta(hours=1)
-        hechos = db.scalar(select(func.count()).select_from(Sincronizacion).where(
-            Sincronizacion.usuario_id == usuario.id, Sincronizacion.tipo != "programada", Sincronizacion.creada > desde))
-        if hechos >= DISPAROS_POR_HORA:
-            return JSONResponse({"error": "limite", "texto": t("sync.limite")}, status_code=429)
-        gh = conexion.app_de(app, settings)
-        try:
-            secreto, _ = conexion.estado_secreto(gh.secretos(usuario.gh_instalacion, usuario.repo))
-        except InstalacionPerdida:
-            conexion.soltar_instalacion(db, usuario)
-            return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
-        except Exception as e:   # noqa: BLE001
-            log.warning("no se pudieron leer los secretos de %s: %s", usuario.id, getattr(e, "status", type(e).__name__))
-            secreto = "otra"
-        if secreto != "listo":
-            sinc, _ = sincronizar.pedir(db, usuario, tipo)
-            sincronizar.terminar(db, sinc, ok=False, error={"falta": "sin_key", "nombre_mal": "nombre_mal"}.get(secreto, "otra"))
-            return {"sinc": a_json(sinc, t), "nueva": True}
-        sinc = conexion.disparar(db, usuario, tipo, gh)
-        if sinc is None:   # desinstalaron la app: disparar soltó la instalación
-            return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
+
+@router.post("/api/sync")
+async def api_sync_pedir(request: Request, usuario=Depends(actual), db=Depends(get_db), settings=Depends(get_settings)):
+    form = await formulario(request)   # CSRF
+    if usuario is None:
+        return JSONResponse({"error": "Entra primero."}, status_code=401)
+    t = request.state.t
+    if not conexion._gh_listo(usuario):
+        return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
+    viva = sincronizar.actual(db, usuario.id)
+    if viva is not None:
+        return {"sinc": a_json(viva, t), "nueva": False}
+    pedido = form.get("tipo")
+    tipo = "treinta" if pedido == "treinta" else "historial" if pedido == "historial" and usuario.historial_pendiente \
+        else "normal"
+    desde = ahora() - timedelta(hours=1)
+    hechos = db.scalar(select(func.count()).select_from(Sincronizacion).where(
+        Sincronizacion.usuario_id == usuario.id, Sincronizacion.tipo != "programada", Sincronizacion.creada > desde))
+    if hechos >= DISPAROS_POR_HORA:
+        return JSONResponse({"error": "limite", "texto": t("sync.limite")}, status_code=429)
+    gh = conexion.app_de(request.app, settings)
+    try:
+        secreto, _ = conexion.estado_secreto(gh.secretos(usuario.gh_instalacion, usuario.repo))
+    except InstalacionPerdida:
+        conexion.soltar_instalacion(db, usuario)
+        return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
+    except Exception as e:   # noqa: BLE001
+        log.warning("no se pudieron leer los secretos de %s: %s", usuario.id, getattr(e, "status", type(e).__name__))
+        secreto = "otra"
+    if secreto != "listo":
+        sinc, _ = sincronizar.pedir(db, usuario, tipo)
+        sincronizar.terminar(db, sinc, ok=False, error={"falta": "sin_key", "nombre_mal": "nombre_mal"}.get(secreto, "otra"))
         return {"sinc": a_json(sinc, t), "nueva": True}
+    sinc = conexion.disparar(db, usuario, tipo, gh)
+    if sinc is None:   # desinstalaron la app: disparar soltó la instalación
+        return JSONResponse({"error": "sin_app", "url": URL_APP}, status_code=409)
+    return {"sinc": a_json(sinc, t), "nueva": True}

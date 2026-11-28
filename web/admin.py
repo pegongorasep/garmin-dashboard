@@ -1,13 +1,14 @@
 """F7b: panel de admin (/admin). Solo el admin; a los demás un 404. No muestra datos de entrenamiento de nadie."""
 from datetime import timedelta
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from plan import motor_v6
 from plan import simulador
 from . import auth, permisos
+from .deps import actual, formulario, get_db, render, settings as get_settings
 from .modelos import Invitacion, Subida, Usuario, ahora
 
 DIAS_ATRASADO = 2
@@ -66,38 +67,43 @@ def datos_simulador() -> dict:
             "textos_reglas": {x["clave"]: x["texto"] for x in resultados[0]["reglas"]} if resultados else {},
             "umbrales": simulador.UMBRALES, "umbrales_motor": motor_v6.UMBRALES}
 
+router = APIRouter()
 
-def montar(app, get_db, actual, render, formulario, settings) -> None:
-    def admin_de(usuario) -> Usuario:
-        if not es_admin(usuario, settings):
-            raise HTTPException(404)
-        return usuario
 
-    def pagina(request, db, admin, **extra):
-        return render(request, "admin.html", atleta=admin, pref="", invitaciones=invitaciones_de(db),
-                      usuarios=usuarios_de(db, admin), dias=DIAS_ATRASADO, **extra)
+def admin_de(usuario, settings) -> Usuario:
+    if not es_admin(usuario, settings):
+        raise HTTPException(404)
+    return usuario
 
-    @app.get("/admin")
-    def panel(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        return pagina(request, db, admin_de(usuario))
+def pagina(request, db, admin, **extra):
+    return render(request, "admin.html", atleta=admin, pref="", invitaciones=invitaciones_de(db),
+                  usuarios=usuarios_de(db, admin), dias=DIAS_ATRASADO, **extra)
 
-    @app.get("/admin/simulador")
-    def simulador_pagina(request: Request, usuario=Depends(actual)):
-        admin = admin_de(usuario)
-        return render(request, "simulador.html", atleta=admin, pref="", **datos_simulador())
 
-    @app.post("/admin/invitar")
-    async def invitar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        admin = admin_de(usuario)
-        nota = str(form.get("nota", "")).strip()[:200] or None
-        token = auth.crear_invitacion(db, admin.id, nota)
-        # sin redirigir: el token en claro solo existe en esta respuesta
-        return pagina(request, db, admin, liga_nueva=f"{settings.base_url}/invitacion/{token}")
+@router.get("/admin")
+def panel(request: Request, usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    return pagina(request, db, admin_de(usuario, settings))
 
-    @app.post("/admin/revocar")
-    async def revocar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db)):
-        form = await formulario(request)
-        admin = admin_de(usuario)
-        ok = revocar_invitacion(db, str(form.get("id", "")))
-        return pagina(request, db, admin, mensaje=request.state.t("admin.revocada" if ok else "admin.no_pendiente"))
+
+@router.get("/admin/simulador")
+def simulador_pagina(request: Request, usuario=Depends(actual), settings=Depends(get_settings)):
+    admin = admin_de(usuario, settings)
+    return render(request, "simulador.html", atleta=admin, pref="", **datos_simulador())
+
+
+@router.post("/admin/invitar")
+async def invitar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    form = await formulario(request)
+    admin = admin_de(usuario, settings)
+    nota = str(form.get("nota", "")).strip()[:200] or None
+    token = auth.crear_invitacion(db, admin.id, nota)
+    # sin redirigir: el token en claro solo existe en esta respuesta
+    return pagina(request, db, admin, liga_nueva=f"{settings.base_url}/invitacion/{token}")
+
+
+@router.post("/admin/revocar")
+async def revocar(request: Request, usuario=Depends(actual), db: Session = Depends(get_db), settings=Depends(get_settings)):
+    form = await formulario(request)
+    admin = admin_de(usuario, settings)
+    ok = revocar_invitacion(db, str(form.get("id", "")))
+    return pagina(request, db, admin, mensaje=request.state.t("admin.revocada" if ok else "admin.no_pendiente"))
