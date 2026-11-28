@@ -33,7 +33,14 @@ Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan im
 - `config.yaml`, `plan/plan.json`, `plan/inbody.json`, `data/`: archivos personales de Pedro.
 
 ### `dashboard/` (motor; funciones puras salvo donde se indica)
-- `build.py`: convierte data/ + plan + config en `data.json` (lista blanca); también escribe `site/i18n/*.json`.
+- `build.py`: `build`/`_build`/`main`: convierte data/ + plan + config en `data.json` (lista blanca); también escribe `site/i18n/*.json`. Re-exporta `construir/`; el código nuevo importa de `dashboard.construir.*`.
+  - `construir/cargar.py`: leer `data/`, el plan y los JSON personales.
+  - `construir/comun.py`: `r1`/`r2`, `monday`, `light_on`, `week_assignment`, `rw_json`, fin del plan.
+  - `construir/sesiones.py`: pasos, rampas, rachas, estructura de calidad y etiquetas de sesión.
+  - `construir/semanas.py`: marcas, semanas del plan y de la vista, resumen de la semana pasada, retomar.
+  - `construir/actividades.py`: corridas, detalle y curva de FC, actividades del día, historial, carreras.
+  - `construir/progreso.py`: pruebas, mejora, números, días y detalles.
+  - `construir/ui.py`: textos y categorías de la interfaz, eventos del plan, huellas/avisos, titular de hoy.
 - `metrics.py`: fachada que re-exporta `metricas/`; sin I/O ni reloj. El código nuevo importa de `dashboard.metricas.*`.
   - `metricas/comun.py`: clasificar actividades, `day_of`, `id_de`, `ZONAS`.
   - `metricas/zonas.py`: zonas de FC, perfil Garmin, minutos por zona, FC máxima.
