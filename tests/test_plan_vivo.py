@@ -424,7 +424,7 @@ def test_plan_redirige_a_la_pestana_y_el_menu_no_trae_plan_vivo(web_ctx):
     assert cl.post("/plan/repetir", data={"csrf": tok(cl)}).headers["location"] in ("/?ok=plan#plan", "/plan/acciones?ok=1")
 
 
-def test_ui_del_plan_trae_valores_por_defecto_en_pages():
+def test_ui_del_plan_trae_valores_por_defecto_en_el_build_local():
     from dashboard import ajustes, build, validar
     cfg = ajustes.cargar_config(build.ROOT)
     d = build.build(build.load_data(build.ROOT), build.load_plan(build.ROOT), cfg, __import__("datetime").datetime(2026, 11, 25))

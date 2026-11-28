@@ -6,7 +6,6 @@ Es el único lugar con reloj: "hoy" se calcula en la zona horaria del config.
 import argparse
 import hashlib
 import json
-import os
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -951,8 +950,7 @@ def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
         partes.append(tt("motor.ui.cada_semana", lista=lista))
     if config["dias_pierna"]:
         partes.append(tt("motor.ui.pierna", dias=lista_es([i18n.csv("motor.dias_largos")[d] for d in config["dias_pierna"]])))
-    repo = os.environ.get("GITHUB_REPOSITORY") if config.get("modo") != "web" else None   # en la web la liga la pone quien llama
-    acciones = config.get("acciones_url") or (f"https://github.com/{repo}/actions/workflows/deploy.yml" if repo else None)
+    acciones = config.get("acciones_url")   # la liga la pone quien llama
     return {
         "titulo": i18n.tt("sitio.titulo_defecto") if config["titulo"] == "Mi entreno" else config["titulo"],   # el título de fábrica, traducido
         "categorias": [{k: c[k] for k in ("id", "nombre", "letra", "clase", "icono")} for c in cats],
@@ -976,7 +974,7 @@ def build_ui(config: dict, plan: dict, cats: list | None = None) -> dict:
             "incluye": tt("motor.ui.incluye", lista=lista_es([c["nombre"] for c in cats] + [tt("motor.ui.corridas")])),
             "fcmax_vacia": (tt("motor.ui.fcmax_vacia_n", nombre=nombre) if nombre else tt("motor.ui.fcmax_vacia"))
             if config["fc_max_correa_desde"] else
-            tt("motor.ui.fcmax_sin_fecha", donde=tt("motor.ui.donde_web" if config.get("modo") == "web" else "motor.ui.donde_yaml")),
+            tt("motor.ui.fcmax_sin_fecha", donde=tt("motor.ui.donde_web")),
         },
     }
 
@@ -1100,7 +1098,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     zonas_g = m.zonas_garmin(data["hr_zones"])
     zonas = zonas_g or m.zones(config["max_hr"], rhr, config["zone_pcts"])
     zonas_origen = "garmin" if zonas_g else "calculadas"
-    zonas_plan = (zonas_g or []) if config.get("modo") == "web" else zonas
+    zonas_plan = zonas_g or []
     # El aviso «configura tus zonas en Garmin» sale con zonas calculadas o con las de fábrica de Garmin.
     sugerir_zonas = (zonas_origen == "calculadas" or m.zonas_de_fabrica(data["hr_zones"])) and config.get("garmin_conectado", True)
     config = {**config, "zonas": zonas}   # derivadas de este día: esfuerzo, ritmo a FC ref y plan vs real las leen de aquí
@@ -1119,7 +1117,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
         tarjeta["sesion"] = convert_session(ses, zonas_plan)
     sin_datos = not any(data[k] for k in ("activities", "daily_summaries", "sleep", "hrv"))
     inicio_plan = date.fromisoformat(config["plan_start"])
-    if sin_datos and (config.get("modo") != "web" or (config.get("garmin_ultima_subida") and config.get("garmin_historial_pendiente"))):
+    if sin_datos and (config.get("garmin_ultima_subida") and config.get("garmin_historial_pendiente")):
         texto = tt("motor.build.primera")
         if hoy < inicio_plan:
             texto += f". {texto_inicio_plan(inicio_plan)}"
@@ -1127,11 +1125,9 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     elif tarjeta["tipo"] == "sin_plan" and hoy < inicio_plan:
         tarjeta = {**tarjeta, "texto": texto_inicio_plan(inicio_plan)}
     elif plan_terminado(hoy, config, plan):   # pasó la última semana: resultado de la prueba y a pedir el siguiente bloque
-        tarjeta = {**tarjeta, "tipo": "plan_terminado", "texto": "Plan terminado", "version": None, "sesion_id": None,
+        tarjeta = {**tarjeta, "tipo": "plan_terminado", "texto": tt("motor.build.plan_terminado"), "version": None, "sesion_id": None,
                    "prueba": prueba_resultado(data, config, plan),
-                   "siguiente": ("Ve a Ajustes para el siguiente bloque" if config.get("modo") == "web"
-                                 else "Corre /ajustar para el siguiente bloque"),
-                   **({"siguiente_url": "/plan/acciones#siguiente"} if config.get("modo") == "web" else {})}
+                   "siguiente": tt("motor.build.siguiente_bloque"), "siguiente_url": "/plan/acciones#siguiente"}
     elif m.en_pausa(hoy, config):   # semana de viaje sin correr o de enfermedad: el plan espera
         tarjeta = {**tarjeta, "tipo": "pausa", "texto": tt("motor.build.pausa"),
                    "version": None, "sesion_id": None}
@@ -1147,7 +1143,7 @@ def _build(data: dict, plan: dict, config: dict, ahora: datetime) -> dict:
     datos_al = None
     if pulled:
         datos_al = datetime.fromisoformat(pulled).astimezone(ahora.tzinfo).isoformat(timespec="minutes")
-    if config.get("modo") == "web":
+    if "garmin_ultima_subida" in config:   # la web la pone siempre (None sin repo); el build local usa el pull de Garmin
         ultima = config.get("garmin_ultima_subida")
         datos_al = ultima.replace(tzinfo=ZoneInfo("UTC")).astimezone(ahora.tzinfo).isoformat(timespec="minutes") if ultima else None
     filas = m.run_rows(data["activities"], data["details"], config)

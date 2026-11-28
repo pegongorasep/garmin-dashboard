@@ -329,7 +329,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         hoy = aw.hoy_de(app.state.reloj, crudo or {})
         base = crudo or {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}
         d = calculo.datos_de(db, atleta, base)
-        cfg = normalizar_config({**base, "modo": "web"})
+        cfg = normalizar_config(base)
         fin_hoy = datetime.combine(hoy, time.max)  # las actividades manuales se guardan a mediodía, incluso si se anotan antes
         calculado = nivel_desde_datos(d["activities"], fin_hoy, cfg, d["details"])
         sin_garmin = not hay_corrida_garmin(d["activities"], fin_hoy, cfg)

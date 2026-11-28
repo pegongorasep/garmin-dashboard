@@ -33,7 +33,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
 
     def contexto(db, atleta, crudo, hoy, idioma=None):
         """Lo que muestra /plan: config con pausas, plan guardado y estado de hoy."""
-        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+        cfg = plan_vivo.con_pausas(normalizar_config(crudo), hoy)
         plan = aw.plan_guardado(db, atleta) or {"start": cfg["plan_start"], "weeks": []}
         efectivo = plan_vivo.plan_efectivo(plan, cfg)
         n = build.m.semana_del_plan(hoy, cfg)
@@ -69,7 +69,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         if crudo is None or not plan:
             raise HTTPException(404)
         hoy = aw.hoy_de(app.state.reloj, crudo)
-        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+        cfg = plan_vivo.con_pausas(normalizar_config(crudo), hoy)
         cuerpo = json.dumps(plan_vivo.plan_efectivo(plan, cfg), ensure_ascii=False, indent=1)
         return Response(cuerpo, media_type="application/json",
                         headers={"Content-Disposition": 'attachment; filename="plan.json"', "Cache-Control": "no-store"})
@@ -101,7 +101,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
                 return RedirectResponse("/bienvenida", 303)
             hoy = aw.hoy_de(app.state.reloj, crudo)
             try:
-                cfg = normalizar_config({**crudo, "modo": "web"})
+                cfg = normalizar_config(crudo)
                 plan = aw.plan_guardado(db, atleta)
                 nuevo_crudo, nuevo_plan, descripcion = hacer(db, atleta, crudo, plan_vivo.con_pausas(cfg, hoy), plan, form, hoy)
             except (ConfigError, ValueError, KeyError) as ex:
@@ -168,7 +168,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
         t = request.state.t
         sin_cache = {"Cache-Control": "no-store"}
         try:
-            cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+            cfg = plan_vivo.con_pausas(normalizar_config(crudo), hoy)
             plan = aw.plan_guardado(db, atleta) or {"weeks": []}
             if accion == "repetir":
                 nuevo, info = plan_vivo.repetir(crudo, plan, cfg, hoy)
@@ -204,7 +204,7 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
             hoy = aw.hoy_de(app.state.reloj, crudo)
             try:
                 if con_plan:   # `que` devuelve (ajustes, plan nuevo o None)
-                    cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+                    cfg = plan_vivo.con_pausas(normalizar_config(crudo), hoy)
                     nuevo, nuevo_plan = que(crudo, ident, hoy, aw.plan_guardado(db, atleta), cfg)
                 else:
                     nuevo, nuevo_plan = que(crudo, ident, hoy), None

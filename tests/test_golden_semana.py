@@ -27,6 +27,12 @@ def datos_ricos():
     return d
 
 
+def fixture_sin_zonas():
+    d = fixture()
+    d["hr_zones"] = [{"sport": "DEFAULT", "maxHeartRateUsed": 190, "restingHeartRateUsed": 64}]   # sin pisos de Garmin: el plan no pinta lpm
+    return d
+
+
 CASOS = {
     "plan_mie": (datos_ricos, {}, AHORA),
     "plan_dom": (datos_ricos, {}, datetime(2026, 11, 8, 20, 0, tzinfo=TZ)),
@@ -34,7 +40,7 @@ CASOS = {
     "plan_sin_corridas": (fixture, {}, datetime(2026, 11, 18, 9, 0, tzinfo=TZ)),
     "libre": (datos_ricos, {"sin_plan": True}, AHORA),
     "pausa_repetida": (datos_ricos, {"semanas_repetidas": [2], "pausas": ["2026-11-02"]}, datetime(2026, 11, 11, 9, 0, tzinfo=TZ)),
-    "web_sin_zonas": (fixture, {"modo": "web", "garmin_conectado": False}, AHORA),
+    "web_sin_zonas": (fixture_sin_zonas, {"garmin_conectado": False, "garmin_ultima_subida": None}, AHORA),
 }
 
 

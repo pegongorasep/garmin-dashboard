@@ -211,7 +211,7 @@
 "sitio.fin.prueba": "{p} test · {fecha}{km}",
 "sitio.fin.prueba_del": "your test on {fecha}",
 "sitio.fin.puntos": "{v} points of jogging",
-"sitio.fin.siguiente": "Run /ajustar to set up the next block",
+"sitio.fin.siguiente": "Go to Settings to set up the next block",
 "sitio.fin.sin_base": "No baseline to compare: the next test will be compared with this one.",
 "sitio.fin.sin_resultado": "{p} test: no result",
 "sitio.fin.spkm": "{v} s/km",

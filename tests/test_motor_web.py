@@ -25,10 +25,10 @@ def test_cargar_config_es_leer_mas_normalizar():
     crudo = ajustes.leer_config_yaml(FIX / "config.yaml")
     assert isinstance(crudo, dict) and "perfil" in crudo
     assert ajustes.normalizar_config(crudo) == ajustes.cargar_config(FIX)
-    assert ajustes.cargar_config(FIX)["modo"] == "pages"
-    assert ajustes.normalizar_config({**crudo, "modo": "web"})["modo"] == "web"
-    with pytest.raises(ajustes.ConfigError):
-        ajustes.normalizar_config({**crudo, "modo": "otro"})
+    # `modo` de configs viejas ("pages", "web" o lo que sea) se ignora sin error
+    for modo in ("pages", "web", "otro"):
+        assert ajustes.normalizar_config({**crudo, "modo": modo}) == ajustes.cargar_config(FIX)
+    assert "modo" not in ajustes.cargar_config(FIX)
 
 
 def test_normalizar_no_modifica_el_crudo():
@@ -51,7 +51,7 @@ def test_el_plan_de_pedro_en_formato_anterior_se_sigue_pintando():
 
 def test_config_por_defecto_sirve_sin_config_yaml():
     c = ajustes.config_por_defecto()
-    assert "running" in c["run_types"] and c["modo"] == "pages"
+    assert "running" in c["run_types"]
 
 
 def test_load_data_y_load_plan_aceptan_carpeta(tmp_path):
@@ -62,8 +62,8 @@ def test_load_data_y_load_plan_aceptan_carpeta(tmp_path):
     assert build.load_plan(tmp_path) == build.load(ROOT / "plan" / "plan.example.json")
 
 
-def _salida(modo):
-    cfg = {**ajustes.cargar_config(FIX), "modo": modo}
+def _salida():
+    cfg = ajustes.cargar_config(FIX)
     vacio = {"daily_summaries": [{"calendarDate": "2029-12-30", "heartRate": {"restingValue": 60}}], "sleep": [], "hrv": [], "activities": [], "details": {}, "hr_zones": [],
              "meta": {}, "historial": None, "inbody": None}
     plan = build.load(ROOT / "plan" / "plan.example.json")
@@ -71,9 +71,9 @@ def _salida(modo):
     return build.build(vacio, plan, cfg, ahora)
 
 
-def test_modo_web_cambia_los_textos_de_ajustar():
-    web, pages = _salida("web"), _salida("pages")
-    assert "/ajustar" in pages["hoy"]["tarjeta"]["siguiente"]
+def test_textos_de_plan_terminado_y_sin_ajustar():
+    web = _salida()
+    assert web["hoy"]["tarjeta"]["texto"] == "Plan terminado" and web["hoy"]["tarjeta"]["siguiente_url"] == "/plan/acciones#siguiente"
     assert web["hoy"]["tarjeta"]["siguiente"] == "Ve a Ajustes para el siguiente bloque"
     assert "/ajustar" not in json.dumps(web, ensure_ascii=False)
     assert "config.yaml" not in json.dumps(web, ensure_ascii=False)
@@ -81,15 +81,15 @@ def test_modo_web_cambia_los_textos_de_ajustar():
 
 
 def test_menu_y_acciones_url_los_pone_quien_llama():
-    cfg = {**ajustes.cargar_config(FIX), "modo": "web", "acciones_url": "https://github.com/x/y/actions",
+    cfg = {**ajustes.cargar_config(FIX), "acciones_url": "https://github.com/x/y/actions",
            "menu": [{"texto": "Ajustes", "url": "ajustes"}]}
     ui = build.build_ui(cfg, build.load(ROOT / "plan" / "plan.example.json"))
     assert ui["acciones_url"] == "https://github.com/x/y/actions"
     assert ui["menu"] == [{"texto": "Ajustes", "url": "ajustes"}]
 
 
-def test_sugerencia_repetir_en_modo_web():
-    cfg = {**ajustes.cargar_config(FIX), "modo": "web"}
+def test_sugerencia_repetir_dice_ajustes():
+    cfg = ajustes.cargar_config(FIX)
     assert m.sugerencia_semana(0, 3, 0, 10, 10, cfg)["texto"] == "Considera repetir la semana (desde Ajustes)"
 
 

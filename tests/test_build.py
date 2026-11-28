@@ -54,7 +54,8 @@ def fixture():
                         {"tipo": "RWD_RUN", "seg": 1200.0, "m": 3000.0, "fc": 145.0, "n": 3},
                         {"tipo": "RWD_WALK", "seg": 600.0, "m": 700.0, "fc": 125.0, "n": 3}]},
                     "3": {"rpe": None, "feel": None}},
-        "hr_zones": [{"sport": "DEFAULT", "maxHeartRateUsed": 190, "restingHeartRateUsed": 64}],
+        "hr_zones": [{"sport": "DEFAULT", "maxHeartRateUsed": 190, "restingHeartRateUsed": 64, "zone1Floor": 125, "zone2Floor": 138,
+                      "zone3Floor": 151, "zone4Floor": 164, "zone5Floor": 177}],   # zonas de Garmin (la web solo pinta lpm con ellas)
         "meta": {"pulled_at_utc": "2026-11-04T17:00:00+00:00"},
     }
 
@@ -437,10 +438,10 @@ def test_build_con_tres_categorias(monkeypatch):
     assert out["detalles"]["fc_max"]["configurada"] is False
 
 
-def test_acciones_url_desde_variable(monkeypatch):
+def test_acciones_url_no_sale_de_la_variable_de_github(monkeypatch):
     monkeypatch.setenv("GITHUB_REPOSITORY", "amigo/mi-dashboard")
     ui = build.build_ui(CONFIG_CORREDOR, build.load(ROOT / "plan" / "plan.example.json"))
-    assert ui["acciones_url"] == "https://github.com/amigo/mi-dashboard/actions/workflows/deploy.yml"
+    assert ui["acciones_url"] is None
 
 
 # --- v4 F3: calidad, mejora por ritmo, primer día, InBody opcional ---
@@ -452,8 +453,12 @@ VACIO = {"daily_summaries": [], "sleep": [], "hrv": [], "activities": [], "detai
          "meta": {}, "inbody": None}
 
 
+# En la web la tarjeta «Primera sincronización» sale con subida hecha e historial aún pendiente.
+PRIMERA_SYNC = {"garmin_ultima_subida": datetime(2026, 11, 4, 17, 0), "garmin_historial_pendiente": True}
+
+
 def test_primer_dia_sin_datos_y_plan_futuro():
-    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07"}
+    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-12-07", **PRIMERA_SYNC}
     plan = planes_v6.generar(cfg)
     out = build.build(VACIO, plan, cfg, AHORA)
     revisar_privacidad(out)
@@ -470,7 +475,7 @@ def test_primer_dia_sin_datos_y_plan_futuro():
 
 
 def test_primer_dia_con_plan_ya_empezado():
-    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-11-23"}
+    cfg = {**CONFIG_CORREDOR, "plan_start": "2026-11-23", **PRIMERA_SYNC}
     out = build.build(VACIO, planes_v6.generar(cfg), cfg, datetime(2026, 11, 24, 12, 0, tzinfo=ZoneInfo("America/Mexico_City")))
     assert out["hoy"]["tarjeta"]["texto"] == "Primera sincronización lista. Garmin tarda en mandar el historial; regresa en unas horas"
     assert out["semanas_hoy"][out["semana_hoy_idx"]]["n"] == 1 and out["semanas_hoy"][out["semana_hoy_idx"]]["estado"] == "actual"

@@ -15253,7 +15253,7 @@
     "recomendada": null,
     "repetir": false,
     "sesion_id": null,
-    "siguiente": "Corre /ajustar para el siguiente bloque",
+    "siguiente": "Ve a Ajustes para el siguiente bloque",
     "texto": "Plan terminado",
     "tipo": "plan_terminado",
     "version": null
@@ -24713,7 +24713,7 @@
     "recomendada": null,
     "repetir": false,
     "sesion_id": null,
-    "siguiente": "Corre /ajustar para el siguiente bloque",
+    "siguiente": "Ve a Ajustes para el siguiente bloque",
     "texto": "Plan terminado",
     "tipo": "plan_terminado",
     "version": null

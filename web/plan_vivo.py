@@ -259,7 +259,7 @@ def _saltar(crudo: dict, plan: dict, cfg: dict, hoy: date, x: int | None) -> tup
     nuevo, c = _corrida(crudo)
     c["saltos"] = list(c.get("saltos") or []) + [{"lunes": desde.isoformat(), "semana": x, "quita": quita}]
     nuevo = _validado(nuevo)
-    sec = m.secuencia_de(con_pausas(normalizar_config({**nuevo, "modo": cfg.get("modo", "web")}), hoy))
+    sec = m.secuencia_de(con_pausas(normalizar_config(nuevo), hoy))
     fin = lunes(date.fromisoformat(cfg["plan_start"])) + timedelta(weeks=len(sec)) - timedelta(days=1)
     return nuevo, {"k": k, "quita": quita, "fin": fin.isoformat(), "objetivo": carrera is not None}
 

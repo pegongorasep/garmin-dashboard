@@ -178,7 +178,7 @@ def test_subida_guarda_con_upsert_y_registra(ctx):
     uid = usuario_amigo(ctx, repo_id=777)
     cl = ctx.cliente()
     r = subir(cl, token(ctx), paquete_chico())
-    assert r.status_code == 200 and r.json() == {"ok": True, "publicar_pages": True}
+    assert r.status_code == 200 and r.json() == {"ok": True}
     n = None
     for _ in range(2):   # subir lo mismo dos veces no duplica
         subir(cl, token(ctx), paquete_chico())
@@ -189,9 +189,6 @@ def test_subida_guarda_con_upsert_y_registra(ctx):
     with ctx.sesiones() as db:
         s = db.query(Subida).filter_by(usuario_id=uid).first()
         assert s.ok and s.motor == "abc123" and s.bytes > 0
-        db.get(Usuario, uid).migrado = True
-        db.commit()
-    assert subir(cl, token(ctx), paquete_chico()).json()["publicar_pages"] is False
 
 
 def test_subida_con_clave_prohibida_da_422(ctx):

@@ -109,7 +109,7 @@ def _prueba(c: dict, plan: dict, fc_ref: int):
     base = _t("pru.previa") if previa else _t("pru.p2_b_base", base=_t(f"pru.base_{tipo}"))
     return {"titulo": _t("pru.titulo"), "parrafos": [
         _t("pru.p1", n=semanas[-1]["n"], como=como),
-        _t("pru.p2_a", x=base, ir=_t("pru.ir_web" if c.get("modo") == "web" else "pru.ir_cli"))], "lista": []}
+        _t("pru.p2_a", x=base, ir=_t("pru.ir_web"))], "lista": []}
 
 
 def _mejora(c: dict, fc_ref: int) -> dict:

@@ -738,7 +738,7 @@ def run_check(activity: dict, session, config=None, minutos_z=None, suave: bool 
 def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, config: dict):
     """Sugerencia por reglas conservadoras del resumen de la semana pasada: {"tipo", "texto"} o None. En orden:
     pocas sesiones hechas (con plan) o muchos días rojos → repetir; carga muy por encima de la anterior → semana pesada;
-    todo hecho y sin rojos → seguir el plan. Solo sugiere: repetir la semana sigue siendo con /ajustar (o desde Ajustes en la web)."""
+    todo hecho y sin rojos → seguir el plan. Solo sugiere: repetir la semana se hace desde Ajustes."""
     pocas = total is not None and hechas < config.get("resumen_min_sesiones", 2)
     if pocas or dias_rojos >= config.get("resumen_dias_rojos", 2):
         tipo = "repetir"
@@ -748,7 +748,7 @@ def sugerencia_semana(hechas, total, dias_rojos: int, carga, carga_anterior, con
         tipo = "sigue"
     else:
         return None
-    texto = tt("motor.sugerencia.repetir_web" if tipo == "repetir" and config.get("modo") == "web" else f"motor.sugerencia.{tipo}")
+    texto = tt(f"motor.sugerencia.{tipo}")
     return {"tipo": tipo, "titulo": tt(f"motor.sugerencia_t.{tipo}"), "texto": texto}
 
 

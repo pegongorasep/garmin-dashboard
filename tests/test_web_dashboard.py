@@ -29,22 +29,18 @@ def usuario_pedro(ctx):
         return u.id
 
 
-def esperado(modo_web: bool):
+def esperado(local: bool = False):   # local = el build de Pedro (dashboard/build.py), sin lo que pone la web
     cfg = ajustes.cargar_config(ROOT)
-    if modo_web:
-        cfg = {**cfg, "modo": "web", "menu": calculo.MENU,
+    if not local:
+        cfg = {**cfg, "menu": calculo.MENU,
                "plan_acciones": calculo.PLAN_ACCIONES, "editar_urls": calculo.editar_urls(build.load_plan(ROOT)), "idioma": "es",
-               "plan_url": calculo.PLAN_URL, "cuerpo_nuevo": "/cuerpo/nuevo", "garmin_conectado": False}
+               "plan_url": calculo.PLAN_URL, "cuerpo_nuevo": "/cuerpo/nuevo", "garmin_conectado": False, "garmin_ultima_subida": None}
     ahora = AHORA_UTC.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(cfg["timezone"]))
     return build.build(build.load_data(ROOT), build.load_plan(ROOT), cfg, ahora)
 
 
-def norm(d, a_pages=False):
-    texto = json.dumps(d, sort_keys=True, ensure_ascii=False)
-    if a_pages:   # los textos que cambian en modo web (el plan los nombra)
-        texto = texto.replace("(desde Ajustes)", "(con /ajustar)").replace("vayas a Ajustes", "corras /ajustar") \
-                     .replace("Ve a Ajustes para", "Corre /ajustar para")
-    return json.loads(texto)
+def norm(d):
+    return json.loads(json.dumps(d, sort_keys=True, ensure_ascii=False))
 
 
 @pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
@@ -55,15 +51,15 @@ def test_dashboard_de_pedro_importado_igual_al_de_build(web_ctx):
         web = calculo.calcular(db, db.get(Usuario, uid), AHORA_UTC)
         assert validar.problemas(web) == []
         assert "serie" not in json.dumps(web)
-    # diferencias permitidas: ui.menu (lista de la web), ui.repo_estado (None si no hay repo) y los textos de /ajustar
+    # diferencias permitidas: ui.menu (lista de la web), ui.repo_estado (None si no hay repo)
     assert web["ui"].pop("repo_estado") is None
     web["ui"].pop("primer_inicio")   # solo la web (E3); se prueba en test_web_primer_inicio
     web["ui"].pop("recordatorio_corrida")
     web["ui"].update(propuesta_url=None, plan_nuevo_url=None, retomar_url=None, retomar_opciones=[])   # solo la web, fuera de la caché (P3)
-    esp = norm(esperado(modo_web=True))
+    esp = norm(esperado())
     assert norm(web) == esp
-    # La web usa fecha de subida y zonas reales; el sitio de archivos mantiene sus propios valores.
-    assert validar.problemas(esperado(modo_web=False)) == []
+    # El build local de Pedro (sin lo que pone la web) también pasa la validación de privacidad.
+    assert validar.problemas(esperado(local=True)) == []
 
 
 @pytest.mark.skipif(not HAY_DATOS, reason="no hay datos personales")
@@ -220,7 +216,7 @@ def test_semanas_del_plan_web_y_build_traen_las_mismas_claves(web_ctx):
     with web_ctx.sesiones() as db:
         importar.importar_carpeta(db, db.get(Usuario, uid), ROOT, salt="42")
         web = calculo.calcular(db, db.get(Usuario, uid), AHORA_UTC)
-    esp = esperado(modo_web=True)["plan"]["semanas"]
+    esp = esperado()["plan"]["semanas"]
     assert [sorted(w) for w in web["plan"]["semanas"]] == [sorted(w) for w in esp]
     assert any("cumplimiento" in w for w in web["plan"]["semanas"]) and all("estados" in w for w in web["plan"]["semanas"] if "progreso" not in w or "cumplimiento" in w)
 

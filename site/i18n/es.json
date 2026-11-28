@@ -211,7 +211,7 @@
 "sitio.fin.prueba": "Prueba de {p} · {fecha}{km}",
 "sitio.fin.prueba_del": "tu prueba del {fecha}",
 "sitio.fin.puntos": "{v} puntos de trote",
-"sitio.fin.siguiente": "Corre /ajustar para el siguiente bloque",
+"sitio.fin.siguiente": "Ve a Ajustes para el siguiente bloque",
 "sitio.fin.sin_base": "Sin base para comparar: la próxima prueba se comparará con esta.",
 "sitio.fin.sin_resultado": "Prueba de {p}: sin resultado",
 "sitio.fin.spkm": "{v} s/km",

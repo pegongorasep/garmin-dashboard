@@ -173,7 +173,7 @@ Compatibilidad
 Código y diseño
 - Lógica en Python; el JS solo pinta (lo que se muestra lo decide Python). Textos en español, por i18n. **Sin librerías de JS.**
 - **Altura fija**: elegir no cambia la altura de nada; solo expandir/colapsar. Ranuras reservadas en `em`/`lh`; nunca cambios de `font-weight` al elegir; gráficas de altura fija.
-- Solo la web: Pages ya no existe (retirado 2026-11-26); diseña solo para ahilallevas.com, sin respaldos para Pages.
+- Solo la web: Pages ya no existe (retirado 2026-11-26); diseña solo para ahilallevas.com, sin respaldos para Pages. El build local de Pedro (`dashboard/build.py`, `run_local.sh`) pinta lo de la web; en el servidor estático algunas ligas (`/plan/...`, Ajustes) no funcionan.
 - No edites a mano lo generado (`site/tokens.css`, `site/iconos.js`, `site/i18n/*.json`).
 - Las plantillas de repos nuevos viven en `plantilla_v5/`; `template/` ya no existe.
 - No toques `.claude/worktrees/` (tiene trabajo sin integrar).

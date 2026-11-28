@@ -336,4 +336,4 @@ def montar(app, get_db, settings) -> None:
         u.historial_desde = None   # el pedido pendiente se cumplió con esta subida
         db.commit()
         _cerrar_sinc(db, u, request, True, (cuentas.get("actividad") or {}).get("nuevos"))
-        return {"ok": True, "publicar_pages": not u.migrado}
+        return {"ok": True}

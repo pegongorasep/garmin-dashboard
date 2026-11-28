@@ -227,7 +227,7 @@ def repetir_semana(db, actor, ahora, atleta, *, semana: int | None = None, resum
     a, crudo, plan, _ = _editable(db, actor, atleta)
     try:
         hoy = _hoy(ahora, crudo)
-        cfg = plan_vivo.con_pausas(normalizar_config({**crudo, "modo": "web"}), hoy)
+        cfg = plan_vivo.con_pausas(normalizar_config(crudo), hoy)
         n = build.m.semana_del_plan(hoy, cfg)
         if n is None:
             raise ConfigError("Hoy no hay una semana de plan para repetir.")

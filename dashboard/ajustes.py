@@ -196,12 +196,9 @@ def _saltos(brutos) -> list:
 
 def normalizar_config(crudo: dict) -> dict:
     """Config plana lista para build/metrics/garmin_connect a partir del dict crudo. Truena con ConfigError.
-    Clave opcional `modo` ("pages" por defecto, "web" en la web): la pone quien llama, no se escribe en config.yaml."""
+    La clave `modo` de configs viejas ("pages" o "web") se ignora: la web es el único modo."""
     defaults = _leer_yaml(Path(__file__).parent / "defaults.yaml")
     cfg = crudo or {}
-    modo = cfg.get("modo") or "pages"
-    if modo not in ("pages", "web"):
-        raise ConfigError(f"modo '{modo}' no válido; usa: pages, web")
     perfil, corrida = cfg.get("perfil") or {}, cfg.get("corrida") or {}
     act = cfg.get("actividades") or {}
 
@@ -238,7 +235,6 @@ def normalizar_config(crudo: dict) -> dict:
     umbrales = {**defaults["umbrales"], **(cfg.get("umbrales") or {})}
     desde = perfil.get("fc_max_correa_desde")
     return {
-        "modo": modo,
         "sin_plan": bool(cfg.get("sin_plan", defaults.get("sin_plan", False))),   # sin plan: el sitio muestra «tu semana»
         "idioma": _idioma(cfg.get("idioma")),   # es | en; None = el del navegador (el sitio lo decide)
         "menu": list(cfg.get("menu") or []),   # solo la web: [{texto, url}] para ui.menu

@@ -57,7 +57,7 @@ def config_de(db: Session, usuario: Usuario, menu: list | None = None, idioma: s
     idioma = idioma or usuario.idioma or "es"
     # sin ajustes (nadie los tiene al registrarse): el motor usa los de fábrica y la persona queda sin plan, con o sin copia
     base = crudo_nuevo if crudo_nuevo is not None else aj.config if aj else {"perfil": {"zona_horaria": "America/Merida", "fc_max": 190}, "corrida": {"inicio": "2026-01-05"}}   # los de fábrica (config_por_defecto)
-    crudo = {**base, "modo": "web", "menu": menu_de(idioma) if menu is None else menu,
+    crudo = {**base, "menu": menu_de(idioma) if menu is None else menu,
              "plan_acciones": plan_acciones(idioma), "idioma": idioma}
     if aj is not None and not usuario.sin_plan:
         crudo["plan_url"] = PLAN_URL
