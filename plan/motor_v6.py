@@ -11,10 +11,11 @@ Qué NO hace: no calcula zonas de FC (los pasos dicen Z1/Z2/…; el sitio las tr
 cuánto hizo la persona: el plan es fijo y no se ajusta cada semana.
 """
 import math
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 RAIZ = Path(__file__).parent.parent
+from dashboard.fechas import lunes as _lunes
 from plan import pasos as ps
 from plan.nivel import PISO_NIVEL
 
@@ -102,10 +103,6 @@ def _u(clave):
 
 
 # ───────────────────────────── entrada ─────────────────────────────
-
-def _lunes(d: date) -> date:
-    return d - timedelta(days=d.weekday())
-
 
 def _meta(e: dict) -> dict:
     """Normaliza la meta: {"tipo": ninguna|base|velocidad|carrera, "km", "fecha", "semanas_hasta"}."""

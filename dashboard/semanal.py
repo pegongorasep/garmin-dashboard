@@ -2,11 +2,8 @@
 from datetime import date, timedelta
 
 from dashboard import metrics as m
+from dashboard.fechas import lunes as _lunes
 
-
-
-def _lunes(d: date) -> date:
-    return d - timedelta(days=d.weekday())
 
 
 # --- cifras de la semana: una sola fuente (Unificar U2) ---
@@ -136,10 +133,6 @@ def adherencia(semanas: list, ultimas: int = 4):
 
 
 SEMANAS_SIN_PLAN = 12
-
-
-def _lunes(d: date) -> date:
-    return d - timedelta(days=d.weekday())
 
 
 def _tramo_plan(plan: dict = None, config: dict = None):

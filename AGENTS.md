@@ -51,6 +51,7 @@ Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan im
   - `metricas/carreras.py`: pruebas, carreras, mejores marcas.
   - `metricas/inbody.py`: composición y hoja InBody.
 - `semanal.py`: cifras de la semana y del plan (cumplimiento, ritmo, volumen, rachas) para Hoy, Plan y Progreso.
+- `fechas.py`: `lunes(d)`, única definición del lunes de la semana (`monday` de `construir/comun.py` es alias).
 - `ajustes.py`: lee `config.yaml` + `defaults.yaml` y devuelve el dict plano (`cargar_config`, `normalizar_config`).
 - `defaults.yaml`: valores por defecto del motor (umbrales, categorías, `sin_plan`).
 - `paquete.py`: el paquete que sube cada repo; archivos de `data/` reducidos a lista blanca (ids opacos).

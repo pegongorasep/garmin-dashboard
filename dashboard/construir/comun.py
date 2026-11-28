@@ -2,13 +2,11 @@
 from dashboard import metrics as m
 from datetime import date, timedelta
 
+from dashboard.fechas import lunes as monday  # noqa: F401
+
 
 def r1(x):
     return None if x is None else round(x, 1)
-
-
-def monday(day: date) -> date:
-    return day - timedelta(days=day.weekday())
 
 
 def light_on(day: date, data: dict, config: dict, prev=None) -> dict:

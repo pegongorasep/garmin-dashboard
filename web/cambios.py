@@ -1,11 +1,13 @@
 """Historial de cambios. TODA escritura a `ajustes`, `planes` o `inbody` pasa por `aplicar_cambio`: guarda quién, por qué
 vía y el antes/después, y permite deshacer (el `antes` se aplica como un cambio nuevo)."""
 import copy
-from datetime import date, timedelta
+from datetime import date
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
+
+from dashboard.fechas import lunes as _lunes
 
 from .modelos import Ajustes, Cambio, InBody, Plan, Usuario, ahora
 from .permisos import puede_editar
@@ -95,10 +97,6 @@ def via_de(actor: Usuario, atleta: Usuario) -> str:
 
 def _saltos(ajustes) -> list:
     return ((ajustes or {}).get("corrida") or {}).get("saltos") or []
-
-
-def _lunes(d: date) -> date:
-    return d - timedelta(days=d.weekday())
 
 
 def _salto_fijo(c: Cambio, actuales: dict | None, hoy: date | None) -> bool:
