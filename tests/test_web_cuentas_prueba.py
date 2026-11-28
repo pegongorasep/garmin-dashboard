@@ -1,12 +1,15 @@
 """Cuentas de prueba (`@prueba.test`) desde /admin."""
 import re
+from datetime import date
 
 import httpx
 
-from web import auth, correo
+from dashboard import paquete
+from web import auth, correo, cuentas_prueba
 from web.config import Settings
-from web.modelos import LigaLogin, Usuario
-from ayudas import csrf_de, listo, post
+from web.modelos import Consentimiento, DatoGarmin, LigaLogin, Usuario
+from web.privacidad import VERSION_AVISO
+from ayudas import HOY, csrf_de, listo, post
 
 
 def admin_listo(ctx):
@@ -104,3 +107,44 @@ def test_no_admin_recibe_404(web_ctx):
         assert cl.post(f"/admin/prueba/{ruta}", data=datos).status_code == 403   # sin CSRF
     with web_ctx.sesiones() as db:
         assert db.query(Usuario).count() == 2
+
+
+def test_historial_inventado():
+    hoy = date(2026, 11, 26)   # jueves
+    assert cuentas_prueba.inventar_historial("vacia", hoy, "a") == ([], {})
+    for nombre in ("empezando", "constante", "crossfit"):
+        acts, detalles = cuentas_prueba.inventar_historial(nombre, hoy, "a@prueba.test")
+        assert (acts, detalles) == cuentas_prueba.inventar_historial(nombre, hoy, "a@prueba.test")
+        assert len({a["id"] for a in acts}) == len(acts) > 5
+        fechas = [a["startTimeLocal"][:10] for a in acts]
+        assert max(fechas) < "2026-11-26" and max(fechas) >= "2026-11-23" and min(fechas) >= "2026-09-28"
+        # pasa la misma revisión que lo que sube un tubo de verdad
+        assert paquete.validar({"esquema": paquete.ESQUEMA, "motor": "x",
+                                "archivos": {"activities": acts, "activity_details": detalles}}) == []
+        for a in acts:
+            assert sum(a[f"hrTimeInZone_{z}"] for z in range(1, 6)) <= a["duration"]
+            assert a["activityType"]["typeKey"] != "running" or a["distance"] > 0
+    tipos = {a["activityType"]["typeKey"] for a in cuentas_prueba.inventar_historial("crossfit", hoy, "a")[0]}
+    assert tipos == {"running", "hiit"}
+    assert cuentas_prueba.inventar_historial("empezando", hoy, "a")[1]   # trae tramos de trote y caminata
+
+
+def test_cada_historial_se_ve_en_su_data_json(web_ctx):
+    _, cl = admin_listo(web_ctx)
+    web_ctx.app.state.reloj = lambda: HOY
+    for nombre in cuentas_prueba.HISTORIALES:
+        r = cl.post("/admin/prueba/crear", data={"csrf": csrf_de(cl.get("/admin").text), "nombre": nombre, "historial": nombre})
+        u = cuenta_de(web_ctx, f"{nombre}@prueba.test")
+        with web_ctx.sesiones() as db:
+            filas = db.query(DatoGarmin).filter(DatoGarmin.usuario_id == u.id).count()
+            assert (filas == 0) == (nombre == "vacia")
+            fila = db.get(Usuario, u.id)
+            fila.nombre, fila.apellido = "Ana", "Prueba"
+            db.add(Consentimiento(usuario_id=u.id, version_aviso=VERSION_AVISO))
+            db.commit()
+        suyo = web_ctx.cliente()
+        post(suyo, liga_en(r.text))
+        assert suyo.get("/").status_code == 200
+        assert suyo.get("/data.json").status_code == 200
+    r = cl.post("/admin/prueba/crear", data={"csrf": csrf_de(cl.get("/admin").text), "nombre": "z", "historial": "otro"})
+    assert r.status_code == 422 and cuenta_de(web_ctx, "z@prueba.test") is None

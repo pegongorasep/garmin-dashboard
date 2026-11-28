@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "componentes.html" import boton, campo, aviso, tarjeta %}
+{% from "componentes.html" import boton, campo, seleccion, aviso, tarjeta %}
 {% block titulo %}{{ t("admin.titulo_pagina") }}{% endblock %}
 {% block clase %}ancha{% endblock %}
 {% block contenido %}
@@ -34,6 +34,8 @@
 <form class="pila" method="post" action="/admin/prueba/crear">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   {{ campo(t("admin.prueba_nombre"), "nombre", ayuda=t("admin.prueba_nombre_ayuda"), requerido=True, extra={"maxlength": "30", "autocomplete": "off", "autocapitalize": "none"}) }}
+  {{ seleccion(t("admin.prueba_historial"), "historial", [("vacia", t("admin.prueba_hist_vacia")), ("empezando", t("admin.prueba_hist_empezando")),
+       ("constante", t("admin.prueba_hist_constante")), ("crossfit", t("admin.prueba_hist_crossfit"))], "vacia", ayuda=t("admin.prueba_historial_ayuda")) }}
   <div class="acciones">{{ boton(t("admin.prueba_crear"), tipo="submit") }}</div>
 </form>
 {% for u in usuarios if u.prueba %}
