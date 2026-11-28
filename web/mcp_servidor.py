@@ -220,7 +220,7 @@ def repetir_semana(db, actor, ahora, atleta) -> dict:
         n = build.m.semana_del_plan(_hoy(ahora, crudo), cfg)
         if n is None:
             raise ConfigError("Hoy no hay una semana de plan para repetir.")
-        nuevo = plan_vivo.repetir_semana(crudo, n)
+        nuevo, _info = plan_vivo.repetir(crudo, plan or {"weeks": []}, cfg, _hoy(ahora, crudo))
     except (ConfigError, ValueError) as ex:
         raise Rechazo(str(ex)) from None
     return _guardar(db, actor, a, f"Repitió la semana {n} (IA)", {"ajustes": nuevo})

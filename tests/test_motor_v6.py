@@ -267,8 +267,6 @@ def test_inicio_se_lleva_al_lunes():
     assert v6.generar_v6(entrada(inicio="2026-12-03"))["start"] == "2026-11-30"
 
 
-# --- ajustar_semana ---
-
 def plan_plano(*semanas):
     """Plan hecho a mano: (kind, [minutos]) por semana; la última sesión es la larga."""
     ws = []

@@ -142,9 +142,8 @@ def montar(app, get_db, actual, render, formulario, settings) -> None:
 
     def repetir(db, atleta, crudo, cfg, plan, f, hoy):
         n = build.m.semana_del_plan(hoy, cfg)
-        if n is None:
-            raise ErrorT("err.sin_semana")
-        return plan_vivo.repetir_semana(crudo, n), None, f"Repitió la semana {n}"
+        nuevo, _info = plan_vivo.repetir(crudo, plan, cfg, hoy)
+        return nuevo, None, f"Repitió la semana {n}"
 
     for nombre, fn in (("viaje", viaje), ("enfermedad", enfermo), ("carrera", carrera), ("repetir", repetir)):
         doble("post", f"/plan/{nombre}", accion(nombre, fn))

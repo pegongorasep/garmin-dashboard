@@ -233,7 +233,7 @@ def semanas_plan(plan: dict, zonas: list, hoy: date, semanas_hoy: list, config: 
     futuras: pendiente; la semana actual usa plan.estado_sesiones). El avance sale de `semanas_hoy` (build_semana): un solo conteo."""
     por_inicio = {s["inicio"]: s for s in semanas_hoy}
     inicio = date.fromisoformat(config["plan_start"])
-    sec = m.secuencia_semanas(inicio, config.get("semanas_repetidas", []), config.get("plan_semanas", 12), config.get("pausas", []))
+    sec = m.secuencia_de(config)
     lunes = {}
     for i, n in enumerate(sec):
         if n is not None and (n not in lunes or monday(inicio) + timedelta(weeks=i) <= monday(hoy)):
@@ -561,7 +561,6 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
     """Una semana calendario (lun–dom) de la vista Hoy: stats de todas las corridas, calendario, sesiones y extras."""
     fin = ini + timedelta(days=6)
     hasta = min(fin, hoy)
-    repetidas = config.get("semanas_repetidas", [])
     n = m.semana_del_plan(ini, config)
     semana, estado = week_assignment(ini, data, config, plan, hasta=hasta)
     pasada = fin < hoy
@@ -598,13 +597,8 @@ def build_semana(ini: date, hoy: date, data: dict, config: dict, plan: dict) -> 
 
 
 def _total_semanas(config: dict, plan: dict) -> int:
-    """Semanas del calendario del plan: las del plan + repetidas + pausas (viaje sin correr, enfermedad)."""
-    inicio = date.fromisoformat(config["plan_start"])
-    n = len(plan["weeks"]) + len(config.get("semanas_repetidas", []))
-    for i in sorted({(date.fromisoformat(p) - inicio).days // 7 for p in config.get("pausas", [])}):
-        if 0 <= i <= n:
-            n += 1
-    return n
+    """Semanas del calendario del plan: las de la secuencia (repetidas, saltos y pausas). Sin plan_semanas en la config, las del plan."""
+    return len(m.secuencia_de({**config, "plan_semanas": len(plan["weeks"])}))
 
 
 def ultima_semana(config: dict, plan: dict) -> date:

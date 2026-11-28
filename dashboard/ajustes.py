@@ -179,6 +179,20 @@ def leer_config_yaml(ruta) -> dict:
     return _leer_yaml(ruta)
 
 
+def _saltos(brutos) -> list:
+    """`corrida.saltos`: [{lunes, semana, quita}] (por defecto []). Los mal formados se ignoran sin romper nada."""
+    out = []
+    for s in brutos if isinstance(brutos, list) else []:
+        try:
+            lunes = date.fromisoformat(str(s["lunes"]))
+            semana, quita = int(s["semana"]), sorted({int(q) for q in s.get("quita") or []})
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue
+        if lunes.weekday() == 0 and semana >= 1:
+            out.append({"lunes": lunes.isoformat(), "semana": semana, "quita": quita})
+    return out
+
+
 def normalizar_config(crudo: dict) -> dict:
     """Config plana lista para build/metrics/garmin_connect a partir del dict crudo. Truena con ConfigError.
     Clave opcional `modo` ("pages" por defecto, "web" en la web): la pone quien llama, no se escribe en config.yaml."""
@@ -241,6 +255,7 @@ def normalizar_config(crudo: dict) -> dict:
         "sensor": sensor, "escalon": escalon, "escalera": list(ESCALERA), "metas": metas, "eventos": eventos,
         "pausas": sorted({_fecha(p, "pausas") for p in cfg.get("pausas") or []}),   # solo la web (salen de `eventos` y de hoy)
         "plan_start": inicio, "semanas_repetidas": list(corrida.get("semanas_repetidas") or []),
+        "saltos": _saltos(corrida.get("saltos")),
         "nivel": nivel, "intensidad": intensidad, "calidad_tipos": tipos_cal,
         "caminatas": caminatas, "variada": variada,
         "plan_semanas": int(corrida.get("semanas", 12)), "base_min": base, "pruebas": pruebas,

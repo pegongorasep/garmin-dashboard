@@ -433,41 +433,63 @@ def motivo(sigs: dict, config=None, ayer=None):
     return texto
 
 
-def secuencia_semanas(plan_start: date, repetidas=(), total: int = 12, pausas=()) -> list:
+def secuencia_semanas(plan_start: date, repetidas=(), total: int = 12, pausas=(), saltos=()) -> list:
     """Semanas del calendario desde `plan_start`: el número de semana del plan que toca en cada una (o None si esa
-    semana está en pausa). `repetidas` repite semanas del plan; `pausas` son lunes (AAAA-MM-DD) que no gastan semana
-    del plan (viaje sin correr, enfermedad): el plan se reanuda donde iba."""
+    semana está en pausa). `repetidas` repite semanas del plan (formato viejo); `pausas` son lunes (AAAA-MM-DD) que no
+    gastan semana del plan (viaje sin correr, enfermedad): el plan se reanuda donde iba. `saltos` [{lunes, semana, quita}]:
+    desde su lunes toca la semana `semana`, luego la siguiente… hasta `total`, sin las de `quita` (las de saltos anteriores
+    tampoco). Se aplican en orden de fecha; los mal formados se ignoran."""
     secuencia = []
     for n in range(1, total + 1):
         secuencia += [n] * (1 + list(repetidas).count(n))
-    for i in sorted({(date.fromisoformat(str(p)) - plan_start).days // 7 for p in pausas}):
+    pausas_i = sorted({(date.fromisoformat(str(p)) - plan_start).days // 7 for p in pausas})
+    validos = []
+    for s in saltos or ():
+        try:
+            validos.append((date.fromisoformat(str(s["lunes"])), int(s["semana"]), {int(q) for q in s.get("quita") or []}))
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue
+    quitadas = set()
+    for lunes, semana, quita in sorted(validos, key=lambda v: v[0]):
+        quitadas |= quita
+        j = (lunes - plan_start).days // 7                      # semana del calendario del salto
+        p = j - sum(1 for i in pausas_i if i < j)               # lugar en la secuencia sin pausas
+        if 0 <= p <= len(secuencia) and 1 <= semana <= total:
+            secuencia = secuencia[:p] + [n for n in range(semana, total + 1) if n not in quitadas]
+    for i in pausas_i:
         if 0 <= i <= len(secuencia):
             secuencia.insert(i, None)
     return secuencia
 
 
-def week_index(day: date, plan_start: date, repetidas=(), total: int = 12, pausas=()):
+def secuencia_de(config: dict) -> list:
+    """`secuencia_semanas` con lo que dice la config (inicio, repetidas, total, pausas y saltos)."""
+    return secuencia_semanas(date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []),
+                             config.get("plan_semanas", 12), config.get("pausas", []), config.get("saltos", []))
+
+
+def week_index(day: date, plan_start: date, repetidas=(), total: int = 12, pausas=(), saltos=()):
     """Semana del plan (1–`total`) que toca en `day`, o None si está fuera (o en pausa).
 
     `repetidas`: números de semana del plan que se repitieron (una semana puede
-    aparecer más de una vez). Cada repetición empuja el resto una semana. `pausas`: ver `secuencia_semanas`.
+    aparecer más de una vez). Cada repetición empuja el resto una semana. `pausas` y `saltos`: ver `secuencia_semanas`.
     """
-    secuencia = secuencia_semanas(plan_start, repetidas, total, pausas)
+    secuencia = secuencia_semanas(plan_start, repetidas, total, pausas, saltos)
     i = (day - plan_start).days // 7
     return secuencia[i] if 0 <= i < len(secuencia) else None
 
 
 def semana_del_plan(day: date, config: dict):
-    """`week_index` con lo que dice la config (inicio, semanas repetidas, total y pausas)."""
-    return week_index(day, date.fromisoformat(config["plan_start"]), config.get("semanas_repetidas", []),
-                      config.get("plan_semanas", 12), config.get("pausas", []))
+    """`week_index` con lo que dice la config (inicio, semanas repetidas, total, pausas y saltos)."""
+    sec = secuencia_de(config)
+    i = (day - date.fromisoformat(config["plan_start"])).days // 7
+    return sec[i] if 0 <= i < len(sec) else None
 
 
 def en_pausa(day: date, config: dict) -> bool:
     """Hoy cae en una semana de pausa del plan (viaje sin correr o enfermedad)."""
-    inicio = date.fromisoformat(config["plan_start"])
-    i = (day - inicio).days // 7
-    sec = secuencia_semanas(inicio, config.get("semanas_repetidas", []), config.get("plan_semanas", 12), config.get("pausas", []))
+    i = (day - date.fromisoformat(config["plan_start"])).days // 7
+    sec = secuencia_de(config)
     return 0 <= i < len(sec) and sec[i] is None
 
 

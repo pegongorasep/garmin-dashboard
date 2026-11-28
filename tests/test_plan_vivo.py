@@ -176,12 +176,12 @@ def test_repetir_semana_y_deshacer_por_el_historial(web_ctx):
     uid, cl = listo(web_ctx)
     r = cl.post("/plan/repetir", data={"csrf": tok(cl)})
     assert r.status_code == 303
-    assert crudo(web_ctx, uid)["corrida"]["semanas_repetidas"] == [3]
+    assert crudo(web_ctx, uid)["corrida"]["saltos"] == [{"lunes": "2026-11-30", "semana": 3, "quita": []}]
     with web_ctx.sesiones() as db:
         c = db.query(Cambio).one()
         assert c.descripcion == "Repitió la semana 3"
     d = cl.get("/data.json").json()
-    assert d["plan"]["semanas_repetidas"] == [3] and len(d["semanas_hoy"]) == 13
+    assert d["plan"]["semana_actual"] == 3 and len(d["semanas_hoy"]) == 13
     cl.post(f"/historial/{c.id}/deshacer", data={"csrf": tok(cl)})
     assert crudo(web_ctx, uid) == CONFIG
 

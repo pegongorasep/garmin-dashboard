@@ -2,7 +2,7 @@
 flexibles. Lógica pura (sin base de datos): recibe y devuelve dicts; las rutas y `aplicar_cambio` están en otros módulos.
 
 Dónde vive cada cosa:
-- `ajustes.config` (crudo) guarda `corrida.metas`, `corrida.eventos`, `corrida.escalon` y `corrida.semanas_repetidas`.
+- `ajustes.config` (crudo) guarda `corrida.metas`, `corrida.eventos`, `corrida.escalon`, `corrida.semanas_repetidas` y `corrida.saltos` (repetir / retomar).
 - `planes.plan` es el plan que sale de `motor_v6` (más lo que la persona edite a mano). NO lleva los eventos:
   `plan_efectivo` los aplica al calcular (así quitar un evento o deshacerlo no deja restos en el plan).
 - Una semana de **pausa** (viaje sin correr, enfermedad o lesión) no gasta semana del plan: el plan se reanuda donde iba
@@ -33,7 +33,7 @@ def semana_tope(cfg: dict, hoy: date) -> int:
     """Primer número de semana del plan que todavía no pasa: las anteriores no se tocan al regenerar.
     Antes del inicio = 1; después del final = total + 1."""
     inicio = date.fromisoformat(cfg["plan_start"])
-    sec = m.secuencia_semanas(inicio, cfg["semanas_repetidas"], cfg["plan_semanas"], cfg.get("pausas", []))
+    sec = m.secuencia_de(cfg)
     i = (hoy - inicio).days // 7
     if i < 0:
         return 1
@@ -86,7 +86,7 @@ def plan_efectivo(plan: dict, cfg: dict) -> dict:
     if not any(e["tipo"] == "viaje" and e["modo"] != "pausa" for e in cfg["eventos"]):
         return plan
     inicio = date.fromisoformat(cfg["plan_start"])
-    sec = m.secuencia_semanas(inicio, cfg["semanas_repetidas"], cfg["plan_semanas"], cfg.get("pausas", []))
+    sec = m.secuencia_de(cfg)
     ligera, igual = set(), set()   # n de semanas de viaje con correr menos / «sigo igual» (solo se marca)
     for e in cfg["eventos"]:
         if e["tipo"] == "viaje" and e["modo"] != "pausa":
@@ -142,7 +142,7 @@ def agregar_carrera_en_plan(crudo: dict, plan: dict | None, cfg: dict, fecha: st
         if distancia not in motor_v6.UMBRALES["taper"]:
             raise ValueError("distancia sin taper")
         inicio = date.fromisoformat(cfg["plan_start"])
-        sec = m.secuencia_semanas(inicio, cfg["semanas_repetidas"], 60, cfg.get("pausas", []))
+        sec = m.secuencia_de({**cfg, "plan_semanas": 60})
         i = (lunes(date.fromisoformat(fecha)) - lunes(inicio)).days // 7
         if not 0 <= i < len(sec) or sec[i] is None:
             raise ValueError("la fecha cae fuera del plan o en una pausa")
@@ -216,10 +216,67 @@ def quitar_evento(crudo: dict, evento_id: str) -> dict:
     return _validado(nuevo)
 
 
-def repetir_semana(crudo: dict, n: int) -> dict:
+def carrera_objetivo(plan: dict | None, cfg: dict) -> dict | None:
+    """La carrera para la que está armado el plan (plan v6 con `meta.carrera`): su meta en `cfg["metas"]` (`en_plan`) o, si no
+    está, la del plan ({km, ...}). None si el plan no es de carrera. Una carrera de paso (meta suelta) no cuenta."""
+    carrera = ((plan or {}).get("meta") or {}).get("carrera")
+    if not carrera:
+        return None
+    en_plan = [x for x in cfg.get("metas", []) if x.get("en_plan")]
+    return en_plan[0] if en_plan else dict(carrera)
+
+
+def _semanas_taper(plan: dict, carrera: dict) -> set[int]:
+    """Números de semana de taper y carrera: las que el plan marca (`evento` descarga_carrera / carrera) y, como mínimo,
+    las últimas `len(taper[km más cercano])`."""
+    marcadas = {w["n"] for w in plan["weeks"] if w.get("evento") in ("descarga_carrera", "carrera") or w.get("kind") in ("taper", "carrera")}
+    km = int(float(carrera.get("km") or carrera.get("distancia_km") or 0))
+    cerca = min(motor_v6.UMBRALES["taper"], key=lambda k: abs(k - km))
+    return marcadas | {w["n"] for w in plan["weeks"][-len(motor_v6.UMBRALES["taper"][cerca]):]}
+
+
+def _saltar(crudo: dict, plan: dict, cfg: dict, hoy: date, x: int | None) -> tuple[dict, dict]:
+    """Repetir (x None: la semana en curso, desde el próximo lunes) o retomar desde x (desde este lunes)."""
+    n = m.semana_del_plan(hoy, cfg)
+    if n is None:
+        raise ErrorT("err.sin_semana")
+    if x is None:
+        x, desde = n, lunes(hoy) + timedelta(weeks=1)
+    else:
+        if not 1 <= x <= n:
+            raise ErrorT("err.retomar_rango", n=n)
+        desde = lunes(hoy)
+    k = n - x if desde == lunes(hoy) else 1   # semanas que se alarga el plan (retomar la actual: 0)
+    carrera = carrera_objetivo(plan, cfg)
+    quita: list[int] = []
+    if carrera:
+        taper = _semanas_taper(plan, carrera)
+        ya = {q for s in cfg.get("saltos", []) for q in s["quita"]}
+        carga = [w["n"] for w in plan["weeks"] if w["n"] > n and w["n"] not in taper and w["n"] not in ya
+                 and w.get("kind", "carga") == "carga"]
+        if len(carga) < k:
+            raise ErrorT("err.sin_carga_antes_taper")
+        quita = carga[len(carga) - k:] if k else []
     nuevo, c = _corrida(crudo)
-    c["semanas_repetidas"] = sorted(list(c.get("semanas_repetidas") or []) + [int(n)])
-    return _validado(nuevo)
+    c["saltos"] = list(c.get("saltos") or []) + [{"lunes": desde.isoformat(), "semana": x, "quita": quita}]
+    nuevo = _validado(nuevo)
+    sec = m.secuencia_de(con_pausas(normalizar_config({**nuevo, "modo": cfg.get("modo", "web")}), hoy))
+    fin = lunes(date.fromisoformat(cfg["plan_start"])) + timedelta(weeks=len(sec)) - timedelta(days=1)
+    return nuevo, {"k": k, "quita": quita, "fin": fin.isoformat(), "objetivo": carrera is not None}
+
+
+def repetir(crudo: dict, plan: dict, cfg: dict, hoy: date) -> tuple[dict, dict]:
+    """Repite la semana en curso: la próxima vuelve a ser la misma y el resto se recorre. (crudo nuevo, info para la vista previa)."""
+    return _saltar(crudo, plan, cfg, hoy, None)
+
+
+def retomar(crudo: dict, plan: dict, cfg: dict, hoy: date, x: int) -> tuple[dict, dict]:
+    """Retoma desde la semana x (1 ≤ x ≤ la actual): desde este lunes toca la x y el resto se recorre."""
+    try:
+        x = int(x)
+    except (TypeError, ValueError):
+        raise ErrorT("err.retomar_rango", n=m.semana_del_plan(hoy, cfg) or 0) from None
+    return _saltar(crudo, plan, cfg, hoy, x)
 
 
 # --- sesiones flexibles (editor) ---
