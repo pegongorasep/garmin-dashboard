@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 from dashboard import i18n
 from dashboard.ajustes import ConfigError
 
-from . import ROOT, actividad_web, admin, aprende, ajustes_web, auth, calculo, coach, conexion, correo, cuenta, feed, garmin_key, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, sync_web, tubo
+from . import ROOT, actividad_web, admin, aprende, ajustes_web, auth, calculo, coach, conexion, correo, cuenta, deps, feed, garmin_key, google, mcp_servidor, grupos, oauth, onboarding, persona, perfil, plan_nuevo, plan_web, sync_web, tubo
 from .privacidad import VERSION_AVISO
 from .config import WEB, Settings, desde_entorno
 from .db import crear_motor, crear_sesiones
@@ -105,36 +105,8 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
             resp.headers.setdefault("Cache-Control", "no-store")
         return resp
 
-    def get_db():
-        db = sesiones()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    def actual(request: Request, db=Depends(get_db)):
-        return auth.usuario_de_sesion(db, request.cookies.get(auth.COOKIE_SESION))
-
-    # --- ayudas de plantillas y CSRF ---
-
-    def render(request: Request, nombre: str, status: int = 200, **ctx) -> Response:
-        cookie = request.cookies.get(auth.COOKIE_CSRF)
-        nueva = cookie is None
-        cookie = cookie or secrets.token_urlsafe(24)
-        resp = plantillas.TemplateResponse(request, nombre, {"csrf": auth.campo_csrf(settings.secret_key, cookie),
-                                                             "t": request.state.t, "idioma": request.state.idioma,
-                                                             "settings": settings, **ctx}, status_code=status)
-        if nueva:
-            resp.set_cookie(auth.COOKIE_CSRF, cookie, httponly=True, secure=settings.cookie_segura,
-                            samesite="lax", path="/")
-        return resp
-
-    async def formulario(request: Request):
-        """Campos del formulario POST, con el token CSRF ya verificado (403 si falla)."""
-        form = await request.form()
-        if not auth.csrf_valido(settings.secret_key, request.cookies.get(auth.COOKIE_CSRF), form.get("csrf")):
-            raise HTTPException(403, "Token CSRF inválido")
-        return form
+    app.state.plantillas = plantillas
+    get_db, actual, render, formulario = deps.get_db, deps.actual, deps.render, deps.formulario
 
     def poner_sesion(resp: Response, valor: str) -> None:
         resp.set_cookie(auth.COOKIE_SESION, valor, max_age=auth.DIAS_SESION * 86400, httponly=True,
@@ -252,7 +224,7 @@ def crear_app(settings: Settings | None = None, motor=None, enviar=None, reloj=N
     actividad_web.montar(app, get_db, actual, render, formulario, settings)
     plan_nuevo.montar(app, get_db, actual, render, formulario, settings)   # antes de plan_web: /plan/nuevo no choca con /plan/{...}
     plan_web.montar(app, get_db, actual, render, formulario, settings)
-    coach.montar(app, get_db, actual, render, formulario, settings)
+    app.include_router(coach.router)
     oauth.montar(app, get_db, actual, render, formulario, settings)
     oauth.montar_conexiones(app, get_db, actual, render, formulario, settings)
     perfil.montar(app, get_db, actual, render, formulario, settings)

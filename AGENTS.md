@@ -22,7 +22,7 @@ Local de Pedro: `garmin_connect.py` -> `dashboard/build.py` -> `site/data.json` 
 
 ## 2. Mapa de módulos
 
-Convención: `montar(app, ...)` = el módulo registra rutas (se llama desde `web/app.py`; no se usa `APIRouter`). Sin `montar` = lógica pura o utilería.
+Convención: módulos nuevos = `router = APIRouter()` con rutas de primer nivel y dependencias de `web/deps.py` (`get_db`, `actual`, `render`, `formulario`, `settings`; leen `request.app.state`), registrado con `app.include_router(x.router)` en `crear_app()` (ya así: `coach.py`). Los viejos con `montar(app, ...)` (rutas como closures) se están migrando. Sin ninguno de los dos = lógica pura o utilería.
 
 Imports: siempre de paquete (`from dashboard import metrics as m`, `from plan import pasos`, `from scripts import subir`); nada de `sys.path` ni imports planos. Solo los puntos de entrada que se corren como archivo (`garmin_connect.py`, `reloj.py`, `dashboard/build.py`, `scripts/subir.py`, `scripts/web_local.py`) insertan la raíz del repo en `sys.path` una vez; `pytest` usa `pythonpath = ["."]` (`pyproject.toml`).
 
@@ -76,7 +76,7 @@ Cuentas y entrada
 - `auth.py`: invitaciones, ligas de entrada, sesiones y CSRF (tokens solo como hash). Lógica.
 - `google.py`: login con Google (OIDC + PKCE; sigue exigiendo invitación). Rutas.
 - `correo.py`: envío con Resend. `config.py`: `Settings` desde variables de entorno. `db.py`: motor y sesiones SQLAlchemy.
-- `modelos.py`: tablas. `permisos.py`: `puede_ver`/`puede_editar` y permisos sociales. `errores.py`: errores de formulario con clave i18n.
+- `deps.py`: dependencias de las rutas con `APIRouter` (`get_db`, `actual`, `render`, `formulario`, `settings`) desde `app.state`. `modelos.py`: tablas. `permisos.py`: `puede_ver`/`puede_editar` y permisos sociales. `errores.py`: errores de formulario con clave i18n.
 - `onboarding.py`: guía de Garmin `/bienvenida`. Rutas. `primer_inicio.py`: lo que Hoy ofrece a quien llega sin nada. Lógica.
 - `perfil.py`: nombre, apellido y foto. Rutas. `privacidad.py`: versión del aviso y rutas públicas. Constantes.
 - `cuenta.py`: descargar mis datos (ZIP) y borrar cuenta. Rutas. `admin.py`: `/admin` (invitaciones; solo admin). Rutas.
@@ -153,7 +153,7 @@ Páginas varias
 5. Cambió algo del sitio: sube `VERSION` en `site/sw.js` (ver la receta de archivo nuevo).
 
 **Ruta nueva de la web**
-1. Crea `web/<tema>.py` con `def montar(app, get_db, actual, render, formulario, settings)` (copia la firma de `web/coach.py`) y regístralo en `crear_app()` de `web/app.py`. El orden importa: `/plan/nuevo` va antes de `/plan/{...}`; `@app.get("/{archivo}")` va siempre al final.
+1. Crea `web/<tema>.py` con `router = APIRouter()` y funciones de primer nivel que importan de `web/deps.py` (copia `web/coach.py`); regístralo con `app.include_router(<tema>.router)` en `crear_app()` de `web/app.py`. El orden importa: `/plan/nuevo` va antes de `/plan/{...}`; `@app.get("/{archivo}")` va siempre al final.
 2. Todo POST empieza con `form = await formulario(request)` (verifica el CSRF, 403 si falla); en plantillas el campo es `csrf` (viene de `render`). Sin sesión: `RedirectResponse("/entrar", 303)`.
 3. Toda consulta de datos de una persona pasa por `permisos.puede_ver` / `puede_editar` (si no puede: 404). Páginas de edición: `ajustes_web.resolver(db, usuario, atleta_id)`; la ruta se repite bajo `/a/{atleta_id}/...` para el coach.
 4. Toda escritura a `ajustes`, `planes` o `inbody` va por `cambios.aplicar_cambio`.
