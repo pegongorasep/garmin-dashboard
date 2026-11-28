@@ -163,7 +163,7 @@ Seguridad y privacidad
 - El `data.json` público sale de una **lista blanca**: sin IDs de Garmin, nombres de actividades, GPS, nombre ni fecha de nacimiento. `dashboard/validar.py` y `tests/test_build.py` lo vigilan. Nunca un token de GitHub en el sitio.
 - La FC por segundo (`serie`) y los `splits` pueden subir a la web dentro de `activity_details`, pero nunca salen en un `data.json`.
 - Cookies HttpOnly/Secure/SameSite=Lax, CSRF en todo POST, tokens solo como hash, `permisos.puede_ver/puede_editar` en toda consulta de datos de una persona.
-- Secretos y variables (`DATABASE_URL`, `SECRET_KEY`, `RESEND_API_KEY`, `OIDC_AUDIENCE`...) viven en Google Secret Manager; nunca en el repo ni en el chat. El admin en producción corre como Cloud Run Job, nunca con la cadena de la base en la compu.
+- Secretos y variables (`DATABASE_URL`, `SECRET_KEY`, `RESEND_API_KEY`, `OIDC_AUDIENCE`...) viven en Google Secret Manager; nunca en el repo ni en el chat. El admin en producción corre como Cloud Run Job, nunca con la cadena de la base en la compu (única excepción: `./run_web.sh`, ver CLAUDE.md).
 
 Compatibilidad
 - El motor debe seguir funcionando con configs viejas: **toda clave nueva de `config.yaml` o de `data.json` lleva un valor por defecto** (`dashboard/defaults.yaml` o `ajustes.cargar_config`) y el sitio tolera claves ausentes.
@@ -191,7 +191,7 @@ Planes
 - Planes: `.venv/bin/python -m plan.simulador` (personas sintéticas y reglas de seguridad).
 - Privacidad del `data.json`: `.venv/bin/python dashboard/validar.py [ruta/data.json]`.
 - Construir el sitio: `.venv/bin/python dashboard/build.py` (`--day AAAA-MM-DD`, `--out ruta`). Con `GARMIN_USER_DIR=<carpeta>` usa config.yaml, plan/ y data/ de otra persona.
-- Web en local: `.venv/bin/alembic -c web/alembic.ini upgrade head`, luego `.venv/bin/python -m uvicorn web.app:app --port 8000` (SQLite en `web/dev.db`; sin `RESEND_API_KEY` las ligas de entrada salen en la consola).
+- Web en local: `./run_web.sh` usa la **base de producción** (lee la cadena de Secret Manager con la sesión de `gcloud`; no migra: si la revisión de la base no es la del código, no arranca; lo que se guarda ahí es real). `./run_web.sh --temporal` usa SQLite (`web/dev.db`) con las migraciones al día; para probar cambios de estructura, siempre este. En ambos modos solo escucha en esta compu, no manda correos ni habla con GitHub o Google, no usa la caché de `data.json`, y la liga o código de entrada sale en la consola.
 - Admin local: `python -m web.cli crear-admin <correo>`, `invitar [--nota X]`, `importar <correo> <carpeta> [--repo-id N]`.
 - Sitio estático solo con datos de Pedro: `./run_local.sh` (baja datos, construye y sirve en http://localhost:8000).
 - CI (`web.yml`): `pip install -r requirements.txt -r web/requirements.txt -r requirements-dev.txt` y `python -m pytest -q`.

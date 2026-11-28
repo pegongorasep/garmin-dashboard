@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import os
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -241,11 +242,16 @@ def _ui_saltos(db: Session, usuario: Usuario, ui: dict, ahora_naive: datetime, i
 
 
 def _calcular_cacheado(db: Session, usuario: Usuario, ahora_utc: datetime | None = None, idioma: str | None = None) -> dict:
-    """De la caché si la huella no cambió y tiene menos de 30 min; si no, recalcula."""
+    """De la caché si la huella no cambió y tiene menos de 30 min; si no, recalcula.
+    Con AHI_SIN_CACHE (la web local, `./run_web.sh`) ni la lee ni la escribe: la huella no cubre web/, así que verías datos
+    viejos y producción podría servir los calculados con código a medias."""
     cfg = config_de(db, usuario, idioma=idioma)
     idioma = cfg["idioma"]   # el de la petición, o el de la cuenta, o es: la caché lo lleva en su huella
     tz = ZoneInfo(cfg["timezone"])
     local = (ahora_utc.replace(tzinfo=ZoneInfo("UTC")) if ahora_utc else datetime.now(ZoneInfo("UTC"))).astimezone(tz)
+    if os.environ.get("AHI_SIN_CACHE"):
+        aj = db.get(Ajustes, usuario.id)
+        return _armar(db, usuario, aj.config if aj else {}, cfg, local, bool(aj))
     h = huella(db, usuario, local.date().isoformat(), idioma)
     cache = db.get(CacheData, usuario.id)
     if cache and cache.huella == h and ahora() - cache.calculado < timedelta(minutes=MINUTOS_CACHE):

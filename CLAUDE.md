@@ -33,6 +33,9 @@ git tag -f stable <sha> && git push -f origin stable
 
 - Deploy de la web: push a `main` y `gh workflow run web.yml` (pruebas → imagen → Cloud Run, Workload Identity Federation); seguirlo con `gh run watch`.
 - Admin en producción: Cloud Run Job (`gcloud run jobs execute ahi-cli --args=...`), nunca con la cadena de la base en la compu.
+  Única excepción (decidida el 2026-11-27, mientras solo exista producción): `./run_web.sh`, que la tiene solo en memoria y
+  nunca la imprime ni la guarda. Claude, al probar ahí, solo mira; para guardar algo usa únicamente la cuenta de Pedro y
+  pregunta antes.
 - Respaldo: `respaldo.yml` (diario 09:00 UTC) deja `gs://<bucket>/respaldos/AAAA-MM-DD.sql.gz`. **Restaurar:**
   `gcloud storage cp gs://<bucket>/respaldos/<fecha>.sql.gz .`, `gunzip`, y con una base vacía de Neon
   `psql "$DATABASE_URL" < respaldo.sql` (la cadena se pega en la terminal desde Secret Manager, nunca en el chat);
