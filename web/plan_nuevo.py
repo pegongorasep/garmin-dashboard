@@ -502,5 +502,5 @@ async def confirmar(request: Request, atleta_id: int | None = None, usuario=Depe
         atleta.sin_plan = False
         db.commit()
     pref = aw.prefijo(usuario, atleta)
-    return RedirectResponse(f"{pref}/plan/acciones?ok=nuevo" if pref else "/?ok=plan#plan", 303)
+    return RedirectResponse(f"{pref}/plan/acciones?ok=nuevo" if pref else "/?ok=plan_nuevo#plan", 303)
 doble(router, "post", "/plan/nuevo/confirmar", confirmar)

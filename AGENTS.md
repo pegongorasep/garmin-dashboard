@@ -119,7 +119,7 @@ Páginas varias
 - `index.html`: página del dashboard. `catalogo.html`: catálogo del sistema de diseño (en la web, `/diseno`, solo admin).
 - `base.js`: utilidades compartidas, `T("sitio.clave")` de i18n. `app.js`: Hoy, ayuda, grupo y la navegación.
 - `vista_comun.js` (tarjeta con vistas, unidad min/km), `vista_plan.js`, `vista_progreso.js` (Corridas, Cuerpo), `vista_grupo.js` (Juntos) y `vistas.js` (ayuda, tema, rutas, menú y arranque; va al final). Scripts clásicos con globales: el orden de carga es el de `index.html`, `plan_nuevo.html` y `sw.js`. `charts.js`: gráficas SVG a mano.
-- `componentes.js` (objeto `DS`) y `componentes.css`: componentes del sistema de diseño. `styles.css`: layout propio de la app.
+- `componentes.js` (objeto `DS`) y `componentes.css`: componentes del sistema de diseño. `arte.js` (objeto `ARTE`): dibujos SVG de los estados vacíos. `styles.css`: layout propio de la app.
 - `franja.js`: franja de sincronización (`window.Franja`). `actualizar.js`: registra el service worker y ofrece la versión nueva.
 - `sw.js`: service worker (`VERSION`, lista `ESTATICOS`). `manifest.webmanifest` e íconos PNG: la PWA.
 - `tokens.css` e `iconos.js`: GENERADOS por `scripts/tokens.py`; no se editan a mano. `fuentes/`, `dibujo-github.svg`: recursos.

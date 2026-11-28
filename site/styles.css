@@ -143,6 +143,15 @@ body > .pie { margin-top: auto; padding-inline: 0; }   /* pie al fondo si el con
 .sem-barra i { display: block; height: 100%; background: currentColor; }
 .sem-barra.completa i { background: var(--ok); }
 .sem:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Plan recién guardado: entran una vez el anillo real (se traza el fondo y se llena el avance) y las semanas, bloque por bloque */
+@media (prefers-reduced-motion: no-preference) {
+  .recien.anim { animation: ahi-aparece .5s ease-out .1s backwards; }
+  .recien.anim .plan .f { --largo: 189; stroke-dasharray: 189; transform: rotate(-90deg); transform-origin: 36px 36px; animation: ahi-trazo .9s ease-out .2s backwards; }
+  .recien.anim .plan .l { animation: anim-anillo .6s ease-out .9s backwards; }
+  .recien.anim .sem { animation: ahi-aparece .4s ease-out calc(.5s + var(--bl, 0s) + var(--se, 0s)) backwards; }
+  .recien .bloque:nth-child(2) { --bl: .2s; } .recien .bloque:nth-child(3) { --bl: .4s; } .recien .bloque:nth-child(n+4) { --bl: .6s; }
+  .recien .sem:nth-child(4n+2) { --se: .05s; } .recien .sem:nth-child(4n+3) { --se: .1s; } .recien .sem:nth-child(4n) { --se: .15s; }
+}
 .tipos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-10); }
 @media (min-width: 700px) { .tipos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1000px) { .tipos { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

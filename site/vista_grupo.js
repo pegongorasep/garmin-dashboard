@@ -195,10 +195,12 @@ function pintarFeed(sec, error) {
   const f = feedCache, aviso = h("div", { "aria-live": "polite" });
   const mas = f.siguiente ? h("div", { class: "feed-mas" }, DS.boton(T("sitio.gr.feed_mas"), { variante: "sec", chico: true, onclick: (e) => feedMas(sec, e.currentTarget) })) : null;
   const cuerpo = f.items.length ? [aviso, ...f.items.map((it) => feedFila(it, aviso)), mas]
-    : f.listo ? [DS.estadoVacio({ icono: "personas", titulo: T("sitio.gr.feed_vacio_t"), texto: T("sitio.gr.feed_vacio"), accion: { texto: T("sitio.gr.feed_vacio_acc"), href: ((ui().vacios || {}).grupos || {}).invitar || "/grupos" } })]
+    : f.listo ? [DS.tarjeta({}, DS.estadoVacio({ arte: ARTE.personas(), titulo: T("sitio.gr.feed_vacio_t"), texto: T("sitio.gr.feed_vacio"), unaVez: "grupos",
+      accion: { texto: T("sitio.gr.feed_vacio_acc"), href: ((ui().vacios || {}).grupos || {}).invitar || "/grupos" } }))]
     : error ? [DS.errorCarga({ titulo: T("sitio.gr.err_t"), texto: T("sitio.gr.feed_err"), detalle: error, onReintentar: () => feedRefrescar() })]
     : [DS.cargando(T("sitio.gr.cargando"))];
   sec.replaceChildren(h("h3", {}, T("sitio.gr.feed")), ...cuerpo.filter(Boolean));
+  if (sec.isConnected) DS.animar.unaVez();   // el feed llega tarde; con la sección aún suelta, lo que está en la página es lo viejo y gastaría la animación
 }
 
 const feedSeccion = () => $("vista-grupo").querySelector(".juntos-feed");
@@ -236,6 +238,7 @@ function pintarListaGrupos(lista) {
   $("vista-grupo").replaceChildren(h("h2", { class: "grupo-cab ancha" }, T("sitio.gr.tus_grupos")),
     h("div", { class: "grupos-lista ancha" }, lista.map((x) => h("a", { class: "grupo-fila", href: `#juntos/${x.id}` },
       h("span", {}, x.nombre), h("small", {}, T("sitio.gr.personas", { n: x.miembros_n }))))), sec);
+  DS.animar.unaVez();
   feedRefrescar();
 }
 
@@ -287,8 +290,8 @@ const grupoPintarCache = (id) => {
 /** Sin ningún grupo: solo el estado vacío. */
 function pintarSinGrupos() {
   const v = (ui().vacios || {}).grupos || {};
-  $("vista-grupo").replaceChildren(DS.tarjeta({ clase: "ancha" }, DS.estadoVacio({ icono: "personas", titulo: T("sitio.gr.sin_t"), texto: T("sitio.gr.sin_x"),
-    accion: { texto: T("sitio.gr.sin_acc"), href: v.crear || "/grupos/nuevo" } })));
+  $("vista-grupo").replaceChildren(DS.tarjeta({ clase: "ancha" }, DS.estadoVacio({ arte: ARTE.personas({ libres: true }), titulo: T("sitio.gr.sin_t"),
+    texto: T("sitio.gr.sin_x"), unaVez: "grupos", accion: { texto: T("sitio.gr.sin_acc"), href: v.crear || "/grupos/nuevo" } })));
 }
 
 /** Entrar a la pestaña: pinta la caché al instante (sin cargador) y refresca en silencio; sin caché, baja con cargador.

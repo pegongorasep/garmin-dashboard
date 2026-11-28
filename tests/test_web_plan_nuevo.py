@@ -91,7 +91,7 @@ def test_confirmar_guarda_plan_v6_ajustes_y_historial(web_ctx):
     uid, cl = nueva(web_ctx)
     sembrar(web_ctx, uid, semanas=6, por_semana=3, minutos=25)
     r = confirmar(cl, "base", tiempo="x", corrida_larga="30")   # tiempo no es de Base: se ignora
-    assert r.status_code == 303 and r.headers["location"] == "/?ok=plan#plan"
+    assert r.status_code == 303 and r.headers["location"] == "/?ok=plan_nuevo#plan"
     with web_ctx.sesiones() as db:
         p, a, u = db.get(Plan, uid), db.get(Ajustes, uid), db.get(Usuario, uid)
         assert p.plan["meta"]["motor"] == "v6" and p.plan["meta"]["nivel"] == "base" and "dolor" not in p.plan["meta"]

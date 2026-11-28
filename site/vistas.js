@@ -235,6 +235,7 @@ function mostrarVista() {
   mostrarSubvista();
   REDIBUJAR[v]();
   if (v === "grupo") { if (nGrupos() > 0 && sub === "persona" && /^\d+$/.test(sub2 || "")) cargarPersona(sub2); else cargarGrupo(sub && sub !== "persona" ? sub : null); }
+  DS.animar.unaVez();
   window.scrollTo(0, 0);
   if (datos && /[?&]abrir\b/.test(location.hash)) {   // para capturas: ?abrir despliega sesiones y "Ver todos los tipos"
     document.querySelectorAll(`#vista-${v} details.fila-ses, #vista-${v} details.todos-tipos`).forEach((x) => { x.open = true; });
@@ -264,9 +265,9 @@ async function iniciar() {
   window.addEventListener("hashchange", mostrarVista);
   let resizeT;
   window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { for (const f of Object.values(REDIBUJAR)) f(); }, 150); });
+  $("app").hidden = true;   // antes de pintar: nada cuenta como «a la vista» (ni gasta su animación) hasta que llegue data.json
   mostrarVista();
   // Mientras llega data.json: el logo que se arma; si falla, el error con «Volver a intentar».
-  $("app").hidden = true;
   $("carga").replaceChildren(DS.cargando(T("sitio.carga_frase"), { pagina: true }));
   try {
     const resp = await fetch("data.json", { cache: "no-cache" });

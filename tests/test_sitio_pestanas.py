@@ -57,7 +57,7 @@ const T=(k)=>k; const pedidos=[]; const nGrupos=()=>0; let grupoTurno=0; const g
 const grupoGet=(u)=>{pedidos.push(u);return Promise.resolve({})}; const grupoBajar=grupoGet; const juntosVisto=()=>pedidos.push("visto");
 const caja={hijos:null,replaceChildren(...x){this.hijos=x}}; const $=()=>caja;
 const ui=()=>({vacios:{grupos:{crear:"/grupos/nuevo",invitar:"/grupos"}}});
-const DS={tarjeta:(o,...x)=>({o,x}),estadoVacio:(o)=>o};
+const DS={tarjeta:(o,...x)=>({o,x}),estadoVacio:(o)=>o}; const ARTE={personas:(o)=>o};
 %s
 juntosRevisar(); precargarGrupo(); cargarGrupo(null).then(()=>cargarGrupo("3")).then(()=>console.log(JSON.stringify({pedidos,vacio:caja.hijos[0].x[0]})));
 """ % fuente
@@ -65,18 +65,21 @@ juntosRevisar(); precargarGrupo(); cargarGrupo(null).then(()=>cargarGrupo("3")).
     assert r["pedidos"] == []
     assert r["vacio"]["titulo"] == "sitio.gr.sin_t" and r["vacio"]["texto"] == "sitio.gr.sin_x"
     assert r["vacio"]["accion"] == {"texto": "sitio.gr.sin_acc", "href": "/grupos/nuevo"}
+    assert r["vacio"]["arte"] == {"libres": True} and r["vacio"]["unaVez"] == "grupos"
 
 
 @pytest.mark.parametrize("ui,href", [({"vacios": {"grupos": {"invitar": "/grupos/7"}}}, "/grupos/7"), ({}, "/grupos")])
 def test_feed_vacio_lleva_a_la_liga_que_dice_python(ui, href):
     js = """
 const T=(k)=>k; const h=()=>({}); const feedCache={items:[],listo:true,siguiente:null}; const ui=()=>(%s);
-const DS={estadoVacio:(o)=>o}; let hijos; const sec={replaceChildren(...x){hijos=x}};
+let veces=0; const DS={tarjeta:(o,x)=>x,estadoVacio:(o)=>o,animar:{unaVez(){veces++}}}; const ARTE={personas:()=>"personas"}; let hijos; const sec={replaceChildren(...x){hijos=x}};
 %s
-pintarFeed(sec); console.log(JSON.stringify(hijos[1]));
+pintarFeed(sec); const suelta=veces; sec.isConnected=true; pintarFeed(sec); console.log(JSON.stringify({...hijos[1], veces:[suelta,veces]}));
 """ % (json.dumps(ui), _trozo("vista_grupo.js", "function pintarFeed("))
     r = _node(js)
+    assert r["veces"] == [0, 1]   # una sección suelta no gasta la animación del estado vacío viejo
     assert r["titulo"] == "sitio.gr.feed_vacio_t" and r["accion"] == {"texto": "sitio.gr.feed_vacio_acc", "href": href}
+    assert r["arte"] == "personas" and r["unaVez"] == "grupos"
 
 
 @pytest.mark.parametrize("plan,texto,accion", [
@@ -88,10 +91,12 @@ pintarFeed(sec); console.log(JSON.stringify(hijos[1]));
 ])
 def test_plan_vacio(plan, texto, accion):
     js = """
-const T=(k)=>k; const ui=()=>(%s); const DS={tarjeta:(o,...x)=>({o,x}),estadoVacio:(o)=>o};
+const T=(k)=>k; const ui=()=>(%s); const DS={tarjeta:(o,...x)=>({o,x}),estadoVacio:(o)=>o}; const ARTE={anillo:(o)=>o};
 %s
 console.log(JSON.stringify(planVacio()));
 """ % (json.dumps({"vacios": {"plan": plan}} if plan else {}), _trozo("vista_plan.js", "function planVacio("))
     r = _node(js)
     assert "titulo" not in r["o"]   # el título va una sola vez: el del estado vacío
     assert r["x"][0]["titulo"] == "sitio.sl.sin_plan_t" and r["x"][0]["texto"] == texto and r["x"][0]["accion"] == accion
+    espera = (plan or {}).get("estado") == "esperando"   # esperando: se repite; sin plan: entra una vez
+    assert r["x"][0]["arte"] == {"espera": espera} and r["x"][0]["espera"] is espera and r["x"][0]["unaVez"] == (None if espera else "plan")

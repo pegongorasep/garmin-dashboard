@@ -333,6 +333,14 @@ function comparacion(s) {
 
 const flecha = (delta, texto) => `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${texto}`;
 
+/** El anillo de minutos de una semana contra el plan (Hoy, y Plan recién guardado). */
+function anilloSemanaPlan(s) {
+  const p = s.plan, min = (s.stats || {}).minutos || 0, pct = p.min_pct != null ? p.min_pct : 0;
+  return DS.anilloPlan({ pct, titulo: `${fmt(min, 0)} / ${fmt(p.plan_min, 0)} min · ${pct} %`,
+    texto: T("sitio.plan.hechas", { h: p.hechas, t: p.total, inc: p.incompletas ? ` · ${Tn("sitio.incompleta", p.incompletas)}` : "" }),
+    etiqueta: T("sitio.plan.min_de", { a: fmt(min, 0), b: fmt(p.plan_min, 0) }) });
+}
+
 function tarjetaEstaSemana(d, s) {
   const st = s.stats || {};
   const c = DS.tarjeta({ titulo: tituloSemana(d, s), clase: "ancha" }, lineaSemana(st, T(s.estado === "futura" ? "sitio.aun_no" : "sitio.sin_corridas")), intensidadCompacta(s));
@@ -344,12 +352,7 @@ function tarjetaEstaSemana(d, s) {
   if (p) {
     if (p.faltan) c.append(h("p", { class: "nota" }, p.faltan));
     if (s.estado === "futura") c.append(h("p", { class: "nota" }, T("sitio.plan.futura", { t: p.total, m: fmt(p.plan_min, 0) })));
-    else {
-      const min = st.minutos || 0, pct = p.min_pct != null ? p.min_pct : 0;
-      c.append(DS.anilloPlan({ pct, titulo: `${fmt(min, 0)} / ${fmt(p.plan_min, 0)} min · ${pct} %`,
-        texto: T("sitio.plan.hechas", { h: p.hechas, t: p.total, inc: p.incompletas ? ` · ${Tn("sitio.incompleta", p.incompletas)}` : "" }),
-        etiqueta: T("sitio.plan.min_de", { a: fmt(min, 0), b: fmt(p.plan_min, 0) }) }));
-    }
+    else c.append(anilloSemanaPlan(s));
   }
   const comp = comparacion(s);
   if (comp) c.append(h("p", { class: "nota" }, comp));

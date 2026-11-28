@@ -32,26 +32,49 @@ function tarjetaTipos(d) {
 function planVacio() {
   const v = (ui().vacios || {}).plan || {}, espera = v.estado === "esperando";   // esperando: el botón va deshabilitado en la misma ranura
   const accion = !v.armar ? null : espera ? { texto: T("sitio.sync.espera"), deshabilitado: true } : { texto: T("sitio.sl.armar"), href: v.armar };
-  return DS.tarjeta({ clase: "ancha" }, DS.estadoVacio({ icono: null, titulo: T("sitio.sl.sin_plan_t"), texto: T(espera ? "sitio.sl.sin_plan_espera" : "sitio.sl.sin_plan_x"), accion }));
+  return DS.tarjeta({ clase: "ancha" }, DS.estadoVacio({ arte: ARTE.anillo({ espera }), titulo: T("sitio.sl.sin_plan_t"),
+    texto: T(espera ? "sitio.sl.sin_plan_espera" : "sitio.sl.sin_plan_x"), accion, espera, unaVez: espera ? null : "plan" }));
+}
+
+let planRecien = false;   // en esta apertura se acaba de crear el plan (?ok=plan_nuevo): el aviso, el anillo y las semanas arriba se quedan al repintar
+
+/** El anillo real de la semana de hoy (antes de que empiece el plan, el de la semana 1); null si no hay semana de plan. */
+function anilloRecien(d) {
+  const sems = semanasHoy(d);
+  let s = sems[d.semana_hoy_idx ?? 0];
+  if (s && !s.plan && s.plan_empieza) s = sems[s.plan_empieza.idx];
+  return s && s.plan ? DS.tarjeta({ titulo: etiquetaSelector(d, s), clase: "ancha" }, anilloSemanaPlan(s)) : null;
+}
+
+/** Recién creado el plan, la tarjeta entra una vez (DS.animar.unaVez, con su propio nombre). */
+function entraUnaVez(nodo, nombre) {
+  if (nodo && planRecien) { nodo.classList.add("recien"); nodo.dataset.unaVez = nombre; }
+  return nodo;
 }
 
 function renderPlan(d) {
   PINTAR.plan = [];
   const det = d.detalles || {};
   const acciones = ui().plan_acciones || [];
-  const guardado = new URLSearchParams(location.search).get("ok") === "plan";   // viene de guardar un formulario del plan
-  if (guardado) history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
+  const ok = new URLSearchParams(location.search).get("ok");
+  const guardado = ok === "plan" || ok === "plan_nuevo";   // viene de guardar un formulario del plan
+  if (guardado) {
+    if (ok === "plan_nuevo") planRecien = true;
+    history.replaceState(null, "", location.pathname + location.hash);   // el aviso sale una vez, no en cada recarga
+  }
   if (ui().sin_plan) {
     $("vista-plan").replaceChildren(planVacio());
     return;
   }
   $("vista-plan").replaceChildren(...[
     recordatorioCorrida(),
-    guardado ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: T("sitio.plan.listo"), texto: T("sitio.plan.guardado") }) : null,
+    guardado || planRecien ? DS.aviso({ clase: "ok", simbolo: "✔", titulo: T("sitio.plan.listo"), texto: T("sitio.plan.guardado") }) : null,
+    planRecien ? entraUnaVez(anilloRecien(d), "plan-anillo") : null,
+    planRecien ? entraUnaVez(tarjetaDoceSemanas(d), "plan-semanas") : null,   // recién creado: las semanas van arriba, a la vista en el celular
     acciones.length ? h("div", { class: "botones ancha" }, acciones.map((a) => DS.boton(a.texto, { variante: "sec", href: a.url }))) : null,
     ui().plan_url ? h("div", { class: "botones ancha" }, DS.boton(T("sitio.plan.ajustar"), { variante: "sec", href: ui().plan_url })) : null,
     botonRepetirRetomar(),
-    tarjetaDoceSemanas(d),
+    planRecien ? null : tarjetaDoceSemanas(d),
     tarjetaTipos(d),
     tarjetaFcMax(d),
     (ui().avisos || {}).zonas_garmin ? avisoCerrable("zonas_garmin", { clase: "warn", simbolo: "!", extra: "ancha", titulo: T("sitio.zonas.sugerir_t"), texto: T("sitio.zonas.sugerir") }) : null,

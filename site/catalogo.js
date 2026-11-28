@@ -67,6 +67,18 @@ def("Contenedores", "Fila de historial", "DS.filaHistorial()", "Un cambio del pl
 def("Contenedores", "Estado vacío", "DS.estadoVacio()", "Cuando todavía no hay datos.",
   DS.tarjeta({}, DS.estadoVacio({ icono: "correr", titulo: "Todavía no hay corridas", texto: "Cuando el reloj suba tu primera corrida, aquí vas a ver tu ritmo y tus zonas." })),
   DS.tarjeta({}, DS.estadoVacio({ icono: "plan", titulo: "No tienes plan todavía", texto: "Elige tu nivel y tus días y armamos tus semanas.", accion: { texto: "Armar mi plan", href: "#" } })));
+/** Un estado vacío animado con su botón para volver a verlo (en la app sale una vez por apertura). */
+const conRepetir = (vacio) => {
+  vacio.classList.add("anim");
+  return DS.tarjeta({}, vacio, DS.boton("Ver otra vez", { variante: "sec", chico: true, onclick: () => { vacio.classList.remove("anim"); void vacio.offsetWidth; vacio.classList.add("anim"); } }));
+};
+def("Contenedores", "Estado vacío con dibujo", "DS.estadoVacio({ arte }) · ARTE", "El dibujo reserva su caja y la liga su ranura. Se anima una vez por apertura y pantalla; la espera se repite. Con «reducir movimiento», todo quieto y completo.",
+  conRepetir(DS.estadoVacio({ arte: ARTE.anillo(), titulo: "Tu plan empieza aquí", texto: "Contesta unas preguntas y te armamos las semanas según lo que ya corres.",
+    accion: { texto: "Armar mi plan", href: "#" }, secundaria: { texto: "Ver un ejemplo", href: "#" } })),
+  DS.tarjeta({}, DS.estadoVacio({ arte: ARTE.anillo({ espera: true }), espera: true, titulo: "Tu plan empieza aquí",
+    texto: "Para armarlo a tu medida esperamos a que llegue tu historial.", accion: { texto: "Esperando tu historial…", deshabilitado: true } })),
+  conRepetir(DS.estadoVacio({ arte: ARTE.personas({ libres: true }), titulo: "Entrena con tu gente", texto: "Arma un grupo, o abre la liga que te mandaron.", accion: { texto: "Crear un grupo", href: "#" } })),
+  conRepetir(DS.estadoVacio({ arte: ARTE.personas(), titulo: "Tu grupo está listo", texto: "Aquí aparecerá lo que entrenen. Invita a quien ya tiene cuenta.", accion: { texto: "Crear liga de invitación", href: "#" } })));
 def("Contenedores", "Íconos de evento del Plan", "DS.ico()", "Esquina de cada cuadrito de semana: carrera, viaje, enfermedad y prueba.",
   DS.tarjeta({}, h("div", { class: "leyenda" }, ["medalla", "avion", "termometro", "cronometro"].map((n) => h("span", {}, DS.ico(n), n)))));
 def("Contenedores", "Fila de ayuda con muestra", "DS.filaMuestra()", "Muestra visual a la izquierda y texto a la derecha; se usa en el «?» de las 12 semanas.",

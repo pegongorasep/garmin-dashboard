@@ -431,6 +431,38 @@ button.dia:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px;
 .vacio .vc-t { font: 600 14px/19px var(--font-sans); color: var(--ink); }
 .vacio .vc-x { font-size: 13px; line-height: 18px; max-width: 26em; }
 
+/* EstadoVacio con dibujo (arte.js): alto mínimo fijo, caja 4:3 para el dibujo y ranura para la liga; lo animado nunca mueve contenido */
+.vacio.con-arte { align-content: center; gap: var(--space-12); min-height: 420px; box-sizing: border-box; }
+.vacio .arte { display: block; width: 240px; max-width: 100%; height: auto; aspect-ratio: 4 / 3; overflow: visible; color: var(--ink); }
+.vacio.con-arte .vc-t { font: 600 18px/24px var(--font-sans); }
+.vacio.con-arte .vc-x { font-size: 14px; line-height: 20px; max-width: 20em; }
+.vacio.con-arte > .boton { min-width: min(220px, 100%); }
+.vacio .vc-sec { display: grid; place-items: center; min-height: 44px; }
+.arte .a-pop { transform-box: fill-box; transform-origin: 50% 50%; }
+/* El reposo es el final: sin la clase `anim` (o con «reducir movimiento») todo se ve completo. `anim` es de una sola vez; `espera` se repite. */
+@media (prefers-reduced-motion: no-preference) {
+  .anim .a-trazo { animation: ahi-trazo 1.4s ease-out backwards; }
+  .anim .a-pop { animation: ahi-pop .5s cubic-bezier(.3, 1.5, .5, 1) backwards; }
+  .anim .a-aparece { animation: ahi-aparece .5s ease-out backwards; }
+  .anim .a-flota { animation: ahi-flota 3.2s ease-in-out 1.6s; }
+  .anim .a-late { animation: ahi-late 1.8s ease-in-out 1.1s; }
+  .anim .a-d3 { animation-delay: .3s; } .anim .a-d5 { animation-delay: .55s; }
+  .anim .a-d6 { animation-delay: .75s; } .anim .a-d7 { animation-delay: .95s; }
+  .vacio.anim .vc-t { animation: ahi-aparece .5s ease-out .4s backwards; }
+  .vacio.anim .vc-x { animation: ahi-aparece .5s ease-out .55s backwards; }
+  .vacio.anim > .boton { animation: ahi-aparece .5s ease-out .75s backwards; }
+  .vacio.anim .vc-sec { animation: ahi-aparece .5s ease-out .95s backwards; }
+  .arte .a-espera { animation: ahi-redibuja 2.6s ease-in-out infinite; }
+  .vacio.espera > .boton { animation: ahi-late 1.8s ease-in-out infinite; }
+}
+/* --largo: lo que mide el trazo (por defecto, el anillo de ARTE) */
+@keyframes ahi-trazo { from { stroke-dashoffset: var(--largo, 345); } }
+@keyframes ahi-redibuja { 0% { stroke-dashoffset: var(--largo, 345); } 60%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: calc(var(--largo, 345) * -1); } }
+@keyframes ahi-pop { from { transform: scale(0); opacity: 0; } }
+@keyframes ahi-aparece { from { opacity: 0; transform: translateY(8px); } }
+@keyframes ahi-flota { 50% { transform: translateY(-5px); } }
+@keyframes ahi-late { 50% { opacity: .35; } }
+
 /* Formulario: grupos de campos */
 .formulario { display: grid; gap: var(--space-16); }
 .formulario fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-12); min-width: 0; }
@@ -545,7 +577,7 @@ html:not(.js) dialog.dialogo-pagina [data-cierra] { display: none; }
 
 /* Animaciones (G5): entrada de Hoy y cambio de tema. El estado final es el de siempre; con reduced-motion no hay nada. */
 @media (prefers-reduced-motion: no-preference) {
-  html.anim-entrada .plan .l { animation: anim-anillo 600ms ease-out backwards; }
+  html.anim-entrada #vista-hoy .plan .l { animation: anim-anillo 600ms ease-out backwards; }
   html.anim-entrada .sem-barra i { transform-origin: left center; animation: anim-ancho 600ms ease-out backwards; }
   html.anim-entrada #vista-hoy .graf .serie { transform-box: fill-box; transform-origin: bottom; animation: anim-alto 500ms ease-out backwards; }
   html.anim-entrada #vista-hoy .graf .serie:nth-of-type(2n) { animation-delay: 40ms; }

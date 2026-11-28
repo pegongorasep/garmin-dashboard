@@ -53,10 +53,14 @@ const DS = (() => {
       h("button", { class: "boton", type: "button", onclick: onReintentar }, T("sitio.ds.reintentar")),
       detalle ? h("details", {}, h("summary", {}, T("sitio.ds.detalle")), h("code", {}, detalle)) : null);
 
-  /** Estado vacío. Recibe { icono (null = sin ícono), titulo, texto, accion: {texto, href} }; se pone dentro de una tarjeta. */
-  const estadoVacio = ({ icono: nombre, titulo, texto, accion } = {}) =>
-    h("div", { class: "vacio" }, nombre === null ? null : ico(nombre || "punto"), h("p", { class: "vc-t" }, titulo), texto ? h("p", { class: "vc-x" }, texto) : null,
-      accion ? (accion.deshabilitado ? h("button", { class: "boton", type: "button", disabled: true }, accion.texto) : h("a", { class: "boton", href: accion.href }, accion.texto)) : null);
+  /** Estado vacío. Recibe { icono (null = sin ícono), titulo, texto, accion: {texto, href} | {texto, deshabilitado}, secundaria (liga debajo del botón:
+   *  {texto, href} o {texto, onclick}), arte (dibujo de ARTE: va en lugar del ícono y reserva la ranura de la liga), espera (lo animado se repite hasta que
+   *  llegan los datos), unaVez (nombre de la pantalla: DS.animar.unaVez lo anima una vez por apertura) }; se pone dentro de una tarjeta. */
+  const estadoVacio = ({ icono: nombre, titulo, texto, accion, secundaria, arte, espera = false, unaVez } = {}) =>
+    h("div", { class: `vacio${arte ? " con-arte" : ""}${espera ? " espera" : ""}`, "data-una-vez": unaVez },
+      arte || (nombre === null ? null : ico(nombre || "punto")), h("p", { class: "vc-t" }, titulo), texto ? h("p", { class: "vc-x" }, texto) : null,
+      accion ? (accion.deshabilitado ? h("button", { class: "boton", type: "button", disabled: true }, accion.texto) : h("a", { class: "boton", href: accion.href }, accion.texto)) : null,
+      arte || secundaria ? h("div", { class: "vc-sec" }, secundaria ? boton(secundaria.texto, { variante: "texto", href: secundaria.href, onclick: secundaria.onclick }) : null) : null);
 
   /** Avatar: foto (`foto` = url) o iniciales con color estable. Recibe { iniciales, color (0..5), foto, grande }. */
   const avatar = ({ iniciales = "?", color = 0, foto, grande = false } = {}) =>
@@ -494,10 +498,13 @@ const DS = (() => {
 
   /** Animaciones (todas se apagan con prefers-reduced-motion). `tema(aplicar, boton)`: cambio de tema con un círculo que
    *  nace en el botón (sin la API, cambia al instante). `entrada()`: la primera vez que se pinta Hoy, anillo y barras se
-   *  llenan (clase en <html> que se quita sola); las repintadas posteriores no animan. */
+   *  llenan (clase en <html> que se quita sola); las repintadas posteriores no animan. `unaVez()`: lo que lleva `data-una-vez="<pantalla>"`
+   *  se anima (clase `anim`) la primera vez que está a la vista en esta apertura de la app; al volver a la pestaña o repintar sale quieto.
+   *  Se llama al cambiar de vista y al pintar algo que llega tarde. */
   const animar = (() => {
     const sinMov = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     let hecha = false;
+    const yaAnimadas = new Set();
     return {
       tema(aplicar, boton) {
         if (!document.startViewTransition || sinMov()) return aplicar();
@@ -522,6 +529,12 @@ const DS = (() => {
         addEventListener("pointerdown", quitar, true);
         addEventListener("keydown", quitar, true);
         setTimeout(quitar, 1400);
+      },
+      unaVez() {
+        for (const el of document.querySelectorAll("[data-una-vez]")) {
+          if (el.closest("[hidden]")) el.classList.remove("anim");   // al esconderse la pierde: si no, el CSS la repetiría al volver
+          else if (!yaAnimadas.has(el.dataset.unaVez)) { yaAnimadas.add(el.dataset.unaVez); el.classList.add("anim"); }
+        }
       },
     };
   })();
